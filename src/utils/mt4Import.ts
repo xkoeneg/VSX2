@@ -27,12 +27,12 @@ export const parseMTTimestamp = (raw: string | undefined): string => {
 };
 
 
-// Your broker's server clock is NOT Philippine time. Based on the offset
-// you gave us — broker shows 16:30 when it's 09:30 in PH — the server runs
-// 7 hours AHEAD of PH time, so we subtract 7 hours from every parsed
+// Your broker's server clock is NOT Philippine time. Confirmed reading:
+// broker showed 16:56 at the same moment PH time was 21:56 — the server
+// runs 5 hours BEHIND PH time, so we add 5 hours to every parsed
 // timestamp before it reaches Trade History.
 // If you ever switch brokers/servers, just update this one number.
-export const BROKER_TO_PH_OFFSET_HOURS = -7;
+export const BROKER_TO_PH_OFFSET_HOURS = 5;
 
 // Shifts a naive "YYYY-MM-DDTHH:MM:SS" string (no timezone attached) by
 // offsetHours, correctly rolling over day/month/year boundaries. We anchor
