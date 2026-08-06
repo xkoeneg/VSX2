@@ -1,6 +1,13 @@
 import type React from 'react';
 import { useState, useRef, useEffect } from 'react';
 import {
+  createChart,
+  ColorType,
+  CrosshairMode,
+  type IChartApi,
+  type UTCTimestamp,
+} from 'lightweight-charts';
+import {
   LayoutDashboard,
   BookOpen,
   FileText,
@@ -282,6 +289,246 @@ function MiniTradingViewChart({ symbol }: { symbol: string }) {
   return <div className="tradingview-widget-container w-full h-full" ref={containerRef} />;
 }
 
+// ---------------------------------------------------------------------------
+// Trade execution chart — client-rendered candlesticks (lightweight-charts)
+// with horizontal reference lines at entry / stop-loss / take-profit,
+// zoomed to the trade's execution window.
+//
+// IMPORTANT — this is NOT real market data. There is no free chart-image or
+// OHLC API that covers the full instrument mix this app supports (FX,
+// indices, metals, crypto) without a paid/key-gated data provider. Rather
+// than fake that with a broken embed, this renders a deterministic,
+// seeded *synthetic* candle series shaped to pass through the trade's
+// actual entry price and resolve at take-profit / stop-loss / breakeven
+// to match the recorded P&L — and it's visibly labeled "Simulated" so it's
+// never mistaken for real price action. Swap `generateMockTradeCandles`
+// for a real fetch (Twelve Data / Polygon.io / EOD Historical Data, etc.)
+// once a market-data API key is wired up; everything downstream (the
+// series, the price lines, the zoom) stays the same.
+// ---------------------------------------------------------------------------
+
+interface MockCandle {
+  time: UTCTimestamp;
+  open: number;
+  high: number;
+  low: number;
+  close: number;
+}
+
+const CANDLES_BEFORE_ENTRY = 8;
+const CANDLES_DURING_TRADE = 24;
+const CANDLES_AFTER_EXIT = 6;
+
+/** Simple deterministic string -> uint32 hash, used to seed the PRNG so the
+ *  same trade always renders the same synthetic candles. */
+function seedFromString(str: string): number {
+  let h = 0;
+  for (let i = 0; i < str.length; i++) {
+    h = (Math.imul(31, h) + str.charCodeAt(i)) | 0;
+  }
+  return h >>> 0;
+}
+
+/** mulberry32 PRNG — small, fast, deterministic given a seed. */
+function mulberry32(seed: number) {
+  let a = seed;
+  return function rand() {
+    a |= 0;
+    a = (a + 0x6d2b79f5) | 0;
+    let t = Math.imul(a ^ (a >>> 15), 1 | a);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+
+/**
+ * Builds a synthetic candle series for a trade card. The series drifts
+ * toward `entryPrice` through a short pre-trade window, walks from entry
+ * toward the resolved exit price across the trade's duration, then drifts
+ * a bit further to give post-trade context — all seeded off `trade.id` so
+ * re-renders (and re-opening the card) always show the same chart.
+ *
+ * NOTE: adjust the `entryTime`/`exitTime`/`exitPrice` field names below if
+ * your `Trade` type uses different names — falls back to `trade.date` and
+ * a nominal 45-minute hold when timestamps aren't present.
+ */
+function generateMockTradeCandles(trade: Trade): {
+  candles: MockCandle[];
+  entryTime: UTCTimestamp;
+  exitTime: UTCTimestamp;
+} {
+  const rand = mulberry32(seedFromString(trade.id));
+
+  const entryPrice = (trade as any).entryPrice ?? 0;
+  const stopLoss = (trade as any).stopLoss ?? entryPrice;
+  const takeProfit = (trade as any).takeProfit ?? entryPrice;
+  const isLong = takeProfit >= entryPrice;
+  const isWin = trade.profitLoss >= 0;
+  const isBreakeven = Math.abs(trade.profitLoss) < 10;
+
+  // Land the synthetic path on whichever level matches the trade's actual
+  // recorded outcome, so the chart never visually contradicts the P&L.
+  const exitPrice: number =
+    (trade as any).exitPrice ?? (isBreakeven ? entryPrice : isWin ? takeProfit : stopLoss);
+
+  const parsedEntry = (trade as any).entryTime
+    ? new Date((trade as any).entryTime).getTime()
+    : new Date(trade.date).getTime();
+  const parsedExit = (trade as any).exitTime
+    ? new Date((trade as any).exitTime).getTime()
+    : parsedEntry + 45 * 60 * 1000;
+  const durationMs = Math.max(parsedExit - parsedEntry, 5 * 60 * 1000);
+  const stepMs = durationMs / CANDLES_DURING_TRADE;
+  const totalCandles = CANDLES_BEFORE_ENTRY + CANDLES_DURING_TRADE + CANDLES_AFTER_EXIT;
+  const startMs = parsedEntry - stepMs * CANDLES_BEFORE_ENTRY;
+
+  // Scale the candle-to-candle wiggle to the trade's own risk distance so a
+  // 3-pip FX scalp and a 200-point index swing both look proportionate.
+  const riskDistance = Math.abs(entryPrice - stopLoss) || entryPrice * 0.002 || 1;
+  const noise = riskDistance * 0.12;
+
+  const candles: MockCandle[] = [];
+  let price = entryPrice - (isLong ? riskDistance * 0.3 : -riskDistance * 0.3);
+
+  for (let i = 0; i < totalCandles; i++) {
+    const time = Math.round((startMs + i * stepMs) / 1000) as UTCTimestamp;
+
+    let target: number;
+    if (i < CANDLES_BEFORE_ENTRY) {
+      target = entryPrice;
+    } else if (i < CANDLES_BEFORE_ENTRY + CANDLES_DURING_TRADE) {
+      const tradeProgress = (i - CANDLES_BEFORE_ENTRY) / Math.max(CANDLES_DURING_TRADE - 1, 1);
+      target = entryPrice + (exitPrice - entryPrice) * tradeProgress;
+    } else {
+      target = exitPrice;
+    }
+
+    const pull = 0.35; // how strongly each candle drifts toward its target
+    const open = price;
+    const wander = (rand() - 0.5) * 2 * noise;
+    const close = open + (target - open) * pull + wander;
+    const high = Math.max(open, close) + rand() * noise * 0.6;
+    const low = Math.min(open, close) - rand() * noise * 0.6;
+
+    candles.push({ time, open, high, low, close });
+    price = close;
+  }
+
+  return {
+    candles,
+    entryTime: Math.round(parsedEntry / 1000) as UTCTimestamp,
+    exitTime: Math.round(parsedExit / 1000) as UTCTimestamp,
+  };
+}
+
+/**
+ * Renders the trade-card chart preview: candlesticks plus entry/SL/TP
+ * price lines, zoomed to the trade's execution window. Falls back to the
+ * live TradingView mini symbol widget when a trade doesn't have enough
+ * price data (no entryPrice) to build a meaningful chart.
+ */
+function TradeExecutionChart({ trade }: { trade: Trade }) {
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const container = containerRef.current;
+    if (!container) return;
+
+    const { candles } = generateMockTradeCandles(trade);
+
+    const chart: IChartApi = createChart(container, {
+      width: container.clientWidth,
+      height: container.clientHeight,
+      layout: {
+        background: { type: ColorType.Solid, color: 'transparent' },
+        textColor: 'rgba(180, 180, 190, 0.7)',
+        fontSize: 10,
+      },
+      grid: {
+        vertLines: { color: 'rgba(255,255,255,0.04)' },
+        horzLines: { color: 'rgba(255,255,255,0.04)' },
+      },
+      rightPriceScale: { borderColor: 'rgba(255,255,255,0.08)' },
+      timeScale: { borderColor: 'rgba(255,255,255,0.08)', timeVisible: true, secondsVisible: false },
+      crosshair: { mode: CrosshairMode.Normal },
+      handleScroll: false,
+      handleScale: false,
+    });
+
+    const series = chart.addCandlestickSeries({
+      upColor: '#34d399',
+      downColor: '#f43f5e',
+      borderVisible: false,
+      wickUpColor: '#34d399',
+      wickDownColor: '#f43f5e',
+    });
+    series.setData(candles);
+
+    const entryPrice = (trade as any).entryPrice;
+    const stopLoss = (trade as any).stopLoss;
+    const takeProfit = (trade as any).takeProfit;
+
+    if (entryPrice != null) {
+      series.createPriceLine({
+        price: entryPrice,
+        color: '#e5e7eb',
+        lineWidth: 1,
+        lineStyle: 2,
+        axisLabelVisible: true,
+        title: 'Entry',
+      });
+    }
+    if (stopLoss != null) {
+      series.createPriceLine({
+        price: stopLoss,
+        color: '#f43f5e',
+        lineWidth: 1,
+        lineStyle: 2,
+        axisLabelVisible: true,
+        title: 'SL',
+      });
+    }
+    if (takeProfit != null) {
+      series.createPriceLine({
+        price: takeProfit,
+        color: '#34d399',
+        lineWidth: 1,
+        lineStyle: 2,
+        axisLabelVisible: true,
+        title: 'TP',
+      });
+    }
+
+    chart.timeScale().setVisibleRange({
+      from: candles[0].time,
+      to: candles[candles.length - 1].time,
+    });
+
+    const resizeObserver = new ResizeObserver(entries => {
+      const entry = entries[0];
+      if (!entry) return;
+      const { width, height } = entry.contentRect;
+      if (width > 0 && height > 0) chart.applyOptions({ width, height });
+    });
+    resizeObserver.observe(container);
+
+    return () => {
+      resizeObserver.disconnect();
+      chart.remove();
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [trade.id, (trade as any).entryPrice, (trade as any).stopLoss, (trade as any).takeProfit, trade.profitLoss]);
+
+  return (
+    <div className="relative w-full h-full">
+      <div ref={containerRef} className="w-full h-full" />
+      <span className="absolute bottom-1 right-1.5 z-10 text-[8px] font-semibold uppercase tracking-wider text-zinc-400/80 bg-black/50 px-1.5 py-0.5 rounded backdrop-blur-sm pointer-events-none">
+        Simulated
+      </span>
+    </div>
+  );
+}
+
 export function TradesScreen() {
   const {
     view, setView, privacyMode, setPrivacyMode, theme, setTheme, mainScrollRef, isExportConfirmOpen,
@@ -503,12 +750,18 @@ export function TradesScreen() {
           {coverImage ? (
             <img src={coverImage} alt="" className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105" />
           ) : (
-            // No screenshot uploaded for this trade — show a live mini chart for
-            // the traded symbol instead of a static placeholder icon.
-            // pointer-events-none lets card clicks (open Trade Details / select
-            // mode) pass through the embedded iframe to the card's onClick.
+            // No screenshot uploaded for this trade — show a chart preview
+            // instead of a static placeholder icon. Trades with entry/SL/TP
+            // price data get the detailed candlestick execution chart;
+            // trades missing that data fall back to the live TradingView
+            // mini symbol widget. pointer-events-none lets card clicks (open
+            // Trade Details / select mode) pass through to the card's onClick.
             <div className="w-full h-full pointer-events-none">
-              <MiniTradingViewChart symbol={trade.symbol} />
+              {(trade as any).entryPrice != null ? (
+                <TradeExecutionChart trade={trade} />
+              ) : (
+                <MiniTradingViewChart symbol={trade.symbol} />
+              )}
             </div>
           )}
           {/* Badge row at the bottom of the thumbnail */}
