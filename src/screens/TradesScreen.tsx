@@ -1,5 +1,5 @@
 import type React from 'react';
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import {
   LayoutDashboard,
   BookOpen,
@@ -14,7 +14,6 @@ import {
   Trash2,
   Check,
   ChevronsUpDown,
-  Image as ImageIcon,
   TrendingUp,
   TrendingDown,
   DollarSign,
@@ -167,6 +166,121 @@ WikiEntry
 import { cn } from '../utils/format';
 import { useAppContext } from '../context/AppContext';
 import { renderStatCard, renderAccountFilter, renderAccountTypeBadge, renderTradingAccountTypeBadge } from '../components/shared/RenderHelpers';
+
+// ---------------------------------------------------------------------------
+// TradingView fallback chart — rendered on trade cards that have no
+// screenshot attached, in place of the old gray "No image" placeholder.
+// ---------------------------------------------------------------------------
+
+// Instruments where the "obvious" ticker doesn't map onto a plain 6-letter
+// FX pair, or where we want to pin a specific/liquid data feed (indices,
+// metals, oil, crypto). Keys are matched against the normalized (suffix
+// stripped, uppercased) core symbol, e.g. "NAS100.X" -> "NAS100".
+const TV_SYMBOL_OVERRIDES: Record<string, string> = {
+  // US indices
+  NAS100: 'CAPITALCOM:US100',
+  USTEC: 'CAPITALCOM:US100',
+  US100: 'CAPITALCOM:US100',
+  NDX100: 'CAPITALCOM:US100',
+  US30: 'CAPITALCOM:US30',
+  DJ30: 'CAPITALCOM:US30',
+  DOW30: 'CAPITALCOM:US30',
+  US500: 'CAPITALCOM:US500',
+  SPX500: 'CAPITALCOM:US500',
+  SP500: 'CAPITALCOM:US500',
+  // European / Asian / other indices
+  GER40: 'CAPITALCOM:DE40',
+  DE40: 'CAPITALCOM:DE40',
+  DAX40: 'CAPITALCOM:DE40',
+  UK100: 'CAPITALCOM:UK100',
+  FTSE100: 'CAPITALCOM:UK100',
+  FRA40: 'CAPITALCOM:FR40',
+  JPN225: 'CAPITALCOM:JP225',
+  NIKKEI225: 'CAPITALCOM:JP225',
+  AUS200: 'CAPITALCOM:AU200',
+  HK50: 'CAPITALCOM:HK50',
+  // Metals
+  XAUUSD: 'OANDA:XAUUSD',
+  GOLD: 'OANDA:XAUUSD',
+  XAGUSD: 'OANDA:XAGUSD',
+  SILVER: 'OANDA:XAGUSD',
+  // Energy
+  USOIL: 'TVC:USOIL',
+  WTI: 'TVC:USOIL',
+  UKOIL: 'TVC:UKOIL',
+  BRENT: 'TVC:UKOIL',
+  // Crypto
+  BTCUSD: 'BINANCE:BTCUSDT',
+  ETHUSD: 'BINANCE:ETHUSDT',
+};
+
+// Plain 6-letter currency pairs (EURUSD, GBPJPY, ...) route straight to the
+// FX exchange prefix.
+const FX_PAIR_REGEX = /^[A-Z]{6}$/;
+
+/**
+ * Normalizes a raw trade symbol — which may carry broker-specific suffixes
+ * like ".X", ".m", "_i", "-ecn" (common on MT4/MT5 exports) — into a
+ * TradingView "EXCHANGE:TICKER" symbol suitable for the embedded chart
+ * widgets. Unknown symbols still get a best-effort CFD-feed guess rather
+ * than failing outright.
+ */
+function getTradingViewSymbol(rawSymbol: string): string {
+  if (!rawSymbol) return 'FX:EURUSD';
+  const core = rawSymbol.trim().toUpperCase().split(/[.\-_ ]/)[0];
+  if (!core) return 'FX:EURUSD';
+  if (TV_SYMBOL_OVERRIDES[core]) return TV_SYMBOL_OVERRIDES[core];
+  if (FX_PAIR_REGEX.test(core)) return `FX:${core}`;
+  // Fall back to a broad CFD feed — covers most indices/commodities/stocks
+  // TradingView recognizes under the CAPITALCOM prefix, and still renders
+  // gracefully (widget just shows "symbol not found") if it doesn't.
+  return `CAPITALCOM:${core}`;
+}
+
+/**
+ * Embeds a small live TradingView "mini symbol overview" widget, used as a
+ * chart-preview fallback on trade cards that have no screenshot uploaded.
+ * Each instance injects its own TradingView script tag (their supported,
+ * no-login embedding method) scoped to a local container div, and cleans
+ * that container up on unmount / symbol change.
+ */
+function MiniTradingViewChart({ symbol }: { symbol: string }) {
+  const containerRef = useRef<HTMLDivElement>(null);
+  const tvSymbol = getTradingViewSymbol(symbol);
+
+  useEffect(() => {
+    const container = containerRef.current;
+    if (!container) return;
+    container.innerHTML = '';
+
+    const widgetDiv = document.createElement('div');
+    widgetDiv.className = 'tradingview-widget-container__widget';
+    container.appendChild(widgetDiv);
+
+    const script = document.createElement('script');
+    script.src = 'https://s3.tradingview.com/external-embedding/embed-widget-mini-symbol-overview.js';
+    script.async = true;
+    script.type = 'text/javascript';
+    script.text = JSON.stringify({
+      symbol: tvSymbol,
+      width: '100%',
+      height: '100%',
+      locale: 'en',
+      dateRange: '1M',
+      colorTheme: 'dark',
+      isTransparent: true,
+      autosize: true,
+      largeChartUrl: '',
+    });
+    container.appendChild(script);
+
+    return () => {
+      container.innerHTML = '';
+    };
+  }, [tvSymbol]);
+
+  return <div className="tradingview-widget-container w-full h-full" ref={containerRef} />;
+}
 
 export function TradesScreen() {
   const {
@@ -389,9 +503,12 @@ export function TradesScreen() {
           {coverImage ? (
             <img src={coverImage} alt="" className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105" />
           ) : (
-            <div className="flex flex-col items-center gap-1.5 text-zinc-600">
-              <ImageIcon className="w-7 h-7" />
-              <span className="text-[10px]">No image</span>
+            // No screenshot uploaded for this trade — show a live mini chart for
+            // the traded symbol instead of a static placeholder icon.
+            // pointer-events-none lets card clicks (open Trade Details / select
+            // mode) pass through the embedded iframe to the card's onClick.
+            <div className="w-full h-full pointer-events-none">
+              <MiniTradingViewChart symbol={trade.symbol} />
             </div>
           )}
           {/* Badge row at the bottom of the thumbnail */}
