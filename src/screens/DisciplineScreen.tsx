@@ -541,7 +541,10 @@ export function DisciplineScreen() {
             {/* Fixed-height body: locked regardless of which state renders below,
                 so the card never grows/shrinks or shifts neighboring cards when
                 pendingCount flips between 0 and >0. */}
-            <div className="flex-1 h-[290px] flex flex-col min-h-0">
+            <div
+              className="flex flex-col min-h-0 overflow-hidden"
+              style={{ height: 290, maxHeight: 290 }}
+            >
               {pendingReviewTrades.length === 0 ? (
                 <div className="flex-1 flex flex-col items-center justify-center gap-3">
                   <FunkyBear />
