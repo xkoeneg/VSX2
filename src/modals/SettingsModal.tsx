@@ -1,0 +1,432 @@
+import type React from 'react';
+import {
+  LayoutDashboard,
+  BookOpen,
+  FileText,
+  Calendar,
+  Shield,
+  Eye,
+  EyeOff,
+  Plus,
+  X,
+  Edit2,
+  Trash2,
+  Check,
+  ChevronsUpDown,
+  Image as ImageIcon,
+  TrendingUp,
+  TrendingDown,
+  DollarSign,
+  Target,
+  AlertCircle,
+  Lightbulb,
+  Filter,
+  Grid,
+  List,
+  LayoutGrid,
+  ChevronLeft,
+  ChevronRight,
+  BarChart3,
+  Brain,
+  Percent,
+  Activity,
+  ArrowUpRight,
+  ArrowDownRight,
+  Save,
+  Upload,
+  CheckCircle2,
+  XCircle,
+  ChevronDown,
+  Link,
+  Download,
+  HardDrive,
+  FolderSync,
+  ToggleLeft,
+  ToggleRight,
+  Wallet,
+  LineChart,
+  Clock,
+  CalendarDays,
+  Calculator,
+  CornerDownLeft,
+  GripVertical,
+  Expand,
+  SlidersHorizontal,
+  ArrowUpDown,
+  Sun,
+  Moon,
+  PanelLeft,
+  Flame,
+  ClipboardPaste,
+  ZoomIn,
+  Send,
+  ImagePlus,
+  StickyNote,
+  Box,
+  Search,
+  ArrowLeft,
+  Database,
+  Settings,
+  Scale,
+  Layers,
+  ShieldCheck,
+  Zap,
+  AlertTriangle,
+  Star,
+  Flag,
+  Bookmark,
+  Lock,
+  Crosshair,
+  Rocket,
+  Award,
+  Bell,
+  Gem,
+  Anchor,
+  Compass,
+  Swords,
+  Smile,
+  Palette,
+  Quote,
+  RefreshCw,
+  ListChecks,
+  Dumbbell,
+  Coffee,
+  Heart,
+  type LucideIcon,
+} from 'lucide-react';
+import { ModalBackdrop } from '../components/shared/ModalBackdrop';
+import type {
+  Account,
+AccountMetrics,
+CalculatorProps,
+ChallengeConfig,
+ChallengePreset,
+ChallengePresetCategory,
+ChatMessage,
+Confluence,
+CustomPillar,
+DateInputProps,
+EconomicEvent,
+EditableTagInputProps,
+EmotionTag,
+GalleryView,
+MTColumnRole,
+MarketEffect,
+MarketNotice,
+MarketSessionDef,
+Mistake,
+MultiSelectDropdownProps,
+NoticeType,
+NotificationReadState,
+NumericInputProps,
+PHTWindow,
+ParsedMTTrade,
+PillarsPerRow,
+RoutineCategory,
+RoutineIconColor,
+RoutineIconKind,
+RoutineItem,
+Rule,
+RuleAccentColor,
+RuleAccentStyle,
+RuleBulletStyle,
+RuleIconKind,
+RuleItemType,
+RulePillar,
+RuleSeverity,
+RuleTextSize,
+SessionOption,
+SetupType,
+SortOrder,
+StoredData,
+Strategy,
+StrategyStep,
+TagColor,
+TagColorPickerProps,
+TagColorStyle,
+TagSelectDropdownProps,
+TimeInputProps,
+TimeframeChart,
+TimeframeChartInputProps,
+Trade,
+TradeFilter,
+TradeImage,
+TradeSortField,
+TradingAccountType,
+ViewType,
+WeekDay,
+WikiCandle,
+WikiCategory,
+WikiEntry
+} from '../types';
+import { cn } from '../utils/format';
+import { useAppContext } from '../context/AppContext';
+import { renderStatCard, renderAccountFilter, renderAccountTypeBadge, renderTradingAccountTypeBadge } from '../components/shared/RenderHelpers';
+
+export function SettingsModal() {
+  const {
+    view, setView, privacyMode, setPrivacyMode, theme, setTheme, mainScrollRef, isExportConfirmOpen,
+    setIsExportConfirmOpen, sidebarCollapsed, setSidebarCollapsed, isSettingsModalOpen,
+    setIsSettingsModalOpen, settingsModalTab, setSettingsModalTab, isMobileSidebarOpen,
+    setIsMobileSidebarOpen, galleryView, setGalleryView, tradeSubView, setTradeSubView, dbSearch, setDbSearch,
+    dbAccountFilter, setDbAccountFilter, dbSessionFilter, setDbSessionFilter, dbOutcomeFilter,
+    setDbOutcomeFilter, dbRulesFilter, setDbRulesFilter, dbPage, setDbPage, dbViewMode, setDbViewMode,
+    DB_PAGE_SIZE, tradeFilter, setTradeFilter, tradeSortField, setTradeSortField, tradeSortOrder,
+    setTradeSortOrder, viewportWidth, equityChartContainerRef, equityChartWidth, setEquityChartWidth,
+    selectedAccounts, setSelectedAccounts, showAccountDropdown, setShowAccountDropdown, calculatorState,
+    setCalculatorState, activeInputRef, resetCalculator, handleNumberInputFocus, handleCalculatorChange,
+    updateFieldFromCalculator, handleCalculatorEnter, closeCalculator, accounts, setAccounts, trades,
+    setTrades, rules, setRules, strategies, setStrategies, notices, setNotices, wikiEntries, setWikiEntries,
+    setupTypes, setSetupTypes, confluences, setConfluences, mistakesList, setMistakesList, emotionsList,
+    setEmotionsList, customSymbols, setCustomSymbols, customPillars, setCustomPillars, tradeImportInputRef,
+    isImportingTrades, setIsImportingTrades, tradeImportToast, setTradeImportToast,
+    tradeImportToastTimeoutRef, showTradeImportToast, pillarsPerRow, setPillarsPerRow, DEFAULT_CREED_QUOTES,
+    customCreedQuotes, setCustomCreedQuotes, customCreedQuotesLoaded, setCustomCreedQuotesLoaded,
+    allCreedQuotes, creedIndex, setCreedIndex, isEditingCreed, setIsEditingCreed, creedDraftText,
+    setCreedDraftText, creedDraftTag, setCreedDraftTag, currentCreedQuote, isCurrentCreedCustom,
+    shuffleDailyCreed, openCreedEditor, saveCreedEdit, deleteCurrentCreedQuote, CREED_EMPHASIS_WORDS,
+    renderCreedQuoteText, PRE_SESSION_CHECKLIST_ITEMS, preSessionChecklist, setPreSessionChecklist,
+    togglePreSessionItem, resetPreSessionChecklist, preSessionCompletedCount, showAddAccount,
+    setShowAddAccount, showEditAccount, setShowEditAccount, showAddTrade, setShowAddTrade, showEditTrade,
+    setShowEditTrade, showTradeDetail, setShowTradeDetail, detailNotesDraft, setDetailNotesDraft,
+    detailRulesFollowedDraft, setDetailRulesFollowedDraft, showDisciplineReview, setShowDisciplineReview,
+    disciplineReviewDraft, setDisciplineReviewDraft, showRuleReviewModal, setShowRuleReviewModal,
+    isEditingRuleReview, setIsEditingRuleReview, showAddRule, setShowAddRule, showManageRulesModal,
+    setShowManageRulesModal, showAddStrategy, setShowAddStrategy, viewStrategyId, setViewStrategyId,
+    newStrategy, setNewStrategy, editingStrategyId, setEditingStrategyId, strategyPendingDelete,
+    setStrategyPendingDelete, stepPendingDeleteId, setStepPendingDeleteId, draggingStepImageId,
+    setDraggingStepImageId, dragOverStepImageId, setDragOverStepImageId, draggingCoverImageId,
+    setDraggingCoverImageId, dragOverCoverImageId, setDragOverCoverImageId, draggingStrategyId,
+    setDraggingStrategyId, dragOverStrategyId, setDragOverStrategyId, strategyCoverIndex,
+    setStrategyCoverIndex, strategyImageInputRef, strategyCarouselRef, canScrollLeftStrategy,
+    setCanScrollLeftStrategy, canScrollRightStrategy, setCanScrollRightStrategy, updateStrategyScrollState,
+    scrollStrategyCarousel, strategyStepImageInputRefs, showAddNotice, setShowAddNotice, editingNoticeId,
+    setEditingNoticeId, showAddWiki, setShowAddWiki, editingTrade, setEditingTrade, lightboxImage,
+    setLightboxImage, showExpandGallery, setShowExpandGallery, executionImageIndex, setExecutionImageIndex,
+    timeframeImageIndices, setTimeframeImageIndices, showTradeTimeFields, setShowTradeTimeFields,
+    showTradePriceLevels, setShowTradePriceLevels, rulesAdherenceError, setRulesAdherenceError,
+    showAccountTypeDropdown, setShowAccountTypeDropdown, showTradingAccountTypeDropdown,
+    setShowTradingAccountTypeDropdown, showSymbolDropdown, setShowSymbolDropdown, symbolCustomInput,
+    setSymbolCustomInput, showSessionDropdown, setShowSessionDropdown, showTradeControlsPanel,
+    setShowTradeControlsPanel, tradeSelectMode, setTradeSelectMode, selectedTradeIds, setSelectedTradeIds,
+    showDeleteSelectedConfirm, setShowDeleteSelectedConfirm, accountPendingDelete, setAccountPendingDelete,
+    tradePendingDelete, setTradePendingDelete, noticeImageInputRef, accountDropdownRef,
+    tradingAccountTypeDropdownRef, accountTypeDropdownRef, symbolDropdownRef, sessionDropdownRef,
+    tradeControlsPanelRef, calendarMonth, setCalendarMonth, streakGridWindow, setStreakGridWindow,
+    disciplineCalendarMonth, setDisciplineCalendarMonth, openDisciplineDay, setOpenDisciplineDay,
+    disciplineCalendarGridRef, emotionsTimeframe, setEmotionsTimeframe, mistakesTimeframe,
+    setMistakesTimeframe, disciplineAnalyticsTimeframeOptions, newAccount, setNewAccount, editingAccount,
+    setEditingAccount, initializeEmptyTimeframes, newTrade, setNewTrade, priceInputs, setPriceInputs, newRule,
+    setNewRule, editingRuleId, setEditingRuleId, showRuleIconPicker, setShowRuleIconPicker, ruleIconPickerTab,
+    setRuleIconPickerTab, emptyNoticeDraft, newNotice, setNewNotice, newWiki, setNewWiki, editingWikiId,
+    setEditingWikiId, viewWikiId, setViewWikiId, wikiImageInputRef, selectedTimeframeTab,
+    setSelectedTimeframeTab, calculatedRR, lifeDisciplineStartDate, setLifeDisciplineStartDate,
+    lifeDisciplineChecks, setLifeDisciplineChecks, lifeDisciplineGraceDays, setLifeDisciplineGraceDays,
+    lifeDisciplineRecheckNotes, setLifeDisciplineRecheckNotes, lifeDisciplineMissedReasons,
+    setLifeDisciplineMissedReasons, challengeConfig, setChallengeConfig, hasStartedChallenge,
+    setHasStartedChallenge, hasActiveChallengeProgress, dayDetailsModal, setDayDetailsModal,
+    isEditingDayReason, setIsEditingDayReason, dayReasonDraftText, setDayReasonDraftText,
+    isRecheckTokenPromptOpen, setIsRecheckTokenPromptOpen, recheckTokenReasonDraft,
+    setRecheckTokenReasonDraft, dayDetailsHonestyGuardrail, setDayDetailsHonestyGuardrail,
+    isEditingDayChecklist, setIsEditingDayChecklist, isChallengeConfigOpen, setIsChallengeConfigOpen,
+    challengeModalMode, setChallengeModalMode, isResetChallengeConfirmOpen, setIsResetChallengeConfirmOpen,
+    challengeConfigDraft, setChallengeConfigDraft, isCustomDuration, setIsCustomDuration, newRoutineItemText,
+    setNewRoutineItemText, editingRoutineItem, setEditingRoutineItem, editingRoutineItemText,
+    setEditingRoutineItemText, iconPickerOpenFor, setIconPickerOpenFor, iconPickerTab, setIconPickerTab,
+    iconPickerPos, setIconPickerPos, iconPickerPopoverRef, iconPickerTriggerRefs, ICON_PICKER_WIDTH,
+    ICON_PICKER_EST_HEIGHT, GAP, computeIconPickerPos, toggleIconPicker, categoryPendingDelete,
+    setCategoryPendingDelete, itemPendingDelete, setItemPendingDelete, userChallengePresets,
+    setUserChallengePresets, isLoadPresetMenuOpen, setIsLoadPresetMenuOpen, isSavingPresetDraft,
+    setIsSavingPresetDraft, savePresetNameDraft, setSavePresetNameDraft, isManagePresetsOpen,
+    setIsManagePresetsOpen, presetPendingDelete, setPresetPendingDelete, loadPresetMenuRef, loadedPresetId,
+    setLoadedPresetId, isPresetSaveChoiceOpen, setIsPresetSaveChoiceOpen, presetSaveChoiceRef,
+    lifeDisciplineToast, setLifeDisciplineToast, lifeDisciplineToastTimeoutRef, showLifeDisciplineToast,
+    emptyLifeDisciplineChecks, toggleLifeDisciplineItem, completeAllLifeDisciplineToday,
+    isLifeDisciplineDayComplete, lifeDisciplineTokensUsed, lifeDisciplineTokensRemaining,
+    toggleLifeDisciplineGraceDay, openDayDetailsModal, startEditDayChecklist, saveDayChecklistEdits,
+    toggleDayDetailsFailedItem, startEditDayReason, saveDayDetailsReason, openRecheckTokenPrompt,
+    confirmUseRecheckToken, undoRecheckDay, handleLifeDisciplineTileClick, findMatchingUserPreset,
+    handleSaveCurrentAsPresetClick, overwriteExistingUserPreset, chooseSaveAsNewPreset,
+    openChallengeConfigModal, applyChallengePreset, saveDraftAsPreset, requestDeleteUserChallengePreset,
+    confirmDeleteUserChallengePreset, addDraftRoutineItem, addDraftWeeklyItem, requestDeleteDraftRoutineItem,
+    confirmDeleteDraftRoutineItem, startEditDraftRoutineItem, commitEditDraftRoutineItem,
+    toggleWeeklyRoutinesEnabled, toggleDraftItemDay, addDraftCategory, renameDraftCategory,
+    setDraftCategoryIcon, setDraftCategoryIconColor, requestDeleteDraftCategory, confirmDeleteDraftCategory,
+    cleanChallengeConfigDraft, saveChallengeConfigUpdate, resetChallengeProgress, saveChallengeConfig,
+    tradeNumberAccountRef, accountFilteredTrades, filteredTrades, dbFilteredTrades, dbPageCount,
+    dbPagedTrades, getDisplayTradeNumber, stats, equityData, ruleViolationCounts, calendarDays,
+    handleAddAccount, handleUpdateAccount, handleDeleteAccount, confirmDeleteAccount, handleImportTradesFile,
+    handleAddTrade, openEditTrade, handleSaveEditedTrade, handleDeleteTrade, confirmDeleteTrade,
+    handleSaveDetailNotes, handleSaveDisciplineReview, handleCancelRuleReviewEdit, closeRuleReviewModal,
+    toggleTradeSelectMode, toggleTradeSelected, toggleSelectAllTrades, handleDeleteSelectedTrades,
+    confirmDeleteSelectedTrades, getTodayLocalDate, tc, resetTradeForm, handleSaveRule, openAddRuleModal,
+    openEditRuleModal, closeRuleModal, handleDeleteRule, handleAddDivider, handleUpdateDividerLabel,
+    showAddPillarModal, setShowAddPillarModal, newPillar, setNewPillar, pillarPendingDelete,
+    setPillarPendingDelete, openAddPillarModal, closeAddPillarModal, handleAddPillar, handleDeletePillar,
+    moveStrategy, handleStrategyImagesPick, removeStrategyImage, moveStrategyImage, openAddStrategyModal,
+    openEditStrategyModal, closeStrategyModal, addStrategyStep, updateStrategyStep, requestRemoveStrategyStep,
+    removeStrategyStep, confirmRemoveStrategyStep, handleStrategyStepImagesPick, removeStrategyStepImage,
+    moveStrategyStepImage, handleSaveStrategy, handleDeleteStrategy, confirmDeleteStrategy,
+    handleNoticeImagePick, handleAddNotice, handleOpenAddNotice, handleEditNotice, handleDeleteNotice,
+    WIKI_FORM_DEFAULT, handleAddWiki, handleOpenAddWiki, handleOpenEditWiki, handleDeleteWiki,
+    handleWikiImagePick, addWikiKeyRule, updateWikiKeyRule, removeWikiKeyRule, handleDeleteSetupType,
+    handleDeleteConfluence, handleDeleteMistakeType, handleChangeSetupTypeColor, handleChangeConfluenceColor,
+    handleChangeMistakeColor, handleDeleteEmotion, handleChangeEmotionColor, colorForEmotion, colorForMistake,
+    handleFileUpload, handleAddImageUrl, handleRemoveImage, handleReorderImages, updateTimeframeNotes,
+    exportBackup, importBackup,
+  } = useAppContext();
+
+    if (!isSettingsModalOpen) return null;
+
+    const themeLabel = theme === 'dark' ? 'Dark' : theme === 'light' ? 'Light' : 'Minecraft';
+    const nextThemeLabel = theme === 'dark' ? 'Light' : theme === 'light' ? 'Minecraft' : 'Dark';
+
+    return (
+      <ModalBackdrop
+        onClose={() => setIsSettingsModalOpen(false)}
+        className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4"
+      >
+        <div
+          className="bg-zinc-900 border border-zinc-800 rounded-2xl p-6 shadow-2xl max-w-lg w-full"
+          onClick={(e) => e.stopPropagation()}
+        >
+          {/* Header */}
+          <div className="flex items-center justify-between mb-5">
+            <div className="flex items-center gap-2.5">
+              <div className="w-8 h-8 rounded-lg bg-zinc-800 border border-zinc-700 flex items-center justify-center">
+                <Settings className="w-4 h-4 text-zinc-300" />
+              </div>
+              <h2 className="text-base font-semibold text-white">Settings</h2>
+            </div>
+            <button
+              onClick={() => setIsSettingsModalOpen(false)}
+              className="p-1.5 rounded-lg text-zinc-500 hover:text-white hover:bg-zinc-800 transition-all"
+              aria-label="Close settings"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+
+          {/* Tabs */}
+          <div className="flex items-center gap-1 mb-5 p-1 rounded-xl bg-zinc-800/60 border border-zinc-800">
+            <button
+              onClick={() => setSettingsModalTab('appearance')}
+              className={cn(
+                'flex-1 flex items-center justify-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-all',
+                settingsModalTab === 'appearance'
+                  ? 'bg-zinc-700 text-white'
+                  : 'text-zinc-400 hover:text-zinc-200'
+              )}
+            >
+              <Sun className="w-3.5 h-3.5" />
+              Appearance & Privacy
+            </button>
+            <button
+              onClick={() => setSettingsModalTab('backup')}
+              className={cn(
+                'flex-1 flex items-center justify-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-all',
+                settingsModalTab === 'backup'
+                  ? 'bg-zinc-700 text-white'
+                  : 'text-zinc-400 hover:text-zinc-200'
+              )}
+            >
+              <HardDrive className="w-3.5 h-3.5" />
+              Data Backup
+            </button>
+          </div>
+
+          {/* TAB 1: Appearance & Privacy */}
+          {settingsModalTab === 'appearance' && (
+            <div className="flex flex-col gap-3">
+              <div className="flex items-center justify-between gap-4 px-4 py-3.5 rounded-xl bg-zinc-800/50 border border-zinc-800">
+                <div className="flex items-center gap-3 min-w-0">
+                  <div className="w-9 h-9 rounded-lg bg-zinc-800 flex items-center justify-center flex-shrink-0">
+                    {theme === 'dark' ? <Moon className="w-4 h-4 text-zinc-300" /> : theme === 'light' ? <Sun className="w-4 h-4 text-amber-400" /> : <Box className="w-4 h-4 text-emerald-400" />}
+                  </div>
+                  <div className="min-w-0">
+                    <p className="text-sm font-medium text-white truncate">Theme</p>
+                    <p className="text-xs text-zinc-500 truncate">Currently {themeLabel} — switch to {nextThemeLabel}</p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => setTheme(theme === 'dark' ? 'light' : theme === 'light' ? 'minecraft' : 'dark')}
+                  className="flex-shrink-0 px-3 py-1.5 rounded-lg text-xs font-medium bg-zinc-700 text-white hover:bg-zinc-600 transition-all"
+                >
+                  {nextThemeLabel}
+                </button>
+              </div>
+
+              <div className="flex items-center justify-between gap-4 px-4 py-3.5 rounded-xl bg-zinc-800/50 border border-zinc-800">
+                <div className="flex items-center gap-3 min-w-0">
+                  <div className="w-9 h-9 rounded-lg bg-zinc-800 flex items-center justify-center flex-shrink-0">
+                    {privacyMode ? <EyeOff className="w-4 h-4 text-amber-400" /> : <Eye className="w-4 h-4 text-zinc-300" />}
+                  </div>
+                  <div className="min-w-0">
+                    <p className="text-sm font-medium text-white truncate">Privacy Mode</p>
+                    <p className="text-xs text-zinc-500 truncate">Blur sensitive figures across the journal</p>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  role="switch"
+                  aria-checked={privacyMode}
+                  onClick={() => setPrivacyMode(!privacyMode)}
+                  className={cn(
+                    'relative flex-shrink-0 w-10 h-6 rounded-full transition-colors',
+                    privacyMode ? 'bg-amber-500' : 'bg-zinc-700'
+                  )}
+                >
+                  <span className={cn(
+                    'absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-white shadow transition-transform',
+                    privacyMode && 'translate-x-4'
+                  )} />
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* TAB 2: Data Backup */}
+          {settingsModalTab === 'backup' && (
+            <div className="flex flex-col gap-3">
+              <div className="px-4 py-3.5 rounded-xl bg-zinc-800/50 border border-zinc-800">
+                <div className="flex items-center gap-3 mb-2">
+                  <div className="w-9 h-9 rounded-lg bg-zinc-800 flex items-center justify-center flex-shrink-0">
+                    <Download className="w-4 h-4 text-zinc-300" />
+                  </div>
+                  <p className="text-sm font-medium text-white">Export Journal Backup</p>
+                </div>
+                <p className="text-xs text-zinc-500 mb-3 leading-relaxed">
+                  Download a complete snapshot of your accounts, trades, rules, and notes as a single JSON file you can store safely or move to another device.
+                </p>
+                <button
+                  onClick={() => setIsExportConfirmOpen(true)}
+                  className="w-full flex items-center justify-center gap-2 px-3 py-2 rounded-lg text-sm font-medium bg-zinc-700 text-white hover:bg-zinc-600 transition-all"
+                >
+                  <Download className="w-4 h-4" />
+                  Export Backup
+                </button>
+              </div>
+
+              <div className="px-4 py-3.5 rounded-xl bg-zinc-800/50 border border-zinc-800">
+                <div className="flex items-center gap-3 mb-2">
+                  <div className="w-9 h-9 rounded-lg bg-zinc-800 flex items-center justify-center flex-shrink-0">
+                    <FolderSync className="w-4 h-4 text-zinc-300" />
+                  </div>
+                  <p className="text-sm font-medium text-white">Import & Restore Backup</p>
+                </div>
+                <p className="text-xs text-zinc-500 mb-3 leading-relaxed">
+                  Restore your journal from a previously exported backup file. This will replace your current data, so make sure it's the file you intend to load.
+                </p>
+                <label className="w-full flex items-center justify-center gap-2 px-3 py-2 rounded-lg text-sm font-medium bg-zinc-700 text-white hover:bg-zinc-600 transition-all cursor-pointer">
+                  <FolderSync className="w-4 h-4" />
+                  Choose File to Import
+                  <input type="file" accept=".json,application/json" className="hidden" onChange={importBackup} />
+                </label>
+              </div>
+            </div>
+          )}
+        </div>
+      </ModalBackdrop>
+    );
+}
+
