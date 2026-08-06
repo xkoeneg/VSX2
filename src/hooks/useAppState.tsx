@@ -2088,6 +2088,38 @@ export function useAppState() {
     setAccountPendingDelete(null);
   };
 
+  // MT4/MT5 report timestamps are naive strings in the BROKER'S OWN server
+  // time — no timezone marker at all. Your broker's server runs GMT+3 (a
+  // 9:30 PM Philippine-time trade shows as 16:30 in the report), so we shift
+  // by +5 hours to land on real Philippine time (UTC+8). If you ever switch
+  // brokers and the server timezone changes, this is the one number to edit.
+  const MT5_SERVER_UTC_OFFSET_HOURS = 3;
+  const PH_UTC_OFFSET_HOURS = 8;
+  const BROKER_TO_PH_SHIFT_HOURS = PH_UTC_OFFSET_HOURS - MT5_SERVER_UTC_OFFSET_HOURS;
+
+  // Takes a naive "YYYY-MM-DDTHH:mm:ss" broker-server-time string and returns
+  // the equivalent Philippine-time date/time fields, plus a correct absolute
+  // ISO timestamp. Does the shift with pure UTC-epoch arithmetic first (so
+  // the result never depends on what timezone the device running this app
+  // happens to be set to), then hands back local Date fields the same way
+  // every other trade in the app already expects (buildLiveTimestamp /
+  // getTodayLocalDate also assume the device clock reads Philippine time).
+  const convertBrokerTimeToPH = (isoNaive: string): { date: string; time: string; timestamp: string } | null => {
+    if (!/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}/.test(isoNaive)) return null;
+    const brokerAsUtcMs = Date.parse(`${isoNaive.slice(0, 19)}Z`);
+    if (isNaN(brokerAsUtcMs)) return null;
+    const phMs = brokerAsUtcMs + BROKER_TO_PH_SHIFT_HOURS * 60 * 60 * 1000;
+    const phWall = new Date(phMs); // read back via UTC getters = PH wall-clock fields
+    const y = phWall.getUTCFullYear();
+    const mo = String(phWall.getUTCMonth() + 1).padStart(2, '0');
+    const d = String(phWall.getUTCDate()).padStart(2, '0');
+    const h = String(phWall.getUTCHours()).padStart(2, '0');
+    const mi = String(phWall.getUTCMinutes()).padStart(2, '0');
+    const s = String(phWall.getUTCSeconds()).padStart(2, '0');
+    const asLocalDate = new Date(y, phWall.getUTCMonth(), Number(d), Number(h), Number(mi), Number(s));
+    return { date: `${y}-${mo}-${d}`, time: `${h}:${mi}`, timestamp: asLocalDate.toISOString() };
+  };
+
   // Reads an uploaded MT4/MT5 .csv or .html report, parses it, maps each
   // parsed row onto the app's Trade shape, de-dupes against trades already
   // imported (by broker ticket ID), and appends whatever's left. All
@@ -2125,9 +2157,14 @@ export function useAppState() {
 
       const existingTicketIds = new Set(trades.map(t => t.importTicketId).filter((v): v is string => !!v));
       let nextTradeNumber = trades.length > 0 ? Math.max(...trades.map(t => t.absoluteTradeNumber || 0)) + 1 : 1;
+      // Trade # (trackingNumber) is per-account, same convention as the Add
+      // Trade modal's "smart Trade #" suggestion (existing count for that
+      // account + 1, incrementing as each new one is appended below) — so
+      // imported trades get numbered automatically and never need typing in.
+      let nextTrackingNumberForAccount = trades.filter(t => t.accountId === targetAccountId).length + 1;
       const newCustomSymbols: string[] = [];
 
-      // Chronological order so absoluteTradeNumber assignment reads sensibly.
+      // Chronological order so absoluteTradeNumber/trackingNumber assignment reads sensibly.
       const sortedParsed = [...parsed].sort((a, b) => new Date(a.openTime).getTime() - new Date(b.openTime).getTime());
 
       const newTrades: Trade[] = [];
@@ -2136,11 +2173,10 @@ export function useAppState() {
         if (existingTicketIds.has(p.ticketId)) { duplicateCount++; continue; }
         existingTicketIds.add(p.ticketId);
 
-        const isoOpen = /^\d{4}-\d{2}-\d{2}T/.test(p.openTime) ? p.openTime : '';
-        const dateStr = isoOpen ? isoOpen.slice(0, 10) : new Date().toISOString().slice(0, 10);
-        const startTimeMatch = isoOpen.match(/T(\d{2}:\d{2})/);
-        const isoClose = /^\d{4}-\d{2}-\d{2}T/.test(p.closeTime) ? p.closeTime : '';
-        const endTimeMatch = isoClose.match(/T(\d{2}:\d{2})/);
+        // Broker server time -> Philippine time (see convertBrokerTimeToPH above).
+        const openPH = convertBrokerTimeToPH(p.openTime);
+        const closePH = convertBrokerTimeToPH(p.closeTime);
+        const dateStr = openPH ? openPH.date : new Date().toISOString().slice(0, 10);
 
         if (p.symbol && !PRESET_SYMBOLS.some(ps => ps.value === p.symbol) && !customSymbols.includes(p.symbol) && !newCustomSymbols.includes(p.symbol)) {
           newCustomSymbols.push(p.symbol);
@@ -2168,12 +2204,12 @@ export function useAppState() {
           riskAmount: 0,
           mistakesAnalysis: '',
           lessonsLearned: '',
-          timestamp: isoOpen ? new Date(isoOpen).toISOString() : buildLiveTimestamp(dateStr),
+          timestamp: openPH ? openPH.timestamp : buildLiveTimestamp(dateStr),
           date: dateStr,
-          startTime: startTimeMatch ? startTimeMatch[1] : undefined,
-          endTime: endTimeMatch ? endTimeMatch[1] : undefined,
+          startTime: openPH ? openPH.time : undefined,
+          endTime: closePH ? closePH.time : undefined,
           absoluteTradeNumber: nextTradeNumber++,
-          trackingNumber: '',
+          trackingNumber: String(nextTrackingNumberForAccount++),
           importTicketId: p.ticketId,
         });
       }
