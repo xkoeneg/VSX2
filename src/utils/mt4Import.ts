@@ -27,6 +27,32 @@ export const parseMTTimestamp = (raw: string | undefined): string => {
 };
 
 
+// Your broker's server clock is NOT Philippine time. Based on the offset
+// you gave us — broker shows 16:30 when it's 09:30 in PH — the server runs
+// 7 hours AHEAD of PH time, so we subtract 7 hours from every parsed
+// timestamp before it reaches Trade History.
+// If you ever switch brokers/servers, just update this one number.
+export const BROKER_TO_PH_OFFSET_HOURS = -7;
+
+// Shifts a naive "YYYY-MM-DDTHH:MM:SS" string (no timezone attached) by
+// offsetHours, correctly rolling over day/month/year boundaries. We anchor
+// the arithmetic in UTC purely as a neutral calculator — the input/output
+// strings stay naive local-time strings, not real UTC.
+export const shiftNaiveIsoHours = (iso: string, offsetHours: number): string => {
+  const m = iso.match(/^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})$/);
+  if (!m) return iso; // didn't come from parseMTTimestamp (e.g. raw fallback) — leave as-is
+  const [, y, mo, d, h, mi, se] = m;
+  const anchor = new Date(Date.UTC(+y, +mo - 1, +d, +h, +mi, +se));
+  anchor.setUTCHours(anchor.getUTCHours() + offsetHours);
+  const pad = (n: number) => String(n).padStart(2, '0');
+  return `${anchor.getUTCFullYear()}-${pad(anchor.getUTCMonth() + 1)}-${pad(anchor.getUTCDate())}T${pad(anchor.getUTCHours())}:${pad(anchor.getUTCMinutes())}:${pad(anchor.getUTCSeconds())}`;
+};
+
+// Parses a raw MT4/MT5 timestamp straight into PH local time, ready to show
+// in Trade History.
+export const parseMTTimestampToPH = (raw: string | undefined): string =>
+  shiftNaiveIsoHours(parseMTTimestamp(raw), BROKER_TO_PH_OFFSET_HOURS);
+
 // Order matters: more specific patterns (profit/commission/swap/taxes/sl/tp)
 // are checked before the generic "price" pattern so e.g. "S / L" never gets
 // mis-tagged. Ticket/time/type/size/symbol are unambiguous.
@@ -68,7 +94,7 @@ export const MT_TICKET_HEADER_RE = /^(ticket|order|position|deal)(\s*#|\s*id)?$/
 // Turns classified column roles + one data row into a ParsedMTTrade, or null
 // if the row doesn't look like a real closed buy/sell trade (e.g. balance,
 // credit, deposit, or cancelled-order rows that MT4/MT5 reports also list).
-export const rowToMTTrade = (cells: string[], roles: Partial<Record<MTColumnRole, number[]>>): ParsedMTTrade | null => {
+export const rowToMTTrade = (cells: string[], roles: Partial<Record<MTColumnRole, number[]>>, tradeNumber: number): ParsedMTTrade | null => {
   const get = (role: MTColumnRole, occurrence: number = 0): string | undefined => {
     const idxList = roles[role];
     if (!idxList || idxList.length <= occurrence) return undefined;
@@ -80,8 +106,8 @@ export const rowToMTTrade = (cells: string[], roles: Partial<Record<MTColumnRole
   if (!ticketRaw || !/^\d+$/.test(ticketRaw.trim())) return null;
   if (typeRaw !== 'buy' && typeRaw !== 'sell') return null;
 
-  const openTime = parseMTTimestamp(get('time', 0));
-  const closeTime = parseMTTimestamp(get('time', 1)) || openTime;
+  const openTime = parseMTTimestampToPH(get('time', 0));
+  const closeTime = parseMTTimestampToPH(get('time', 1)) || openTime;
   const entryPrice = parseMTNumber(get('price', 0));
   const exitPrice = parseMTNumber(get('price', 1));
   const profitBase = parseMTNumber(get('profit'));
@@ -90,6 +116,7 @@ export const rowToMTTrade = (cells: string[], roles: Partial<Record<MTColumnRole
   const taxes = parseMTNumber(get('taxes'));
 
   return {
+    tradeNumber,
     ticketId: ticketRaw.trim(),
     symbol: (get('symbol') || '').trim().toUpperCase(),
     orderType: typeRaw as 'buy' | 'sell',
@@ -131,6 +158,9 @@ export const parseMT4MT5Csv = (text: string): ParsedMTTrade[] => {
 
   const trades: ParsedMTTrade[] = [];
   let roles: Partial<Record<MTColumnRole, number[]>> | null = null;
+  // Auto-numbers trades in the order they're found, so you never have to
+  // type in a trade # by hand.
+  let nextTradeNumber = 1;
 
   for (const line of lines) {
     const cells = splitMTDelimitedLine(line, delimiter);
@@ -142,8 +172,11 @@ export const parseMT4MT5Csv = (text: string): ParsedMTTrade[] => {
       continue;
     }
     if (!roles) continue;
-    const trade = rowToMTTrade(cells, roles);
-    if (trade) trades.push(trade);
+    const trade = rowToMTTrade(cells, roles, nextTradeNumber);
+    if (trade) {
+      trades.push(trade);
+      nextTradeNumber++;
+    }
   }
   return trades;
 };
@@ -164,6 +197,9 @@ export const parseMT4MT5Html = (text: string): ParsedMTTrade[] => {
   // get misread as complete trades — duplicating/corrupting the real
   // Positions rows, which are the only ones with both an entry and exit.
   let inPositionsSection = false;
+  // Auto-numbers trades in the order they're found, so you never have to
+  // type in a trade # by hand.
+  let nextTradeNumber = 1;
 
   for (const row of rows) {
     const headerCells = Array.from(row.querySelectorAll('th'));
@@ -191,8 +227,11 @@ export const parseMT4MT5Html = (text: string): ParsedMTTrade[] => {
       continue;
     }
     if (!roles || !inPositionsSection) continue;
-    const trade = rowToMTTrade(cells, roles);
-    if (trade) trades.push(trade);
+    const trade = rowToMTTrade(cells, roles, nextTradeNumber);
+    if (trade) {
+      trades.push(trade);
+      nextTradeNumber++;
+    }
   }
   return trades;
 };
