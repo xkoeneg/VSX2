@@ -322,12 +322,6 @@ export function WikiScreen() {
       () => WIKI_CATEGORIES.filter(cat => wikiEntries.some(e => e.category === cat)),
       [wikiEntries]
     );
-    const primarySessionInfo = useMemo(() => {
-      const counts: Record<string, number> = {};
-      wikiEntries.forEach(e => { if (e.bestSession) counts[e.bestSession] = (counts[e.bestSession] || 0) + 1; });
-      const sorted = Object.entries(counts).sort((a, b) => b[1] - a[1]);
-      return sorted.length > 0 ? { label: sorted[0][0], count: sorted[0][1] } : { label: '—', count: 0 };
-    }, [wikiEntries]);
 
     // ---- Filtering: search first, then category -------------------------
     const searchedEntries = useMemo(() => {
@@ -597,50 +591,30 @@ export function WikiScreen() {
     };
 
     return (
-      <div className="space-y-4 min-w-0">
+      <div className="space-y-6 min-w-0">
         <PageHeader
           title="Knowledge Wiki"
           description="Visual reference for PD Arrays & trading concepts"
           actions={
-            <button onClick={handleOpenAddWiki} className="flex items-center gap-2 px-4 py-2 bg-zinc-800 hover:bg-zinc-700 text-white rounded-lg text-sm transition-colors flex-shrink-0">
-              <Plus className="w-4 h-4" />
-              <span>Add Entry</span>
-            </button>
+            <>
+              <div className="hidden sm:flex items-center gap-3 px-3 py-2 rounded-lg bg-zinc-900/60 border border-zinc-800/80 text-xs text-zinc-400 flex-shrink-0 whitespace-nowrap">
+                <span className="flex items-center gap-1.5">
+                  <BookOpen className="w-3.5 h-3.5 text-sky-400 flex-shrink-0" />
+                  <span className="text-white font-semibold">{totalConcepts}</span> concepts
+                </span>
+                <span className="w-px h-3 bg-zinc-800 flex-shrink-0" />
+                <span className="flex items-center gap-1.5">
+                  <Layers className="w-3.5 h-3.5 text-purple-400 flex-shrink-0" />
+                  <span className="text-white font-semibold">{presentCategoryNames.length}</span> categories
+                </span>
+              </div>
+              <button onClick={handleOpenAddWiki} className="flex items-center gap-2 px-4 py-2 bg-zinc-800 hover:bg-zinc-700 text-white rounded-lg text-sm transition-colors flex-shrink-0">
+                <Plus className="w-4 h-4" />
+                <span>Add Entry</span>
+              </button>
+            </>
           }
         />
-
-        {/* Top bar — quick stats + global search, terminal-style */}
-        <div className="flex flex-col lg:flex-row lg:items-center gap-3 bg-[#111113] border border-zinc-800/80 rounded-xl px-4 py-3 min-w-0">
-          <div className="flex items-center gap-4 sm:gap-5 flex-shrink-0 overflow-x-auto">
-            <div className="flex items-center gap-2 whitespace-nowrap">
-              <BookOpen className="w-4 h-4 text-sky-400 flex-shrink-0" />
-              <span className="text-sm font-bold text-white">{totalConcepts}</span>
-              <span className="text-[11px] text-zinc-500">logged concepts</span>
-            </div>
-            <div className="w-px h-4 bg-zinc-800 flex-shrink-0" />
-            <div className="flex items-center gap-2 whitespace-nowrap">
-              <Layers className="w-4 h-4 text-purple-400 flex-shrink-0" />
-              <span className="text-sm font-bold text-white">{presentCategoryNames.length}</span>
-              <span className="text-[11px] text-zinc-500">active categories</span>
-            </div>
-            <div className="w-px h-4 bg-zinc-800 flex-shrink-0 hidden sm:block" />
-            <div className="hidden sm:flex items-center gap-2 whitespace-nowrap">
-              <Compass className="w-4 h-4 text-amber-400 flex-shrink-0" />
-              <span className="text-sm font-bold text-white truncate max-w-[110px]">{primarySessionInfo.label}</span>
-              <span className="text-[11px] text-zinc-500">top session</span>
-            </div>
-          </div>
-          <div className="relative flex-1 min-w-[180px]">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-zinc-600 pointer-events-none" />
-            <input
-              type="text"
-              value={wikiSearch}
-              onChange={(e) => setWikiSearch(e.target.value)}
-              placeholder="Search concepts, rules, sessions..."
-              className="w-full bg-zinc-950 border border-zinc-800 rounded-lg pl-9 pr-3 py-2 text-xs text-white placeholder:text-zinc-600 focus:outline-none focus:border-sky-500/50"
-            />
-          </div>
-        </div>
 
         {wikiEntries.length === 0 ? (
           <div className="text-center py-12">
@@ -656,10 +630,27 @@ export function WikiScreen() {
           </div>
         ) : (
           /* Split-pane workbench — category list on the left, full
-             detail workbench for the selected concept on the right. */
+             detail workbench for the selected concept on the right.
+             This sits directly under PageHeader (no block in between)
+             so its top border lands on the same baseline as the first
+             card row in Rules Playbook / Trade History. */
           <div className="flex flex-col lg:flex-row gap-4 lg:h-[calc(100vh-220px)] min-h-[520px]">
             {/* Left sidebar — nav list (~35%) */}
             <div className="lg:w-[35%] lg:min-w-[300px] lg:max-w-[420px] flex flex-col bg-[#111113] border border-zinc-800/80 rounded-xl overflow-hidden lg:h-full">
+              {/* Search — scoped to the concept list it filters */}
+              <div className="p-3 border-b border-zinc-800/80 flex-shrink-0">
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-zinc-600 pointer-events-none" />
+                  <input
+                    type="text"
+                    value={wikiSearch}
+                    onChange={(e) => setWikiSearch(e.target.value)}
+                    placeholder="Search concepts, rules, sessions..."
+                    className="w-full bg-zinc-950 border border-zinc-800 rounded-lg pl-9 pr-3 py-2 text-xs text-white placeholder:text-zinc-600 focus:outline-none focus:border-sky-500/50"
+                  />
+                </div>
+              </div>
+
               {/* Category pill filters */}
               <div className="p-3 border-b border-zinc-800/80 flex flex-wrap items-center gap-1.5 flex-shrink-0">
                 {FILTER_CATEGORIES.map(cat => {
