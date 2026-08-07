@@ -414,6 +414,23 @@ export function useAppState() {
       console.error('Failed to save imported ticket IDs:', e);
     }
   };
+  // Called whenever imported trades are deleted (single, bulk, or via account
+  // deletion) so the persisted log never blocks re-importing a report whose
+  // trades no longer exist in the journal.
+  const removeFromImportedTicketLog = (ticketIds: (string | undefined)[]) => {
+    const idsToRemove = ticketIds.filter((v): v is string => !!v);
+    if (idsToRemove.length === 0) return;
+    setImportedTicketIds(prev => {
+      let changed = false;
+      const next = new Set(prev);
+      for (const id of idsToRemove) {
+        if (next.delete(id)) changed = true;
+      }
+      if (!changed) return prev;
+      persistImportedTicketIds(next);
+      return next;
+    });
+  };
   // How many pillar columns the Trading Rules card shows per row (2–6).
   // Purely a display preference — not persisted to the trading journal
   // schema, so it always starts at a sensible default per session.
@@ -2131,8 +2148,10 @@ export function useAppState() {
   const confirmDeleteAccount = () => {
     if (!accountPendingDelete) return;
     const id = accountPendingDelete;
+    const deletedTicketIds = trades.filter(t => t.accountId === id).map(t => t.importTicketId);
     setAccounts(accounts.filter(a => a.id !== id));
     setTrades(trades.filter(t => t.accountId !== id));
+    removeFromImportedTicketLog(deletedTicketIds);
     if (selectedAccounts.includes(id)) {
       setSelectedAccounts(selectedAccounts.filter(a => a !== id));
     }
@@ -2420,7 +2439,9 @@ export function useAppState() {
   const confirmDeleteTrade = () => {
     if (!tradePendingDelete) return;
     const id = tradePendingDelete;
+    const deletedTrade = trades.find(t => t.id === id);
     setTrades(prev => prev.filter(t => t.id !== id));
+    removeFromImportedTicketLog([deletedTrade?.importTicketId]);
     setSelectedTradeIds(prev => prev.filter(t => t !== id));
     setTradePendingDelete(null);
     setShowTradeDetail(null);
@@ -2500,7 +2521,9 @@ export function useAppState() {
   };
 
   const confirmDeleteSelectedTrades = () => {
+    const deletedTicketIds = trades.filter(t => selectedTradeIds.includes(t.id)).map(t => t.importTicketId);
     setTrades(prev => prev.filter(t => !selectedTradeIds.includes(t.id)));
+    removeFromImportedTicketLog(deletedTicketIds);
     setSelectedTradeIds([]);
     setTradeSelectMode(false);
     setShowDeleteSelectedConfirm(false);
