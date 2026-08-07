@@ -336,6 +336,10 @@ export function Sidebar({ isMobile }: { isMobile: boolean }) {
               {
                 header: 'TRADING',
                 headerClassName: 'text-[10px] font-semibold text-zinc-500 uppercase tracking-wider px-3.5 mt-6 mb-2 select-none',
+                accentIcon: theme !== 'light' ? 'text-cyan-400/80' : 'text-cyan-600/80',
+                accentIconActive: theme !== 'light' ? 'text-cyan-300' : 'text-cyan-600',
+                activeBorder: 'border-cyan-400',
+                activeBg: 'bg-cyan-500/10',
                 items: [
                   { id: 'dashboard' as ViewType, icon: LayoutDashboard, label: 'Dashboard' },
                   { id: 'trades' as ViewType, icon: TrendingUp, label: 'Trade History' },
@@ -345,6 +349,10 @@ export function Sidebar({ isMobile }: { isMobile: boolean }) {
               {
                 header: 'PROCESS',
                 headerClassName: 'text-[10px] font-semibold text-zinc-500 uppercase tracking-wider px-3.5 mt-6 mb-2 select-none',
+                accentIcon: theme !== 'light' ? 'text-emerald-400/80' : 'text-emerald-600/80',
+                accentIconActive: theme !== 'light' ? 'text-emerald-300' : 'text-emerald-600',
+                activeBorder: 'border-emerald-400',
+                activeBg: 'bg-emerald-500/10',
                 items: [
                   { id: 'discipline' as ViewType, icon: Shield, label: 'Discipline Tracker' },
                   { id: 'playbook' as ViewType, icon: BookOpen, label: 'Rules Playbook' },
@@ -354,38 +362,58 @@ export function Sidebar({ isMobile }: { isMobile: boolean }) {
               {
                 header: 'RESOURCES',
                 headerClassName: 'text-[10px] font-semibold text-zinc-500 uppercase tracking-wider px-3.5 mt-6 mb-2 select-none',
+                accentIcon: theme !== 'light' ? 'text-purple-400/80' : 'text-purple-600/80',
+                accentIconActive: theme !== 'light' ? 'text-purple-300' : 'text-purple-600',
+                activeBorder: 'border-purple-400',
+                activeBg: 'bg-purple-500/10',
                 items: [
                   { id: 'notices' as ViewType, icon: FileText, label: 'Market Notices' },
                   { id: 'wiki' as ViewType, icon: Lightbulb, label: 'Knowledge Wiki' },
                 ],
               },
-            ].map(section => (
-              <div key={section.header} className="flex flex-col gap-1 w-full">
+            ].map((section, sectionIndex) => (
+              <div
+                key={section.header}
+                className={cn(
+                  'flex flex-col gap-1 w-full',
+                  sectionIndex > 0 && (theme !== 'light' ? 'border-t border-zinc-800 pt-1' : 'border-t border-zinc-200 pt-1')
+                )}
+              >
                 {!collapsed && (
                   <span className={section.headerClassName}>{section.header}</span>
                 )}
                 <div className="flex flex-col gap-1 w-full">
-                  {section.items.map(item => (
-                    <button
-                      key={item.id}
-                      onClick={() => {
-                        if (item.id !== 'trades') setTradeSubView('overview');
-                        setView(item.id);
-                        setIsMobileSidebarOpen(false);
-                      }}
-                      title={collapsed ? item.label : undefined}
-                      className={cn(
-                        'w-full flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all text-sm select-none cursor-pointer',
-                        collapsed && 'justify-center px-0',
-                        view === item.id
-                          ? theme !== 'light' ? 'bg-zinc-800 text-white' : 'bg-zinc-100 text-zinc-900'
-                          : theme !== 'light' ? 'text-zinc-400 hover:text-white hover:bg-zinc-800/50' : 'text-zinc-600 hover:text-zinc-900 hover:bg-zinc-50'
-                      )}
-                    >
-                      <item.icon className="w-4 h-4 flex-shrink-0" />
-                      {!collapsed && <span className="truncate">{item.label}</span>}
-                    </button>
-                  ))}
+                  {section.items.map(item => {
+                    const isActive = view === item.id;
+                    return (
+                      <button
+                        key={item.id}
+                        onClick={() => {
+                          if (item.id !== 'trades') setTradeSubView('overview');
+                          setView(item.id);
+                          setIsMobileSidebarOpen(false);
+                        }}
+                        title={collapsed ? item.label : undefined}
+                        className={cn(
+                          'w-full flex items-center gap-3 pl-2.5 pr-3 py-2.5 rounded-lg border-l-4 transition-all text-sm select-none cursor-pointer',
+                          collapsed && 'justify-center px-0 border-l-0',
+                          isActive
+                            ? cn(
+                                section.activeBorder,
+                                section.activeBg,
+                                theme !== 'light' ? 'text-white font-medium' : 'text-zinc-900 font-medium'
+                              )
+                            : cn(
+                                'border-transparent',
+                                theme !== 'light' ? 'text-zinc-400 hover:text-white hover:bg-zinc-800/50' : 'text-zinc-600 hover:text-zinc-900 hover:bg-zinc-50'
+                              )
+                        )}
+                      >
+                        <item.icon className={cn('w-4 h-4 flex-shrink-0', isActive ? section.accentIconActive : section.accentIcon)} />
+                        {!collapsed && <span className="truncate">{item.label}</span>}
+                      </button>
+                    );
+                  })}
                 </div>
               </div>
             ))}
