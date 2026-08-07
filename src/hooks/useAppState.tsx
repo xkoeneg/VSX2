@@ -382,6 +382,38 @@ export function useAppState() {
   useEffect(() => () => {
     if (tradeImportToastTimeoutRef.current) clearTimeout(tradeImportToastTimeoutRef.current);
   }, []);
+
+  // ---- MT4/MT5 Trade Import: persisted ticket-ID dedupe ----
+  // Checking only the live `trades` array isn't enough to prevent
+  // duplicates: if an imported trade is later deleted from the journal, its
+  // ticket ID disappears from `trades` too, so re-importing the same report
+  // would silently recreate it. And since this was previously tracked with
+  // nothing but that in-memory `trades` derivation, a page refresh before
+  // reopening the same file also had a brief window to lose the guard.
+  // So we keep a standalone, append-only log of every ticket ID we've ever
+  // imported, persisted to localStorage — this is checked ALONGSIDE the
+  // live trades array and never shrinks, so a report already imported once
+  // stays blocked forever, across deletions, refreshes, and app relaunches.
+  const IMPORTED_TICKET_IDS_KEY = 'importedMTTicketIds';
+  const [importedTicketIds, setImportedTicketIds] = useState<Set<string>>(() => {
+    try {
+      const stored = localStorage.getItem(IMPORTED_TICKET_IDS_KEY);
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        if (Array.isArray(parsed)) return new Set(parsed.filter((v): v is string => typeof v === 'string'));
+      }
+    } catch (e) {
+      console.error('Failed to load imported ticket IDs:', e);
+    }
+    return new Set();
+  });
+  const persistImportedTicketIds = (ids: Set<string>) => {
+    try {
+      localStorage.setItem(IMPORTED_TICKET_IDS_KEY, JSON.stringify(Array.from(ids)));
+    } catch (e) {
+      console.error('Failed to save imported ticket IDs:', e);
+    }
+  };
   // How many pillar columns the Trading Rules card shows per row (2–6).
   // Purely a display preference — not persisted to the trading journal
   // schema, so it always starts at a sensible default per session.
@@ -826,6 +858,25 @@ export function useAppState() {
       console.error('Failed to save data:', e);
     }
   }, [accounts, trades, rules, strategies, notices, wikiEntries, setupTypes, confluences, mistakesList, emotionsList, customSymbols, customPillars]);
+
+  // Backfill the persisted imported-ticket-ID log from whatever's currently
+  // in `trades` — covers trades imported before this persistence fix
+  // shipped, and trades imported since then but not yet folded in by
+  // handleImportTradesFile's own persist call. Runs whenever trades change;
+  // only writes when something new actually shows up, so this is a no-op
+  // on every render once caught up.
+  useEffect(() => {
+    const liveTicketIds = trades.map(t => t.importTicketId).filter((v): v is string => !!v);
+    if (liveTicketIds.length === 0) return;
+    setImportedTicketIds(prev => {
+      const missing = liveTicketIds.some(id => !prev.has(id));
+      if (!missing) return prev;
+      const next = new Set(prev);
+      liveTicketIds.forEach(id => next.add(id));
+      persistImportedTicketIds(next);
+      return next;
+    });
+  }, [trades]);
 
   // ---- Life Discipline Hub persistence ----
   // Kept in its own localStorage key, deliberately separate from the trading
@@ -2155,7 +2206,10 @@ export function useAppState() {
         ? selectedAccounts[0]
         : accounts[0].id;
 
-      const existingTicketIds = new Set(trades.map(t => t.importTicketId).filter((v): v is string => !!v));
+      const existingTicketIds = new Set([
+        ...trades.map(t => t.importTicketId).filter((v): v is string => !!v),
+        ...importedTicketIds,
+      ]);
       let nextTradeNumber = trades.length > 0 ? Math.max(...trades.map(t => t.absoluteTradeNumber || 0)) + 1 : 1;
       // Trade # (trackingNumber) is per-account, same convention as the Add
       // Trade modal's "smart Trade #" suggestion (existing count for that
@@ -2228,6 +2282,12 @@ export function useAppState() {
       if (newCustomSymbols.length > 0) {
         setCustomSymbols(prev => [...prev, ...newCustomSymbols.filter(s => !prev.includes(s))]);
       }
+
+      // existingTicketIds now holds every ticket seen so far (old + this
+      // file's new ones) — persist it so the dedupe guard survives refreshes,
+      // relaunches, and even deleting the imported trades later.
+      setImportedTicketIds(existingTicketIds);
+      persistImportedTicketIds(existingTicketIds);
 
       const parts = [`Imported ${newTrades.length} trade${newTrades.length === 1 ? '' : 's'}`];
       if (duplicateCount > 0) parts.push(`skipped ${duplicateCount} duplicate${duplicateCount === 1 ? '' : 's'}`);
