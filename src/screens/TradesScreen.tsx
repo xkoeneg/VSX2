@@ -465,14 +465,15 @@ export function TradesScreen() {
               type="button"
               disabled={isImportingTrades}
               onClick={() => tradeImportInputRef.current?.click()}
+              title={isImportingTrades ? 'Importing…' : 'Import MT4/MT5'}
+              aria-label={isImportingTrades ? 'Importing…' : 'Import MT4/MT5'}
               className={cn(
-                'flex items-center gap-2 px-3 sm:px-4 py-2 rounded-lg text-sm transition-colors border',
+                'flex items-center justify-center w-9 h-9 rounded-lg transition-colors border flex-shrink-0',
                 theme !== 'light' ? 'bg-zinc-800 border-zinc-700 text-zinc-300 hover:bg-zinc-700' : 'bg-zinc-100 border-zinc-200 text-zinc-700 hover:bg-zinc-200',
                 isImportingTrades && 'opacity-60 cursor-not-allowed'
               )}
             >
-              <Upload className="w-4 h-4" />
-              <span className="hidden sm:inline">{isImportingTrades ? 'Importing…' : 'Import MT4/MT5'}</span>
+              <Upload className={cn('w-4 h-4', isImportingTrades && 'animate-pulse')} />
             </button>
             <button onClick={() => { resetTradeForm(); resetCalculator(); setShowAddTrade(true); }} className="flex items-center gap-2 px-3 sm:px-4 py-2 bg-zinc-800 hover:bg-zinc-700 text-white rounded-lg text-sm transition-colors">
               <Plus className="w-4 h-4" />
@@ -864,14 +865,15 @@ export function TradesScreen() {
               type="button"
               disabled={isImportingTrades}
               onClick={() => tradeImportInputRef.current?.click()}
+              title={isImportingTrades ? 'Importing…' : 'Import MT4/MT5'}
+              aria-label={isImportingTrades ? 'Importing…' : 'Import MT4/MT5'}
               className={cn(
-                'flex items-center gap-2 px-3 py-2 rounded-lg text-sm transition-colors border flex-shrink-0',
+                'flex items-center justify-center w-9 h-9 rounded-lg transition-colors border flex-shrink-0',
                 theme !== 'light' ? 'bg-zinc-800 border-zinc-700 text-zinc-300 hover:bg-zinc-700' : 'bg-zinc-100 border-zinc-200 text-zinc-700 hover:bg-zinc-200',
                 isImportingTrades && 'opacity-60 cursor-not-allowed'
               )}
             >
-              <Upload className="w-4 h-4" />
-              <span className="hidden sm:inline">{isImportingTrades ? 'Importing…' : 'Import MT4/MT5'}</span>
+              <Upload className={cn('w-4 h-4', isImportingTrades && 'animate-pulse')} />
             </button>
             <button onClick={() => { resetTradeForm(); resetCalculator(); setShowAddTrade(true); }} className="flex items-center gap-2 px-3 py-2 bg-zinc-800 hover:bg-zinc-700 text-white rounded-lg text-sm transition-colors flex-shrink-0">
               <Plus className="w-4 h-4" />
