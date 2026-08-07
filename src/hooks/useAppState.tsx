@@ -822,6 +822,7 @@ export function useAppState() {
         localStorage.setItem('tradingJournal', JSON.stringify(migrated));
       } catch (e) {
         console.error('Failed to load data:', e);
+        showTradeImportToast('error', 'Failed to load saved data — your journal may be corrupted or unreadable. Check the console for details.');
       }
     }
   }, []);
@@ -833,6 +834,18 @@ export function useAppState() {
       localStorage.setItem('tradingJournal', JSON.stringify(data));
     } catch (e) {
       console.error('Failed to save data:', e);
+      // Most common real-world cause here is the localStorage quota being
+      // exceeded (e.g. base64 trade screenshots pushing the journal past
+      // ~5-10MB) — previously this failed completely silently, so trades
+      // could look fine all session and then simply not be there on the
+      // next reopen with zero indication why. Surface it instead.
+      const isQuotaError = e instanceof DOMException && (e.name === 'QuotaExceededError' || e.name === 'NS_ERROR_DOM_QUOTA_REACHED');
+      showTradeImportToast(
+        'error',
+        isQuotaError
+          ? 'Storage is full — this change was NOT saved. Delete some trade images or export a backup and clear old data.'
+          : 'Failed to save your journal — this change may be lost on reload. Check the console for details.'
+      );
     }
   }, [accounts, trades, rules, strategies, notices, wikiEntries, setupTypes, confluences, mistakesList, emotionsList, customSymbols, customPillars]);
 
