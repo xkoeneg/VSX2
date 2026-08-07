@@ -383,58 +383,14 @@ export function useAppState() {
     if (tradeImportToastTimeoutRef.current) clearTimeout(tradeImportToastTimeoutRef.current);
   }, []);
 
-  // ---- MT4/MT5 Trade Import: persisted ticket-ID dedupe ----
-  // This is a standalone log of every ticket ID we've imported, persisted to
-  // localStorage and checked ALONGSIDE the live `trades` array. It only ever
-  // grows on import and shrinks via an EXPLICIT delete action (see
-  // removeFromImportedTicketLog, called from the trade/account delete
-  // handlers below) — it deliberately does NOT reactively resync itself
-  // against `trades` on every render. That reactive-mirror approach was
-  // tried and reverted: it wiped the log back down to whatever `trades`
-  // looked like on every reload, and if the reloaded trade objects didn't
-  // reliably carry `importTicketId` through the load/migration path, the
-  // whole log got reset — which is why re-importing a file worked fine
-  // mid-session but silently duplicated everything after a refresh. Only
-  // trusting the standalone persisted log (plus live `trades` as a second
-  // check) and only pruning it on real user-initiated deletes keeps the
-  // guard reliable across refreshes and app relaunches.
-  const IMPORTED_TICKET_IDS_KEY = 'importedMTTicketIds';
-  const [importedTicketIds, setImportedTicketIds] = useState<Set<string>>(() => {
-    try {
-      const stored = localStorage.getItem(IMPORTED_TICKET_IDS_KEY);
-      if (stored) {
-        const parsed = JSON.parse(stored);
-        if (Array.isArray(parsed)) return new Set(parsed.filter((v): v is string => typeof v === 'string'));
-      }
-    } catch (e) {
-      console.error('Failed to load imported ticket IDs:', e);
-    }
-    return new Set();
-  });
-  const persistImportedTicketIds = (ids: Set<string>) => {
-    try {
-      localStorage.setItem(IMPORTED_TICKET_IDS_KEY, JSON.stringify(Array.from(ids)));
-    } catch (e) {
-      console.error('Failed to save imported ticket IDs:', e);
-    }
-  };
-  // Called from the trade/account delete handlers so a deleted trade's
-  // ticket becomes importable again — this is the ONLY thing that removes
-  // entries from the persisted log.
-  const removeFromImportedTicketLog = (ticketIds: (string | undefined)[]) => {
-    const idsToRemove = ticketIds.filter((v): v is string => !!v);
-    if (idsToRemove.length === 0) return;
-    setImportedTicketIds(prev => {
-      let changed = false;
-      const next = new Set(prev);
-      for (const id of idsToRemove) {
-        if (next.delete(id)) changed = true;
-      }
-      if (!changed) return prev;
-      persistImportedTicketIds(next);
-      return next;
-    });
-  };
+  // ---- MT4/MT5 Trade Import: duplicate ticket-ID check ----
+  // Duplicate checking is done ENTIRELY against the live `trades` array in
+  // state (see handleImportTradesFile below) — no separate tracking list or
+  // localStorage log. This keeps the guard automatically correct: deleting a
+  // trade removes its ticket ID from `trades`, so re-importing the same file
+  // immediately works again, and since `trades` itself is the persisted
+  // source of truth, the check is just as reliable across refreshes and app
+  // relaunches.
   // How many pillar columns the Trading Rules card shows per row (2–6).
   // Purely a display preference — not persisted to the trading journal
   // schema, so it always starts at a sensible default per session.
@@ -2133,10 +2089,8 @@ export function useAppState() {
   const confirmDeleteAccount = () => {
     if (!accountPendingDelete) return;
     const id = accountPendingDelete;
-    const deletedTicketIds = trades.filter(t => t.accountId === id).map(t => t.importTicketId);
     setAccounts(accounts.filter(a => a.id !== id));
     setTrades(trades.filter(t => t.accountId !== id));
-    removeFromImportedTicketLog(deletedTicketIds);
     if (selectedAccounts.includes(id)) {
       setSelectedAccounts(selectedAccounts.filter(a => a !== id));
     }
@@ -2210,10 +2164,9 @@ export function useAppState() {
         ? selectedAccounts[0]
         : accounts[0].id;
 
-      const existingTicketIds = new Set([
-        ...trades.map(t => t.importTicketId).filter((v): v is string => !!v),
-        ...importedTicketIds,
-      ]);
+      const existingTicketIds = new Set(
+        trades.map(t => t.importTicketId).filter((v): v is string => !!v)
+      );
       let nextTradeNumber = trades.length > 0 ? Math.max(...trades.map(t => t.absoluteTradeNumber || 0)) + 1 : 1;
       // Trade # (trackingNumber) is per-account, same convention as the Add
       // Trade modal's "smart Trade #" suggestion (existing count for that
@@ -2276,7 +2229,7 @@ export function useAppState() {
         showTradeImportToast(
           'error',
           duplicateCount > 0
-            ? `All ${duplicateCount} trade${duplicateCount === 1 ? '' : 's'} in this file ${duplicateCount === 1 ? 'was' : 'were'} already imported.`
+            ? 'All trades in this file are already imported.'
             : 'No valid trades found in that report.'
         );
         return;
@@ -2286,12 +2239,6 @@ export function useAppState() {
       if (newCustomSymbols.length > 0) {
         setCustomSymbols(prev => [...prev, ...newCustomSymbols.filter(s => !prev.includes(s))]);
       }
-
-      // existingTicketIds now holds every ticket seen so far (old + this
-      // file's new ones) — persist it so the dedupe guard survives refreshes,
-      // relaunches, and even deleting the imported trades later.
-      setImportedTicketIds(existingTicketIds);
-      persistImportedTicketIds(existingTicketIds);
 
       const parts = [`Imported ${newTrades.length} trade${newTrades.length === 1 ? '' : 's'}`];
       if (duplicateCount > 0) parts.push(`skipped ${duplicateCount} duplicate${duplicateCount === 1 ? '' : 's'}`);
@@ -2424,9 +2371,7 @@ export function useAppState() {
   const confirmDeleteTrade = () => {
     if (!tradePendingDelete) return;
     const id = tradePendingDelete;
-    const deletedTrade = trades.find(t => t.id === id);
     setTrades(prev => prev.filter(t => t.id !== id));
-    removeFromImportedTicketLog([deletedTrade?.importTicketId]);
     setSelectedTradeIds(prev => prev.filter(t => t !== id));
     setTradePendingDelete(null);
     setShowTradeDetail(null);
@@ -2506,9 +2451,7 @@ export function useAppState() {
   };
 
   const confirmDeleteSelectedTrades = () => {
-    const deletedTicketIds = trades.filter(t => selectedTradeIds.includes(t.id)).map(t => t.importTicketId);
     setTrades(prev => prev.filter(t => !selectedTradeIds.includes(t.id)));
-    removeFromImportedTicketLog(deletedTicketIds);
     setSelectedTradeIds([]);
     setTradeSelectMode(false);
     setShowDeleteSelectedConfirm(false);
