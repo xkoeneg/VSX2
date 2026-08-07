@@ -267,10 +267,38 @@ export const EconomicCalendarCard: React.FC = () => {
         </div>
         <div className="flex items-center gap-2 flex-shrink-0">
           {lastUpdated && !loading && isToday && (
-            <span className="hidden sm:inline text-[10px] text-zinc-500">
+            <span className="hidden md:inline text-[10px] text-zinc-500">
               Updated {lastUpdated.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}
             </span>
           )}
+
+          <div className="flex items-center gap-0.5 bg-black/20 rounded-lg p-0.5">
+            <button
+              onClick={goPrevDay}
+              className="p-1 rounded-md text-zinc-400 hover:bg-black/40 hover:text-white transition-colors"
+              aria-label="Previous day"
+            >
+              <ChevronLeft className="w-3.5 h-3.5" />
+            </button>
+            <button
+              onClick={goToday}
+              className={cn(
+                'px-2 py-1 rounded-md text-[11px] font-medium transition-colors text-center whitespace-nowrap',
+                isToday ? 'text-amber-300' : 'text-zinc-300 hover:bg-black/40'
+              )}
+              aria-label="Jump to today"
+            >
+              {isToday ? 'Today' : selectedDateLabel}
+            </button>
+            <button
+              onClick={goNextDay}
+              className="p-1 rounded-md text-zinc-400 hover:bg-black/40 hover:text-white transition-colors"
+              aria-label="Next day"
+            >
+              <ChevronRight className="w-3.5 h-3.5" />
+            </button>
+          </div>
+
           <button
             onClick={loadCalendar}
             disabled={loading}
@@ -280,33 +308,6 @@ export const EconomicCalendarCard: React.FC = () => {
             <RefreshCw className={cn('w-3.5 h-3.5', loading && 'animate-spin')} />
           </button>
         </div>
-      </div>
-
-      <div className="flex items-center justify-center gap-1.5 mt-2 flex-shrink-0">
-        <button
-          onClick={goPrevDay}
-          className="p-1 rounded-md bg-black/20 hover:bg-black/40 text-zinc-400 hover:text-white transition-colors"
-          aria-label="Previous day"
-        >
-          <ChevronLeft className="w-3.5 h-3.5" />
-        </button>
-        <button
-          onClick={goToday}
-          className={cn(
-            'px-2.5 py-1 rounded-md text-[11px] font-medium transition-colors min-w-[110px] text-center',
-            isToday ? 'bg-amber-500/10 text-amber-300 border border-amber-500/30' : 'bg-black/20 text-zinc-300 hover:bg-black/40 border border-transparent'
-          )}
-          aria-label="Jump to today"
-        >
-          {isToday ? 'Today' : selectedDateLabel}
-        </button>
-        <button
-          onClick={goNextDay}
-          className="p-1 rounded-md bg-black/20 hover:bg-black/40 text-zinc-400 hover:text-white transition-colors"
-          aria-label="Next day"
-        >
-          <ChevronRight className="w-3.5 h-3.5" />
-        </button>
       </div>
 
       <div className="mt-3">
