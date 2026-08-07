@@ -77,6 +77,11 @@ export const normalizeTrade = (t: any, fallbackTradeNumber: number): Trade => ({
   absoluteTradeNumber: typeof t?.absoluteTradeNumber === 'number' && t.absoluteTradeNumber > 0 ? t.absoluteTradeNumber : fallbackTradeNumber,
   trackingNumber: typeof t?.trackingNumber === 'string' ? t.trackingNumber : undefined,
   session: SESSION_OPTIONS.includes(t?.session) ? t.session : undefined,
+  // Broker ticket ID from MT4/MT5 import — MUST survive normalization or
+  // the import duplicate-check (which reads trade.importTicketId straight
+  // off live `trades`) silently loses every ticket ID on the next app
+  // load/reopen, and every previously-imported trade becomes re-importable.
+  importTicketId: typeof t?.importTicketId === 'string' ? t.importTicketId : undefined,
 });
 
 export const normalizeTrades = (rawTrades: any[]): Trade[] => {
