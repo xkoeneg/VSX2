@@ -1120,6 +1120,7 @@ export function TradesScreen() {
         ref={tradeImportInputRef}
         type="file"
         accept=".csv,.html,.htm,text/csv,text/html"
+        hidden
         className="hidden"
         onChange={handleImportTradesFile}
       />
