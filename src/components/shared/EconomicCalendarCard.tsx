@@ -99,6 +99,51 @@ import { cn } from '../../utils/format';
 import { useEconomicCalendarFeed } from '../../hooks/useEconomicCalendarFeed';
 import { formatEventTimePHT, formatCountdown, IMPACT_META, MARKET_EFFECT_META, getMarketEffect, compareActualToForecast } from '../../utils/economicCalendar';
 
+// ============================================================
+// PAST EVENTS CACHE
+// ============================================================
+// Whenever a USD/high-impact event prints an Actual value, we persist a
+// lightweight snapshot of it to localStorage so it survives even after the
+// live feed's window moves on and stops returning that event. This lets the
+// card render a "Historical View" for any past date, not just today's feed.
+
+const CALENDAR_CACHE_KEY = 'vsx.economicCalendar.pastEventsCache.v1';
+
+interface CachedEconomicEvent {
+  id: string;
+  title: string;
+  currency: string;
+  impact: EconomicEvent['impact'];
+  time: string; // ISO string, '' if unknown
+  previous: string;
+  forecast: string;
+  actual: string;
+}
+
+function loadCalendarCache(): Record<string, CachedEconomicEvent> {
+  try {
+    const raw = localStorage.getItem(CALENDAR_CACHE_KEY);
+    return raw ? (JSON.parse(raw) as Record<string, CachedEconomicEvent>) : {};
+  } catch {
+    return {};
+  }
+}
+
+function saveCalendarCache(cache: Record<string, CachedEconomicEvent>) {
+  try {
+    localStorage.setItem(CALENDAR_CACHE_KEY, JSON.stringify(cache));
+  } catch {
+    // Storage can be unavailable (private mode, quota exceeded, etc.) —
+    // caching is a nice-to-have, so fail silently rather than crash.
+  }
+}
+
+// PHT-local yyyy-mm-dd key, used both for grouping events by "day" and for
+// comparing against the currently-selected date.
+function dateKeyPHT(d: Date): string {
+  return d.toLocaleDateString('en-CA', { timeZone: 'Asia/Manila' });
+}
+
 export const EconomicCalendarCard: React.FC = () => {
   const { events, loading, error, lastUpdated, loadCalendar } = useEconomicCalendarFeed();
   // Drives the live "Time Left" countdown column — ticks independently of
@@ -116,6 +161,90 @@ export const EconomicCalendarCard: React.FC = () => {
       .sort((a, b) => (a.time?.getTime() || 0) - (b.time?.getTime() || 0));
   }, [events]);
 
+  // --- Historical cache: persist any USD/high-impact event once it has an
+  // Actual value, so it's still reviewable after it drops out of the feed.
+  const [pastEventsCache, setPastEventsCache] = useState<Record<string, CachedEconomicEvent>>(() => loadCalendarCache());
+
+  useEffect(() => {
+    const updates: Record<string, CachedEconomicEvent> = {};
+    let changed = false;
+    for (const evt of usdHighImpact) {
+      if (!evt.actual) continue; // only worth caching once it has printed
+      const snapshot: CachedEconomicEvent = {
+        id: evt.id,
+        title: evt.title,
+        currency: evt.currency,
+        impact: evt.impact,
+        time: evt.time ? evt.time.toISOString() : '',
+        previous: evt.previous,
+        forecast: evt.forecast,
+        actual: evt.actual,
+      };
+      const existing = pastEventsCache[evt.id];
+      if (!existing || existing.actual !== snapshot.actual || existing.previous !== snapshot.previous || existing.forecast !== snapshot.forecast) {
+        updates[evt.id] = snapshot;
+        changed = true;
+      }
+    }
+    if (changed) {
+      setPastEventsCache(prev => {
+        const next = { ...prev, ...updates };
+        saveCalendarCache(next);
+        return next;
+      });
+    }
+    // Only re-run when the live feed actually changes.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [usdHighImpact]);
+
+  // --- Date navigation: which day's events (past, today, or upcoming) the
+  // card is currently displaying. Defaults to today.
+  const [selectedDate, setSelectedDate] = useState<Date>(() => new Date());
+  const selectedKey = dateKeyPHT(selectedDate);
+  const todayKey = dateKeyPHT(now);
+  const isToday = selectedKey === todayKey;
+  const isPastDate = selectedKey < todayKey;
+
+  const goPrevDay = () => setSelectedDate(d => { const n = new Date(d); n.setDate(n.getDate() - 1); return n; });
+  const goNextDay = () => setSelectedDate(d => { const n = new Date(d); n.setDate(n.getDate() + 1); return n; });
+  const goToday = () => setSelectedDate(new Date());
+
+  const selectedDateLabel = selectedDate.toLocaleDateString('en-US', {
+    timeZone: 'Asia/Manila',
+    weekday: 'short',
+    month: 'short',
+    day: 'numeric',
+    year: selectedKey.slice(0, 4) !== todayKey.slice(0, 4) ? 'numeric' : undefined,
+  });
+
+  // Merge live feed events for the selected day with cached historical
+  // snapshots for that same day. Live data wins on overlap since it's the
+  // freshest source of truth (e.g. an Actual that just printed).
+  const displayEvents = useMemo(() => {
+    const merged = new Map<string, EconomicEvent>();
+
+    Object.values(pastEventsCache).forEach(c => {
+      if (!c.time || dateKeyPHT(new Date(c.time)) !== selectedKey) return;
+      merged.set(c.id, {
+        id: c.id,
+        title: c.title,
+        currency: c.currency,
+        impact: c.impact,
+        time: new Date(c.time),
+        previous: c.previous,
+        forecast: c.forecast,
+        actual: c.actual,
+      });
+    });
+
+    usdHighImpact.forEach(e => {
+      if (!e.time || dateKeyPHT(e.time) !== selectedKey) return;
+      merged.set(e.id, e);
+    });
+
+    return Array.from(merged.values()).sort((a, b) => (a.time?.getTime() || 0) - (b.time?.getTime() || 0));
+  }, [pastEventsCache, usdHighImpact, selectedKey]);
+
   return (
     <div className="min-w-0 bg-zinc-900/50 border border-zinc-800 rounded-xl p-4 flex flex-col">
       <div className="flex items-center justify-between gap-2 px-3 py-2 rounded-lg border flex-shrink-0 bg-amber-500/10 border-amber-500/30">
@@ -127,12 +256,17 @@ export const EconomicCalendarCard: React.FC = () => {
           </span>
           {!loading && !error && (
             <span className="px-1.5 py-0.5 rounded-full text-[10px] bg-black/30 text-zinc-400 flex-shrink-0">
-              {usdHighImpact.length}
+              {displayEvents.length}
+            </span>
+          )}
+          {isPastDate && (
+            <span className="px-1.5 py-0.5 rounded-full text-[10px] bg-black/30 text-zinc-400 flex-shrink-0">
+              Historical
             </span>
           )}
         </div>
         <div className="flex items-center gap-2 flex-shrink-0">
-          {lastUpdated && !loading && (
+          {lastUpdated && !loading && isToday && (
             <span className="hidden sm:inline text-[10px] text-zinc-500">
               Updated {lastUpdated.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}
             </span>
@@ -148,14 +282,41 @@ export const EconomicCalendarCard: React.FC = () => {
         </div>
       </div>
 
+      <div className="flex items-center justify-center gap-1.5 mt-2 flex-shrink-0">
+        <button
+          onClick={goPrevDay}
+          className="p-1 rounded-md bg-black/20 hover:bg-black/40 text-zinc-400 hover:text-white transition-colors"
+          aria-label="Previous day"
+        >
+          <ChevronLeft className="w-3.5 h-3.5" />
+        </button>
+        <button
+          onClick={goToday}
+          className={cn(
+            'px-2.5 py-1 rounded-md text-[11px] font-medium transition-colors min-w-[110px] text-center',
+            isToday ? 'bg-amber-500/10 text-amber-300 border border-amber-500/30' : 'bg-black/20 text-zinc-300 hover:bg-black/40 border border-transparent'
+          )}
+          aria-label="Jump to today"
+        >
+          {isToday ? 'Today' : selectedDateLabel}
+        </button>
+        <button
+          onClick={goNextDay}
+          className="p-1 rounded-md bg-black/20 hover:bg-black/40 text-zinc-400 hover:text-white transition-colors"
+          aria-label="Next day"
+        >
+          <ChevronRight className="w-3.5 h-3.5" />
+        </button>
+      </div>
+
       <div className="mt-3">
-        {loading && events.length === 0 ? (
+        {loading && events.length === 0 && isToday ? (
           <div className="space-y-2">
             {[...Array(4)].map((_, i) => (
               <div key={i} className="h-10 rounded-lg bg-zinc-800/40 animate-pulse" />
             ))}
           </div>
-        ) : error ? (
+        ) : error && isToday ? (
           <div className="text-center py-8 rounded-lg border border-dashed border-rose-900/50 bg-rose-950/10">
             <AlertTriangle className="w-5 h-5 mx-auto text-rose-400 mb-2" />
             <p className="text-rose-300 text-xs mb-2">{error}</p>
@@ -167,10 +328,14 @@ export const EconomicCalendarCard: React.FC = () => {
               Retry
             </button>
           </div>
-        ) : usdHighImpact.length === 0 ? (
+        ) : displayEvents.length === 0 ? (
           <div className="text-center py-8 rounded-lg border border-dashed border-zinc-800 bg-zinc-900/30">
             <Calendar className="w-5 h-5 mx-auto text-zinc-700 mb-2" />
-            <p className="text-zinc-600 text-xs">No high-impact USD events in the current feed window</p>
+            <p className="text-zinc-600 text-xs">
+              {isPastDate
+                ? 'No cached high-impact USD events for this date'
+                : 'No high-impact USD events in the current feed window'}
+            </p>
           </div>
         ) : (
           <div className="overflow-x-auto -mx-1">
@@ -190,7 +355,7 @@ export const EconomicCalendarCard: React.FC = () => {
                 </tr>
               </thead>
               <tbody>
-                {usdHighImpact.map(evt => {
+                {displayEvents.map(evt => {
                   const trend = compareActualToForecast(evt.actual, evt.forecast);
                   const meta = IMPACT_META[evt.impact];
                   const effect = getMarketEffect(evt.actual, evt.forecast);
