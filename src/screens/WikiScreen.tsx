@@ -1,5 +1,5 @@
 import type React from 'react';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import {
   LayoutDashboard,
   BookOpen,
@@ -96,7 +96,7 @@ import {
   type LucideIcon,
 } from 'lucide-react';
 import { WIKI_CATEGORIES } from '../types/index';
-import { WIKI_CATEGORY_FALLBACK_STYLE, getWikiCategoryStyle } from '../constants/wiki';
+import { getWikiCategoryStyle } from '../constants/wiki';
 import { PageHeader } from '../components/shared/PageHeader';
 import type {
   Account,
@@ -286,6 +286,18 @@ export function WikiScreen() {
     const [wikiSearch, setWikiSearch] = useState('');
     const FILTER_CATEGORIES: ('All' | WikiCategory)[] = ['All', ...WIKI_CATEGORIES];
 
+    // ---- Master-detail selection (split-pane) ---------------------------
+    // Which concept is open in the right-hand workbench, and which sub-tab
+    // of its detail is active. Both are transient viewing state, not data.
+    const [selectedWikiId, setSelectedWikiId] = useState<string | null>(null);
+    const [activeDetailTab, setActiveDetailTab] = useState<'overview' | 'criteria' | 'confluence'>('overview');
+
+    const DETAIL_TABS: { id: 'overview' | 'criteria' | 'confluence'; label: string; icon: LucideIcon }[] = [
+      { id: 'overview', label: 'Overview & Description', icon: BookOpen },
+      { id: 'criteria', label: 'Entry Criteria Checklist', icon: ListChecks },
+      { id: 'confluence', label: 'Session & Timeframe Confluence', icon: Compass },
+    ];
+
     // ---- Catalog codes (e.g. "PD·01") ----------------------------------
     // A stable per-category reference number for every entry, computed off
     // the full unfiltered library so a code never shifts when a filter or
@@ -336,146 +348,256 @@ export function WikiScreen() {
       [searchedEntries, activeCategory]
     );
 
-    // Grouped by category (fixed order) so the whole library reads top to
-    // bottom on one page. Any entry with a category outside the 4 fixed
-    // ones still shows up under an "Other" section instead of getting
-    // hidden. When a specific category pill is active, "Other" drops out
-    // naturally since it's excluded from the categories being grouped.
-    const groupedWikiSections = useMemo(() => {
-      const cats: (WikiCategory | 'Other')[] = activeCategory === 'All' ? [...WIKI_CATEGORIES, 'Other'] : [activeCategory];
-      return cats.map(cat => ({
-        category: cat,
-        entries: cat === 'Other'
-          ? categoryFilteredEntries.filter(e => !WIKI_CATEGORIES.includes(e.category as WikiCategory))
-          : categoryFilteredEntries.filter(e => e.category === cat),
-      })).filter(section => section.entries.length > 0);
-    }, [categoryFilteredEntries, activeCategory]);
-
     const isFiltering = activeCategory !== 'All' || wikiSearch.trim().length > 0;
 
-    const renderWikiCard = (entry: WikiEntry) => {
+    // ---- Auto-select: the workbench always shows *something* when the
+    // filtered list is non-empty, and clears itself when it isn't (e.g. a
+    // search narrows the list past the currently open concept). -----------
+    useEffect(() => {
+      if (categoryFilteredEntries.length === 0) {
+        if (selectedWikiId !== null) setSelectedWikiId(null);
+        return;
+      }
+      if (!selectedWikiId || !categoryFilteredEntries.some(e => e.id === selectedWikiId)) {
+        setSelectedWikiId(categoryFilteredEntries[0].id);
+      }
+    }, [categoryFilteredEntries, selectedWikiId]);
+
+    const selectedEntry = categoryFilteredEntries.find(e => e.id === selectedWikiId) || null;
+
+    const handleSelectWikiEntry = (id: string) => {
+      setSelectedWikiId(id);
+      setActiveDetailTab('overview');
+    };
+
+    // ---- Left sidebar: compact list item ---------------------------------
+    const renderWikiListItem = (entry: WikiEntry) => {
       const style = getWikiCategoryStyle(entry.category);
-      const visibleRules = entry.keyRules.slice(0, 4);
-      const extraRuleCount = entry.keyRules.length - visibleRules.length;
+      const isActive = entry.id === selectedWikiId;
       const code = entryCodes.get(entry.id) || '';
       return (
-        <div
+        <button
           key={entry.id}
-          onClick={() => setViewWikiId(entry.id)}
+          onClick={() => handleSelectWikiEntry(entry.id)}
           className={cn(
-            'group min-w-0 bg-[#111113] border rounded-xl overflow-hidden cursor-pointer flex flex-col transition-all hover:-translate-y-0.5',
-            'border-zinc-800/80 hover:border-zinc-700 hover:shadow-xl hover:shadow-black/40'
+            'relative w-full text-left rounded-lg pl-3.5 pr-3 py-2.5 border transition-all',
+            isActive
+              ? 'bg-white/[0.06] border-zinc-700/80 shadow-[0_0_16px_-3px_rgba(56,189,248,0.45)]'
+              : 'bg-transparent border-transparent hover:bg-white/[0.03] hover:border-zinc-800'
           )}
         >
-          {/* Header — concept title + category badge + catalog code */}
-          <div className="px-4 pt-4 pb-2.5 flex items-start justify-between gap-3">
-            <h3 className="font-bold text-white text-[15px] leading-snug min-w-0">{entry.title}</h3>
-            <div className="flex flex-col items-end gap-1 flex-shrink-0">
-              {entry.category && (
-                <span className={cn('text-[10px] px-2 py-0.5 rounded-full font-semibold whitespace-nowrap', style.badge, style.glow)}>
-                  {entry.category}
-                </span>
-              )}
-              {code && <span className="font-mono text-[9px] text-zinc-600 tracking-wider">{code}</span>}
-            </div>
-          </div>
-
-          {entry.content && (
-            <p className="px-4 pb-3 text-xs text-zinc-500 leading-relaxed line-clamp-2">{entry.content}</p>
+          {isActive && (
+            <span className="absolute left-0 top-1.5 bottom-1.5 w-[3px] rounded-full bg-sky-400 shadow-[0_0_8px_1px_rgba(56,189,248,0.65)]" />
           )}
-
-          {/* Diagram window — mini chart-terminal chrome + preview + zoom */}
-          <div className="mx-4 rounded-lg overflow-hidden border border-zinc-800/70 bg-zinc-950 relative flex-shrink-0">
-            <div className="h-6 flex items-center justify-between px-2 bg-zinc-900/80 border-b border-zinc-800/70">
-              <span className="flex items-center gap-1.5 min-w-0">
-                <span className={cn('w-1.5 h-1.5 rounded-full flex-shrink-0', style.dot)} />
-                <span className="font-mono text-[9px] uppercase tracking-wider text-zinc-500 truncate">{entry.category || 'Concept'}</span>
+          <div className="flex items-start justify-between gap-2">
+            <h4 className={cn('text-[13px] font-semibold leading-snug line-clamp-1 min-w-0', isActive ? 'text-white' : 'text-zinc-300')}>
+              {entry.title}
+            </h4>
+            {code && <span className="font-mono text-[9px] text-zinc-600 flex-shrink-0 mt-0.5">{code}</span>}
+          </div>
+          <div className="flex items-center gap-1.5 mt-1.5 flex-wrap">
+            {entry.category && (
+              <span className={cn('inline-flex items-center gap-1 text-[9px] px-1.5 py-0.5 rounded-full font-semibold whitespace-nowrap', style.badge)}>
+                <span className={cn('w-1 h-1 rounded-full', style.dot)} />
+                {entry.category}
               </span>
-              {/* Edit / Delete — visible on hover (or tap, on touch devices) */}
-              <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 group-active:opacity-100 transition-opacity flex-shrink-0">
-                <button
-                  onClick={(e) => { e.stopPropagation(); handleOpenEditWiki(entry); }}
-                  className="p-0.5 text-zinc-500 hover:text-white transition-colors"
-                  title="Edit entry"
-                >
-                  <Edit2 className="w-3 h-3" />
-                </button>
-                <button
-                  onClick={(e) => { e.stopPropagation(); handleDeleteWiki(entry.id); }}
-                  className="p-0.5 text-zinc-500 hover:text-rose-400 transition-colors"
-                  title="Delete entry"
-                >
-                  <Trash2 className="w-3 h-3" />
-                </button>
-              </div>
-            </div>
-            <div className="relative aspect-[2/1] w-full">
-              {entry.imageUrl ? (
-                <img src={entry.imageUrl} alt={entry.title} className="w-full h-full object-cover group-hover:scale-[1.04] transition-transform duration-300" />
-              ) : (
-                <div className="w-full h-full flex flex-col items-center justify-center gap-1.5 text-zinc-700">
-                  <ImageIcon className="w-6 h-6" />
-                  <span className="text-[11px]">No diagram yet</span>
-                </div>
-              )}
-              {entry.imageUrl && (
-                <button
-                  onClick={(e) => { e.stopPropagation(); setLightboxImage(entry.imageUrl); }}
-                  className="absolute bottom-2 right-2 p-1.5 rounded-md bg-black/60 backdrop-blur-sm text-zinc-300 hover:text-white opacity-70 group-hover:opacity-100 transition-opacity"
-                  title="Zoom diagram"
-                >
-                  <ZoomIn className="w-3.5 h-3.5" />
-                </button>
-              )}
-            </div>
-          </div>
-
-          {/* Protocol box — entry criteria, boxed off from the rest of the card */}
-          <div className="mx-4 mt-3 rounded-lg bg-black/30 border border-zinc-800/60 p-3 min-w-0">
-            <p className="text-[10px] uppercase tracking-wide text-zinc-500 font-semibold mb-2">Entry Criteria</p>
-            {visibleRules.length > 0 ? (
-              <ul className="space-y-1.5">
-                {visibleRules.map((rule, idx) => (
-                  <li key={idx} className="flex items-start gap-2 text-xs text-zinc-400 leading-snug">
-                    <CheckCircle2 className={cn('w-3.5 h-3.5 flex-shrink-0 mt-0.5', style.icon)} />
-                    <span className="line-clamp-1">{rule}</span>
-                  </li>
-                ))}
-                {extraRuleCount > 0 && (
-                  <li className="text-[11px] text-zinc-600 pl-[22px]">+{extraRuleCount} more rule{extraRuleCount === 1 ? '' : 's'}</li>
-                )}
-              </ul>
-            ) : (
-              <p className="text-[11px] text-zinc-600 italic">No criteria logged yet</p>
             )}
-          </div>
-
-          {/* Footer badges — timeframe & ideal session */}
-          <div className="p-4 pt-3 mt-auto flex flex-wrap items-center gap-1.5">
             {entry.timeframe && (
-              <span className="inline-flex items-center gap-1.5 text-[10px] px-2 py-1 rounded-md bg-zinc-900 border border-zinc-800 text-zinc-300 font-mono">
-                <Clock className="w-3 h-3 text-zinc-500" />
+              <span className="inline-flex items-center gap-1 text-[9px] px-1.5 py-0.5 rounded-md bg-zinc-950 border border-zinc-800 text-zinc-500 font-mono whitespace-nowrap">
+                <Clock className="w-2.5 h-2.5" />
                 {entry.timeframe}
               </span>
             )}
-            {entry.bestSession && (
-              <span className="inline-flex items-center gap-1.5 text-[10px] px-2 py-1 rounded-md bg-zinc-900 border border-zinc-800 text-zinc-300 font-mono">
-                <Compass className="w-3 h-3 text-zinc-500" />
-                {entry.bestSession}
-              </span>
-            )}
-            {!entry.timeframe && !entry.bestSession && (
-              <span className="inline-flex items-center gap-1.5 text-[10px] px-2 py-1 rounded-md bg-zinc-900/60 border border-zinc-800/60 text-zinc-600 italic">
-                No execution context set
-              </span>
-            )}
+          </div>
+        </button>
+      );
+    };
+
+    // ---- Right panel: full detail workbench for the selected concept ----
+    const renderWikiDetailPanel = () => {
+      if (!selectedEntry) {
+        return (
+          <div className="flex-1 flex flex-col items-center justify-center text-center p-8">
+            <div className="w-14 h-14 rounded-full bg-zinc-900 border border-zinc-800 flex items-center justify-center mb-3">
+              <Search className="w-6 h-6 text-zinc-700" />
+            </div>
+            <h3 className="text-sm font-semibold text-zinc-400">No concepts match</h3>
+            <p className="text-xs text-zinc-600 mt-1 max-w-[240px]">Try a different search term or category filter.</p>
+          </div>
+        );
+      }
+
+      const entry = selectedEntry;
+      const style = getWikiCategoryStyle(entry.category);
+      const code = entryCodes.get(entry.id) || '';
+
+      return (
+        <div className="flex flex-col h-full min-h-0">
+          {/* Header — title, category tag, ideal session badge, actions */}
+          <div className="flex items-start justify-between gap-3 px-5 py-4 border-b border-zinc-800/80 flex-shrink-0">
+            <div className="min-w-0">
+              <div className="flex items-center gap-2 flex-wrap mb-1.5">
+                {entry.category && (
+                  <span className={cn('text-[10px] px-2 py-0.5 rounded-full font-semibold whitespace-nowrap', style.badge, style.glow)}>
+                    {entry.category}
+                  </span>
+                )}
+                {entry.bestSession && (
+                  <span className="inline-flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-400 border border-amber-500/20 font-semibold whitespace-nowrap">
+                    <Compass className="w-2.5 h-2.5" />
+                    {entry.bestSession} session
+                  </span>
+                )}
+                {code && <span className="font-mono text-[10px] text-zinc-600 tracking-wider">{code}</span>}
+              </div>
+              <h2 className="text-lg font-bold text-white leading-tight truncate">{entry.title}</h2>
+            </div>
+            <div className="flex items-center gap-1 flex-shrink-0">
+              {entry.imageUrl && (
+                <button
+                  onClick={() => setLightboxImage(entry.imageUrl)}
+                  className="p-2 rounded-lg text-zinc-500 hover:text-white hover:bg-zinc-800 transition-colors"
+                  title="Zoom diagram"
+                >
+                  <ZoomIn className="w-4 h-4" />
+                </button>
+              )}
+              <button
+                onClick={() => handleOpenEditWiki(entry)}
+                className="p-2 rounded-lg text-zinc-500 hover:text-white hover:bg-zinc-800 transition-colors"
+                title="Edit entry"
+              >
+                <Edit2 className="w-4 h-4" />
+              </button>
+              <button
+                onClick={() => handleDeleteWiki(entry.id)}
+                className="p-2 rounded-lg text-zinc-500 hover:text-rose-400 hover:bg-rose-500/10 transition-colors"
+                title="Delete entry"
+              >
+                <Trash2 className="w-4 h-4" />
+              </button>
+            </div>
+          </div>
+
+          {/* Scrollable workbench body */}
+          <div className="flex-1 overflow-y-auto min-h-0">
+            {/* Chart viewport */}
+            <div className="p-5 pb-0">
+              <div className="group relative rounded-xl overflow-hidden border border-slate-800 bg-slate-950">
+                <div className="aspect-[16/7] w-full relative">
+                  {entry.imageUrl ? (
+                    <img src={entry.imageUrl} alt={entry.title} className="w-full h-full object-cover" />
+                  ) : (
+                    <div className="w-full h-full flex flex-col items-center justify-center gap-2 text-zinc-700">
+                      <ImageIcon className="w-8 h-8" />
+                      <span className="text-xs">No chart diagram uploaded</span>
+                    </div>
+                  )}
+                  {entry.imageUrl && (
+                    <button
+                      onClick={() => setLightboxImage(entry.imageUrl)}
+                      className="absolute inset-0 flex items-center justify-center bg-black/0 group-hover:bg-black/50 opacity-0 group-hover:opacity-100 transition-all"
+                    >
+                      <span className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-black/70 backdrop-blur-sm text-white text-xs font-medium border border-white/10">
+                        <ZoomIn className="w-3.5 h-3.5" />
+                        Full-screen preview
+                      </span>
+                    </button>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/* Interactive detail tabs */}
+            <div className="px-5 mt-5 flex items-center gap-1 border-b border-zinc-800/80 flex-shrink-0 overflow-x-auto">
+              {DETAIL_TABS.map(tab => {
+                const TabIcon = tab.icon;
+                const isActiveTab = activeDetailTab === tab.id;
+                return (
+                  <button
+                    key={tab.id}
+                    onClick={() => setActiveDetailTab(tab.id)}
+                    className={cn(
+                      'flex items-center gap-1.5 px-3 py-2.5 text-xs font-semibold border-b-2 -mb-px whitespace-nowrap transition-colors',
+                      isActiveTab ? 'text-white border-sky-400' : 'text-zinc-500 border-transparent hover:text-zinc-300'
+                    )}
+                  >
+                    <TabIcon className="w-3.5 h-3.5" />
+                    {tab.label}
+                  </button>
+                );
+              })}
+            </div>
+
+            {/* Tab content */}
+            <div className="p-5">
+              {activeDetailTab === 'overview' && (
+                <div className="space-y-4">
+                  {entry.content ? (
+                    <div>
+                      <p className="text-[10px] uppercase tracking-wide text-zinc-500 font-semibold mb-2">Core Definition</p>
+                      <div className="rounded-lg bg-zinc-900/60 border border-zinc-800/70 p-4">
+                        <p className="text-[13px] leading-relaxed text-zinc-300 whitespace-pre-line">{entry.content}</p>
+                      </div>
+                    </div>
+                  ) : (
+                    <p className="text-xs text-zinc-600 italic">No description logged yet.</p>
+                  )}
+                  {entry.contextNotes ? (
+                    <div className="flex items-start gap-2.5 rounded-lg bg-sky-500/[0.06] border border-sky-500/20 p-3.5">
+                      <Lightbulb className="w-4 h-4 text-sky-400 flex-shrink-0 mt-0.5" />
+                      <p className="text-[12px] leading-relaxed text-sky-200/90 whitespace-pre-line">{entry.contextNotes}</p>
+                    </div>
+                  ) : (
+                    <p className="text-xs text-zinc-600 italic">No additional context notes yet.</p>
+                  )}
+                </div>
+              )}
+
+              {activeDetailTab === 'criteria' && (
+                entry.keyRules.length > 0 ? (
+                  <ul className="space-y-2.5">
+                    {entry.keyRules.map((rule, idx) => (
+                      <li key={idx} className="flex items-start gap-2.5 rounded-lg bg-zinc-900/50 border border-zinc-800/60 px-3.5 py-2.5">
+                        <CheckCircle2 className={cn('w-4 h-4 flex-shrink-0 mt-0.5', style.icon)} />
+                        <span className="text-[13px] leading-relaxed text-zinc-300">{rule}</span>
+                      </li>
+                    ))}
+                  </ul>
+                ) : (
+                  <p className="text-xs text-zinc-600 italic">No entry criteria logged yet.</p>
+                )
+              )}
+
+              {activeDetailTab === 'confluence' && (
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div className="rounded-lg bg-zinc-900/50 border border-zinc-800/60 p-4">
+                    <p className="flex items-center gap-1.5 text-[10px] uppercase tracking-wide text-zinc-500 font-semibold mb-2">
+                      <Clock className="w-3 h-3" />
+                      Ideal Timeframe
+                    </p>
+                    <p className="text-sm font-mono text-white">{entry.timeframe || '—'}</p>
+                  </div>
+                  <div className="rounded-lg bg-zinc-900/50 border border-zinc-800/60 p-4">
+                    <p className="flex items-center gap-1.5 text-[10px] uppercase tracking-wide text-zinc-500 font-semibold mb-2">
+                      <Compass className="w-3 h-3" />
+                      Ideal Session
+                    </p>
+                    <p className="text-sm font-mono text-white">{entry.bestSession || '—'}</p>
+                  </div>
+                  {!entry.timeframe && !entry.bestSession && (
+                    <p className="sm:col-span-2 text-xs text-zinc-600 italic">No session or timeframe confluence set for this concept.</p>
+                  )}
+                </div>
+              )}
+            </div>
           </div>
         </div>
       );
     };
 
     return (
-      <div className="space-y-6 min-w-0">
+      <div className="space-y-4 min-w-0">
         <PageHeader
           title="Knowledge Wiki"
           description="Visual reference for PD Arrays & trading concepts"
@@ -487,100 +609,39 @@ export function WikiScreen() {
           }
         />
 
-        {/* Summary widgets bar */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          <div className="bg-[#111113] border border-zinc-800/80 rounded-xl p-4 flex items-center gap-3 min-w-0">
-            <div className="w-10 h-10 rounded-lg bg-sky-500/10 text-sky-400 flex items-center justify-center flex-shrink-0">
-              <BookOpen className="w-5 h-5" />
+        {/* Top bar — quick stats + global search, terminal-style */}
+        <div className="flex flex-col lg:flex-row lg:items-center gap-3 bg-[#111113] border border-zinc-800/80 rounded-xl px-4 py-3 min-w-0">
+          <div className="flex items-center gap-4 sm:gap-5 flex-shrink-0 overflow-x-auto">
+            <div className="flex items-center gap-2 whitespace-nowrap">
+              <BookOpen className="w-4 h-4 text-sky-400 flex-shrink-0" />
+              <span className="text-sm font-bold text-white">{totalConcepts}</span>
+              <span className="text-[11px] text-zinc-500">logged concepts</span>
             </div>
-            <div className="min-w-0">
-              <p className="text-[11px] uppercase tracking-wide text-zinc-500 font-semibold">Total Core Models</p>
-              <p className="text-xl font-bold text-white leading-tight">{totalConcepts}</p>
+            <div className="w-px h-4 bg-zinc-800 flex-shrink-0" />
+            <div className="flex items-center gap-2 whitespace-nowrap">
+              <Layers className="w-4 h-4 text-purple-400 flex-shrink-0" />
+              <span className="text-sm font-bold text-white">{presentCategoryNames.length}</span>
+              <span className="text-[11px] text-zinc-500">active categories</span>
             </div>
-          </div>
-
-          <div className="bg-[#111113] border border-zinc-800/80 rounded-xl p-4 flex items-center gap-3 min-w-0">
-            <div className="w-10 h-10 rounded-lg bg-purple-500/10 text-purple-400 flex items-center justify-center flex-shrink-0">
-              <Layers className="w-5 h-5" />
-            </div>
-            <div className="min-w-0">
-              <p className="text-[11px] uppercase tracking-wide text-zinc-500 font-semibold">Primary Categories</p>
-              <p className="text-xl font-bold text-white leading-tight">
-                {presentCategoryNames.length}<span className="text-zinc-600 text-sm font-medium"> / {WIKI_CATEGORIES.length}</span>
-              </p>
-              {presentCategoryNames.length > 0 && (
-                <p className="text-[10px] text-zinc-600 truncate mt-0.5">{presentCategoryNames.join(' · ')}</p>
-              )}
+            <div className="w-px h-4 bg-zinc-800 flex-shrink-0 hidden sm:block" />
+            <div className="hidden sm:flex items-center gap-2 whitespace-nowrap">
+              <Compass className="w-4 h-4 text-amber-400 flex-shrink-0" />
+              <span className="text-sm font-bold text-white truncate max-w-[110px]">{primarySessionInfo.label}</span>
+              <span className="text-[11px] text-zinc-500">top session</span>
             </div>
           </div>
-
-          <div className="bg-[#111113] border border-zinc-800/80 rounded-xl p-4 flex items-center gap-3 min-w-0">
-            <div className="w-10 h-10 rounded-lg bg-amber-500/10 text-amber-400 flex items-center justify-center flex-shrink-0">
-              <Compass className="w-5 h-5" />
-            </div>
-            <div className="min-w-0">
-              <p className="text-[11px] uppercase tracking-wide text-zinc-500 font-semibold">Primary Session</p>
-              <p className="text-xl font-bold text-white leading-tight truncate">{primarySessionInfo.label}</p>
-              <p className="text-[10px] text-zinc-600 mt-0.5">
-                {primarySessionInfo.count > 0 ? `${primarySessionInfo.count} of ${totalConcepts} concepts` : 'No session data yet'}
-              </p>
-            </div>
-          </div>
-
-          <button
-            onClick={handleOpenAddWiki}
-            className="bg-[#111113] border border-dashed border-zinc-700 hover:border-emerald-500/50 hover:bg-emerald-500/5 rounded-xl p-4 flex items-center gap-3 transition-colors text-left group min-w-0"
-          >
-            <div className="w-10 h-10 rounded-lg bg-emerald-500/10 text-emerald-400 flex items-center justify-center flex-shrink-0 group-hover:scale-105 transition-transform">
-              <Plus className="w-5 h-5" />
-            </div>
-            <div className="min-w-0">
-              <p className="text-[11px] uppercase tracking-wide text-zinc-500 font-semibold">Quick Add</p>
-              <p className="text-sm font-bold text-white leading-tight">New Concept</p>
-            </div>
-          </button>
-        </div>
-
-        {/* Category filter pills + search */}
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-          <div className="flex flex-wrap items-center gap-2">
-            {FILTER_CATEGORIES.map(cat => {
-              const isActive = activeCategory === cat;
-              const count = cat === 'All' ? wikiEntries.length : wikiEntries.filter(e => e.category === cat).length;
-              const style = cat === 'All' ? null : getWikiCategoryStyle(cat);
-              return (
-                <button
-                  key={cat}
-                  onClick={() => setActiveCategory(cat)}
-                  className={cn(
-                    'flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium border transition-all',
-                    isActive
-                      ? (style ? style.active : 'bg-white/10 text-white border-white/20')
-                      : 'bg-zinc-900 border-zinc-800 text-zinc-500 hover:text-zinc-300 hover:border-zinc-700'
-                  )}
-                >
-                  {style && <span className={cn('w-1.5 h-1.5 rounded-full', style.dot)} />}
-                  <span>{cat}</span>
-                  <span className={isActive ? 'opacity-70' : 'text-zinc-600'}>{count}</span>
-                </button>
-              );
-            })}
-          </div>
-          <div className="relative w-full sm:w-64 flex-shrink-0">
+          <div className="relative flex-1 min-w-[180px]">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-zinc-600 pointer-events-none" />
             <input
               type="text"
               value={wikiSearch}
               onChange={(e) => setWikiSearch(e.target.value)}
               placeholder="Search concepts, rules, sessions..."
-              className="w-full bg-zinc-900 border border-zinc-800 rounded-lg pl-9 pr-3 py-2 text-xs text-white placeholder:text-zinc-600 focus:outline-none focus:border-zinc-600"
+              className="w-full bg-zinc-950 border border-zinc-800 rounded-lg pl-9 pr-3 py-2 text-xs text-white placeholder:text-zinc-600 focus:outline-none focus:border-sky-500/50"
             />
           </div>
         </div>
 
-        {/* Library — grouped by category as plain section labels (not
-            tabs), so nothing needs to be clicked to bring the rest of a
-            filtered result set into view; just scroll. */}
         {wikiEntries.length === 0 ? (
           <div className="text-center py-12">
             <div className="w-16 h-16 mx-auto rounded-full bg-zinc-800 flex items-center justify-center mb-4">
@@ -593,38 +654,62 @@ export function WikiScreen() {
               Add Entry
             </button>
           </div>
-        ) : groupedWikiSections.length === 0 ? (
-          <div className="text-center py-12">
-            <div className="w-16 h-16 mx-auto rounded-full bg-zinc-800 flex items-center justify-center mb-4">
-              <Search className="w-8 h-8 text-zinc-600" />
-            </div>
-            <h3 className="text-lg font-medium text-white mb-2">No concepts match</h3>
-            <p className="text-zinc-500 mb-4">Try a different search term or category filter</p>
-            <button
-              onClick={() => { setActiveCategory('All'); setWikiSearch(''); }}
-              className="inline-flex items-center gap-2 px-4 py-2 bg-zinc-800 hover:bg-zinc-700 text-white rounded-lg text-sm transition-colors"
-            >
-              Clear filters
-            </button>
-          </div>
         ) : (
-          <div className="space-y-8">
-            {groupedWikiSections.map(section => {
-              const style = section.category === 'Other' ? WIKI_CATEGORY_FALLBACK_STYLE : getWikiCategoryStyle(section.category);
-              return (
-                <div key={section.category} className="space-y-4">
-                  <div className="flex items-center gap-2.5">
-                    <span className={cn('w-2 h-2 rounded-full', style.dot)} />
-                    <h2 className="text-sm font-bold text-white uppercase tracking-wide">{section.category}</h2>
-                    <span className="text-xs text-zinc-600">{section.entries.length}</span>
-                    <div className="flex-1 h-px bg-zinc-800/80" />
+          /* Split-pane workbench — category list on the left, full
+             detail workbench for the selected concept on the right. */
+          <div className="flex flex-col lg:flex-row gap-4 lg:h-[calc(100vh-220px)] min-h-[520px]">
+            {/* Left sidebar — nav list (~35%) */}
+            <div className="lg:w-[35%] lg:min-w-[300px] lg:max-w-[420px] flex flex-col bg-[#111113] border border-zinc-800/80 rounded-xl overflow-hidden lg:h-full">
+              {/* Category pill filters */}
+              <div className="p-3 border-b border-zinc-800/80 flex flex-wrap items-center gap-1.5 flex-shrink-0">
+                {FILTER_CATEGORIES.map(cat => {
+                  const isActive = activeCategory === cat;
+                  const count = cat === 'All' ? wikiEntries.length : wikiEntries.filter(e => e.category === cat).length;
+                  const style = cat === 'All' ? null : getWikiCategoryStyle(cat);
+                  return (
+                    <button
+                      key={cat}
+                      onClick={() => setActiveCategory(cat)}
+                      className={cn(
+                        'flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-medium border transition-all',
+                        isActive
+                          ? (style ? style.active : 'bg-white/10 text-white border-white/20')
+                          : 'bg-zinc-900 border-zinc-800 text-zinc-500 hover:text-zinc-300 hover:border-zinc-700'
+                      )}
+                    >
+                      {style && <span className={cn('w-1.5 h-1.5 rounded-full', style.dot)} />}
+                      <span>{cat}</span>
+                      <span className={isActive ? 'opacity-70' : 'text-zinc-600'}>{count}</span>
+                    </button>
+                  );
+                })}
+              </div>
+
+              {/* Scrollable concept list */}
+              <div className="flex-1 overflow-y-auto p-2 space-y-1 min-h-[240px]">
+                {categoryFilteredEntries.length > 0 ? (
+                  categoryFilteredEntries.map(renderWikiListItem)
+                ) : (
+                  <div className="text-center py-10 px-4">
+                    <Search className="w-6 h-6 text-zinc-700 mx-auto mb-2" />
+                    <p className="text-xs text-zinc-500">No concepts match</p>
+                    {isFiltering && (
+                      <button
+                        onClick={() => { setActiveCategory('All'); setWikiSearch(''); }}
+                        className="mt-2 text-[11px] text-sky-400 hover:text-sky-300 transition-colors"
+                      >
+                        Clear filters
+                      </button>
+                    )}
                   </div>
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-                    {section.entries.map(renderWikiCard)}
-                  </div>
-                </div>
-              );
-            })}
+                )}
+              </div>
+            </div>
+
+            {/* Right main panel — detail workbench (~65%) */}
+            <div className="flex-1 min-w-0 flex flex-col bg-[#111113] border border-zinc-800/80 rounded-xl overflow-hidden lg:h-full">
+              {renderWikiDetailPanel()}
+            </div>
           </div>
         )}
       </div>
