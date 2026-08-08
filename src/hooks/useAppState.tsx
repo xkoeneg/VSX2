@@ -571,7 +571,12 @@ export function useAppState() {
   const [showEditTrade, setShowEditTrade] = useState(false);
   const [showTradeDetail, setShowTradeDetail] = useState<string | null>(null);
   const [detailNotesDraft, setDetailNotesDraft] = useState<{ mistakesAnalysis: string; lessonsLearned: string }>({ mistakesAnalysis: '', lessonsLearned: '' });
-  const [detailRulesFollowedDraft, setDetailRulesFollowedDraft] = useState<'followed' | 'broken'>('followed');
+  // Widened to include undefined: rulesFollowed itself is now optional on
+  // Trade (a trade can exist with no Followed/Broken judgment made yet), so
+  // seeding this draft straight from t.rulesFollowed (see the useEffect
+  // around line 1797) needs the state to be able to hold that same
+  // "not set" case instead of being forced to fake a starting value.
+  const [detailRulesFollowedDraft, setDetailRulesFollowedDraft] = useState<'followed' | 'broken' | undefined>(undefined);
   const [showDisciplineReview, setShowDisciplineReview] = useState<string | null>(null);
   const [disciplineReviewDraft, setDisciplineReviewDraft] = useState<{ emotions: string[]; mistakes: string[]; notes: string }>({ emotions: [], mistakes: [], notes: '' });
   // 2-pane split-view modal opened from Rule Adherence Log items — left pane is
