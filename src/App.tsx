@@ -410,6 +410,67 @@ function AppShell() {
         .theme-light-fix [class~="bg-zinc-900/70"] { background-color: #ffffff !important; }
         .theme-light-fix [class~="text-zinc-500"] { color: #52525b !important; }
 
+        /* ---- Light theme color fixes, gray-* palette ----
+           The zinc-* block above assumed every dark surface used Tailwind's
+           "zinc" neutral scale. Several empty-state placeholder cards (the
+           flat gray boxes seen under "No emotions logged", "No price
+           action insights yet", the day-grid cells, etc.) actually use
+           Tailwind's separate "gray" neutral scale instead of "zinc" —
+           same idea, different palette — so those never matched a single
+           rule above and stayed a raw mid-gray regardless of theme. Mirrors
+           every rule above 1:1, same target colors, gray-* selectors. */
+        .theme-light-fix [class~="bg-gray-900"] { background-color: #ffffff !important; }
+        .theme-light-fix [class~="border-gray-800"] { border-color: #e5e7eb !important; }
+        .theme-light-fix [class~="text-gray-300"] { color: #374151 !important; }
+        .theme-light-fix [class~="border-gray-700"] { border-color: #d1d5db !important; }
+        .theme-light-fix [class~="hover:bg-gray-800/50"]:hover { background-color: #e5e7eb !important; }
+        .theme-light-fix [class~="text-gray-400"] { color: #4b5563 !important; }
+        .theme-light-fix [class~="hover:bg-gray-700"]:hover { background-color: #e5e7eb !important; }
+        .theme-light-fix [class~="bg-gray-800"] { background-color: #f3f4f6 !important; }
+        .theme-light-fix [class~="bg-gray-600"] { background-color: #e5e7eb !important; }
+        .theme-light-fix [class~="bg-gray-700"] { background-color: #f3f4f6 !important; }
+        .theme-light-fix [class~="hover:bg-gray-600"]:hover { background-color: #d1d5db !important; }
+        .theme-light-fix [class~="bg-gray-900/50"] { background-color: #ffffff !important; }
+        .theme-light-fix [class~="hover:border-gray-700"]:hover { border-color: #9ca3af !important; }
+        .theme-light-fix [class~="border-gray-600"] { border-color: #d1d5db !important; }
+        .theme-light-fix [class~="hover:text-gray-300"]:hover { color: #1f2937 !important; }
+        .theme-light-fix [class~="bg-gray-800/60"] { background-color: #f3f4f6 !important; }
+        .theme-light-fix [class~="border-gray-700/80"] { border-color: #d1d5db !important; }
+        .theme-light-fix [class~="hover:bg-gray-800"]:hover { background-color: #e5e7eb !important; }
+        .theme-light-fix [class~="hover:text-gray-200"]:hover { color: #111827 !important; }
+        .theme-light-fix [class~="bg-gray-800/50"] { background-color: #f3f4f6 !important; }
+        .theme-light-fix [class~="border-gray-700/50"] { border-color: #d1d5db !important; }
+        .theme-light-fix [class~="bg-gray-700/50"] { background-color: #f3f4f6 !important; }
+        .theme-light-fix [class~="border-gray-600/50"] { border-color: #d1d5db !important; }
+        .theme-light-fix [class~="bg-gray-950"] { background-color: #fafafa !important; }
+        .theme-light-fix [class~="bg-gray-900/40"] { background-color: #ffffff !important; }
+        .theme-light-fix [class~="hover:bg-gray-900/70"]:hover { background-color: #fafafa !important; }
+        .theme-light-fix [class~="border-gray-800/80"] { border-color: #e5e7eb !important; }
+        .theme-light-fix [class~="from-gray-700"] { --tw-gradient-from: #e5e7eb !important; }
+        .theme-light-fix [class~="to-gray-800"] { --tw-gradient-to: #f3f4f6 !important; }
+        .theme-light-fix [class~="from-gray-900"] { --tw-gradient-from: #f3f4f6 !important; }
+        .theme-light-fix [class~="via-gray-900/90"] { --tw-gradient-stops: #f3f4f6 !important; }
+        .theme-light-fix [class~="to-gray-900/60"] { --tw-gradient-to: #f3f4f6 !important; }
+        .theme-light-fix [class~="bg-gray-800/30"] { background-color: #f3f4f6 !important; }
+        .theme-light-fix [class~="hover:bg-gray-800/60"]:hover { background-color: #e5e7eb !important; }
+        .theme-light-fix [class~="bg-gray-800/40"] { background-color: #f3f4f6 !important; }
+        .theme-light-fix [class~="from-gray-900/70"] { --tw-gradient-from: #f3f4f6 !important; }
+        .theme-light-fix [class~="to-gray-900/30"] { --tw-gradient-to: #f3f4f6 !important; }
+        .theme-light-fix [class~="bg-gray-950/80"] { background-color: #fafafa !important; }
+        .theme-light-fix [class~="bg-gray-800/70"] { background-color: #f3f4f6 !important; }
+        .theme-light-fix [class~="bg-gray-800/80"] { background-color: #f3f4f6 !important; }
+        .theme-light-fix [class~="from-gray-800"] { --tw-gradient-from: #f3f4f6 !important; }
+        .theme-light-fix [class~="border-gray-800/70"] { border-color: #e5e7eb !important; }
+        .theme-light-fix [class~="border-gray-800/60"] { border-color: #e5e7eb !important; }
+        .theme-light-fix [class~="border-gray-700/60"] { border-color: #d1d5db !important; }
+        .theme-light-fix [class~="border-gray-800/50"] { border-color: #e5e7eb !important; }
+        .theme-light-fix [class~="bg-gray-900/60"] { background-color: #ffffff !important; }
+        .theme-light-fix [class~="border-gray-500"] { border-color: #d1d5db !important; }
+        .theme-light-fix [class~="hover:border-gray-500"]:hover { border-color: #6b7280 !important; }
+        .theme-light-fix [class~="bg-gray-500"] { background-color: #d1d5db !important; }
+        .theme-light-fix [class~="bg-gray-900/70"] { background-color: #ffffff !important; }
+        .theme-light-fix [class~="text-gray-500"] { color: #4b5563 !important; }
+
         /* ---- Minecraft theme ----
            The base markup is authored with dark zinc-* utility classes.
            Rather than thread a third branch through every ternary in the
