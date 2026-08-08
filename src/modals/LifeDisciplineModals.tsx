@@ -1,4 +1,5 @@
 import type React from 'react';
+import { useState } from 'react';
 import {
   LayoutDashboard,
   BookOpen,
@@ -787,7 +788,44 @@ export function ChallengeConfigModal() {
     exportBackup, importBackup,
   } = useAppContext();
 
+    // STRICT DOUBLE-CONFIRMATION GUARD — "Start Challenge" (configure mode
+    // only) always overwrites Day 1 and wipes any in-progress run, so if
+    // one is already active we never let the click through directly.
+    // Instead we surface a Step 1 warning + Step 2 typing gate ("RESET",
+    // case-sensitive) and only call saveChallengeConfig() once the user
+    // has explicitly typed it. Local state (not context) since this is a
+    // transient, modal-scoped confirmation that should reset every time
+    // it's dismissed or confirmed. Declared above the early return below
+    // so hook order stays stable across renders (Rules of Hooks).
+    const [isStartChallengeResetConfirmOpen, setIsStartChallengeResetConfirmOpen] = useState(false);
+    const [startChallengeResetTypedText, setStartChallengeResetTypedText] = useState('');
+    const isStartChallengeResetConfirmed = startChallengeResetTypedText === 'RESET';
+
     if (!isChallengeConfigOpen) return null;
+
+    const handleStartChallengeClick = () => {
+      // hasActiveChallengeProgress mirrors "hasActiveChallenge / currentDay
+      // > 0" — there's an in-progress run whose streak/timeline would be
+      // wiped by starting fresh. Only then do we intercept with the guard;
+      // otherwise Start Challenge behaves exactly as before (immediate).
+      if (hasActiveChallengeProgress) {
+        setStartChallengeResetTypedText('');
+        setIsStartChallengeResetConfirmOpen(true);
+        return;
+      }
+      saveChallengeConfig();
+    };
+
+    const closeStartChallengeResetConfirm = () => {
+      setIsStartChallengeResetConfirmOpen(false);
+      setStartChallengeResetTypedText('');
+    };
+
+    const confirmStartChallengeReset = () => {
+      if (!isStartChallengeResetConfirmed) return;
+      saveChallengeConfig();
+      closeStartChallengeResetConfirm();
+    };
 
     // Regular "+ Add Category / Group" cards are strictly 100% Everyday
     // Daily Routines — the reserved Weekly Card lives outside this list and
@@ -1435,9 +1473,11 @@ export function ChallengeConfigModal() {
 
               {challengeModalMode === 'configure' && (
                 // Applies the full draft (including Duration/Tokens) and
-                // starts Day 1 — always, whether or not one was already running.
+                // starts Day 1. If a challenge is already active, this is
+                // intercepted by the double-confirmation guard below instead
+                // of saving immediately — see handleStartChallengeClick.
                 <button
-                  onClick={saveChallengeConfig}
+                  onClick={handleStartChallengeClick}
                   className="px-4 py-2 rounded-lg text-sm font-medium bg-amber-500 text-black hover:bg-amber-400 transition-all"
                 >
                   Start Challenge
@@ -1493,6 +1533,59 @@ export function ChallengeConfigModal() {
                   className="px-4 py-2 bg-rose-500/90 hover:bg-rose-500 text-white rounded-lg text-sm font-medium transition-colors"
                 >
                   Confirm Reset
+                </button>
+              </div>
+            </div>
+          </ModalBackdrop>
+        )}
+
+        {/* START CHALLENGE — DOUBLE CONFIRMATION GUARD — layered above the
+            Configure Challenge modal. Only ever shown when Start Challenge
+            is clicked while a challenge is already active (hasActiveChallengeProgress).
+            Step 1 is the warning copy below; Step 2 is the typing gate —
+            "Confirm & Reset Challenge" stays disabled until the user types
+            RESET exactly (case-sensitive). No other way to proceed. */}
+        {isStartChallengeResetConfirmOpen && (
+          <ModalBackdrop
+            onClose={closeStartChallengeResetConfirm}
+            className="fixed inset-0 bg-black/80 backdrop-blur-sm z-[70] flex items-center justify-center p-4"
+          >
+            <div className="bg-zinc-900 border border-zinc-800 rounded-xl max-w-sm w-full p-6" onClick={(e) => e.stopPropagation()}>
+              <div className="flex items-center gap-3 mb-3">
+                <div className="w-10 h-10 rounded-full bg-rose-500/15 flex items-center justify-center flex-shrink-0">
+                  <AlertTriangle className="w-5 h-5 text-rose-400" />
+                </div>
+                <h3 className="text-lg font-bold text-white">Active Challenge in Progress!</h3>
+              </div>
+              <p className="text-sm text-zinc-400 mb-4">
+                Proceeding will wipe current streak and reset timeline back to Day 1. This cannot be undone.
+              </p>
+              <label className="text-xs font-semibold text-zinc-400 uppercase tracking-wider mb-2 block">
+                Type <span className="text-rose-400 font-bold normal-case">RESET</span> to confirm
+              </label>
+              <input
+                type="text"
+                autoFocus
+                value={startChallengeResetTypedText}
+                onChange={(e) => setStartChallengeResetTypedText(e.target.value)}
+                placeholder="RESET"
+                className="w-full mb-6 px-3.5 py-2.5 rounded-lg bg-zinc-800/60 border border-zinc-700 text-sm text-white placeholder:text-zinc-600 focus:outline-none focus:ring-2 focus:ring-rose-500/40"
+              />
+              <div className="flex justify-end gap-3">
+                <button
+                  type="button"
+                  onClick={closeStartChallengeResetConfirm}
+                  className="px-4 py-2 bg-zinc-800 hover:bg-zinc-700 text-white rounded-lg text-sm transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={confirmStartChallengeReset}
+                  disabled={!isStartChallengeResetConfirmed}
+                  className="px-4 py-2 bg-rose-500/90 hover:bg-rose-500 disabled:bg-zinc-800 disabled:text-zinc-600 disabled:cursor-not-allowed disabled:hover:bg-zinc-800 text-white rounded-lg text-sm font-medium transition-colors"
+                >
+                  Confirm & Reset Challenge
                 </button>
               </div>
             </div>
