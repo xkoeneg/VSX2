@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo, useRef, useCallback } from 'react';
+import { useDebouncedLocalStorageWriter } from './hooks/useDebouncedLocalStorageWriter';
 import {
   LayoutDashboard,
   BookOpen,
@@ -799,6 +800,11 @@ export function useAppState() {
     return pnl / risk;
   }, [newTrade.profitLoss, newTrade.riskAmount]);
 
+  // Shared debounced writer for the two large, high-frequency localStorage
+  // payloads below (trading journal + life discipline hub). See
+  // useDebouncedLocalStorageWriter for why this exists.
+  const { write: writeToLocalStorage } = useDebouncedLocalStorageWriter(500);
+
   // Load from localStorage
   // Every load goes through migrateStoredData() so data saved by an older
   // version of the app (missing fields, old shapes, etc.) always comes out
@@ -833,11 +839,22 @@ export function useAppState() {
   }, []);
 
   // Save to localStorage
+  // Debounced (see useDebouncedLocalStorageWriter) — this payload can carry
+  // multi-MB base64 trade screenshots, so JSON.stringify + setItem is not
+  // free. Without debouncing, every keystroke in a notes field or every
+  // rapid click re-serializes the entire journal synchronously and can
+  // visibly stutter the UI. Writes still land within `delay` ms of the last
+  // change, and are flushed immediately on tab close, so nothing is lost.
   useEffect(() => {
     const data: StoredData = { version: DATA_SCHEMA_VERSION, accounts, trades, rules, strategies, notices, wikiEntries, setupTypes, confluences, mistakesList, emotionsList, customSymbols, customPillars };
+    let serialized: string;
     try {
-      localStorage.setItem('tradingJournal', JSON.stringify(data));
+      serialized = JSON.stringify(data);
     } catch (e) {
+      console.error('Failed to serialize data:', e);
+      return;
+    }
+    writeToLocalStorage('tradingJournal', serialized, (e) => {
       console.error('Failed to save data:', e);
       // Most common real-world cause here is the localStorage quota being
       // exceeded (e.g. base64 trade screenshots pushing the journal past
@@ -851,8 +868,8 @@ export function useAppState() {
           ? 'Storage is full — this change was NOT saved. Delete some trade images or export a backup and clear old data.'
           : 'Failed to save your journal — this change may be lost on reload. Check the console for details.'
       );
-    }
-  }, [accounts, trades, rules, strategies, notices, wikiEntries, setupTypes, confluences, mistakesList, emotionsList, customSymbols, customPillars]);
+    });
+  }, [accounts, trades, rules, strategies, notices, wikiEntries, setupTypes, confluences, mistakesList, emotionsList, customSymbols, customPillars, writeToLocalStorage]);
 
   // ---- Life Discipline Hub persistence ----
   // Kept in its own localStorage key, deliberately separate from the trading
@@ -1065,8 +1082,9 @@ export function useAppState() {
   }, []);
 
   useEffect(() => {
+    let serialized: string;
     try {
-      localStorage.setItem('lifeDisciplineData', JSON.stringify({
+      serialized = JSON.stringify({
         startDate: lifeDisciplineStartDate,
         checks: lifeDisciplineChecks,
         graceDays: lifeDisciplineGraceDays,
@@ -1074,11 +1092,18 @@ export function useAppState() {
         recheckNotes: lifeDisciplineRecheckNotes,
         config: challengeConfig,
         hasStarted: hasStartedChallenge,
-      }));
+      });
     } catch (e) {
-      console.error('Failed to save Life Discipline Hub data:', e);
+      console.error('Failed to serialize Life Discipline Hub data:', e);
+      return;
     }
-  }, [lifeDisciplineStartDate, lifeDisciplineChecks, lifeDisciplineGraceDays, lifeDisciplineMissedReasons, lifeDisciplineRecheckNotes, challengeConfig, hasStartedChallenge]);
+    // Debounced for the same reason as the trading journal save above —
+    // this fires on every habit-tile tap, and shouldn't block the tap's
+    // visual feedback.
+    writeToLocalStorage('lifeDisciplineData', serialized, (e) => {
+      console.error('Failed to save Life Discipline Hub data:', e);
+    });
+  }, [lifeDisciplineStartDate, lifeDisciplineChecks, lifeDisciplineGraceDays, lifeDisciplineMissedReasons, lifeDisciplineRecheckNotes, challengeConfig, hasStartedChallenge, writeToLocalStorage]);
 
   useEffect(() => {
     const stored = localStorage.getItem('lifeDisciplineUserPresets');
@@ -1979,9 +2004,13 @@ export function useAppState() {
   // Toggling Ascending/Descending only changes which card sits on top — the newest trade
   // naturally carries the highest number (it was created last) and the oldest the lowest,
   // so the badge and its card always travel together.
-  const getDisplayTradeNumber = (trade: Trade): number => {
+  // Wrapped in useCallback purely for referential stability: this is passed
+  // down through context to trade card / row components that are now
+  // React.memo'd (see TradesScreen.tsx), and a function prop that changes
+  // identity every render would defeat that memoization.
+  const getDisplayTradeNumber = useCallback((trade: Trade): number => {
     return trade.absoluteTradeNumber || 0;
-  };
+  }, []);
 
   const stats = useMemo(() => {
     const filtered = filteredTrades;
@@ -2477,9 +2506,11 @@ export function useAppState() {
     setSelectedTradeIds([]);
   };
 
-  const toggleTradeSelected = (id: string) => {
+  // useCallback: passed down to the now-memoized trade card/row components
+  // as a prop, so a stable identity keeps their memo comparison meaningful.
+  const toggleTradeSelected = useCallback((id: string) => {
     setSelectedTradeIds(prev => prev.includes(id) ? prev.filter(t => t !== id) : [...prev, id]);
-  };
+  }, []);
 
   const toggleSelectAllTrades = () => {
     if (selectedTradeIds.length === filteredTrades.length) {
