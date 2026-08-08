@@ -54,7 +54,21 @@ export interface Trade {
   setupTypes: string[];
   confluences: string[];
   mistakes: string[];
-  rulesFollowed: 'followed' | 'broken';
+  // Optional because a trade starts with no Followed/Broken judgment made
+  // at all (e.g. right after MT4/MT5 import) — 'followed' | 'broken' alone
+  // couldn't represent "not yet categorized" and forced every new trade to
+  // be one or the other before any review had happened.
+  rulesFollowed?: 'followed' | 'broken';
+  // True only once the Discipline & Psychology Review has actually been
+  // saved for this trade (see handleSaveDisciplineReview in useAppState).
+  // This is the single source of truth for Pending Review vs. Rule
+  // Adherence Log membership — kept independent of rulesFollowed since
+  // that field can be set from a separate flow (Trade Detail modal).
+  // Optional (not required) so any other Trade-construction code you have
+  // elsewhere (e.g. a normalizeTrade/migration helper) doesn't need to be
+  // touched just to keep compiling — missing/undefined is treated the same
+  // as false everywhere this is checked.
+  isReviewed?: boolean;
   timeframes: TimeframeChart[];
   executionImages: TradeImage[];
   riskAmount: number;
