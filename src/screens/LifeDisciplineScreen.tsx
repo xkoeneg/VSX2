@@ -165,6 +165,29 @@ import { cn } from '../utils/format';
 import { useAppContext } from '../context/AppContext';
 import { renderStatCard, renderAccountFilter, renderAccountTypeBadge, renderTradingAccountTypeBadge } from '../components/shared/RenderHelpers';
 
+// Picks a track-list for the Challenge Progress Grid so the boxes scale to
+// the challenge's actual duration instead of always assuming a 20-column
+// grid. Short challenges (21/30 days) get fewer, larger columns that fill
+// the row; long/custom durations (100+ days) fall back to CSS auto-fill so
+// boxes keep a sane minimum size and simply wrap instead of stretching
+// paper-thin or leaving empty trailing cells. `isMobile` gets its own
+// (smaller) column cap so boxes never shrink below a tappable size on
+// narrow viewports, even for durations that go wide on desktop.
+function getChallengeGridTemplate(totalDays: number, isMobile: boolean): string {
+  if (totalDays > 100) {
+    return `repeat(auto-fill, minmax(${isMobile ? 28 : 40}px, 1fr))`;
+  }
+  const desktopCols =
+    totalDays <= 21 ? 7 :
+    totalDays <= 30 ? 10 :
+    totalDays <= 45 ? 12 :
+    totalDays <= 60 ? 13 :
+    totalDays <= 75 ? 15 :
+    20; // 76-100 days
+  const cols = isMobile ? Math.min(desktopCols, 10) : desktopCols;
+  return `repeat(${cols}, minmax(0, 1fr))`;
+}
+
 export function LifeDisciplineScreen() {
   const {
     view, setView, privacyMode, setPrivacyMode, theme, setTheme, mainScrollRef, isExportConfirmOpen,
@@ -364,6 +387,16 @@ export function LifeDisciplineScreen() {
 
     const completedCount = gridDays.filter(d => d.status === 'complete' || d.status === 'grace').length;
     const failedCount = gridDays.filter(d => d.status === 'failed').length;
+
+    // Responsive column templates for the grid below, derived from the
+    // challenge's actual duration (see getChallengeGridTemplate). Kept as
+    // CSS custom properties rather than literal Tailwind grid-cols-N
+    // classes because the column count is data-driven at runtime — JIT
+    // can't generate a class for a number it never sees in source, but it
+    // *can* statically pick up the literal `grid-cols-[var(--...)]`
+    // arbitrary-value classes below and let the variables drive them.
+    const challengeGridTemplateMobile = getChallengeGridTemplate(challengeConfig.durationDays, true);
+    const challengeGridTemplateDesktop = getChallengeGridTemplate(challengeConfig.durationDays, false);
 
     // Combined Challenge Timeline card — Target End Date is Start Date +
     // durationDays (Day 1 is the start date itself, so the last day is
@@ -671,7 +704,7 @@ export function LifeDisciplineScreen() {
         </div>
 
         {/* DYNAMIC CHALLENGE PROGRESS GRID */}
-        <div className="bg-zinc-900/40 border border-zinc-800/80 rounded-2xl p-5 min-w-0">
+        <div className="bg-zinc-900/40 border border-zinc-800/80 rounded-2xl p-5 min-w-0 w-full">
           <div className="flex items-center justify-between mb-4 flex-wrap gap-2">
             <h3 className="text-base font-semibold text-white flex items-center gap-2 select-none">
               <Target className="w-4 h-4 text-zinc-400 flex-shrink-0" />
@@ -742,7 +775,13 @@ export function LifeDisciplineScreen() {
             </p>
           )}
 
-          <div className="grid grid-cols-10 sm:grid-cols-10 md:grid-cols-[repeat(20,minmax(0,1fr))] gap-1.5">
+          <div
+            className="grid w-full gap-1.5 grid-cols-[var(--ld-grid-mobile)] md:grid-cols-[var(--ld-grid-desktop)]"
+            style={{
+              '--ld-grid-mobile': challengeGridTemplateMobile,
+              '--ld-grid-desktop': challengeGridTemplateDesktop,
+            } as React.CSSProperties}
+          >
             {gridDays.map(({ day, dateKey, status }) => {
               const loggedReason = lifeDisciplineMissedReasons[dateKey];
               const isClickable = status === 'complete' || status === 'failed' || status === 'grace';
