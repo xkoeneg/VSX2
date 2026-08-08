@@ -2222,13 +2222,18 @@ export function useAppState() {
           setupTypes: [],
           confluences: [],
           mistakes: [],
-          // Imported trades start unreviewed — rulesFollowed must stay
-          // undefined until the user actually completes a Discipline &
-          // Psychology Review for this trade (see handleSaveDisciplineReview).
-          // Defaulting this to 'followed' silently marked every imported
-          // trade as reviewed-and-compliant, so it skipped Pending Review
-          // and went straight into the Rule Adherence Log's "Followed"
-          // column with no emotions/mistakes/checklist ever recorded.
+          // isReviewed is the ONLY gate for Pending Review vs. Rule
+          // Adherence Log — it is set exclusively by handleSaveDisciplineReview
+          // when the user actually submits the "+ Review" form (Discipline &
+          // Psychology Review). It is deliberately NOT derived from
+          // rulesFollowed: that field is edited independently in the Trade
+          // Detail modal (detailRulesFollowedDraft) and can also get
+          // back-filled by the localStorage migration/normalize pipeline on
+          // reload — either of which previously caused freshly-imported
+          // trades to be silently treated as "reviewed". A brand-new,
+          // single-purpose boolean that nothing else in the app writes to
+          // can't be flipped by either of those paths.
+          isReviewed: false,
           rulesFollowed: undefined,
           timeframes: initializeEmptyTimeframes(),
           executionImages: [],
@@ -2295,6 +2300,10 @@ export function useAppState() {
       confluences: newTrade.confluences || [],
       mistakes: newTrade.mistakes || [],
       rulesFollowed: newTrade.rulesFollowed as 'followed' | 'broken',
+      // Manually-added trades require Followed/Broken to be chosen before
+      // the form will even save (see the rulesFollowed guard clause just
+      // above), so there's no separate pending state to pass through here.
+      isReviewed: true,
       timeframes: newTrade.timeframes || initializeEmptyTimeframes(),
       executionImages: newTrade.executionImages || [],
       riskAmount: Number(newTrade.riskAmount) || 0,
@@ -2356,6 +2365,11 @@ export function useAppState() {
       confluences: newTrade.confluences || [],
       mistakes: newTrade.mistakes || [],
       rulesFollowed: newTrade.rulesFollowed as 'followed' | 'broken',
+      // Same reasoning as handleAddTrade: this save path also requires
+      // Followed/Broken to already be chosen, so the trade counts as
+      // reviewed the moment it saves — even if it started as an unreviewed
+      // import and was edited directly instead of going through "+ Review".
+      isReviewed: true,
       timeframes: newTrade.timeframes || initializeEmptyTimeframes(),
       executionImages: newTrade.executionImages || [],
       riskAmount: Number(newTrade.riskAmount) || 0,
@@ -2417,7 +2431,12 @@ export function useAppState() {
     const targetId = showRuleReviewModal || showDisciplineReview;
     if (!targetId) return;
     setTrades(prev => prev.map(t => t.id === targetId
-      ? { ...t, emotions: disciplineReviewDraft.emotions, mistakes: disciplineReviewDraft.mistakes, notes: disciplineReviewDraft.notes }
+      // This is the one and only place isReviewed flips to true — it fires
+      // whether the save came from Pending Review's first-time "+ Review"
+      // flow (showDisciplineReview) or from re-editing an already-reviewed
+      // trade from the Rule Adherence Log (showRuleReviewModal), so a trade
+      // only ever leaves Pending Review once this exact save action runs.
+      ? { ...t, emotions: disciplineReviewDraft.emotions, mistakes: disciplineReviewDraft.mistakes, notes: disciplineReviewDraft.notes, isReviewed: true }
       : t
     ));
     if (showRuleReviewModal) {
