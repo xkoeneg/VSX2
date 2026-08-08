@@ -409,6 +409,13 @@ function AppShell() {
            inlined in this file) renders correctly in light mode too. */
         .theme-light-fix [class~="bg-zinc-900/70"] { background-color: #ffffff !important; }
         .theme-light-fix [class~="text-zinc-500"] { color: #52525b !important; }
+        /* bg-zinc-800/20 was the actual root cause of the "Top Emotions &
+           State Breakdown" / "Top Mistakes Committed" / preset-row cards
+           staying flat gray in light mode — fixed at the source in
+           DisciplineScreen.tsx and LifeDisciplineModals.tsx, but covered
+           here too as a safety net for any other screen using the same
+           unconditional class. */
+        .theme-light-fix [class~="bg-zinc-800/20"] { background-color: #fafafa !important; }
 
         /* ---- Light theme color fixes, gray-* palette ----
            The zinc-* block above assumed every dark surface used Tailwind's
