@@ -287,8 +287,24 @@ export function DisciplineScreen() {
     exportBackup, importBackup,
   } = useAppContext();
 
-    const followedTrades = filteredTrades.filter(t => t.rulesFollowed === 'followed');
-    const brokenTrades = filteredTrades.filter(t => t.rulesFollowed === 'broken');
+    // A trade only "counts" as reviewed for the Adherence Log when it has
+    // real review content, not just a rulesFollowed value. rulesFollowed can
+    // be set entirely separately (Trade Detail modal's Followed/Broken
+    // toggle) with zero relation to the Discipline & Psychology Review, and
+    // the review modal itself lets Save Review go through with nothing
+    // selected. So "qualifies for the log" requires ALL three:
+    //   1. isReviewed        — a review was actually saved
+    //   2. rulesFollowed set — followed/broken was chosen (somewhere)
+    //   3. at least one emotion OR one mistake tagged — there's an actual
+    //      psychology entry, not an empty "Rule Followed" badge with no
+    //      Emotions Tracker / Mistakes Analysis / notes behind it
+    // Anything that fails any of these stays in Pending Review instead.
+    const hasReviewContent = (t: Trade) => (t.emotions?.length || 0) > 0 || (t.mistakes?.length || 0) > 0;
+    const qualifiesForAdherenceLog = (t: Trade) =>
+      !!t.isReviewed && (t.rulesFollowed === 'followed' || t.rulesFollowed === 'broken') && hasReviewContent(t);
+
+    const followedTrades = filteredTrades.filter(t => qualifiesForAdherenceLog(t) && t.rulesFollowed === 'followed');
+    const brokenTrades = filteredTrades.filter(t => qualifiesForAdherenceLog(t) && t.rulesFollowed === 'broken');
 
     // Psychology analytics: for each Emotion tag logged within the selected
     // timeframe, tally how often it shows up, the aggregate P&L tied to
@@ -361,17 +377,13 @@ export function DisciplineScreen() {
       setMistakesTimeframe(tf);
     };
 
-    // Trades Needing Review — ANY trade whose Discipline & Psychology Review
-    // hasn't been completed yet (rulesFollowed is still undefined), newest
-    // first. This must be the single source of truth for "pending" — it used
-    // to key off emotions/mistakes being empty instead, which (a) let a
-    // reviewed trade with no emotions or mistakes tagged look pending again,
-    // and (b) was hard-capped to 8 results, so the count badge and this list
-    // silently dropped anything past the first 8 unreviewed trades (e.g. an
-    // MT5 import of 20 would only ever show 8). Every unreviewed trade must
-    // show up here and be reflected in the count.
+    // Trades Needing Review — the exact inverse of qualifiesForAdherenceLog
+    // above, so a trade can never be in both lists (or neither). If it's
+    // missing isReviewed, missing a rulesFollowed value, or has rulesFollowed
+    // set but no emotion/mistake tagged, it stays here — including a trade
+    // where "Save Review" was clicked with nothing filled in.
     const pendingReviewTrades = [...filteredTrades]
-      .filter(t => t.rulesFollowed !== 'followed' && t.rulesFollowed !== 'broken')
+      .filter(t => !qualifiesForAdherenceLog(t))
       .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
 
     // Current Discipline Streak — based on actual TRADING DAYS, not individual
