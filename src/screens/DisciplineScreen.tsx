@@ -361,13 +361,18 @@ export function DisciplineScreen() {
       setMistakesTimeframe(tf);
     };
 
-    // Trades Needing Review — recent trades with no emotion or mistake tags
-    // logged yet, newest first, so the discipline queue surfaces what's left
-    // to tag before it gets buried in history.
+    // Trades Needing Review — ANY trade whose Discipline & Psychology Review
+    // hasn't been completed yet (rulesFollowed is still undefined), newest
+    // first. This must be the single source of truth for "pending" — it used
+    // to key off emotions/mistakes being empty instead, which (a) let a
+    // reviewed trade with no emotions or mistakes tagged look pending again,
+    // and (b) was hard-capped to 8 results, so the count badge and this list
+    // silently dropped anything past the first 8 unreviewed trades (e.g. an
+    // MT5 import of 20 would only ever show 8). Every unreviewed trade must
+    // show up here and be reflected in the count.
     const pendingReviewTrades = [...filteredTrades]
-      .filter(t => (!t.emotions || t.emotions.length === 0) && (!t.mistakes || t.mistakes.length === 0))
-      .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
-      .slice(0, 8);
+      .filter(t => t.rulesFollowed !== 'followed' && t.rulesFollowed !== 'broken')
+      .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
 
     // Current Discipline Streak — based on actual TRADING DAYS, not individual
     // trades, so a rest day (weekend, no trades logged) never breaks the chain.
