@@ -168,13 +168,13 @@ import { renderStatCard, renderAccountFilter, renderAccountTypeBadge, renderTrad
 // Picks a track-list for the Challenge Progress Grid so the boxes scale to
 // the challenge's actual duration instead of always assuming a 20-column
 // grid. Short challenges (21/30 days) get fewer, larger columns that fill
-// the row; long/custom durations (100+ days) fall back to CSS auto-fill so
-// boxes keep a sane minimum size and simply wrap instead of stretching
-// paper-thin or leaving empty trailing cells. `isMobile` gets its own
-// (smaller) column cap so boxes never shrink below a tappable size on
-// narrow viewports, even for durations that go wide on desktop.
+// the row; long/custom durations (beyond 365 days) fall back to CSS
+// auto-fill so boxes keep a sane minimum size and simply wrap instead of
+// stretching paper-thin or leaving empty trailing cells. `isMobile` gets
+// its own (smaller) column cap so boxes never shrink below a tappable
+// size on narrow viewports, even for durations that go wide on desktop.
 function getChallengeGridTemplate(totalDays: number, isMobile: boolean): string {
-  if (totalDays > 100) {
+  if (totalDays > 365) {
     return `repeat(auto-fill, minmax(${isMobile ? 28 : 40}px, 1fr))`;
   }
   const desktopCols =
@@ -183,7 +183,11 @@ function getChallengeGridTemplate(totalDays: number, isMobile: boolean): string 
     totalDays <= 45 ? 12 :
     totalDays <= 60 ? 13 :
     totalDays <= 75 ? 15 :
-    20; // 76-100 days
+    totalDays <= 100 ? 20 :
+    totalDays <= 150 ? 20 :
+    totalDays <= 200 ? 25 :
+    totalDays <= 300 ? 28 :
+    30; // 301-365 days
   const cols = isMobile ? Math.min(desktopCols, 10) : desktopCols;
   return `repeat(${cols}, minmax(0, 1fr))`;
 }
