@@ -5,7 +5,6 @@ import type {
   ChatMessage, MarketNotice, WikiEntry, TagColor, StoredData,
 } from '../types';
 import { DEFAULT_TAG_COLOR, TAG_COLOR_PALETTE } from '../constants/tagColors';
-import { DEFAULT_WIKI_ENTRIES } from '../constants/wiki';
 import { EMOTION_OPTIONS } from '../constants/trading';
 import { ACCOUNT_TYPES, SESSION_OPTIONS, TIMEFRAMES, TRADING_ACCOUNT_TYPES } from '../constants/trading';
 import { RULE_ACCENT_PALETTE, RULE_ICON_OPTIONS, RULE_SEVERITIES } from '../constants/rules';
@@ -259,11 +258,12 @@ export const migrateStoredData = (raw: any): StoredData => {
     strategies: Array.isArray(data.strategies) ? data.strategies.map(normalizeStrategy) : [],
     notices: Array.isArray(data.notices) ? data.notices.map(normalizeNotice) : [],
     // Older backups saved before the Knowledge Wiki existed have no
-    // wikiEntries field at all — treat that (undefined) as "never
-    // initialized" and seed the PD Array defaults, same as a first-ever
-    // run. An explicit empty array (user deleted every entry) is left
-    // alone so it doesn't keep coming back.
-    wikiEntries: Array.isArray(data.wikiEntries) ? data.wikiEntries.map(normalizeWiki) : DEFAULT_WIKI_ENTRIES,
+    // wikiEntries field at all. That case used to seed built-in mock
+    // concepts (IFVG, Order Block, CISD, etc). The wiki now starts
+    // genuinely empty for everyone — a missing field (fresh install /
+    // pre-wiki backup) and an explicit empty array (user deleted every
+    // entry) both just mean "no entries".
+    wikiEntries: Array.isArray(data.wikiEntries) ? data.wikiEntries.map(normalizeWiki) : [],
     setupTypes: Array.isArray(data.setupTypes) ? data.setupTypes.map((item: any) => normalizeNamedItem(item, 'gray')) : [],
     confluences: Array.isArray(data.confluences) ? data.confluences.map((item: any) => normalizeNamedItem(item, 'gray')) : [],
     mistakesList: Array.isArray(data.mistakesList) ? data.mistakesList.map((item: any) => normalizeNamedItem(item, 'red')) : [],
