@@ -93,30 +93,81 @@ import {
   Heart,
   type LucideIcon,
 } from 'lucide-react';
+import type React from 'react';
+import { lazy, Suspense, type ComponentType } from 'react';
 import { AppProvider, useAppContext } from './context/AppContext';
 import { cn } from './utils/format';
 import { Sidebar } from './components/Sidebar';
 import { NotificationBell } from './components/shared/NotificationBell';
-import { DashboardScreen } from './screens/DashboardScreen';
-import { TradesScreen } from './screens/TradesScreen';
-import { DisciplineScreen } from './screens/DisciplineScreen';
-import { LifeDisciplineScreen } from './screens/LifeDisciplineScreen';
-import { PlaybookScreen } from './screens/PlaybookScreen';
-import { NoticesScreen } from './screens/NoticesScreen';
-import { WikiScreen } from './screens/WikiScreen';
-import { CalendarScreen } from './screens/CalendarScreen';
-import { SettingsModal } from './modals/SettingsModal';
-import { DayDetailsModal, ChallengeConfigModal } from './modals/LifeDisciplineModals';
-import { DisciplinePsychologyReviewModal, RuleAdherenceReviewModal } from './modals/DisciplineReviewModals';
-import {
-  TradeDetailModal, ExpandGalleryModal, AccountModal, AddTradeModal, EditTradeModal,
-  DeleteTradeConfirm, DeleteAccountConfirm, LightboxModal,
-} from './modals/TradeModals';
-import { AddRuleModal, ManageRulesModal, AddPillarModal, DeletePillarConfirm } from './modals/RuleModals';
-import {
-  AddStrategyModal, DeleteStepConfirm, StrategyDetailModal, DeleteStrategyConfirm,
-} from './modals/StrategyModals';
-import { AddNoticeModal, AddWikiModal, WikiDetailModal } from './modals/NoticeWikiModals';
+
+// ============================================================================
+// Code splitting: screens & modals
+// ----------------------------------------------------------------------------
+// Only one screen is ever mounted at a time (see the `view === '...'` switch
+// below), and at most a handful of modals are open at once — but before this
+// change every screen and every modal shipped in the same JS bundle the app
+// downloads and parses before it can paint anything. Converting them to
+// React.lazy() means each one becomes its own chunk, fetched on first use
+// and cached after that, which shrinks the initial bundle substantially and
+// gets the first paint on screen faster.
+//
+// These are named exports (not default), so `lazy()` — which requires a
+// default export — is fed a tiny adapter that resolves to `{ default }`.
+// This is a load-time transform only; every component's props/behavior are
+// completely unchanged.
+// ============================================================================
+function lazyNamed<T extends ComponentType<any>>(
+  factory: () => Promise<Record<string, unknown>>,
+  exportName: string,
+): React.LazyExoticComponent<T> {
+  return lazy(() => factory().then(m => ({ default: m[exportName] as T })));
+}
+
+const DashboardScreen = lazyNamed<typeof import('./screens/DashboardScreen').DashboardScreen>(() => import('./screens/DashboardScreen'), 'DashboardScreen');
+const TradesScreen = lazyNamed<typeof import('./screens/TradesScreen').TradesScreen>(() => import('./screens/TradesScreen'), 'TradesScreen');
+const DisciplineScreen = lazyNamed<typeof import('./screens/DisciplineScreen').DisciplineScreen>(() => import('./screens/DisciplineScreen'), 'DisciplineScreen');
+const LifeDisciplineScreen = lazyNamed<typeof import('./screens/LifeDisciplineScreen').LifeDisciplineScreen>(() => import('./screens/LifeDisciplineScreen'), 'LifeDisciplineScreen');
+const PlaybookScreen = lazyNamed<typeof import('./screens/PlaybookScreen').PlaybookScreen>(() => import('./screens/PlaybookScreen'), 'PlaybookScreen');
+const NoticesScreen = lazyNamed<typeof import('./screens/NoticesScreen').NoticesScreen>(() => import('./screens/NoticesScreen'), 'NoticesScreen');
+const WikiScreen = lazyNamed<typeof import('./screens/WikiScreen').WikiScreen>(() => import('./screens/WikiScreen'), 'WikiScreen');
+const CalendarScreen = lazyNamed<typeof import('./screens/CalendarScreen').CalendarScreen>(() => import('./screens/CalendarScreen'), 'CalendarScreen');
+
+const SettingsModal = lazyNamed<typeof import('./modals/SettingsModal').SettingsModal>(() => import('./modals/SettingsModal'), 'SettingsModal');
+const DayDetailsModal = lazyNamed<typeof import('./modals/LifeDisciplineModals').DayDetailsModal>(() => import('./modals/LifeDisciplineModals'), 'DayDetailsModal');
+const ChallengeConfigModal = lazyNamed<typeof import('./modals/LifeDisciplineModals').ChallengeConfigModal>(() => import('./modals/LifeDisciplineModals'), 'ChallengeConfigModal');
+const DisciplinePsychologyReviewModal = lazyNamed<typeof import('./modals/DisciplineReviewModals').DisciplinePsychologyReviewModal>(() => import('./modals/DisciplineReviewModals'), 'DisciplinePsychologyReviewModal');
+const RuleAdherenceReviewModal = lazyNamed<typeof import('./modals/DisciplineReviewModals').RuleAdherenceReviewModal>(() => import('./modals/DisciplineReviewModals'), 'RuleAdherenceReviewModal');
+const TradeDetailModal = lazyNamed<typeof import('./modals/TradeModals').TradeDetailModal>(() => import('./modals/TradeModals'), 'TradeDetailModal');
+const ExpandGalleryModal = lazyNamed<typeof import('./modals/TradeModals').ExpandGalleryModal>(() => import('./modals/TradeModals'), 'ExpandGalleryModal');
+const AccountModal = lazyNamed<typeof import('./modals/TradeModals').AccountModal>(() => import('./modals/TradeModals'), 'AccountModal');
+const AddTradeModal = lazyNamed<typeof import('./modals/TradeModals').AddTradeModal>(() => import('./modals/TradeModals'), 'AddTradeModal');
+const EditTradeModal = lazyNamed<typeof import('./modals/TradeModals').EditTradeModal>(() => import('./modals/TradeModals'), 'EditTradeModal');
+const DeleteTradeConfirm = lazyNamed<typeof import('./modals/TradeModals').DeleteTradeConfirm>(() => import('./modals/TradeModals'), 'DeleteTradeConfirm');
+const DeleteAccountConfirm = lazyNamed<typeof import('./modals/TradeModals').DeleteAccountConfirm>(() => import('./modals/TradeModals'), 'DeleteAccountConfirm');
+const LightboxModal = lazyNamed<typeof import('./modals/TradeModals').LightboxModal>(() => import('./modals/TradeModals'), 'LightboxModal');
+const AddRuleModal = lazyNamed<typeof import('./modals/RuleModals').AddRuleModal>(() => import('./modals/RuleModals'), 'AddRuleModal');
+const ManageRulesModal = lazyNamed<typeof import('./modals/RuleModals').ManageRulesModal>(() => import('./modals/RuleModals'), 'ManageRulesModal');
+const AddPillarModal = lazyNamed<typeof import('./modals/RuleModals').AddPillarModal>(() => import('./modals/RuleModals'), 'AddPillarModal');
+const DeletePillarConfirm = lazyNamed<typeof import('./modals/RuleModals').DeletePillarConfirm>(() => import('./modals/RuleModals'), 'DeletePillarConfirm');
+const AddStrategyModal = lazyNamed<typeof import('./modals/StrategyModals').AddStrategyModal>(() => import('./modals/StrategyModals'), 'AddStrategyModal');
+const DeleteStepConfirm = lazyNamed<typeof import('./modals/StrategyModals').DeleteStepConfirm>(() => import('./modals/StrategyModals'), 'DeleteStepConfirm');
+const StrategyDetailModal = lazyNamed<typeof import('./modals/StrategyModals').StrategyDetailModal>(() => import('./modals/StrategyModals'), 'StrategyDetailModal');
+const DeleteStrategyConfirm = lazyNamed<typeof import('./modals/StrategyModals').DeleteStrategyConfirm>(() => import('./modals/StrategyModals'), 'DeleteStrategyConfirm');
+const AddNoticeModal = lazyNamed<typeof import('./modals/NoticeWikiModals').AddNoticeModal>(() => import('./modals/NoticeWikiModals'), 'AddNoticeModal');
+const AddWikiModal = lazyNamed<typeof import('./modals/NoticeWikiModals').AddWikiModal>(() => import('./modals/NoticeWikiModals'), 'AddWikiModal');
+const WikiDetailModal = lazyNamed<typeof import('./modals/NoticeWikiModals').WikiDetailModal>(() => import('./modals/NoticeWikiModals'), 'WikiDetailModal');
+
+// Minimal, GPU-cheap placeholder shown only during the first Suspense
+// fallback for a given screen chunk (see ScreenSuspense usage below).
+// Pure opacity animation — no layout/paint-triggering properties — so it
+// costs nothing on the compositor while the chunk streams in.
+function ScreenLoadingFallback() {
+  return (
+    <div className="flex-1 flex items-center justify-center py-24">
+      <div className="w-8 h-8 rounded-full border-2 border-zinc-700 border-t-zinc-300 animate-spin transform-gpu" />
+    </div>
+  );
+}
 
 // ============================================================================
 // AppShell renders the page chrome (sidebar / main content switch / all
@@ -632,18 +683,19 @@ function AppShell() {
         }
       `}</style>
 
-      {/* MOBILE SIDEBAR (Drawer Mode) — its own isolated tree; only ever exists in the DOM while isMobileSidebarOpen is true, and only below md. */}
+      {/* MOBILE SIDEBAR (Drawer Mode) — its own isolated tree; only ever exists in the DOM while isMobileSidebarOpen is true, and only below md.
+          Entrance is transform+opacity only (slide-in panel, fade-in backdrop) — no animated width/left, so it's compositor-only. */}
       {isMobileSidebarOpen && (
         <div className="md:hidden fixed inset-0 z-50 flex">
-          {/* Backdrop overlay */}
+          {/* Backdrop overlay — opacity-only fade, no animated blur radius */}
           <div
-            className="fixed inset-0 bg-black/50"
+            className="fixed inset-0 bg-black/50 backdrop-enter gpu-layer"
             onClick={() => setIsMobileSidebarOpen(false)}
             aria-hidden="true"
           />
-          {/* Actual Mobile Sidebar Panel */}
+          {/* Actual Mobile Sidebar Panel — slides in via transform, not by animating width/left */}
           <aside className={cn(
-            "relative w-56 h-full flex flex-col select-none",
+            "relative w-56 h-full flex flex-col select-none gpu-layer modal-enter",
             theme !== 'light' ? 'bg-zinc-900 border-r border-zinc-800' : 'bg-white border-r border-zinc-200'
           )}>
             {<Sidebar isMobile={true} />}
@@ -651,9 +703,18 @@ function AppShell() {
         </div>
       )}
 
-      {/* DESKTOP SIDEBAR (Permanent Layout) - FIXED HEIGHT, PINNED TO VIEWPORT */}
+      {/* DESKTOP SIDEBAR (Permanent Layout) - FIXED HEIGHT, PINNED TO VIEWPORT
+          Collapse/expand still animates `width` (scoped to just that property,
+          not `transition-all`, so color/border changes elsewhere don't get
+          swept into the same composited transition) because this sidebar sits
+          in normal flow and pushes <main> over — a pure-transform collapse
+          would need the sidebar taken out of flow (position: fixed/absolute,
+          overlaying main) to avoid animating layout, which is a bigger
+          structural change than this pass makes. transform-gpu still promotes
+          it to its own layer so the width animation doesn't repaint siblings
+          on every frame. */}
       <aside className={cn(
-        "hidden md:flex flex-col h-screen sticky top-0 flex-shrink-0 overflow-hidden transition-all duration-300 select-none",
+        "hidden md:flex flex-col h-screen sticky top-0 flex-shrink-0 overflow-hidden transition-[width] duration-300 ease-in-out select-none transform-gpu",
         theme !== 'light' ? 'bg-zinc-900 border-r border-zinc-800' : 'bg-white border-r border-zinc-200',
         sidebarCollapsed ? "w-[72px]" : "w-56"
       )}>
@@ -684,45 +745,75 @@ function AppShell() {
         </div>
 
         <div className="flex-1 flex flex-col px-4 pt-4 pb-4 sm:px-6 sm:pt-6 sm:pb-6">
-          {view === 'dashboard' && <DashboardScreen />}
-          {view === 'trades' && <TradesScreen />}
-          {view === 'discipline' && <DisciplineScreen />}
-          {view === 'lifeDiscipline' && <LifeDisciplineScreen />}
-          {view === 'playbook' && <PlaybookScreen />}
-          {view === 'notices' && <NoticesScreen />}
-          {view === 'wiki' && <WikiScreen />}
-          {view === 'calendar' && <CalendarScreen />}
+          {/* Only one screen is ever mounted here, so Suspense + lazy means the
+              initial bundle only has to fetch/parse the screen the user lands
+              on — every other screen's code streams in on first navigation
+              to it instead of up front. The tiny pulse fallback only ever
+              shows on that first navigation to a given screen; it's cached
+              (as its own chunk) after that. */}
+          <Suspense fallback={<ScreenLoadingFallback />}>
+            {view === 'dashboard' && <DashboardScreen />}
+            {view === 'trades' && <TradesScreen />}
+            {view === 'discipline' && <DisciplineScreen />}
+            {view === 'lifeDiscipline' && <LifeDisciplineScreen />}
+            {view === 'playbook' && <PlaybookScreen />}
+            {view === 'notices' && <NoticesScreen />}
+            {view === 'wiki' && <WikiScreen />}
+            {view === 'calendar' && <CalendarScreen />}
+          </Suspense>
         </div>
       </main>
 
-      {<AccountModal />}
-      {<AddTradeModal />}
-      {<EditTradeModal />}
-      {<TradeDetailModal />}
-      {<DisciplinePsychologyReviewModal />}
-      {<RuleAdherenceReviewModal />}
-      {<ExpandGalleryModal />}
-      {<ManageRulesModal />}
-      {<AddRuleModal />}
-      {<AddPillarModal />}
-      {<DeletePillarConfirm />}
-      {<AddStrategyModal />}
-      {<DeleteStepConfirm />}
-      {<StrategyDetailModal />}
-      {<AddNoticeModal />}
-      {<AddWikiModal />}
-      {<WikiDetailModal />}
-      {<DeleteTradeConfirm />}
-      {<DeleteAccountConfirm />}
-      {<DeleteStrategyConfirm />}
-      {<LightboxModal />}
-      {<SettingsModal />}
-      {<ChallengeConfigModal />}
-      {<DayDetailsModal />}
+      {/*
+        NOTE ON MODALS: each of these renders unconditionally here and relies
+        on its OWN internal open/closed state (e.g. `showAddAccount`) to
+        decide whether to return null. Lazy-loading still shrinks the initial
+        bundle (each modal's code — and its own imports — moves into a
+        separate chunk instead of shipping in the main one, so the main
+        chunk the browser must fetch/parse/execute before first paint is
+        smaller), but because every modal is present in the tree from the
+        first render, its chunk starts fetching immediately alongside the
+        shell rather than being deferred until the user actually opens it.
+        Getting the stronger "don't fetch until opened" behavior would mean
+        gating each one at this call site on its own show-flag (e.g.
+        `{showAddAccount && <AccountModal />}`) instead of inside the
+        component — a slightly bigger change since it moves that boolean
+        check out of the modal component and into here, so it's left as-is
+        for now to avoid touching modal-internal logic sight unseen.
+        fallback={null}: closed modals resolve to null almost immediately
+        and have no visible chrome, so there's nothing worth showing a
+        spinner for while their chunk loads.
+      */}
+      <Suspense fallback={null}>
+        {<AccountModal />}
+        {<AddTradeModal />}
+        {<EditTradeModal />}
+        {<TradeDetailModal />}
+        {<DisciplinePsychologyReviewModal />}
+        {<RuleAdherenceReviewModal />}
+        {<ExpandGalleryModal />}
+        {<ManageRulesModal />}
+        {<AddRuleModal />}
+        {<AddPillarModal />}
+        {<DeletePillarConfirm />}
+        {<AddStrategyModal />}
+        {<DeleteStepConfirm />}
+        {<StrategyDetailModal />}
+        {<AddNoticeModal />}
+        {<AddWikiModal />}
+        {<WikiDetailModal />}
+        {<DeleteTradeConfirm />}
+        {<DeleteAccountConfirm />}
+        {<DeleteStrategyConfirm />}
+        {<LightboxModal />}
+        {<SettingsModal />}
+        {<ChallengeConfigModal />}
+        {<DayDetailsModal />}
+      </Suspense>
 
       {isExportConfirmOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
-          <div className="w-full max-w-sm mx-4 rounded-xl border border-zinc-700 bg-zinc-900 shadow-2xl">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm backdrop-enter gpu-layer">
+          <div className="w-full max-w-sm mx-4 rounded-xl border border-zinc-700 bg-zinc-900 shadow-2xl gpu-layer modal-enter">
             <div className="p-5">
               <h2 className="text-base font-semibold text-white">
                 Export Journal Backup?
@@ -734,7 +825,7 @@ function AppShell() {
             <div className="flex items-center justify-end gap-2 border-t border-zinc-800 px-5 py-3">
               <button
                 onClick={() => setIsExportConfirmOpen(false)}
-                className="px-3 py-1.5 rounded-lg text-sm text-zinc-300 hover:text-white hover:bg-zinc-800 transition-all"
+                className="px-3 py-1.5 rounded-lg text-sm text-zinc-300 hover:text-white hover:bg-zinc-800 transition-colors"
               >
                 Cancel
               </button>
@@ -743,7 +834,7 @@ function AppShell() {
                   exportBackup();
                   setIsExportConfirmOpen(false);
                 }}
-                className="px-3 py-1.5 rounded-lg text-sm bg-zinc-100 text-zinc-900 hover:bg-white transition-all font-medium"
+                className="px-3 py-1.5 rounded-lg text-sm bg-zinc-100 text-zinc-900 hover:bg-white transition-colors font-medium"
               >
                 Confirm Export
               </button>
