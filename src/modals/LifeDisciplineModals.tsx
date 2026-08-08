@@ -1640,7 +1640,10 @@ export function ChallengeConfigModal() {
                 <p className="text-[11px] font-semibold text-zinc-500 uppercase tracking-wider mt-4 mb-2">Built-in Templates</p>
                 <div className="space-y-1.5">
                   {CHALLENGE_PRESETS.map(preset => (
-                    <div key={preset.id} className="flex items-center justify-between gap-2 px-3 py-2 rounded-lg bg-zinc-800/20 border border-zinc-800/60">
+                    <div key={preset.id} className={cn(
+                      "flex items-center justify-between gap-2 px-3 py-2 rounded-lg border",
+                      theme !== 'light' ? 'bg-zinc-800/20 border-zinc-800/60' : 'bg-zinc-50 border-zinc-200'
+                    )}>
                       <div className="min-w-0">
                         <p className="text-sm text-zinc-400 truncate">{preset.name}</p>
                         <p className="text-[11px] text-zinc-600 mt-0.5">{preset.durationDays} days · {preset.recheckTokens} tokens</p>
