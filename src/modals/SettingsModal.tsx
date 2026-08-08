@@ -1,4 +1,5 @@
 import type React from 'react';
+import { useState } from 'react';
 import {
   LayoutDashboard,
   BookOpen,
@@ -276,12 +277,26 @@ export function SettingsModal() {
     exportBackup, importBackup,
   } = useAppContext();
 
+    const [showResetConfirm, setShowResetConfirm] = useState(false);
+    const [resetConfirmText, setResetConfirmText] = useState('');
+
+    const handleConfirmReset = () => {
+      if (resetConfirmText !== 'CONFIRM') return;
+      localStorage.clear();
+      setTrades([]);
+      setAccounts([]);
+      setWikiEntries([]);
+      setLifeDisciplineChecks({});
+      window.location.reload();
+    };
+
     if (!isSettingsModalOpen) return null;
 
     const themeLabel = theme === 'dark' ? 'Dark' : theme === 'light' ? 'Light' : 'Minecraft';
     const nextThemeLabel = theme === 'dark' ? 'Light' : theme === 'light' ? 'Minecraft' : 'Dark';
 
     return (
+      <>
       <ModalBackdrop
         onClose={() => setIsSettingsModalOpen(false)}
         className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4"
@@ -425,8 +440,77 @@ export function SettingsModal() {
               </div>
             </div>
           )}
+
+          {/* Danger Zone — always visible at the bottom, regardless of tab */}
+          <div className="mt-5 pt-4 border-t border-zinc-800">
+            <div className="px-4 py-3.5 rounded-xl bg-rose-950/10 border border-rose-900/40">
+              <div className="flex items-center gap-3 mb-2">
+                <div className="w-9 h-9 rounded-lg bg-rose-950/30 flex items-center justify-center flex-shrink-0">
+                  <AlertTriangle className="w-4 h-4 text-rose-400" />
+                </div>
+                <p className="text-sm font-medium text-rose-300">Danger Zone</p>
+              </div>
+              <p className="text-xs text-zinc-500 mb-3 leading-relaxed">
+                Permanently erase every trade, account, discipline log, and wiki entry from this device. This cannot be undone — export a backup first if you want to keep a copy.
+              </p>
+              <button
+                onClick={() => { setResetConfirmText(''); setShowResetConfirm(true); }}
+                className="w-full flex items-center justify-center gap-2 px-3 py-2 rounded-lg text-sm font-medium bg-transparent border border-rose-800/60 text-rose-400 hover:bg-rose-950/30 hover:border-rose-700 transition-all"
+              >
+                <Trash2 className="w-4 h-4" />
+                Reset All Journal Data
+              </button>
+            </div>
+          </div>
         </div>
       </ModalBackdrop>
+
+      {showResetConfirm && (
+        <ModalBackdrop
+          onClose={() => setShowResetConfirm(false)}
+          className="fixed inset-0 z-[60] flex items-center justify-center bg-black/70 backdrop-blur-sm p-4"
+        >
+          <div
+            className="bg-zinc-900 border border-rose-900/50 rounded-2xl p-6 shadow-2xl max-w-sm w-full"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center gap-2.5 mb-3">
+              <div className="w-8 h-8 rounded-lg bg-rose-950/40 border border-rose-900/50 flex items-center justify-center">
+                <AlertTriangle className="w-4 h-4 text-rose-400" />
+              </div>
+              <h2 className="text-base font-semibold text-white">Reset All Journal Data</h2>
+            </div>
+            <p className="text-sm text-zinc-400 mb-4 leading-relaxed">
+              This permanently deletes every trade, account, discipline log, and wiki entry on this device and cannot be undone. Type <span className="font-mono text-rose-400">CONFIRM</span> below to proceed.
+            </p>
+            <input
+              type="text"
+              value={resetConfirmText}
+              onChange={(e) => setResetConfirmText(e.target.value)}
+              placeholder="Type CONFIRM"
+              autoFocus
+              className="w-full bg-zinc-950 border border-zinc-800 rounded-lg px-3 py-2 text-sm text-white placeholder:text-zinc-600 focus:outline-none focus:border-rose-600/60 mb-4"
+            />
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => setShowResetConfirm(false)}
+                className="flex-1 px-3 py-2 rounded-lg text-sm font-medium bg-zinc-800 text-zinc-300 hover:bg-zinc-700 transition-all"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleConfirmReset}
+                disabled={resetConfirmText !== 'CONFIRM'}
+                className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium bg-rose-600 text-white hover:bg-rose-500 transition-all disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-rose-600"
+              >
+                <Trash2 className="w-3.5 h-3.5" />
+                Confirm Reset
+              </button>
+            </div>
+          </div>
+        </ModalBackdrop>
+      )}
+    </>
     );
 }
 
