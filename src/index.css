@@ -1,3 +1,73 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+@layer utilities {
+  /*
+    ==========================================================================
+    Performance utilities: GPU compositing + transform/opacity-only motion
+    ==========================================================================
+    Tailwind ships `transform-gpu` already (translateZ(0) hint), but
+    `backface-hidden` isn't guaranteed to exist depending on the Tailwind
+    version pinned here, so it's defined explicitly rather than assumed.
+
+    Everything below only ever animates `transform` and `opacity`. Those two
+    properties are compositor-only on modern browsers — the browser can
+    animate them on the GPU without re-running layout or paint on every
+    frame. Animating `width`/`height`/`margin`/`top`/`left` instead forces a
+    full layout recalculation each frame, which is the single most common
+    cause of janky, sub-60fps UI animation.
+  */
+
+  .backface-hidden {
+    backface-visibility: hidden;
+  }
+
+  /* Isolates an element onto its own compositor layer ahead of an
+     interaction (hover/open), rather than promoting it mid-animation, which
+     avoids a layer-creation stutter on the first frame. Apply to modals,
+     backdrops, and sidebar panels that animate in/out. */
+  .gpu-layer {
+    transform: translateZ(0);
+    backface-visibility: hidden;
+    will-change: transform, opacity;
+  }
+
+  /* Modal / overlay entrance: fades and scales in via transform+opacity
+     only. Use alongside `gpu-layer` on the modal panel itself. */
+  .modal-enter {
+    animation: modal-enter-kf 160ms cubic-bezier(0.16, 1, 0.3, 1);
+  }
+  @keyframes modal-enter-kf {
+    from { opacity: 0; transform: translateZ(0) scale(0.97); }
+    to { opacity: 1; transform: translateZ(0) scale(1); }
+  }
+
+  /* Backdrop fade: opacity-only, no blur-radius animation (animating a
+     backdrop-filter's blur amount is expensive; fading its opacity in at
+     a fixed blur value is nearly free by comparison). */
+  .backdrop-enter {
+    animation: backdrop-enter-kf 160ms ease-out;
+  }
+  @keyframes backdrop-enter-kf {
+    from { opacity: 0; }
+    to { opacity: 1; }
+  }
+
+  /* Sidebar collapse/expand and mobile drawer slide — transform only, no
+     animated `width`. Pair with a fixed max-width panel that's translated
+     off/on-screen rather than one whose width itself is animated. */
+  .sidebar-slide {
+    transition: transform 300ms cubic-bezier(0.4, 0, 0.2, 1);
+    transform: translateZ(0);
+  }
+
+  /* Fast, cheap hover lift for cards/buttons — transform + opacity only. */
+  .hover-lift {
+    transition: transform 200ms ease-out, opacity 200ms ease-out, box-shadow 200ms ease-out;
+    transform: translateZ(0);
+  }
+  .hover-lift:hover {
+    transform: translateZ(0) translateY(-2px);
+  }
+}
