@@ -2222,7 +2222,14 @@ export function useAppState() {
           setupTypes: [],
           confluences: [],
           mistakes: [],
-          rulesFollowed: 'followed',
+          // Imported trades start unreviewed — rulesFollowed must stay
+          // undefined until the user actually completes a Discipline &
+          // Psychology Review for this trade (see handleSaveDisciplineReview).
+          // Defaulting this to 'followed' silently marked every imported
+          // trade as reviewed-and-compliant, so it skipped Pending Review
+          // and went straight into the Rule Adherence Log's "Followed"
+          // column with no emotions/mistakes/checklist ever recorded.
+          rulesFollowed: undefined,
           timeframes: initializeEmptyTimeframes(),
           executionImages: [],
           riskAmount: 0,
