@@ -98,6 +98,7 @@ import type { EconomicEvent } from '../../types';
 import { cn } from '../../utils/format';
 import { useEconomicCalendarFeed } from '../../hooks/useEconomicCalendarFeed';
 import { formatEventTimePHT, formatCountdown, IMPACT_META, MARKET_EFFECT_META, getMarketEffect, compareActualToForecast } from '../../utils/economicCalendar';
+import { useAppContext } from '../../context/AppContext';
 
 // ============================================================
 // PAST EVENTS CACHE
@@ -145,6 +146,7 @@ function dateKeyPHT(d: Date): string {
 }
 
 export const EconomicCalendarCard: React.FC = () => {
+  const { theme } = useAppContext();
   const { events, loading, error, lastUpdated, loadCalendar } = useEconomicCalendarFeed();
   // Drives the live "Time Left" countdown column — ticks independently of
   // the data refresh so countdowns stay fresh even between fetches.
@@ -246,21 +248,36 @@ export const EconomicCalendarCard: React.FC = () => {
   }, [pastEventsCache, usdHighImpact, selectedKey]);
 
   return (
-    <div className="min-w-0 bg-zinc-900/50 border border-zinc-800 rounded-xl p-4 flex flex-col">
-      <div className="flex items-center justify-between gap-2 px-3 py-2 rounded-lg border flex-shrink-0 bg-amber-500/10 border-amber-500/30">
+    <div className={cn(
+      'min-w-0 border rounded-xl p-4 flex flex-col',
+      theme !== 'light' ? 'bg-zinc-900/50 border-zinc-800' : 'bg-white border-zinc-200'
+    )}>
+      <div className={cn(
+        'flex items-center justify-between gap-2 px-3 py-2 rounded-lg border flex-shrink-0',
+        theme !== 'light' ? 'bg-amber-500/10 border-amber-500/30' : 'bg-amber-50 border-amber-200'
+      )}>
         <div className="flex items-center gap-2 min-w-0">
-          <Calendar className="w-4 h-4 flex-shrink-0 text-amber-400" />
-          <h2 className="text-sm font-semibold truncate text-amber-300">Economic Calendar</h2>
-          <span className="px-1.5 py-0.5 rounded-full text-[10px] bg-black/30 text-zinc-300 flex-shrink-0">
+          <Calendar className="w-4 h-4 flex-shrink-0 text-amber-500" />
+          <h2 className={cn('text-sm font-semibold truncate', theme !== 'light' ? 'text-amber-300' : 'text-amber-700')}>Economic Calendar</h2>
+          <span className={cn(
+            'px-1.5 py-0.5 rounded-full text-[10px] flex-shrink-0',
+            theme !== 'light' ? 'bg-black/30 text-zinc-300' : 'bg-white/70 text-zinc-600'
+          )}>
             USD · High Impact
           </span>
           {!loading && !error && (
-            <span className="px-1.5 py-0.5 rounded-full text-[10px] bg-black/30 text-zinc-400 flex-shrink-0">
+            <span className={cn(
+              'px-1.5 py-0.5 rounded-full text-[10px] flex-shrink-0',
+              theme !== 'light' ? 'bg-black/30 text-zinc-400' : 'bg-white/70 text-zinc-500'
+            )}>
               {displayEvents.length}
             </span>
           )}
           {isPastDate && (
-            <span className="px-1.5 py-0.5 rounded-full text-[10px] bg-black/30 text-zinc-400 flex-shrink-0">
+            <span className={cn(
+              'px-1.5 py-0.5 rounded-full text-[10px] flex-shrink-0',
+              theme !== 'light' ? 'bg-black/30 text-zinc-400' : 'bg-white/70 text-zinc-500'
+            )}>
               Historical
             </span>
           )}
@@ -272,10 +289,13 @@ export const EconomicCalendarCard: React.FC = () => {
             </span>
           )}
 
-          <div className="flex items-center gap-0.5 bg-black/20 rounded-lg p-0.5">
+          <div className={cn('flex items-center gap-0.5 rounded-lg p-0.5', theme !== 'light' ? 'bg-black/20' : 'bg-white/70')}>
             <button
               onClick={goPrevDay}
-              className="p-1 rounded-md text-zinc-400 hover:bg-black/40 hover:text-white transition-colors"
+              className={cn(
+                'p-1 rounded-md transition-colors',
+                theme !== 'light' ? 'text-zinc-400 hover:bg-black/40 hover:text-white' : 'text-zinc-500 hover:bg-white hover:text-zinc-900'
+              )}
               aria-label="Previous day"
             >
               <ChevronLeft className="w-3.5 h-3.5" />
@@ -284,7 +304,9 @@ export const EconomicCalendarCard: React.FC = () => {
               onClick={goToday}
               className={cn(
                 'px-2 py-1 rounded-md text-[11px] font-medium transition-colors text-center whitespace-nowrap',
-                isToday ? 'text-amber-300' : 'text-zinc-300 hover:bg-black/40'
+                isToday
+                  ? (theme !== 'light' ? 'text-amber-300' : 'text-amber-700')
+                  : (theme !== 'light' ? 'text-zinc-300 hover:bg-black/40' : 'text-zinc-600 hover:bg-white')
               )}
               aria-label="Jump to today"
             >
@@ -292,7 +314,10 @@ export const EconomicCalendarCard: React.FC = () => {
             </button>
             <button
               onClick={goNextDay}
-              className="p-1 rounded-md text-zinc-400 hover:bg-black/40 hover:text-white transition-colors"
+              className={cn(
+                'p-1 rounded-md transition-colors',
+                theme !== 'light' ? 'text-zinc-400 hover:bg-black/40 hover:text-white' : 'text-zinc-500 hover:bg-white hover:text-zinc-900'
+              )}
               aria-label="Next day"
             >
               <ChevronRight className="w-3.5 h-3.5" />
@@ -302,7 +327,10 @@ export const EconomicCalendarCard: React.FC = () => {
           <button
             onClick={loadCalendar}
             disabled={loading}
-            className="p-1.5 rounded-lg bg-black/20 hover:bg-black/40 text-zinc-300 hover:text-white transition-colors disabled:opacity-50"
+            className={cn(
+              'p-1.5 rounded-lg transition-colors disabled:opacity-50',
+              theme !== 'light' ? 'bg-black/20 hover:bg-black/40 text-zinc-300 hover:text-white' : 'bg-white/70 hover:bg-white text-zinc-500 hover:text-zinc-900'
+            )}
             aria-label="Refresh economic calendar"
           >
             <RefreshCw className={cn('w-3.5 h-3.5', loading && 'animate-spin')} />
@@ -314,25 +342,34 @@ export const EconomicCalendarCard: React.FC = () => {
         {loading && events.length === 0 && isToday ? (
           <div className="space-y-2">
             {[...Array(4)].map((_, i) => (
-              <div key={i} className="h-10 rounded-lg bg-zinc-800/40 animate-pulse" />
+              <div key={i} className={cn('h-10 rounded-lg animate-pulse', theme !== 'light' ? 'bg-zinc-800/40' : 'bg-zinc-100')} />
             ))}
           </div>
         ) : error && isToday ? (
-          <div className="text-center py-8 rounded-lg border border-dashed border-rose-900/50 bg-rose-950/10">
-            <AlertTriangle className="w-5 h-5 mx-auto text-rose-400 mb-2" />
-            <p className="text-rose-300 text-xs mb-2">{error}</p>
+          <div className={cn(
+            'text-center py-8 rounded-lg border border-dashed',
+            theme !== 'light' ? 'border-rose-900/50 bg-rose-950/10' : 'border-rose-200 bg-rose-50'
+          )}>
+            <AlertTriangle className="w-5 h-5 mx-auto text-rose-500 mb-2" />
+            <p className={cn('text-xs mb-2', theme !== 'light' ? 'text-rose-300' : 'text-rose-600')}>{error}</p>
             <button
               onClick={loadCalendar}
-              className="inline-flex items-center gap-1 text-xs text-zinc-400 hover:text-zinc-200 transition-colors"
+              className={cn(
+                'inline-flex items-center gap-1 text-xs transition-colors',
+                theme !== 'light' ? 'text-zinc-400 hover:text-zinc-200' : 'text-zinc-500 hover:text-zinc-800'
+              )}
             >
               <RefreshCw className="w-3 h-3" />
               Retry
             </button>
           </div>
         ) : displayEvents.length === 0 ? (
-          <div className="text-center py-8 rounded-lg border border-dashed border-zinc-800 bg-zinc-900/30">
-            <Calendar className="w-5 h-5 mx-auto text-zinc-700 mb-2" />
-            <p className="text-zinc-600 text-xs">
+          <div className={cn(
+            'text-center py-8 rounded-lg border border-dashed',
+            theme !== 'light' ? 'border-zinc-800 bg-zinc-900/30' : 'border-zinc-300 bg-zinc-50'
+          )}>
+            <Calendar className={cn('w-5 h-5 mx-auto mb-2', theme !== 'light' ? 'text-zinc-700' : 'text-zinc-400')} />
+            <p className="text-zinc-500 text-xs">
               {isPastDate
                 ? 'No cached high-impact USD events for this date'
                 : 'No high-impact USD events in the current feed window'}
@@ -342,7 +379,7 @@ export const EconomicCalendarCard: React.FC = () => {
           <div className="overflow-x-auto -mx-1">
             <table className="w-full text-xs min-w-[860px]">
               <thead>
-                <tr className="text-zinc-500 border-b border-zinc-800">
+                <tr className={cn('text-zinc-500 border-b', theme !== 'light' ? 'border-zinc-800' : 'border-zinc-200')}>
                   <th className="text-left font-medium py-2 px-2 whitespace-nowrap">
                     <span className="inline-flex items-center gap-1"><Clock className="w-3 h-3" />Time (PHT)</span>
                   </th>
@@ -369,19 +406,29 @@ export const EconomicCalendarCard: React.FC = () => {
                   const isImminent = !isPassed && evt.time !== null
                     && evt.time.getTime() - now.getTime() <= 60 * 60 * 1000;
                   return (
-                    <tr key={evt.id} className="border-b border-zinc-800/60 hover:bg-zinc-800/30 transition-colors">
-                      <td className="py-2 px-2 text-zinc-400 whitespace-nowrap">{formatEventTimePHT(evt.time)}</td>
+                    <tr key={evt.id} className={cn(
+                      'border-b transition-colors',
+                      theme !== 'light' ? 'border-zinc-800/60 hover:bg-zinc-800/30' : 'border-zinc-100 hover:bg-zinc-50'
+                    )}>
+                      <td className="py-2 px-2 text-zinc-500 whitespace-nowrap">{formatEventTimePHT(evt.time)}</td>
                       <td className="py-2 px-2 whitespace-nowrap">
                         <span className={cn(
                           'font-medium',
-                          isPassed ? 'text-zinc-600' : isImminent ? 'text-amber-300' : 'text-zinc-300'
+                          isPassed
+                            ? 'text-zinc-500'
+                            : isImminent
+                              ? (theme !== 'light' ? 'text-amber-300' : 'text-amber-600')
+                              : (theme !== 'light' ? 'text-zinc-300' : 'text-zinc-600')
                         )}>
                           {countdown}
                         </span>
                       </td>
-                      <td className="py-2 px-2 text-white font-medium">
+                      <td className={cn('py-2 px-2 font-medium', theme !== 'light' ? 'text-white' : 'text-zinc-900')}>
                         <span className="inline-flex items-center gap-1.5">
-                          <span className="px-1.5 py-0.5 rounded text-[10px] border border-zinc-700 text-zinc-400 bg-zinc-800/60 flex-shrink-0">
+                          <span className={cn(
+                            'px-1.5 py-0.5 rounded text-[10px] border flex-shrink-0',
+                            theme !== 'light' ? 'border-zinc-700 text-zinc-400 bg-zinc-800/60' : 'border-zinc-200 text-zinc-500 bg-zinc-100'
+                          )}>
                             {evt.currency}
                           </span>
                           <span className="truncate">{evt.title.replace(/^United States\s*/i, '')}</span>
@@ -392,12 +439,12 @@ export const EconomicCalendarCard: React.FC = () => {
                           {meta.label}
                         </span>
                       </td>
-                      <td className="py-2 px-2 text-right text-zinc-400 whitespace-nowrap">{evt.previous || '—'}</td>
-                      <td className="py-2 px-2 text-right text-zinc-400 whitespace-nowrap">{evt.forecast || '—'}</td>
+                      <td className="py-2 px-2 text-right text-zinc-500 whitespace-nowrap">{evt.previous || '—'}</td>
+                      <td className="py-2 px-2 text-right text-zinc-500 whitespace-nowrap">{evt.forecast || '—'}</td>
                       <td className="py-2 px-2 text-right whitespace-nowrap">
                         <span className={cn(
                           'inline-flex items-center gap-1 font-semibold',
-                          trend === 'up' ? 'text-emerald-400' : trend === 'down' ? 'text-rose-400' : 'text-white'
+                          trend === 'up' ? 'text-emerald-500' : trend === 'down' ? 'text-rose-500' : (theme !== 'light' ? 'text-white' : 'text-zinc-900')
                         )}>
                           {trend === 'up' && <TrendingUp className="w-3 h-3" />}
                           {trend === 'down' && <TrendingDown className="w-3 h-3" />}
