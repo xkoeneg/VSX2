@@ -289,19 +289,23 @@ export function NoticesScreen() {
         <div
           key={notice.id}
           className={cn(
-            'group relative rounded-lg border bg-zinc-900/50 transition-all p-2.5 flex gap-3 min-w-0',
+            'group relative rounded-lg border transition-all p-2.5 flex gap-3 min-w-0',
+            theme !== 'light' ? 'bg-zinc-900/50' : 'bg-white',
             meta.cardRing
           )}
         >
           {/* Thumbnail */}
           <div
-            className="w-20 h-14 flex-shrink-0 rounded-md overflow-hidden bg-zinc-950 flex items-center justify-center cursor-pointer"
+            className={cn(
+              'w-20 h-14 flex-shrink-0 rounded-md overflow-hidden flex items-center justify-center cursor-pointer',
+              theme !== 'light' ? 'bg-zinc-950' : 'bg-zinc-100'
+            )}
             onClick={() => notice.imageUrl && setLightboxImage(notice.imageUrl)}
           >
             {notice.imageUrl ? (
               <img src={notice.imageUrl} alt={notice.title} className="w-full h-full object-cover" />
             ) : (
-              <ImageIcon className="w-4 h-4 text-zinc-700" />
+              <ImageIcon className={cn('w-4 h-4', theme !== 'light' ? 'text-zinc-700' : 'text-zinc-400')} />
             )}
           </div>
 
@@ -309,17 +313,23 @@ export function NoticesScreen() {
           <div className="min-w-0 flex-1 space-y-1">
             <div className="flex flex-wrap items-center gap-1">
               {notice.session && (
-                <span className="px-1.5 py-0.5 rounded-full text-[10px] border border-zinc-700 text-zinc-500 bg-zinc-800/60">
+                <span className={cn(
+                  'px-1.5 py-0.5 rounded-full text-[10px] border',
+                  theme !== 'light' ? 'border-zinc-700 text-zinc-500 bg-zinc-800/60' : 'border-zinc-200 text-zinc-500 bg-zinc-100'
+                )}>
                   {notice.session}
                 </span>
               )}
               {notice.tag && (
-                <span className="px-1.5 py-0.5 rounded-full text-[10px] border border-zinc-700 text-zinc-500 bg-zinc-800/60">
+                <span className={cn(
+                  'px-1.5 py-0.5 rounded-full text-[10px] border',
+                  theme !== 'light' ? 'border-zinc-700 text-zinc-500 bg-zinc-800/60' : 'border-zinc-200 text-zinc-500 bg-zinc-100'
+                )}>
                   {notice.tag}
                 </span>
               )}
             </div>
-            <h3 className="text-xs font-semibold text-white leading-snug truncate">{notice.title}</h3>
+            <h3 className={cn('text-xs font-semibold leading-snug truncate', theme !== 'light' ? 'text-white' : 'text-zinc-900')}>{notice.title}</h3>
             {notice.description && (
               <p className="text-[11px] text-zinc-500 leading-snug line-clamp-2">{notice.description}</p>
             )}
@@ -335,13 +345,19 @@ export function NoticesScreen() {
           <div className="absolute top-1.5 right-1.5 flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
             <button
               onClick={(e) => { e.stopPropagation(); handleEditNotice(notice); }}
-              className="p-1 rounded-md bg-black/60 backdrop-blur-sm text-zinc-300 hover:text-white transition-colors"
+              className={cn(
+                'p-1 rounded-md backdrop-blur-sm transition-colors',
+                theme !== 'light' ? 'bg-black/60 text-zinc-300 hover:text-white' : 'bg-white/80 text-zinc-500 hover:text-zinc-900 shadow-sm'
+              )}
             >
               <Edit2 className="w-3 h-3" />
             </button>
             <button
               onClick={(e) => { e.stopPropagation(); handleDeleteNotice(notice.id); }}
-              className="p-1 rounded-md bg-black/60 backdrop-blur-sm text-zinc-400 hover:text-rose-400 transition-colors"
+              className={cn(
+                'p-1 rounded-md backdrop-blur-sm transition-colors',
+                theme !== 'light' ? 'bg-black/60 text-zinc-400 hover:text-rose-400' : 'bg-white/80 text-zinc-500 hover:text-rose-500 shadow-sm'
+              )}
             >
               <Trash2 className="w-3 h-3" />
             </button>
@@ -360,25 +376,37 @@ export function NoticesScreen() {
       const list = notices.filter(n => n.type === type);
       return (
         <div className={cn(
-          'min-w-0 h-[450px] bg-zinc-900/50 border border-zinc-800 rounded-xl p-4 flex flex-col border-t-2',
+          'min-w-0 h-[450px] border rounded-xl p-4 flex flex-col border-t-2',
+          theme !== 'light' ? 'bg-zinc-900/50 border-zinc-800' : 'bg-white border-zinc-200',
           type === 'mistake' ? 'border-t-rose-500/50' : 'border-t-cyan-500/50'
         )}>
-          <div className="flex items-center justify-between gap-2 px-3 py-2 rounded-lg border border-zinc-800 bg-zinc-800/40 flex-shrink-0">
+          <div className={cn(
+            'flex items-center justify-between gap-2 px-3 py-2 rounded-lg border flex-shrink-0',
+            theme !== 'light' ? 'border-zinc-800 bg-zinc-800/40' : 'border-zinc-200 bg-zinc-50'
+          )}>
             <div className="flex items-center gap-2 min-w-0">
               <meta.headerIcon className={cn('w-4 h-4 flex-shrink-0', type === 'mistake' ? 'text-rose-400' : 'text-cyan-400')} />
-              <h2 className={cn('text-sm font-semibold truncate', type === 'mistake' ? 'text-rose-300' : 'text-cyan-300')}>
+              <h2 className={cn(
+                'text-sm font-semibold truncate',
+                type === 'mistake'
+                  ? (theme !== 'light' ? 'text-rose-300' : 'text-rose-600')
+                  : (theme !== 'light' ? 'text-cyan-300' : 'text-cyan-600')
+              )}>
                 {meta.tabLabel}
               </h2>
               <span className={cn(
                 'px-1.5 py-0.5 rounded-full text-[10px] border flex-shrink-0',
-                type === 'mistake' ? 'bg-rose-500/10 text-rose-300 border-rose-500/20' : 'bg-cyan-500/10 text-cyan-300 border-cyan-500/20'
+                type === 'mistake' ? 'bg-rose-500/10 text-rose-500 border-rose-500/20' : 'bg-cyan-500/10 text-cyan-500 border-cyan-500/20'
               )}>
                 {list.length}
               </span>
             </div>
             <button
               onClick={() => handleOpenAddNotice(type)}
-              className="p-1.5 rounded-lg bg-black/20 hover:bg-black/40 text-zinc-300 hover:text-white transition-colors flex-shrink-0"
+              className={cn(
+                'p-1.5 rounded-lg transition-colors flex-shrink-0',
+                theme !== 'light' ? 'bg-black/20 hover:bg-black/40 text-zinc-300 hover:text-white' : 'bg-zinc-200/60 hover:bg-zinc-200 text-zinc-600 hover:text-zinc-900'
+              )}
             >
               <Plus className="w-3.5 h-3.5" />
             </button>
@@ -402,13 +430,19 @@ export function NoticesScreen() {
                 {list.map(renderCompactCard)}
               </div>
             ) : (
-              <div className="text-center py-8 rounded-lg border border-dashed border-zinc-800 bg-zinc-900/30">
-                <p className="text-zinc-600 text-xs mb-2">
+              <div className={cn(
+                'text-center py-8 rounded-lg border border-dashed',
+                theme !== 'light' ? 'border-zinc-800 bg-zinc-900/30' : 'border-zinc-300 bg-zinc-50'
+              )}>
+                <p className="text-zinc-500 text-xs mb-2">
                   {notices.some(n => n.type === type) ? 'No matches for these filters' : `No ${meta.tabLabel.toLowerCase()} yet`}
                 </p>
                 <button
                   onClick={() => handleOpenAddNotice(type)}
-                  className="inline-flex items-center gap-1 text-xs text-zinc-400 hover:text-zinc-200 transition-colors"
+                  className={cn(
+                    'inline-flex items-center gap-1 text-xs transition-colors',
+                    theme !== 'light' ? 'text-zinc-400 hover:text-zinc-200' : 'text-zinc-500 hover:text-zinc-800'
+                  )}
                 >
                   <Plus className="w-3 h-3" />
                   Add {meta.shortLabel}
@@ -429,7 +463,10 @@ export function NoticesScreen() {
           actions={
             <button
               onClick={() => handleOpenAddNotice('mistake')}
-              className="flex items-center gap-2 px-4 py-2 bg-zinc-800 hover:bg-zinc-700 text-white rounded-lg text-sm transition-colors flex-shrink-0"
+              className={cn(
+                'flex items-center gap-2 px-4 py-2 rounded-lg text-sm transition-colors flex-shrink-0',
+                theme !== 'light' ? 'bg-zinc-800 hover:bg-zinc-700 text-white' : 'bg-zinc-900 hover:bg-zinc-800 text-white'
+              )}
             >
               <Plus className="w-4 h-4" />
               <span>Add Notice</span>
