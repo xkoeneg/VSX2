@@ -954,7 +954,10 @@ export function DisciplineScreen() {
           </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-            <div className="bg-zinc-800/20 border border-zinc-800/60 rounded-xl p-4 min-w-0">
+            <div className={cn(
+              "border rounded-xl p-4 min-w-0",
+              theme !== 'light' ? 'bg-zinc-800/20 border-zinc-800/60' : 'bg-zinc-50 border-zinc-200'
+            )}>
               <div className="flex items-center justify-between gap-2 mb-3">
                 <h4 className="text-sm font-semibold text-violet-400 flex items-center gap-1.5 min-w-0">
                   <Brain className="w-4 h-4 flex-shrink-0" />
@@ -1002,7 +1005,10 @@ export function DisciplineScreen() {
               )}
             </div>
 
-            <div className="bg-zinc-800/20 border border-zinc-800/60 rounded-xl p-4 min-w-0">
+            <div className={cn(
+              "border rounded-xl p-4 min-w-0",
+              theme !== 'light' ? 'bg-zinc-800/20 border-zinc-800/60' : 'bg-zinc-50 border-zinc-200'
+            )}>
               <div className="flex items-center justify-between gap-2 mb-3">
                 <h4 className="text-sm font-semibold text-rose-400 flex items-center gap-1.5 min-w-0">
                   <AlertCircle className="w-4 h-4 flex-shrink-0" />
