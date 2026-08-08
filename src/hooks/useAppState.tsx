@@ -103,7 +103,7 @@ import {
   RuleAccentColor, StoredData,
 } from '../types';
 import {
-  DEFAULT_WIKI_ENTRIES, WIKI_CATEGORIES,
+  WIKI_CATEGORIES,
 } from '../constants/wiki';
 import {
   TIMEFRAMES, ACCOUNT_TYPES, TRADING_ACCOUNT_TYPES, PRESET_SYMBOLS, SESSION_OPTIONS, EMOTION_OPTIONS, SESSION_SHORT_LABEL,
@@ -359,7 +359,7 @@ export function useAppState() {
   const [rules, setRules] = useState<Rule[]>([]);
   const [strategies, setStrategies] = useState<Strategy[]>([]);
   const [notices, setNotices] = useState<MarketNotice[]>([]);
-  const [wikiEntries, setWikiEntries] = useState<WikiEntry[]>(DEFAULT_WIKI_ENTRIES);
+  const [wikiEntries, setWikiEntries] = useState<WikiEntry[]>([]);
   const [setupTypes, setSetupTypes] = useState<SetupType[]>([]);
   const [confluences, setConfluences] = useState<Confluence[]>([]);
   const [mistakesList, setMistakesList] = useState<Mistake[]>([]);
@@ -2282,6 +2282,11 @@ export function useAppState() {
 
   const handleAddTrade = () => {
     if (!newTrade.accountId || !newTrade.symbol) return;
+    if (newTrade.rulesFollowed !== 'followed' && newTrade.rulesFollowed !== 'broken') {
+      setRulesAdherenceError(true);
+      return;
+    }
+    setRulesAdherenceError(false);
     const chosenDate = newTrade.date || new Date().toISOString().split('T')[0];
     const nextTradeNumber = trades.length > 0
       ? Math.max(...trades.map(t => t.absoluteTradeNumber || 0)) + 1
@@ -2299,12 +2304,11 @@ export function useAppState() {
       setupTypes: newTrade.setupTypes || [],
       confluences: newTrade.confluences || [],
       mistakes: newTrade.mistakes || [],
-      rulesFollowed: newTrade.rulesFollowed === 'followed' || newTrade.rulesFollowed === 'broken' ? newTrade.rulesFollowed : undefined,
-      // Rules Adherence is optional now, so isReviewed follows whether the
-      // user actually picked Followed/Broken rather than being hardcoded —
-      // a manually-added trade left unreviewed behaves the same as an
-      // imported one instead of jumping straight to "reviewed".
-      isReviewed: newTrade.rulesFollowed === 'followed' || newTrade.rulesFollowed === 'broken',
+      rulesFollowed: newTrade.rulesFollowed as 'followed' | 'broken',
+      // Manually-added trades require Followed/Broken to be chosen before
+      // the form will even save (see the rulesFollowed guard clause just
+      // above), so there's no separate pending state to pass through here.
+      isReviewed: true,
       timeframes: newTrade.timeframes || initializeEmptyTimeframes(),
       executionImages: newTrade.executionImages || [],
       riskAmount: Number(newTrade.riskAmount) || 0,
@@ -2346,6 +2350,11 @@ export function useAppState() {
 
   const handleSaveEditedTrade = () => {
     if (!editingTrade || !newTrade.accountId || !newTrade.symbol) return;
+    if (newTrade.rulesFollowed !== 'followed' && newTrade.rulesFollowed !== 'broken') {
+      setRulesAdherenceError(true);
+      return;
+    }
+    setRulesAdherenceError(false);
     const chosenDate = newTrade.date || editingTrade.date;
     const updated: Trade = {
       ...editingTrade,
@@ -2360,13 +2369,12 @@ export function useAppState() {
       setupTypes: newTrade.setupTypes || [],
       confluences: newTrade.confluences || [],
       mistakes: newTrade.mistakes || [],
-      rulesFollowed: newTrade.rulesFollowed === 'followed' || newTrade.rulesFollowed === 'broken' ? newTrade.rulesFollowed : undefined,
-      // Same reasoning as handleAddTrade: isReviewed now follows whether
-      // Followed/Broken was actually chosen, rather than being hardcoded
-      // true just because the edit form was submitted. Editing an
-      // unreviewed import without touching Rules Adherence keeps it
-      // unreviewed instead of silently marking it reviewed.
-      isReviewed: newTrade.rulesFollowed === 'followed' || newTrade.rulesFollowed === 'broken',
+      rulesFollowed: newTrade.rulesFollowed as 'followed' | 'broken',
+      // Same reasoning as handleAddTrade: this save path also requires
+      // Followed/Broken to already be chosen, so the trade counts as
+      // reviewed the moment it saves — even if it started as an unreviewed
+      // import and was edited directly instead of going through "+ Review".
+      isReviewed: true,
       timeframes: newTrade.timeframes || initializeEmptyTimeframes(),
       executionImages: newTrade.executionImages || [],
       riskAmount: Number(newTrade.riskAmount) || 0,
