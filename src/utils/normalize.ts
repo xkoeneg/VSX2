@@ -60,7 +60,11 @@ export const normalizeTrade = (t: any, fallbackTradeNumber: number): Trade => ({
   setupTypes: Array.isArray(t?.setupTypes) ? t.setupTypes : [],
   confluences: Array.isArray(t?.confluences) ? t.confluences : [],
   mistakes: Array.isArray(t?.mistakes) ? t.mistakes : [],
-  rulesFollowed: t?.rulesFollowed === 'broken' ? 'broken' : 'followed',
+  // Must NOT default to 'followed' — unreviewed/imported trades have
+  // rulesFollowed === undefined and need to stay that way through every
+  // reload, or every unreviewed trade silently turns into a false
+  // "Rules Followed" the next time the app loads.
+  rulesFollowed: t?.rulesFollowed === 'broken' ? 'broken' : t?.rulesFollowed === 'followed' ? 'followed' : undefined,
   timeframes: Array.isArray(t?.timeframes) && t.timeframes.length > 0
     ? t.timeframes.map(normalizeTimeframeChart)
     : createEmptyTimeframes(),
