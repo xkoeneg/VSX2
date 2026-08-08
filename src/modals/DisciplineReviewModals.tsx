@@ -315,9 +315,19 @@ export function DisciplinePsychologyReviewModal() {
                 <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs font-medium">
                   <CheckCircle2 className="w-3.5 h-3.5" /> Rule Followed
                 </span>
-              ) : (
+              ) : trade.rulesFollowed === 'broken' ? (
                 <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-rose-500/10 border border-rose-500/20 text-rose-400 text-xs font-medium">
                   <XCircle className="w-3.5 h-3.5" /> Rule Broken
+                </span>
+              ) : (
+                // rulesFollowed is only ever set from the separate Trade
+                // Detail modal, not from this review flow — an imported or
+                // otherwise not-yet-categorized trade has neither value, and
+                // silently defaulting that to "Rule Broken" here was
+                // misleading (it hadn't been judged as broken; it just
+                // hadn't been judged at all).
+                <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-amber-500/10 border border-amber-500/20 text-amber-400 text-xs font-medium">
+                  <AlertCircle className="w-3.5 h-3.5" /> Not Yet Set
                 </span>
               )}
               <span className={cn('font-mono text-sm font-medium', trade.profitLoss >= 0 ? 'text-emerald-400' : 'text-rose-400')}>
@@ -622,9 +632,13 @@ export function RuleAdherenceReviewModal() {
                 <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs font-medium w-fit flex-shrink-0">
                   <CheckCircle2 className="w-3.5 h-3.5" /> Rule Followed
                 </span>
-              ) : (
+              ) : trade.rulesFollowed === 'broken' ? (
                 <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-rose-500/10 border border-rose-500/20 text-rose-400 text-xs font-medium w-fit flex-shrink-0">
                   <XCircle className="w-3.5 h-3.5" /> Rule Broken
+                </span>
+              ) : (
+                <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-amber-500/10 border border-amber-500/20 text-amber-400 text-xs font-medium w-fit flex-shrink-0">
+                  <AlertCircle className="w-3.5 h-3.5" /> Not Yet Set
                 </span>
               )}
 
