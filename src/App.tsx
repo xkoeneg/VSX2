@@ -237,7 +237,12 @@ function AppShell() {
   } = useAppContext();
 
   return (
-    <div className={cn("h-screen w-full flex overflow-hidden bg-[#0b0c0e] text-white", theme === 'minecraft' && 'theme-minecraft')}>
+    <div className={cn(
+      "h-screen w-full flex overflow-hidden",
+      theme === 'light' ? 'bg-zinc-50 text-zinc-900' : 'bg-[#0b0c0e] text-white',
+      theme === 'light' && 'theme-light-fix',
+      theme === 'minecraft' && 'theme-minecraft'
+    )}>
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=VT323&display=swap');
 
@@ -255,10 +260,12 @@ function AppShell() {
           padding: 0;
           height: 100%;
           scroll-behavior: smooth;
-          /* Matches the dark root background so mobile elastic/rubber-band
-             overscroll never reveals the browser's default white canvas
-             underneath tall pages (e.g. the 100-day grid). */
-          background-color: #0b0c0e;
+          /* Matches the current theme's root background so mobile
+             elastic/rubber-band overscroll never reveals a mismatched
+             canvas underneath tall pages (e.g. the 100-day grid) — was
+             hardcoded to the dark color, which flashed black on overscroll
+             even in light theme. */
+          background-color: ${theme === 'light' ? '#fafafa' : '#0b0c0e'};
         }
         /* Trade History (List / Preview) tables force horizontal scroll on
            narrow screens — restore a slim, themed scrollbar here so users
@@ -396,6 +403,12 @@ function AppShell() {
         .theme-light-fix [class~="border-zinc-500"] { border-color: #d4d4d8 !important; }
         .theme-light-fix [class~="hover:border-zinc-500"]:hover { border-color: #71717a !important; }
         .theme-light-fix [class~="bg-zinc-500"] { background-color: #d4d4d8 !important; }
+        /* Two classes the minecraft reskin below already accounts for
+           (bg-zinc-900/70, text-zinc-500) but that were missing from this
+           list — added so every screen using them (not just the ones
+           inlined in this file) renders correctly in light mode too. */
+        .theme-light-fix [class~="bg-zinc-900/70"] { background-color: #ffffff !important; }
+        .theme-light-fix [class~="text-zinc-500"] { color: #52525b !important; }
 
         /* ---- Minecraft theme ----
            The base markup is authored with dark zinc-* utility classes.
