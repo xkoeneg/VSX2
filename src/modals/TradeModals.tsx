@@ -1539,32 +1539,26 @@ export function AddTradeModal() {
               <div className="grid grid-cols-2 gap-3">
                 <button
                   type="button"
-                  onClick={() => { setNewTrade(prev => ({ ...prev, rulesFollowed: prev.rulesFollowed === 'followed' ? undefined : 'followed' })); setRulesAdherenceError(false); }}
+                  onClick={() => setNewTrade(prev => ({ ...prev, rulesFollowed: prev.rulesFollowed === 'followed' ? undefined : 'followed' }))}
                   className={cn('w-full flex items-center justify-center gap-1.5 px-3 py-3 rounded-lg text-sm font-medium border transition-colors',
                     newTrade.rulesFollowed === 'followed'
                       ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30'
-                      : rulesAdherenceError
-                        ? 'bg-zinc-800/60 text-zinc-400 border-rose-500/50 hover:bg-zinc-800 hover:border-rose-500/70'
-                        : 'bg-zinc-800/60 text-zinc-400 border-zinc-700/80 hover:bg-zinc-800 hover:border-zinc-600')}
+                      : 'bg-zinc-800/60 text-zinc-400 border-zinc-700/80 hover:bg-zinc-800 hover:border-zinc-600')}
                 >
                   <Check className="w-3.5 h-3.5" /> Followed
                 </button>
                 <button
                   type="button"
-                  onClick={() => { setNewTrade(prev => ({ ...prev, rulesFollowed: prev.rulesFollowed === 'broken' ? undefined : 'broken' })); setRulesAdherenceError(false); }}
+                  onClick={() => { setNewTrade(prev => ({ ...prev, rulesFollowed: prev.rulesFollowed === 'broken' ? undefined : 'broken' })); }}
                   className={cn('w-full flex items-center justify-center gap-1.5 px-3 py-3 rounded-lg text-sm font-medium border transition-colors',
                     newTrade.rulesFollowed === 'broken'
                       ? 'bg-rose-500/10 text-rose-400 border-rose-500/30'
-                      : rulesAdherenceError
-                        ? 'bg-zinc-800/60 text-zinc-400 border-rose-500/50 hover:bg-zinc-800 hover:border-rose-500/70'
-                        : 'bg-zinc-800/60 text-zinc-400 border-zinc-700/80 hover:bg-zinc-800 hover:border-zinc-600')}
+                      : 'bg-zinc-800/60 text-zinc-400 border-zinc-700/80 hover:bg-zinc-800 hover:border-zinc-600')}
                 >
                   <X className="w-3.5 h-3.5" /> Broken
                 </button>
               </div>
-              {rulesAdherenceError && (
-                <p className="text-xs text-rose-400">Please select whether rules were Followed or Broken</p>
-              )}
+              <p className="text-[11px] text-zinc-500">Optional — leave unselected if not yet reviewed</p>
             </div>
 
             {/* ================= SECTION 2: Strategy & Tagging ================= */}
@@ -2109,32 +2103,26 @@ export function EditTradeModal() {
               <div className="grid grid-cols-2 gap-3">
                 <button
                   type="button"
-                  onClick={() => { setNewTrade(prev => ({ ...prev, rulesFollowed: prev.rulesFollowed === 'followed' ? undefined : 'followed' })); setRulesAdherenceError(false); }}
+                  onClick={() => setNewTrade(prev => ({ ...prev, rulesFollowed: prev.rulesFollowed === 'followed' ? undefined : 'followed' }))}
                   className={cn('w-full flex items-center justify-center gap-1.5 px-3 py-3 rounded-lg text-sm font-medium border transition-colors',
                     newTrade.rulesFollowed === 'followed'
                       ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30'
-                      : rulesAdherenceError
-                        ? 'bg-zinc-800/60 text-zinc-400 border-rose-500/50 hover:bg-zinc-800 hover:border-rose-500/70'
-                        : 'bg-zinc-800/60 text-zinc-400 border-zinc-700/80 hover:bg-zinc-800 hover:border-zinc-600')}
+                      : 'bg-zinc-800/60 text-zinc-400 border-zinc-700/80 hover:bg-zinc-800 hover:border-zinc-600')}
                 >
                   <Check className="w-3.5 h-3.5" /> Followed
                 </button>
                 <button
                   type="button"
-                  onClick={() => { setNewTrade(prev => ({ ...prev, rulesFollowed: prev.rulesFollowed === 'broken' ? undefined : 'broken' })); setRulesAdherenceError(false); }}
+                  onClick={() => { setNewTrade(prev => ({ ...prev, rulesFollowed: prev.rulesFollowed === 'broken' ? undefined : 'broken' })); }}
                   className={cn('w-full flex items-center justify-center gap-1.5 px-3 py-3 rounded-lg text-sm font-medium border transition-colors',
                     newTrade.rulesFollowed === 'broken'
                       ? 'bg-rose-500/10 text-rose-400 border-rose-500/30'
-                      : rulesAdherenceError
-                        ? 'bg-zinc-800/60 text-zinc-400 border-rose-500/50 hover:bg-zinc-800 hover:border-rose-500/70'
-                        : 'bg-zinc-800/60 text-zinc-400 border-zinc-700/80 hover:bg-zinc-800 hover:border-zinc-600')}
+                      : 'bg-zinc-800/60 text-zinc-400 border-zinc-700/80 hover:bg-zinc-800 hover:border-zinc-600')}
                 >
                   <X className="w-3.5 h-3.5" /> Broken
                 </button>
               </div>
-              {rulesAdherenceError && (
-                <p className="text-xs text-rose-400">Please select whether rules were Followed or Broken</p>
-              )}
+              <p className="text-[11px] text-zinc-500">Optional — leave unselected if not yet reviewed</p>
             </div>
 
             {/* ================= SECTION 2: Strategy & Tagging ================= */}
