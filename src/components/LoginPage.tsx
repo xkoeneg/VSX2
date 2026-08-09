@@ -9,6 +9,7 @@ import {
   TrendingUp,
   Brain,
   ChevronRight,
+  Scale,
   Wallet,
   CloudCog,
   ShieldCheck,
@@ -114,6 +115,29 @@ function DisciplinePreviewCard() {
         <span className="flex items-center gap-0.5 text-xs font-medium text-zinc-500 ml-1">
           Full <ChevronRight className="w-3.5 h-3.5" />
         </span>
+      </div>
+    </div>
+  );
+}
+
+// Mirrors the Win/Loss ratio stat — compact horizontal card, good filler
+// between the larger showcase pieces.
+function TradeStatsPreviewCard() {
+  return (
+    <div className="w-64 rounded-2xl border border-zinc-800/80 bg-zinc-900/70 p-4 shadow-2xl flex items-center gap-3">
+      <div className="p-2.5 rounded-xl bg-zinc-800/60 flex-shrink-0">
+        <Scale className="w-4 h-4 text-zinc-400" />
+      </div>
+      <div className="min-w-0">
+        <p className="text-[10px] uppercase tracking-wider font-medium text-zinc-500">Win / Loss Ratio</p>
+        <p className="text-lg font-semibold tabular-nums flex items-baseline gap-1.5">
+          <span>
+            <span className="text-emerald-500">202W</span>
+            <span className="text-zinc-500 mx-1">-</span>
+            <span className="text-rose-500">110L</span>
+          </span>
+          <span className="text-[10px] font-normal text-zinc-500">(312 · 64.8%)</span>
+        </p>
       </div>
     </div>
   );
@@ -258,39 +282,62 @@ function WikiPreviewCard() {
   );
 }
 
-// Two tiles per corner (near + far), each on its own float timing so
-// nothing bobs in unison, and its own translateZ depth so the tilted scene
-// reads with real parallax rather than a flat sticker sheet. The "far"
-// tile in each cluster sits further from the edge, toward center, so the
-// canvas actually reads as populated rather than four lonely cards.
-const CORNER_CARDS: Array<{
-  Card: () => JSX.Element;
-  position: string;
-  depth: string;
-  duration: string;
-  delay: string;
-}> = [
-  // Top-left cluster
-  { Card: PnLPreviewCard, position: 'top-8 left-6 xl:left-14', depth: '-40px', duration: '7s', delay: '0s' },
-  { Card: TradeHistoryPreviewCard, position: 'top-64 left-16 xl:left-28', depth: '20px', duration: '9s', delay: '1.1s' },
-  // Top-right cluster
-  { Card: AccountsPreviewCard, position: 'top-8 right-6 xl:right-14', depth: '40px', duration: '8s', delay: '0.6s' },
-  { Card: NoticePreviewCard, position: 'top-60 right-16 xl:right-28', depth: '-30px', duration: '7.8s', delay: '1.4s' },
-  // Bottom-left cluster
-  { Card: DisciplinePreviewCard, position: 'bottom-8 left-6 xl:left-14', depth: '40px', duration: '7.5s', delay: '0.3s' },
-  { Card: WikiPreviewCard, position: 'bottom-60 left-16 xl:left-28', depth: '-25px', duration: '8.3s', delay: '0.8s' },
-  // Bottom-right cluster
-  { Card: PlaybookPreviewCard, position: 'bottom-8 right-6 xl:right-14', depth: '-40px', duration: '8.5s', delay: '0.9s' },
-  { Card: CalendarHeatmapPreviewCard, position: 'bottom-64 right-16 xl:right-28', depth: '30px', duration: '9.2s', delay: '1.7s' },
+// Every preview variant, cycled with repeats for density — this is what
+// fills the background wall. Deliberately more entries than corners so
+// cards land everywhere: edges, mid-screen, and directly behind the modal
+// (where the modal's own translucent glass shows a soft blurred sliver of
+// whatever's back there instead of a hard void).
+const PREVIEW_CARDS: Array<() => JSX.Element> = [
+  PnLPreviewCard,
+  TradeHistoryPreviewCard,
+  DisciplinePreviewCard,
+  CalendarHeatmapPreviewCard,
+  AccountsPreviewCard,
+  PlaybookPreviewCard,
+  TradeStatsPreviewCard,
+  NoticePreviewCard,
+  WikiPreviewCard,
+  AccountsPreviewCard,
+  CalendarHeatmapPreviewCard,
+  TradeHistoryPreviewCard,
+  DisciplinePreviewCard,
+  PlaybookPreviewCard,
+  PnLPreviewCard,
+  WikiPreviewCard,
+  TradeStatsPreviewCard,
+  NoticePreviewCard,
 ];
 
-// Full-viewport backdrop that sits behind the centered auth modal: a subtly
-// tilted 3D scene (perspective + static rotateX/Y/Z, same as the rest of
-// the app's "living terminal" feel) with a small cluster of preview cards
-// anchored in each corner, plus ambient emerald glows in all four corners
-// for depth. Purely decorative — pointer-events disabled so it never
-// intercepts clicks — and hidden below `lg` where there isn't enough room
-// for corner clusters to sit clear of the modal.
+// translateZ depth (px) per tile, cycled — negative pushes a card further
+// from the camera (back layer), positive pulls it closer (front layer).
+const DEPTH_CYCLE = [0, -140, 70, -70, 140, -210, 35, -105];
+
+// Depth-based opacity so far-back cards recede slightly, but everything
+// stays clearly readable — floor is high enough that figures never wash
+// out against the dark backdrop.
+function opacityForDepth(depth: number) {
+  const fade = Math.min(Math.abs(depth) / 260, 0.15);
+  return (0.9 - fade).toFixed(2);
+}
+
+// Float timing/delay cycled per tile so nothing bobs in unison.
+const FLOAT_CYCLE = [
+  { duration: '4s', delay: '0s' },
+  { duration: '4.6s', delay: '0.4s' },
+  { duration: '5s', delay: '0.8s' },
+  { duration: '4.3s', delay: '1.2s' },
+  { duration: '4.8s', delay: '0.2s' },
+];
+
+// Full-viewport backdrop that sits behind the centered auth modal: a dense,
+// subtly tilted 3D wall of preview cards (perspective + static
+// rotateX/Y/Z), wide enough to overflow both edges of the screen so cards
+// land everywhere — corners, mid-screen, and directly behind the modal
+// itself, where the modal's translucent glass lets a soft blurred sliver
+// show through on either side rather than leaving a bare gap. Ambient
+// emerald glows sit in all four corners for depth. Purely decorative —
+// pointer-events disabled so it never intercepts clicks — and hidden below
+// `lg` in favor of a clean, uncluttered modal.
 function CornerPreviewBackdrop() {
   return (
     <div className="pointer-events-none absolute inset-0 overflow-hidden bg-[#0d0f12]" aria-hidden="true">
@@ -300,39 +347,48 @@ function CornerPreviewBackdrop() {
       <div className="absolute -bottom-24 -left-24 w-[420px] h-[420px] rounded-full bg-emerald-500/15 blur-[120px]" />
       <div className="absolute -bottom-24 -right-24 w-[420px] h-[420px] rounded-full bg-emerald-500/15 blur-[120px]" />
 
-      {/* Tilted 3D scene, corner cards only — hidden on small/medium
-          viewports where they'd otherwise collide with the centered modal */}
-      <div className="hidden lg:block absolute inset-0" style={{ perspective: '1400px' }}>
-        <div
-          className="absolute inset-0 login-scene-drift"
-          style={{ transformStyle: 'preserve-3d' }}
-        >
+      {/* Tilted 3D card wall — overflows both edges (160% of viewport
+          width) so the scatter reads as continuous background, not a
+          handful of pinned tiles. Hidden on small/medium viewports. */}
+      <div className="hidden lg:flex absolute inset-0 items-center justify-center" style={{ perspective: '1400px' }}>
+        <div className="login-scene-drift" style={{ transformStyle: 'preserve-3d' }}>
           <div
-            className="absolute inset-0"
-            style={{ transform: 'rotateX(12deg) rotateY(-16deg) rotateZ(3deg)', transformStyle: 'preserve-3d' }}
+            className="flex flex-wrap content-center justify-center gap-6 p-6"
+            style={{
+              width: '160vw',
+              maxWidth: 'none',
+              transform: 'rotateX(12deg) rotateY(-16deg) rotateZ(3deg)',
+              transformStyle: 'preserve-3d',
+            }}
           >
-            {CORNER_CARDS.map(({ Card, position, depth, duration, delay }, i) => (
-              <div
-                key={i}
-                className={cn('absolute login-card-float', position)}
-                style={
-                  {
-                    animationDuration: duration,
-                    animationDelay: delay,
-                    '--depth': depth,
-                  } as React.CSSProperties
-                }
-              >
-                <Card />
-              </div>
-            ))}
+            {PREVIEW_CARDS.map((Card, i) => {
+              const depth = DEPTH_CYCLE[i % DEPTH_CYCLE.length];
+              const float = FLOAT_CYCLE[i % FLOAT_CYCLE.length];
+              return (
+                <div
+                  key={i}
+                  className="login-card-float"
+                  style={
+                    {
+                      opacity: opacityForDepth(depth),
+                      animationDuration: float.duration,
+                      animationDelay: float.delay,
+                      '--depth': `${depth}px`,
+                    } as React.CSSProperties
+                  }
+                >
+                  <Card />
+                </div>
+              );
+            })}
           </div>
         </div>
       </div>
 
-      {/* Soft edge fade so the corners recede slightly and the centered
-          modal stays the clear focal point */}
-      <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,transparent_35%,rgba(13,15,18,0.55)_100%)]" />
+      {/* Soft edge fade so the outer rim recedes slightly and the centered
+          modal stays the clear focal point, without crushing the cards
+          that peek out alongside it into invisibility */}
+      <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,transparent_30%,rgba(13,15,18,0.4)_100%)]" />
 
       <style>{`
         @keyframes login-scene-drift {
