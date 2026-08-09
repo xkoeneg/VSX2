@@ -1,4 +1,6 @@
 import { useState, useEffect, useMemo, useRef, useCallback } from 'react';
+import type { Session } from '@supabase/supabase-js';
+import { supabase } from '../lib/supabaseClient';
 import { useDebouncedLocalStorageWriter } from './useDebouncedLocalStorageWriter';
 import {
   LayoutDashboard,
@@ -157,6 +159,39 @@ import type { TagColor, RoutineIconKind, WeekDay, RoutineIconColor, RuleSeverity
 // own files without every function signature having to change.
 // ============================================================================
 export function useAppState() {
+  // ---- Supabase Auth ----
+  // `authLoading` covers the brief window before the very first
+  // getSession() resolves — App.tsx uses it to show a blank/loading screen
+  // instead of flashing the LoginPage before we actually know whether a
+  // session already exists (e.g. from a previous visit's persisted token).
+  const [session, setSession] = useState<Session | null>(null);
+  const [authLoading, setAuthLoading] = useState(true);
+
+  useEffect(() => {
+    // Picks up any session already persisted (localStorage, by default)
+    // from a previous visit, without waiting for onAuthStateChange to fire.
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setSession(session);
+      setAuthLoading(false);
+    });
+
+    // Fires on every subsequent sign-in, sign-out, token refresh, and (for
+    // the Google OAuth redirect flow) when Supabase picks the session up
+    // out of the URL after the provider sends the user back. This is the
+    // single source of truth App.tsx reads to decide LoginPage vs the
+    // dashboard — no manual "did login succeed?" plumbing needed anywhere.
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, newSession) => {
+      setSession(newSession);
+      setAuthLoading(false);
+    });
+
+    return () => subscription.unsubscribe();
+  }, []);
+
+  const signOutUser = useCallback(async () => {
+    await supabase.auth.signOut();
+  }, []);
+
   // State
   const [view, setView] = useState<ViewType>('dashboard');
   const [privacyMode, setPrivacyMode] = useState(false);
@@ -3967,5 +4002,8 @@ export function useAppState() {
     importBackup,
     exportTradesOnly,
     handleFullSystemReset,
+    session,
+    authLoading,
+    signOutUser,
   };
 }
