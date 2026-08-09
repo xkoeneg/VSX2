@@ -372,7 +372,9 @@ export function LoginPage() {
   const [mode, setMode] = useState<AuthMode>('signIn');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isGoogleSubmitting, setIsGoogleSubmitting] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
@@ -382,6 +384,7 @@ export function LoginPage() {
     setMode(next);
     setErrorMsg(null);
     setInfoMsg(null);
+    setConfirmPassword('');
   };
 
   const handleGoogleSignIn = async () => {
@@ -407,9 +410,19 @@ export function LoginPage() {
       setErrorMsg('Enter both an email and a password.');
       return;
     }
-    if (mode === 'signUp' && password.length < 6) {
-      setErrorMsg('Password must be at least 6 characters.');
-      return;
+    if (mode === 'signUp') {
+      if (password.length < 8) {
+        setErrorMsg('Password must be at least 8 characters.');
+        return;
+      }
+      if (!/[!@#$%^&*(),.?":{}|<>_\-+=[\]\\/;'`~]/.test(password)) {
+        setErrorMsg('Password must include at least one special character.');
+        return;
+      }
+      if (password !== confirmPassword) {
+        setErrorMsg('Passwords do not match.');
+        return;
+      }
     }
 
     setIsSubmitting(true);
@@ -525,7 +538,7 @@ export function LoginPage() {
                 autoComplete={mode === 'signIn' ? 'current-password' : 'new-password'}
                 value={password}
                 onChange={e => setPassword(e.target.value)}
-                placeholder={mode === 'signUp' ? 'At least 6 characters' : '••••••••'}
+                placeholder={mode === 'signUp' ? '8+ characters, 1 special' : '••••••••'}
                 className={cn(inputClass, 'pr-11')}
               />
               <button
@@ -537,7 +550,39 @@ export function LoginPage() {
                 {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
               </button>
             </div>
+            {mode === 'signUp' && (
+              <p className="mt-1.5 text-[11px] text-zinc-500">
+                Must be 8+ characters and include a special character (e.g. ! @ # $).
+              </p>
+            )}
           </div>
+
+          {mode === 'signUp' && (
+            <div>
+              <label htmlFor="auth-confirm-password" className="block text-xs font-medium text-zinc-400 mb-1.5">
+                Confirm Password
+              </label>
+              <div className="relative">
+                <input
+                  id="auth-confirm-password"
+                  type={showConfirmPassword ? 'text' : 'password'}
+                  autoComplete="new-password"
+                  value={confirmPassword}
+                  onChange={e => setConfirmPassword(e.target.value)}
+                  placeholder="Re-enter your password"
+                  className={cn(inputClass, 'pr-11')}
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowConfirmPassword(v => !v)}
+                  aria-label={showConfirmPassword ? 'Hide password' : 'Show password'}
+                  className="absolute right-0 top-0 h-11 w-11 flex items-center justify-center text-zinc-500 hover:text-zinc-300 transition-colors"
+                >
+                  {showConfirmPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                </button>
+              </div>
+            </div>
+          )}
 
           <button
             type="submit"
