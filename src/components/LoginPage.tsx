@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useLayoutEffect } from 'react';
 import {
   Eye,
   EyeOff,
@@ -755,19 +755,19 @@ function Tile({ Card, top, left, ring, variant, seed }: TileConfig) {
 // pointer-events disabled so it never intercepts clicks — and hidden below
 // `lg` in favor of a clean, uncluttered modal.
 function WarRoomBackdrop() {
-  // Mount fade-in: the scatter starts invisible and fades to full opacity
-  // once its own effect fires (i.e. after React has committed the DOM and
-  // the browser has a layout to paint from). This means the very first
-  // paint the user sees is the *finished* 3D-transformed layout, not the
-  // flat/untransformed one snapping into place — the "stutter" was really
-  // that snap, not the animation itself. requestAnimationFrame (rather than
-  // firing immediately in useEffect) guarantees the initial styles have
-  // actually been painted at opacity 0 before we transition, so the browser
-  // has something to interpolate from instead of jumping.
-  const [mounted, setMounted] = useState(false);
-  useEffect(() => {
-    const raf = requestAnimationFrame(() => setMounted(true));
-    return () => cancelAnimationFrame(raf);
+  // Client mount safety guard: the scatter's 3D positions (top/left/rotate/
+  // scale/z, all computed inline per tile) don't exist until React commits
+  // and the browser lays them out. Rather than trusting a fade to mask that
+  // window, we keep the whole subtree fully hidden (opacity-0 +
+  // pointer-events-none) through that first commit, and only flip it
+  // visible once useLayoutEffect confirms the DOM — and therefore every
+  // tile's transform — is already in place. useLayoutEffect (not useEffect)
+  // matters here: it fires synchronously after DOM mutations but before the
+  // browser paints, so there is no frame where the unstyled/untransformed
+  // layout is ever actually painted to the screen — nothing to "snap" from.
+  const [isMounted, setIsMounted] = useState(false);
+  useLayoutEffect(() => {
+    setIsMounted(true);
   }, []);
 
   return (
@@ -787,16 +787,19 @@ function WarRoomBackdrop() {
           breathes. Hidden on small/medium viewports.
           `contain: layout paint` scopes reflow/repaint to this subtree so
           the 25 tiles computing their 3D transforms on mount can never
-          trigger a layout pass on the auth card or the rest of the page —
-          that cross-subtree reflow was the other half of the stutter.
-          The opacity transition is the actual fade-in; transform-gpu keeps
-          it compositor-only (no repaint) rather than a layout-affecting one. */}
+          trigger a layout pass on the auth card or the rest of the page.
+          Visibility is fully gated on `isMounted`: opacity-0 +
+          pointer-events-none until the layout effect confirms every tile
+          is positioned, then a quick 300ms fade reveals the already-correct
+          scene — never the raw unstyled one. */}
       <div
-        className="hidden lg:block absolute inset-0 transform-gpu transition-opacity duration-500 ease-out"
+        className={cn(
+          'hidden lg:block absolute inset-0 transform-gpu transition-opacity duration-300 ease-out',
+          isMounted ? 'opacity-100' : 'opacity-0 pointer-events-none'
+        )}
         style={{
           perspective: '1400px',
           contain: 'layout paint',
-          opacity: mounted ? 1 : 0,
           willChange: 'opacity',
         }}
       >
