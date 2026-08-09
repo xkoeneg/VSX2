@@ -384,7 +384,11 @@ export function LoginPage() {
     setMode(next);
     setErrorMsg(null);
     setInfoMsg(null);
+    setEmail('');
+    setPassword('');
     setConfirmPassword('');
+    setShowPassword(false);
+    setShowConfirmPassword(false);
   };
 
   const handleGoogleSignIn = async () => {
