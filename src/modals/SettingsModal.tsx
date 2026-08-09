@@ -274,8 +274,20 @@ export function SettingsModal() {
     handleDeleteConfluence, handleDeleteMistakeType, handleChangeSetupTypeColor, handleChangeConfluenceColor,
     handleChangeMistakeColor, handleDeleteEmotion, handleChangeEmotionColor, colorForEmotion, colorForMistake,
     handleFileUpload, handleAddImageUrl, handleRemoveImage, handleReorderImages, updateTimeframeNotes,
-    exportBackup, importBackup,
+    exportBackup, importBackup, exportTradesOnly,
   } = useAppContext();
+
+    const [tradesExportFormat, setTradesExportFormat] = useState<'csv' | 'json'>('csv');
+    const [isExportingTrades, setIsExportingTrades] = useState(false);
+
+    const handleExportTradesOnly = async () => {
+      setIsExportingTrades(true);
+      try {
+        await exportTradesOnly(tradesExportFormat);
+      } finally {
+        setIsExportingTrades(false);
+      }
+    };
 
     const [showResetConfirm, setShowResetConfirm] = useState(false);
     const [resetConfirmText, setResetConfirmText] = useState('');
@@ -403,40 +415,75 @@ export function SettingsModal() {
           {/* TAB 2: Data Backup */}
           {settingsModalTab === 'backup' && (
             <div className="flex flex-col gap-3">
-              <div className="px-4 py-3.5 rounded-xl bg-zinc-800/50 border border-zinc-800">
+              {/* OPTION 1 (default/primary): Full System Backup & Restore */}
+              <div className="px-4 py-3.5 rounded-xl bg-zinc-800/50 border border-zinc-700/80">
+                <div className="flex items-center gap-2 mb-0.5">
+                  <p className="text-[10px] font-semibold tracking-wider text-emerald-400 uppercase">Recommended</p>
+                </div>
                 <div className="flex items-center gap-3 mb-2">
                   <div className="w-9 h-9 rounded-lg bg-zinc-800 flex items-center justify-center flex-shrink-0">
-                    <Download className="w-4 h-4 text-zinc-300" />
+                    <HardDrive className="w-4 h-4 text-zinc-300" />
                   </div>
-                  <p className="text-sm font-medium text-white">Export Journal Backup</p>
+                  <p className="text-sm font-medium text-white">Full System Backup &amp; Restore</p>
                 </div>
                 <p className="text-xs text-zinc-500 mb-3 leading-relaxed">
-                  Download a complete snapshot of your accounts, trades, rules, and notes as a single JSON file you can store safely or move to another device.
+                  A complete JSON snapshot of everything — accounts, trades, your rules playbook, and the full Life Discipline Hub (active challenge config, daily logs, and history). Restoring overwrites your current data 1:1, so make sure it's the file you intend to load.
                 </p>
-                <button
-                  onClick={() => setIsExportConfirmOpen(true)}
-                  className="w-full flex items-center justify-center gap-2 px-3 py-2 rounded-lg text-sm font-medium bg-zinc-700 text-white hover:bg-zinc-600 transition-all"
-                >
-                  <Download className="w-4 h-4" />
-                  Export Backup
-                </button>
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => setIsExportConfirmOpen(true)}
+                    className="flex-1 flex items-center justify-center gap-2 px-3 py-2 rounded-lg text-sm font-medium bg-zinc-700 text-white hover:bg-zinc-600 transition-all"
+                  >
+                    <Download className="w-4 h-4" />
+                    Export Backup
+                  </button>
+                  <label className="flex-1 flex items-center justify-center gap-2 px-3 py-2 rounded-lg text-sm font-medium bg-zinc-700 text-white hover:bg-zinc-600 transition-all cursor-pointer">
+                    <FolderSync className="w-4 h-4" />
+                    Import &amp; Restore
+                    <input type="file" accept=".json,application/json" className="hidden" onChange={importBackup} />
+                  </label>
+                </div>
               </div>
 
+              {/* OPTION 2: Trades Only Export */}
               <div className="px-4 py-3.5 rounded-xl bg-zinc-800/50 border border-zinc-800">
                 <div className="flex items-center gap-3 mb-2">
                   <div className="w-9 h-9 rounded-lg bg-zinc-800 flex items-center justify-center flex-shrink-0">
-                    <FolderSync className="w-4 h-4 text-zinc-300" />
+                    <FileText className="w-4 h-4 text-zinc-300" />
                   </div>
-                  <p className="text-sm font-medium text-white">Import & Restore Backup</p>
+                  <p className="text-sm font-medium text-white">Trades Only Export</p>
                 </div>
                 <p className="text-xs text-zinc-500 mb-3 leading-relaxed">
-                  Restore your journal from a previously exported backup file. This will replace your current data, so make sure it's the file you intend to load.
+                  Export just your trade records — Entry, Exit, Pair, R:R, PnL, Date, Status, and Account — in a clean format for spreadsheet analysis or sharing. No discipline logs, habits, or system settings included.
                 </p>
-                <label className="w-full flex items-center justify-center gap-2 px-3 py-2 rounded-lg text-sm font-medium bg-zinc-700 text-white hover:bg-zinc-600 transition-all cursor-pointer">
-                  <FolderSync className="w-4 h-4" />
-                  Choose File to Import
-                  <input type="file" accept=".json,application/json" className="hidden" onChange={importBackup} />
-                </label>
+                <div className="flex items-center gap-1 mb-3 p-1 rounded-lg bg-zinc-900/60 border border-zinc-800 w-fit">
+                  <button
+                    onClick={() => setTradesExportFormat('csv')}
+                    className={cn(
+                      'px-3 py-1 rounded-md text-xs font-medium transition-all',
+                      tradesExportFormat === 'csv' ? 'bg-zinc-700 text-white' : 'text-zinc-400 hover:text-zinc-200'
+                    )}
+                  >
+                    .csv
+                  </button>
+                  <button
+                    onClick={() => setTradesExportFormat('json')}
+                    className={cn(
+                      'px-3 py-1 rounded-md text-xs font-medium transition-all',
+                      tradesExportFormat === 'json' ? 'bg-zinc-700 text-white' : 'text-zinc-400 hover:text-zinc-200'
+                    )}
+                  >
+                    .json
+                  </button>
+                </div>
+                <button
+                  onClick={handleExportTradesOnly}
+                  disabled={isExportingTrades || trades.length === 0}
+                  className="w-full flex items-center justify-center gap-2 px-3 py-2 rounded-lg text-sm font-medium bg-zinc-700 text-white hover:bg-zinc-600 transition-all disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-zinc-700"
+                >
+                  <Download className="w-4 h-4" />
+                  {isExportingTrades ? 'Exporting…' : `Export Trades (.${tradesExportFormat})`}
+                </button>
               </div>
             </div>
           )}
