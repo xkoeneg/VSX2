@@ -169,48 +169,53 @@ function PlaybookPreviewCard() {
 // bobs in perfect unison, plus a small vertical offset (margin, not
 // transform) so the four cards read as an organic scatter rather than a
 // rigid grid.
+// One tile per quadrant of the canvas (top-left, top-right, bottom-left,
+// bottom-right) so the cards actually use the full 60% of real estate
+// instead of clumping in the center. `corner` drives absolute positioning;
+// `duration`/`delay` stagger the float so nothing bobs in unison.
 const SHOWCASE_TILES: Array<{
   Card: () => JSX.Element;
-  offsetClass: string;
+  corner: string;
   duration: string;
   delay: string;
 }> = [
-  { Card: PnLPreviewCard, offsetClass: 'mt-10', duration: '7s', delay: '0s' },
-  { Card: AccountsPreviewCard, offsetClass: 'mt-0', duration: '8s', delay: '0.6s' },
-  { Card: DisciplinePreviewCard, offsetClass: 'mt-4', duration: '7.5s', delay: '0.3s' },
-  { Card: PlaybookPreviewCard, offsetClass: 'mt-16', duration: '8.5s', delay: '0.9s' },
+  { Card: PnLPreviewCard, corner: 'top-32 left-10 xl:left-16', duration: '7s', delay: '0s' },
+  { Card: AccountsPreviewCard, corner: 'top-16 right-10 xl:right-16', duration: '8s', delay: '0.6s' },
+  { Card: DisciplinePreviewCard, corner: 'bottom-16 left-14 xl:left-24', duration: '7.5s', delay: '0.3s' },
+  { Card: PlaybookPreviewCard, corner: 'bottom-12 right-14 xl:right-24', duration: '8.5s', delay: '0.9s' },
 ];
 
-// Left-side (60%) showcase canvas — ambient emerald glows behind a loosely
-// scattered, gently floating cluster of preview cards. Purely decorative;
-// pointer-events disabled on the animated layer so it never intercepts
-// clicks, and hidden entirely below `lg` in favor of a full-width auth panel.
+// Left-side (60%) showcase canvas — ambient emerald glows behind a
+// gently floating cluster of preview cards, one anchored in each corner so
+// the whole canvas feels filled rather than a bunched-up center cluster.
+// Purely decorative; pointer-events disabled on the animated layer so it
+// never intercepts clicks, and hidden entirely below `lg` in favor of a
+// full-width auth panel.
 function ShowcaseCanvas() {
   return (
-    <div className="relative hidden lg:flex w-[60%] flex-shrink-0 items-center justify-center overflow-hidden bg-[#0d0f12] px-12 xl:px-20 py-10">
-      {/* Ambient emerald glows */}
-      <div className="absolute -left-32 top-1/4 w-[480px] h-[480px] rounded-full bg-emerald-500/10 blur-[120px]" />
-      <div className="absolute right-0 -bottom-24 w-[420px] h-[420px] rounded-full bg-emerald-500/10 blur-[120px]" />
-      <div className="absolute left-1/3 -top-24 w-[360px] h-[360px] rounded-full bg-slate-500/10 blur-[120px]" />
+    <div className="relative hidden lg:block flex-1 lg:w-[calc(100%-450px)] overflow-hidden bg-[#0d0f12]">
+      {/* Ambient emerald glows — one behind each quadrant so the glow
+          follows the cards into every corner of the canvas */}
+      <div className="absolute -top-10 -left-10 w-96 h-96 rounded-full bg-emerald-500/10 blur-[130px]" />
+      <div className="absolute -top-16 right-0 w-96 h-96 rounded-full bg-emerald-500/10 blur-[130px]" />
+      <div className="absolute -bottom-16 left-1/4 w-96 h-96 rounded-full bg-emerald-500/10 blur-[130px]" />
+      <div className="absolute -bottom-10 -right-10 w-96 h-96 rounded-full bg-emerald-500/10 blur-[130px]" />
+      <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-[420px] h-[420px] rounded-full bg-slate-500/5 blur-[130px]" />
 
       {/* Brand mark, anchored top-left of the canvas */}
-      <div className="absolute top-10 left-12 xl:left-20">
+      <div className="absolute top-10 left-12 xl:left-20 z-10">
         <h1 className="text-2xl font-bold tracking-tight text-white">VSX</h1>
         <p className="mt-1 text-sm text-zinc-500">Institutional Trading &amp; Discipline Journal</p>
       </div>
 
-      {/* Scattered, floating preview cards */}
-      <div className="relative z-10 grid grid-cols-2 gap-10 xl:gap-14 max-w-2xl w-full pointer-events-none">
-        {SHOWCASE_TILES.map(({ Card, offsetClass, duration, delay }, i) => (
-          <div
-            key={i}
-            className={offsetClass}
-            style={{ animation: `login-card-float ${duration} ease-in-out ${delay} infinite` }}
-          >
+      {/* Cards, one per corner, each gently floating */}
+      {SHOWCASE_TILES.map(({ Card, corner, duration, delay }, i) => (
+        <div key={i} className={cn('absolute z-10 scale-105 pointer-events-none', corner)}>
+          <div style={{ animation: `login-card-float ${duration} ease-in-out ${delay} infinite` }}>
             <Card />
           </div>
-        ))}
-      </div>
+        </div>
+      ))}
 
       <style>{`
         @keyframes login-card-float {
@@ -219,7 +224,7 @@ function ShowcaseCanvas() {
           100% { transform: translateY(0); }
         }
         @media (prefers-reduced-motion: reduce) {
-          .login-scene-drift, [style*="login-card-float"] { animation: none !important; }
+          [style*="login-card-float"] { animation: none !important; }
         }
       `}</style>
     </div>
@@ -350,12 +355,17 @@ export function LoginPage() {
 
   return (
     <div className="min-h-screen w-full flex bg-[#0d0f12] overflow-hidden">
-      {/* Left 60% — ambient, floating product showcase. Hidden below lg. */}
+      {/* Left — ambient, floating product showcase. Fills whatever space
+          remains once the fixed 450px auth panel is subtracted. Hidden
+          below lg, where the panel takes the full width instead. */}
       <ShowcaseCanvas />
 
-      {/* Right 40% (fixed 480px max) — hyper-focused auth container. Full
-          width below lg, since the showcase canvas is hidden there. */}
-      <div className="relative w-full lg:w-[40%] lg:min-w-[420px] lg:max-w-[480px] flex-shrink-0 flex items-center justify-center min-h-screen bg-zinc-950 lg:border-l lg:border-zinc-800/80 backdrop-blur-2xl px-4 py-10 sm:px-8">
+      {/* Right — hyper-focused auth container, pinned to the browser's
+          right edge (no trailing margin/padding) so it always reaches the
+          viewport boundary regardless of any outer app padding. Full width,
+          static position below lg, since the showcase canvas is hidden
+          there and there's nothing to pin against. */}
+      <div className="relative w-full lg:fixed lg:right-0 lg:top-0 lg:bottom-0 lg:w-[450px] flex items-center justify-center min-h-screen lg:min-h-0 bg-zinc-950 lg:border-l lg:border-zinc-800/80 backdrop-blur-2xl px-4 py-10 sm:px-8 overflow-y-auto">
         <div className="w-full max-w-sm">
           {/* Header — shown here too (not just on the hidden-below-lg
               showcase canvas) so mobile/tablet still gets the brand mark. */}
