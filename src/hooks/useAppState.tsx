@@ -212,6 +212,10 @@ export function useAppState() {
   const [session, setSession] = useState<Session | null>(null);
   const [authLoading, setAuthLoading] = useState(true);
 
+  // Declared here (ahead of the auth effect below) purely so the effect's
+  // SIGNED_IN handler can call setView without forward-referencing it.
+  const [view, setView] = useState<ViewType>('dashboard');
+
   useEffect(() => {
     // Picks up any session already persisted (localStorage, by default)
     // from a previous visit, without waiting for onAuthStateChange to fire.
@@ -225,9 +229,19 @@ export function useAppState() {
     // out of the URL after the provider sends the user back. This is the
     // single source of truth App.tsx reads to decide LoginPage vs the
     // dashboard — no manual "did login succeed?" plumbing needed anywhere.
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, newSession) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, newSession) => {
       setSession(newSession);
       setAuthLoading(false);
+
+      // Force the landing screen back to the Dashboard on every fresh
+      // sign-in (password, or Google OAuth bouncing back through this same
+      // listener) so the person never lands on whatever tab happened to be
+      // open in a previous session. Deliberately scoped to SIGNED_IN only —
+      // TOKEN_REFRESHED/USER_UPDATED fire while someone is already using
+      // the app and must never yank them off the screen they're on.
+      if (event === 'SIGNED_IN') {
+        setView('dashboard');
+      }
     });
 
     return () => subscription.unsubscribe();
@@ -243,7 +257,6 @@ export function useAppState() {
   const userId = session?.user?.id ?? null;
 
   // State
-  const [view, setView] = useState<ViewType>('dashboard');
   const [privacyMode, setPrivacyMode] = useState(false);
   const [theme, setTheme] = useState<'light' | 'dark' | 'minecraft'>('dark');
 
