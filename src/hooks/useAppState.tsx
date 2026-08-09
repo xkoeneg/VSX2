@@ -3843,31 +3843,56 @@ export function useAppState() {
   // fires — silently undoing the "clear". Resetting every piece of state
   // that feeds those two payloads guarantees any in-flight write only ever
   // writes back empty/default data.
-  const handleFullSystemReset = () => {
-    // ---- Accounts, Trades, Journal Data, Preferences (Supabase) ----
-    // Fire-and-forget: React state is reset synchronously below regardless
-    // of how long these requests take, so the UI reflects the reset
-    // immediately either way.
+  const handleFullSystemReset = async () => {
+    // ---- Step 1: Accounts, Trades, Journal Data, Preferences (Supabase) ----
+    // Deliberately AWAITED (not fire-and-forget) and scoped strictly to
+    // `user_id: userId` on every table. If any delete fails, we surface a
+    // toast and abort before touching localStorage/React state — otherwise
+    // a failed server-side delete combined with a "successful" local reset
+    // is exactly what lets the old data silently reappear on next reload
+    // (the debounced Supabase writers would also just re-upsert stale
+    // state right back on top of whatever's left server-side).
     if (userId) {
-      supabase.from('trades').delete().eq('user_id', userId).then(({ error }) => {
-        if (error) console.error('Failed to delete trades from Supabase during reset:', error);
-      });
-      supabase.from('accounts').delete().eq('user_id', userId).then(({ error }) => {
-        if (error) console.error('Failed to delete accounts from Supabase during reset:', error);
-      });
-      supabase.from('journal_data').delete().eq('user_id', userId).then(({ error }) => {
-        if (error) console.error('Failed to delete journal data from Supabase during reset:', error);
-      });
-      supabase.from('preferences').delete().eq('user_id', userId).then(({ error }) => {
-        if (error) console.error('Failed to delete preferences from Supabase during reset:', error);
-      });
+      const results = await Promise.all([
+        supabase.from('trades').delete().eq('user_id', userId),
+        supabase.from('accounts').delete().eq('user_id', userId),
+        supabase.from('journal_data').delete().eq('user_id', userId),
+        supabase.from('preferences').delete().eq('user_id', userId),
+      ]);
+
+      const [tradesRes, accountsRes, journalRes, prefsRes] = results;
+      const failures: string[] = [];
+      if (tradesRes.error) { console.error('Failed to delete trades from Supabase during reset:', tradesRes.error); failures.push('trades'); }
+      if (accountsRes.error) { console.error('Failed to delete accounts from Supabase during reset:', accountsRes.error); failures.push('accounts'); }
+      if (journalRes.error) { console.error('Failed to delete journal data from Supabase during reset:', journalRes.error); failures.push('journal data'); }
+      if (prefsRes.error) { console.error('Failed to delete preferences from Supabase during reset:', prefsRes.error); failures.push('preferences'); }
+
+      if (failures.length > 0) {
+        showTradeImportToast('error', `Full reset failed to delete ${failures.join(', ')} from the server — nothing was cleared to avoid data reappearing after refresh. Check your connection and try again.`);
+        return;
+      }
     }
 
-    // ---- Accounts & Trades ----
+    // ---- Step 2: Clear localStorage ----
+    // Nothing in the app is meant to persist here anymore (see the
+    // `useDebouncedSupabaseWriter` comment near the top of this file), but
+    // wipe it explicitly so no stale 'tradingJournal' (or any other) key
+    // can ever get read back in by the legacy-migration snapshot logic on
+    // a future sign-in.
+    try {
+      localStorage.clear();
+    } catch (e) {
+      console.error('Failed to clear localStorage during reset:', e);
+    }
+
+    // ---- Step 3: Reset all React state back to clean defaults ----
+
+    // Accounts & Trades
     setAccounts([]);
     setTrades([]);
+    setSelectedAccounts(['all']);
 
-    // ---- Journal Data: Rules/Playbook, Notices, Wiki, Tags ----
+    // Journal Data: Rules/Playbook, Notices, Wiki, Tags
     setRules([]);
     setCustomPillars([]); // Rules Playbook custom pillars
     setStrategies([]);
@@ -3879,13 +3904,13 @@ export function useAppState() {
     setEmotionsList(EMOTION_OPTIONS.map(name => ({ id: generateId(), name, color: 'purple' as TagColor })));
     setCustomSymbols([]);
 
-    // ---- App Preferences/Settings ----
+    // App Preferences/Settings
     setTheme('dark');
     setPrivacyMode(false);
     setPillarsPerRow(3);
     setPreSessionChecklist({ 'htf-levels': false, 'news-check': false, 'mindset-check': false, 'max-loss-set': false });
 
-    // ---- Life Discipline Hub ----
+    // Life Discipline Hub
     setLifeDisciplineStartDate(getLocalDateKey());
     setLifeDisciplineChecks({});
     setLifeDisciplineGraceDays({});
@@ -3894,14 +3919,16 @@ export function useAppState() {
     setChallengeConfig(DEFAULT_CHALLENGE_CONFIG);
     setHasStartedChallenge(false);
 
-    // ---- User-saved challenge presets ----
+    // User-saved challenge presets
     setUserChallengePresets([]);
     setLoadedPresetId(null);
 
-    // ---- Daily Trading Creed ----
+    // Daily Trading Creed
     setCustomCreedQuotes([]);
     setCreedIndex(0);
     dailyCreedDateRef.current = '';
+
+    showTradeImportToast('success', 'Full system reset complete — all data cleared.');
   };
 
   return {
