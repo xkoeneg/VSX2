@@ -346,30 +346,93 @@ function EquityChartPreviewCard() {
   );
 }
 
-// Radial win-rate gauge — arc drawn with stroke-dasharray, mirroring the
-// donut-style performance gauges used around the app.
+// Win/Loss/Break-even donut gauge — three stacked stroke-dasharray arcs
+// (emerald win, rose loss, zinc break-even) with the win rate centered
+// inside, plus a legend and breakdown grid. Mirrors TradesScreen's real
+// TradeAnalyticsCard header (Trade History's Win/Loss donut + Total
+// Trades / Win-Loss / Profit Factor / Avg Win-Loss metrics) so this login
+// preview reflects an actual in-app feature rather than a generic gauge.
 function WinRateGaugePreviewCard() {
-  const pct = 64.8;
-  const r = 30;
+  const wins = 202;
+  const losses = 110;
+  const breakeven = 15;
+  const total = wins + losses + breakeven;
+  const winRate = (wins / (wins + losses)) * 100;
+
+  const r = 42;
+  const strokeWidth = 12;
   const c = 2 * Math.PI * r;
-  const offset = c - (pct / 100) * c;
+  const winLen = (wins / total) * c;
+  const lossLen = (losses / total) * c;
+  const beLen = (breakeven / total) * c;
+
   return (
-    <div className="w-56 rounded-2xl border border-zinc-800/80 bg-zinc-900/70 p-4 shadow-2xl flex items-center gap-4">
-      <div className="relative w-[76px] h-[76px] flex-shrink-0">
-        <svg viewBox="0 0 76 76" className="w-full h-full -rotate-90">
-          <circle cx="38" cy="38" r={r} fill="none" stroke="rgb(39,39,42)" strokeWidth="7" />
-          <circle
-            cx="38" cy="38" r={r} fill="none" stroke="rgb(16,185,129)" strokeWidth="7"
-            strokeDasharray={c} strokeDashoffset={offset} strokeLinecap="round"
-          />
-        </svg>
-        <div className="absolute inset-0 flex items-center justify-center">
-          <span className="text-sm font-bold tabular-nums text-white">{pct}%</span>
+    <div className="w-[22rem] rounded-2xl border border-white/10 bg-zinc-900/50 backdrop-blur-md p-4 shadow-2xl">
+      <div className="flex items-center gap-4">
+        <div className="relative w-[88px] h-[88px] flex-shrink-0">
+          <svg viewBox="0 0 112 112" className="w-full h-full -rotate-90">
+            <circle cx="56" cy="56" r={r} fill="none" stroke="rgb(39,39,42)" strokeWidth={strokeWidth} />
+            <circle
+              cx="56" cy="56" r={r} fill="none" stroke="rgb(16,185,129)" strokeWidth={strokeWidth}
+              strokeDasharray={`${winLen} ${c - winLen}`} strokeDashoffset={0}
+            />
+            <circle
+              cx="56" cy="56" r={r} fill="none" stroke="rgb(244,63,94)" strokeWidth={strokeWidth}
+              strokeDasharray={`${lossLen} ${c - lossLen}`} strokeDashoffset={-winLen}
+            />
+            <circle
+              cx="56" cy="56" r={r} fill="none" stroke="rgb(161,161,170)" strokeWidth={strokeWidth}
+              strokeDasharray={`${beLen} ${c - beLen}`} strokeDashoffset={-(winLen + lossLen)}
+            />
+          </svg>
+          <div className="absolute inset-0 flex flex-col items-center justify-center">
+            <span className="text-base font-bold tabular-nums text-white leading-none">{winRate.toFixed(1)}%</span>
+            <span className="text-[8px] uppercase tracking-wider text-zinc-500 mt-1">Win Rate</span>
+          </div>
+        </div>
+        <div className="flex flex-col gap-1">
+          <span className="flex items-center gap-1.5 text-[11px] font-medium">
+            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+            <span className="text-zinc-500">Wins</span>
+            <span className="text-emerald-400 font-semibold tabular-nums">{wins}</span>
+          </span>
+          <span className="flex items-center gap-1.5 text-[11px] font-medium">
+            <span className="w-1.5 h-1.5 rounded-full bg-rose-500" />
+            <span className="text-zinc-500">Losses</span>
+            <span className="text-rose-400 font-semibold tabular-nums">{losses}</span>
+          </span>
+          <span className="flex items-center gap-1.5 text-[11px] font-medium">
+            <span className="w-1.5 h-1.5 rounded-full bg-zinc-400" />
+            <span className="text-zinc-500">B/E</span>
+            <span className="text-zinc-300 font-semibold tabular-nums">{breakeven}</span>
+          </span>
         </div>
       </div>
-      <div>
-        <p className="text-[10px] uppercase tracking-wider text-zinc-500 mb-0.5">Win Rate</p>
-        <p className="text-xs text-zinc-400">312 trades logged</p>
+      <div className="mt-3.5 pt-3 border-t border-white/5 grid grid-cols-2 gap-x-3 gap-y-2">
+        <div>
+          <p className="text-[8px] uppercase tracking-wider text-zinc-500 mb-0.5">Total Trades</p>
+          <p className="text-xs font-semibold tabular-nums text-white">{total}</p>
+        </div>
+        <div>
+          <p className="text-[8px] uppercase tracking-wider text-zinc-500 mb-0.5">Profit Factor</p>
+          <p className="text-xs font-semibold tabular-nums text-white">2.14</p>
+        </div>
+        <div>
+          <p className="text-[8px] uppercase tracking-wider text-zinc-500 mb-0.5">Win / Loss</p>
+          <p className="text-xs font-semibold tabular-nums">
+            <span className="text-emerald-500">{wins}W</span>
+            <span className="text-zinc-600 mx-0.5">-</span>
+            <span className="text-rose-500">{losses}L</span>
+          </p>
+        </div>
+        <div>
+          <p className="text-[8px] uppercase tracking-wider text-zinc-500 mb-0.5">Avg Win / Loss</p>
+          <p className="text-xs font-semibold tabular-nums">
+            <span className="text-emerald-500">$420</span>
+            <span className="text-zinc-600 mx-0.5">/</span>
+            <span className="text-rose-500">$180</span>
+          </p>
+        </div>
       </div>
     </div>
   );
