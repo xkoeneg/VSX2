@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo, useRef, useCallback } from 'react';
-import { useDebouncedLocalStorageWriter } from './hooks/useDebouncedLocalStorageWriter';
+import { useDebouncedLocalStorageWriter } from './useDebouncedLocalStorageWriter';
 import {
   LayoutDashboard,
   BookOpen,
@@ -854,7 +854,7 @@ export function useAppState() {
       console.error('Failed to serialize data:', e);
       return;
     }
-    writeToLocalStorage('tradingJournal', serialized, (e) => {
+    writeToLocalStorage('tradingJournal', serialized, (e: any) => {
       console.error('Failed to save data:', e);
       // Most common real-world cause here is the localStorage quota being
       // exceeded (e.g. base64 trade screenshots pushing the journal past
@@ -1100,7 +1100,7 @@ export function useAppState() {
     // Debounced for the same reason as the trading journal save above —
     // this fires on every habit-tile tap, and shouldn't block the tap's
     // visual feedback.
-    writeToLocalStorage('lifeDisciplineData', serialized, (e) => {
+    writeToLocalStorage('lifeDisciplineData', serialized, (e: any) => {
       console.error('Failed to save Life Discipline Hub data:', e);
     });
   }, [lifeDisciplineStartDate, lifeDisciplineChecks, lifeDisciplineGraceDays, lifeDisciplineMissedReasons, lifeDisciplineRecheckNotes, challengeConfig, hasStartedChallenge, writeToLocalStorage]);
