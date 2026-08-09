@@ -291,18 +291,38 @@ export function SettingsModal() {
 
     const [showResetConfirm, setShowResetConfirm] = useState(false);
     const [resetConfirmText, setResetConfirmText] = useState('');
+    const [isResettingSystem, setIsResettingSystem] = useState(false);
+    const [resetErrorMessage, setResetErrorMessage] = useState<string | null>(null);
 
-    const handleConfirmReset = () => {
-      if (resetConfirmText !== 'CONFIRM') return;
-      // Delegates to useAppState's handleFullSystemReset, which resets every
-      // feature's state (Trades, Accounts, Rules Playbook, Strategies, Wiki,
-      // Life Discipline Hub, Daily Creed, saved presets) AND clears every
-      // localStorage key — previously this only reset trades/accounts/wiki/
-      // lifeDisciplineChecks, so Rules Playbook and the rest of the Life
-      // Discipline Hub (start date, grace days, missed reasons, challenge
-      // config) survived the reset.
-      handleFullSystemReset();
-      window.location.reload();
+    const handleConfirmReset = async () => {
+      if (resetConfirmText !== 'CONFIRM' || isResettingSystem) return;
+      setResetErrorMessage(null);
+      setIsResettingSystem(true);
+      try {
+        // Delegates to useAppState's handleFullSystemReset, which deletes
+        // every Supabase table (trades, accounts, journal_data,
+        // preferences) scoped to this user, clears localStorage, and
+        // resets every feature's React state (Trades, Accounts, Rules
+        // Playbook, Strategies, Wiki, Life Discipline Hub, Daily Creed,
+        // saved presets). Critically, this is AWAITED: the previous
+        // version called it without awaiting and reloaded immediately
+        // after, which killed the in-flight Supabase delete requests
+        // before they ever completed — nothing was actually removed from
+        // the server, so the old data just came right back on refresh.
+        await handleFullSystemReset();
+        // Only reload once the server-side deletes are confirmed done —
+        // this is what guarantees the dashboard comes back truly empty
+        // instead of momentarily-empty-then-repopulated.
+        window.location.reload();
+      } catch (err) {
+        console.error('Full system reset failed:', err);
+        setIsResettingSystem(false);
+        setResetErrorMessage(
+          err instanceof Error
+            ? err.message
+            : 'Reset failed — some data may not have been deleted from the server. Check your connection and try again.'
+        );
+      }
     };
 
     if (!isSettingsModalOpen) return null;
@@ -539,22 +559,29 @@ export function SettingsModal() {
               onChange={(e) => setResetConfirmText(e.target.value)}
               placeholder="Type CONFIRM"
               autoFocus
-              className="w-full bg-zinc-950 border border-zinc-800 rounded-lg px-3 py-2 text-sm text-white placeholder:text-zinc-600 focus:outline-none focus:border-rose-600/60 mb-4"
+              disabled={isResettingSystem}
+              className="w-full bg-zinc-950 border border-zinc-800 rounded-lg px-3 py-2 text-sm text-white placeholder:text-zinc-600 focus:outline-none focus:border-rose-600/60 mb-4 disabled:opacity-50"
             />
+            {resetErrorMessage && (
+              <p className="text-xs text-rose-400 mb-4 leading-relaxed">
+                {resetErrorMessage}
+              </p>
+            )}
             <div className="flex items-center gap-2">
               <button
                 onClick={() => setShowResetConfirm(false)}
-                className="flex-1 px-3 py-2 rounded-lg text-sm font-medium bg-zinc-800 text-zinc-300 hover:bg-zinc-700 transition-all"
+                disabled={isResettingSystem}
+                className="flex-1 px-3 py-2 rounded-lg text-sm font-medium bg-zinc-800 text-zinc-300 hover:bg-zinc-700 transition-all disabled:opacity-40 disabled:cursor-not-allowed"
               >
                 Cancel
               </button>
               <button
                 onClick={handleConfirmReset}
-                disabled={resetConfirmText !== 'CONFIRM'}
+                disabled={resetConfirmText !== 'CONFIRM' || isResettingSystem}
                 className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium bg-rose-600 text-white hover:bg-rose-500 transition-all disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-rose-600"
               >
                 <Trash2 className="w-3.5 h-3.5" />
-                Confirm Reset
+                {isResettingSystem ? 'Resetting…' : 'Confirm Reset'}
               </button>
             </div>
           </div>
