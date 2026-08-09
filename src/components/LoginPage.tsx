@@ -1,4 +1,4 @@
-import { useState, useLayoutEffect } from 'react';
+import { useState } from 'react';
 import {
   Eye,
   EyeOff,
@@ -727,31 +727,14 @@ function Tile({ Card, top, left, ring, variant, seed }: TileConfig) {
   const scale = (cfg.scaleBase + (seed % 4) * cfg.scaleStep).toFixed(2);
   const z = cfg.zBase + (seed % 3) * cfg.zStep;
   const float = FLOAT_CYCLE[seed % FLOAT_CYCLE.length];
-  // PERF: continuous `translateZ` float animation is only applied to the
-  // outer ring. Mid/inner tiles are smaller, further back, and barely
-  // register the bob visually, but each animating layer forces the browser
-  // to keep re-compositing that element every frame — 25 of them running
-  // at once (stacked with the whole-scene drift + several blur filters) is
-  // what was reading as "laggy" during the continuous animation, separate
-  // from the mount flash. Cutting float to just the 10 outer tiles removes
-  // more than half the concurrently-animating layers for free.
-  const shouldFloat = ring === 'outer';
 
-  // Built as a plain mutable object (typed loosely to allow the CSS custom
-  // property `--depth`) rather than an inline ternary-spread literal —
-  // TS can't reconcile two differently-shaped inline object literals against
-  // CSSProperties in a single cast, which is what broke the build.
   const innerStyle: React.CSSProperties & Record<string, string | number> = {
     opacity: cfg.opacity,
     willChange: 'transform',
     '--depth': `${cfg.floatDepth}px`,
+    animationDuration: float.duration,
+    animationDelay: float.delay,
   };
-  if (shouldFloat) {
-    innerStyle.animationDuration = float.duration;
-    innerStyle.animationDelay = float.delay;
-  } else {
-    innerStyle.transform = `translateZ(${cfg.floatDepth}px)`;
-  }
 
   return (
     <div
@@ -765,10 +748,7 @@ function Tile({ Card, top, left, ring, variant, seed }: TileConfig) {
         willChange: 'transform',
       }}
     >
-      <div
-        className={shouldFloat ? 'login-card-float transform-gpu' : 'transform-gpu'}
-        style={innerStyle}
-      >
+      <div className="login-card-float transform-gpu" style={innerStyle}>
         <TileFrame variant={variant}>
           <Card />
         </TileFrame>
@@ -783,21 +763,6 @@ function Tile({ Card, top, left, ring, variant, seed }: TileConfig) {
 // pointer-events disabled so it never intercepts clicks — and hidden below
 // `lg` in favor of a clean, uncluttered modal.
 function WarRoomBackdrop() {
-  // Client mount safety guard: the scatter's 3D positions (top/left/rotate/
-  // scale/z, all computed inline per tile) don't exist until React commits
-  // and the browser lays them out. Rather than trusting a fade to mask that
-  // window, we keep the whole subtree fully hidden (opacity-0 +
-  // pointer-events-none) through that first commit, and only flip it
-  // visible once useLayoutEffect confirms the DOM — and therefore every
-  // tile's transform — is already in place. useLayoutEffect (not useEffect)
-  // matters here: it fires synchronously after DOM mutations but before the
-  // browser paints, so there is no frame where the unstyled/untransformed
-  // layout is ever actually painted to the screen — nothing to "snap" from.
-  const [isMounted, setIsMounted] = useState(false);
-  useLayoutEffect(() => {
-    setIsMounted(true);
-  }, []);
-
   return (
     <div className="pointer-events-none absolute inset-0 overflow-hidden bg-[#0a0c0f]" aria-hidden="true">
       {/* Base ambient glows, one per corner plus a cyan accent, so the deep
@@ -816,15 +781,17 @@ function WarRoomBackdrop() {
           `contain: layout paint` scopes reflow/repaint to this subtree so
           the 25 tiles computing their 3D transforms on mount can never
           trigger a layout pass on the auth card or the rest of the page.
-          Visibility is fully gated on `isMounted`: opacity-0 +
-          pointer-events-none until the layout effect confirms every tile
-          is positioned, then a quick 300ms fade reveals the already-correct
-          scene — never the raw unstyled one. */}
+
+          Reveal is pure CSS (`login-scatter-reveal`, fill-mode backwards)
+          instead of a React `isMounted` state flip. A JS-driven toggle means
+          React commits a class/style change on this whole subtree in the
+          same tick that 25 CSS animations all start for the first time —
+          that combined synchronous style recalc is what read as a
+          split-second stutter right after refresh. A CSS-only animation
+          just gets scheduled by the browser's own render pipeline with
+          everything else, no extra JS-forced layout pass involved. */}
       <div
-        className={cn(
-          'hidden lg:block absolute inset-0 transform-gpu transition-opacity duration-300 ease-out',
-          isMounted ? 'opacity-100' : 'opacity-0 pointer-events-none'
-        )}
+        className="hidden lg:block absolute inset-0 transform-gpu login-scatter-reveal"
         style={{
           perspective: '1400px',
           contain: 'layout paint',
@@ -845,6 +812,13 @@ function WarRoomBackdrop() {
       <div className="absolute inset-0 bg-black/[0.06]" />
 
       <style>{`
+        @keyframes login-scatter-reveal {
+          from { opacity: 0; }
+          to { opacity: 1; }
+        }
+        .login-scatter-reveal {
+          animation: login-scatter-reveal 0.3s ease-out both;
+        }
         @keyframes login-scene-drift {
           0% { transform: translate3d(-0.8%, -0.5%, 0) rotate(-0.25deg); }
           50% { transform: translate3d(0.8%, 0.5%, 0) rotate(0.25deg); }
@@ -864,7 +838,7 @@ function WarRoomBackdrop() {
           animation-iteration-count: infinite;
         }
         @media (prefers-reduced-motion: reduce) {
-          .login-scene-drift, .login-card-float { animation: none !important; }
+          .login-scatter-reveal, .login-scene-drift, .login-card-float { animation: none !important; opacity: 1; }
         }
       `}</style>
     </div>
