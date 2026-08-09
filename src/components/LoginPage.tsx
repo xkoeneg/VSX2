@@ -302,12 +302,23 @@ const PREVIEW_CARDS = [
 // from the camera (back layer), positive pulls it closer (front layer).
 const DEPTH_CYCLE = [0, -140, 70, -70, 140, -210, 35, -105];
 
-// Depth-based opacity so far-back cards recede visually instead of
-// competing for attention with the ones up front.
+// Depth-based opacity so far-back cards recede slightly, but everything
+// stays clearly readable — floor is high enough that charts/figures never
+// wash out against the dark backdrop.
 function opacityForDepth(depth: number) {
-  const fade = Math.min(Math.abs(depth) / 260, 0.45);
+  const fade = Math.min(Math.abs(depth) / 260, 0.15);
   return (0.9 - fade).toFixed(2);
 }
+
+// Small cycle of floating-animation timings so tiles don't all bob in
+// perfect unison — each tile gets a duration/delay pulled from here.
+const FLOAT_CYCLE = [
+  { duration: '4s', delay: '0s' },
+  { duration: '4.6s', delay: '0.4s' },
+  { duration: '5s', delay: '0.8s' },
+  { duration: '4.3s', delay: '1.2s' },
+  { duration: '4.8s', delay: '0.2s' },
+];
 
 // Dense, wall-to-wall tilted 3D backdrop built from every preview card
 // above. Sits behind the login panel; pointer-events are disabled so it
@@ -333,10 +344,19 @@ function AppPreviewBackdrop() {
           >
             {PREVIEW_CARDS.map((Card, i) => {
               const depth = DEPTH_CYCLE[i % DEPTH_CYCLE.length];
+              const float = FLOAT_CYCLE[i % FLOAT_CYCLE.length];
               return (
                 <div
                   key={i}
-                  style={{ transform: `translateZ(${depth}px)`, opacity: opacityForDepth(depth) }}
+                  className="login-card-float"
+                  style={
+                    {
+                      opacity: opacityForDepth(depth),
+                      animationDuration: float.duration,
+                      animationDelay: float.delay,
+                      '--depth': `${depth}px`,
+                    } as React.CSSProperties
+                  }
                 >
                   <Card />
                 </div>
@@ -346,9 +366,14 @@ function AppPreviewBackdrop() {
         </div>
       </div>
 
-      {/* Darken + fade edges so the login panel stays legible */}
-      <div className="absolute inset-0 bg-gradient-to-b from-[#0d0f12]/55 via-[#0d0f12]/75 to-[#0d0f12]" />
-      <div className="absolute inset-0 bg-[#0d0f12]/35" />
+      {/* Ambient glows for depth — green on the left behind the profit
+          metrics, cool slate/blue on the right to balance the palette */}
+      <div className="absolute -left-24 top-1/4 w-[420px] h-[420px] rounded-full bg-emerald-500/15 blur-[120px]" />
+      <div className="absolute -right-24 bottom-1/4 w-[420px] h-[420px] rounded-full bg-slate-500/15 blur-[120px]" />
+
+      {/* Soft fade at the edges so the login panel stays legible, without
+          crushing the preview cards into near-invisibility */}
+      <div className="absolute inset-0 bg-gradient-to-b from-[#0d0f12]/35 via-[#0d0f12]/45 to-[#0d0f12]/70" />
 
       <style>{`
         @keyframes login-scene-drift {
@@ -359,8 +384,19 @@ function AppPreviewBackdrop() {
         .login-scene-drift {
           animation: login-scene-drift 48s ease-in-out infinite;
         }
+        @keyframes login-card-float {
+          0% { transform: translateZ(var(--depth)) translateY(-10px); }
+          50% { transform: translateZ(var(--depth)) translateY(10px); }
+          100% { transform: translateZ(var(--depth)) translateY(-10px); }
+        }
+        .login-card-float {
+          animation-name: login-card-float;
+          animation-timing-function: ease-in-out;
+          animation-iteration-count: infinite;
+        }
         @media (prefers-reduced-motion: reduce) {
           .login-scene-drift { animation: none; }
+          .login-card-float { animation: none; }
         }
       `}</style>
     </div>
