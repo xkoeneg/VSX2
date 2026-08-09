@@ -435,12 +435,12 @@ function TradeAnalyticsCard({ trades, stats, privacyMode, theme, tc, tradeFilter
 
   return (
     <div className={cn(
-      "relative overflow-hidden rounded-2xl border border-white/10 bg-zinc-900/50 backdrop-blur-md px-5 py-5 mb-4",
+      "relative overflow-hidden rounded-xl border border-white/10 bg-zinc-900/60 backdrop-blur-md p-5 mb-4",
       theme === 'light' && 'bg-white border-zinc-200'
     )}>
-      <div className="flex flex-col sm:flex-row items-center sm:items-stretch gap-6">
-        {/* Left side — donut gauge + clickable legend chips */}
-        <div className="flex items-center gap-4 flex-shrink-0">
+      <div className="flex flex-col lg:flex-row items-center lg:items-stretch gap-6">
+        {/* Left — donut gauge + legend, ~28% width on large screens */}
+        <div className="flex flex-col items-center gap-4 flex-shrink-0 w-full lg:w-[26%]">
           <div className="relative w-[112px] h-[112px] flex-shrink-0">
             <svg viewBox="0 0 112 112" className="w-full h-full -rotate-90">
               <circle cx="56" cy="56" r={r} fill="none" stroke="rgb(39,39,42)" strokeWidth={strokeWidth} />
@@ -471,71 +471,73 @@ function TradeAnalyticsCard({ trades, stats, privacyMode, theme, tc, tradeFilter
             </div>
           </div>
 
-          <div className="flex flex-col gap-1.5">
+          {/* Legend — stacked below the gauge, clickable to filter */}
+          <div className="flex flex-col gap-1.5 w-full max-w-[160px]">
             <button
               type="button"
               onClick={() => setTradeFilter(prev => prev === 'profit' ? 'all' : 'profit')}
               className={cn(
-                "flex items-center gap-1.5 text-xs font-medium px-2 py-1 -mx-2 rounded-lg transition-colors",
+                "flex items-center gap-1.5 text-xs font-medium px-2 py-1 rounded-lg transition-colors",
                 tradeFilter === 'profit' ? 'bg-emerald-500/10 ring-1 ring-emerald-500/40' : 'hover:bg-white/5'
               )}
             >
               <span className="w-2 h-2 rounded-full bg-emerald-500 flex-shrink-0" />
               <span className="text-zinc-500">Wins</span>
-              <span className="text-emerald-400 font-semibold tabular-nums">{wins}</span>
+              <span className="text-emerald-400 font-semibold tabular-nums ml-auto">{wins}</span>
             </button>
             <button
               type="button"
               onClick={() => setTradeFilter(prev => prev === 'loss' ? 'all' : 'loss')}
               className={cn(
-                "flex items-center gap-1.5 text-xs font-medium px-2 py-1 -mx-2 rounded-lg transition-colors",
+                "flex items-center gap-1.5 text-xs font-medium px-2 py-1 rounded-lg transition-colors",
                 tradeFilter === 'loss' ? 'bg-rose-500/10 ring-1 ring-rose-500/40' : 'hover:bg-white/5'
               )}
             >
               <span className="w-2 h-2 rounded-full bg-rose-500 flex-shrink-0" />
               <span className="text-zinc-500">Losses</span>
-              <span className="text-rose-400 font-semibold tabular-nums">{losses}</span>
+              <span className="text-rose-400 font-semibold tabular-nums ml-auto">{losses}</span>
             </button>
             <button
               type="button"
               onClick={() => setTradeFilter(prev => prev === 'breakeven' ? 'all' : 'breakeven')}
               className={cn(
-                "flex items-center gap-1.5 text-xs font-medium px-2 py-1 -mx-2 rounded-lg transition-colors",
+                "flex items-center gap-1.5 text-xs font-medium px-2 py-1 rounded-lg transition-colors",
                 tradeFilter === 'breakeven' ? 'bg-zinc-400/10 ring-1 ring-zinc-400/40' : 'hover:bg-white/5'
               )}
             >
               <span className="w-2 h-2 rounded-full bg-zinc-400 flex-shrink-0" />
-              <span className="text-zinc-500">B/E</span>
-              <span className="text-zinc-300 font-semibold tabular-nums">{breakeven}</span>
+              <span className="text-zinc-500">Break-Even</span>
+              <span className="text-zinc-300 font-semibold tabular-nums ml-auto">{breakeven}</span>
             </button>
           </div>
         </div>
 
-        <div className="hidden sm:block w-px bg-white/10 self-stretch" />
+        <div className="hidden lg:block border-r border-white/10 self-stretch" />
+        <div className="lg:hidden w-full h-px bg-white/10" />
 
-        {/* Right side — breakdown metrics grid */}
-        <div className="flex-1 grid grid-cols-2 sm:grid-cols-4 gap-4 sm:gap-6 w-full">
-          <div>
-            <p className="text-[10px] uppercase tracking-wider text-zinc-500 mb-1">Total Trades</p>
-            <p className={cn("text-lg font-semibold tabular-nums", tc.text)}>{total}</p>
+        {/* Right — 4-tile metrics grid, ~72-74% width on large screens */}
+        <div className="flex-1 grid grid-cols-2 lg:grid-cols-4 gap-3">
+          <div className="bg-zinc-800/40 border border-white/5 rounded-lg p-3 hover:border-white/10 transition-colors">
+            <p className="text-[10px] text-zinc-400 font-medium tracking-wider uppercase mb-1.5">Total Trades</p>
+            <p className={cn("text-base font-semibold tabular-nums", tc.text)}>{total}</p>
           </div>
-          <div>
-            <p className="text-[10px] uppercase tracking-wider text-zinc-500 mb-1">Win / Loss</p>
-            <p className="text-lg font-semibold tabular-nums">
+          <div className="bg-zinc-800/40 border border-white/5 rounded-lg p-3 hover:border-white/10 transition-colors">
+            <p className="text-[10px] text-zinc-400 font-medium tracking-wider uppercase mb-1.5">Win / Loss Count</p>
+            <p className="text-base font-semibold tabular-nums">
               <span className="text-emerald-500">{wins}W</span>
               <span className="text-zinc-600 mx-1">-</span>
               <span className="text-rose-500">{losses}L</span>
             </p>
           </div>
-          <div>
-            <p className="text-[10px] uppercase tracking-wider text-zinc-500 mb-1">Profit Factor</p>
-            <p className={cn("text-lg font-semibold tabular-nums", tc.text)}>
+          <div className="bg-zinc-800/40 border border-white/5 rounded-lg p-3 hover:border-white/10 transition-colors">
+            <p className="text-[10px] text-zinc-400 font-medium tracking-wider uppercase mb-1.5">Profit Factor</p>
+            <p className={cn("text-base font-semibold tabular-nums", tc.text)}>
               {total > 0 && isFinite(stats.profitFactor) ? stats.profitFactor.toFixed(2) : 'N/A'}
             </p>
           </div>
-          <div>
-            <p className="text-[10px] uppercase tracking-wider text-zinc-500 mb-1">Avg Win / Loss</p>
-            <p className="text-lg font-semibold tabular-nums">
+          <div className="bg-zinc-800/40 border border-white/5 rounded-lg p-3 hover:border-white/10 transition-colors">
+            <p className="text-[10px] text-zinc-400 font-medium tracking-wider uppercase mb-1.5">Avg Win / Avg Loss</p>
+            <p className="text-base font-semibold tabular-nums">
               <span className="text-emerald-500">{formatCurrency(stats.avgWin, privacyMode)}</span>
               <span className="text-zinc-600 mx-1">/</span>
               <span className="text-rose-500">{formatCurrency(-stats.avgLoss, privacyMode)}</span>
