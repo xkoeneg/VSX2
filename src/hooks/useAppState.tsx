@@ -3844,32 +3844,43 @@ export function useAppState() {
   // that feeds those two payloads guarantees any in-flight write only ever
   // writes back empty/default data.
   const handleFullSystemReset = async () => {
-    // ---- Step 1: Accounts, Trades, Journal Data, Preferences (Supabase) ----
-    // Deliberately AWAITED (not fire-and-forget) and scoped strictly to
-    // `user_id: userId` on every table. If any delete fails, we surface a
-    // toast and abort before touching localStorage/React state — otherwise
-    // a failed server-side delete combined with a "successful" local reset
-    // is exactly what lets the old data silently reappear on next reload
-    // (the debounced Supabase writers would also just re-upsert stale
-    // state right back on top of whatever's left server-side).
+    // ---- Step 1: Delete from Supabase, sequentially, scoped strictly to
+    // `user_id: userId` on every table. Order matters: `trades` carries a
+    // foreign key on `account_id` referencing `accounts`, so trades must be
+    // deleted BEFORE accounts or Postgres will reject the accounts delete
+    // with a foreign-key-violation error. journal_data/preferences have no
+    // such dependency but are kept in the same sequential chain for
+    // consistency and simpler error attribution.
+    //
+    // This function throws on the first failure (rather than swallowing
+    // the error) so callers (e.g. SettingsModal's reset-confirmation flow)
+    // can `await` it, know for certain whether the server-side wipe
+    // actually succeeded, and decide whether it's safe to reload — a
+    // silent failure here combined with an unconditional reload is exactly
+    // what let old data reappear after "resetting".
     if (userId) {
-      const results = await Promise.all([
-        supabase.from('trades').delete().eq('user_id', userId),
-        supabase.from('accounts').delete().eq('user_id', userId),
-        supabase.from('journal_data').delete().eq('user_id', userId),
-        supabase.from('preferences').delete().eq('user_id', userId),
-      ]);
+      const { error: tradesError } = await supabase.from('trades').delete().eq('user_id', userId);
+      if (tradesError) {
+        console.error('Failed to delete trades from Supabase during reset:', tradesError);
+        throw new Error('Failed to delete trades from the server.');
+      }
 
-      const [tradesRes, accountsRes, journalRes, prefsRes] = results;
-      const failures: string[] = [];
-      if (tradesRes.error) { console.error('Failed to delete trades from Supabase during reset:', tradesRes.error); failures.push('trades'); }
-      if (accountsRes.error) { console.error('Failed to delete accounts from Supabase during reset:', accountsRes.error); failures.push('accounts'); }
-      if (journalRes.error) { console.error('Failed to delete journal data from Supabase during reset:', journalRes.error); failures.push('journal data'); }
-      if (prefsRes.error) { console.error('Failed to delete preferences from Supabase during reset:', prefsRes.error); failures.push('preferences'); }
+      const { error: accountsError } = await supabase.from('accounts').delete().eq('user_id', userId);
+      if (accountsError) {
+        console.error('Failed to delete accounts from Supabase during reset:', accountsError);
+        throw new Error('Failed to delete accounts from the server.');
+      }
 
-      if (failures.length > 0) {
-        showTradeImportToast('error', `Full reset failed to delete ${failures.join(', ')} from the server — nothing was cleared to avoid data reappearing after refresh. Check your connection and try again.`);
-        return;
+      const { error: journalError } = await supabase.from('journal_data').delete().eq('user_id', userId);
+      if (journalError) {
+        console.error('Failed to delete journal data from Supabase during reset:', journalError);
+        throw new Error('Failed to delete journal data from the server.');
+      }
+
+      const { error: prefsError } = await supabase.from('preferences').delete().eq('user_id', userId);
+      if (prefsError) {
+        console.error('Failed to delete preferences from Supabase during reset:', prefsError);
+        throw new Error('Failed to delete preferences from the server.');
       }
     }
 
@@ -3886,6 +3897,11 @@ export function useAppState() {
     }
 
     // ---- Step 3: Reset all React state back to clean defaults ----
+    // Also done even though the caller typically reloads the page right
+    // after this resolves — the reload is what actually guarantees a
+    // fully clean slate, but resetting state here too means the UI is
+    // never left showing stale data during the brief window before that
+    // reload fires (or if the caller chooses not to reload at all).
 
     // Accounts & Trades
     setAccounts([]);
@@ -3927,8 +3943,6 @@ export function useAppState() {
     setCustomCreedQuotes([]);
     setCreedIndex(0);
     dailyCreedDateRef.current = '';
-
-    showTradeImportToast('success', 'Full system reset complete — all data cleared.');
   };
 
   return {
