@@ -1,7 +1,6 @@
 import { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import type { Session } from '@supabase/supabase-js';
 import { supabase } from '../lib/supabaseClient';
-import { useDebouncedLocalStorageWriter } from './useDebouncedLocalStorageWriter';
 import {
   LayoutDashboard,
   BookOpen,
@@ -148,6 +147,52 @@ import { calculateAccountMetrics } from '../utils/accountMetrics';
 import { useViewportWidth } from './useViewportWidth';
 import { useClickOutside } from './useClickOutside';
 import type { TagColor, RoutineIconKind, WeekDay, RoutineIconColor, RuleSeverity, RuleIconKind, RuleBulletStyle, RuleTextSize } from '../types';
+
+// ============================================================================
+// useDebouncedSupabaseWriter — generic debounced "save this payload to
+// Supabase" helper, used in place of the old useDebouncedLocalStorageWriter
+// now that NOTHING in this app persists to localStorage anymore. Same
+// shape/rationale as the old hook (avoid re-serializing/upserting a
+// multi-field payload on every keystroke/click), just pointed at a Supabase
+// `upsert` call instead of `localStorage.setItem`.
+// ============================================================================
+function useDebouncedSupabaseWriter(delay: number = 500) {
+  const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const pendingRef = useRef<(() => Promise<void>) | null>(null);
+
+  const write = useCallback((runUpsert: () => Promise<void>, onError: (e: any) => void) => {
+    pendingRef.current = runUpsert;
+    if (timeoutRef.current) clearTimeout(timeoutRef.current);
+    timeoutRef.current = setTimeout(() => {
+      const fn = pendingRef.current;
+      pendingRef.current = null;
+      if (fn) {
+        fn().catch(onError);
+      }
+    }, delay);
+  }, [delay]);
+
+  // Flush any pending write immediately (e.g. on tab close) so nothing is
+  // silently dropped just because the debounce window hadn't elapsed yet.
+  useEffect(() => {
+    const flush = () => {
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current);
+        timeoutRef.current = null;
+      }
+      const fn = pendingRef.current;
+      pendingRef.current = null;
+      if (fn) fn().catch(() => {});
+    };
+    window.addEventListener('beforeunload', flush);
+    return () => {
+      window.removeEventListener('beforeunload', flush);
+      flush();
+    };
+  }, []);
+
+  return { write };
+}
 
 // ============================================================================
 // useAppState — the entire journal's state + business logic.
@@ -478,8 +523,10 @@ export function useAppState() {
     { text: "You don't need to trade every day to be a great trader.", tag: "Rule #4: Selective Execution" },
     { text: "Cut losses fast, let winners run — the oldest rule, still the truest.", tag: "Rule #5: Risk Management" },
   ];
-  // User's own quotes — persisted to localStorage so they survive reloads,
-  // same pattern as the rest of the app's settings (see 'lifeDisciplineUserPresets').
+  // User's own quotes — now persisted per-user in Supabase (see the
+  // "Preferences: Supabase" section below), not localStorage. `customCreedQuotesLoaded`
+  // doubles as the general "preferences have loaded" gate, kept under its
+  // original name so nothing downstream has to change.
   const [customCreedQuotes, setCustomCreedQuotes] = useState<CreedQuote[]>([]);
   const [customCreedQuotesLoaded, setCustomCreedQuotesLoaded] = useState(false);
   const allCreedQuotes = useMemo(() => [...DEFAULT_CREED_QUOTES, ...customCreedQuotes], [customCreedQuotes]);
@@ -489,68 +536,37 @@ export function useAppState() {
   const [creedDraftTag, setCreedDraftTag] = useState('');
   const currentCreedQuote: CreedQuote = allCreedQuotes[creedIndex] ?? DEFAULT_CREED_QUOTES[0];
   const isCurrentCreedCustom = creedIndex >= DEFAULT_CREED_QUOTES.length;
-
-  // Load saved custom quotes once on mount.
-  useEffect(() => {
-    try {
-      const stored = localStorage.getItem('customCreedQuotes');
-      if (stored) {
-        const parsed = JSON.parse(stored);
-        if (Array.isArray(parsed)) setCustomCreedQuotes(parsed);
-      }
-    } catch (e) {
-      console.error('Failed to load custom creed quotes:', e);
-    }
-    setCustomCreedQuotesLoaded(true);
-  }, []);
-
-  // Persist custom quotes whenever they change (skip the very first render so
-  // we don't stomp saved data with the initial empty array before it loads).
-  useEffect(() => {
-    if (!customCreedQuotesLoaded) return;
-    try {
-      localStorage.setItem('customCreedQuotes', JSON.stringify(customCreedQuotes));
-    } catch (e) {
-      console.error('Failed to save custom creed quotes:', e);
-    }
-  }, [customCreedQuotes, customCreedQuotesLoaded]);
+  // Tracks the calendar date (YYYY-MM-DD) the current creedIndex was picked
+  // for, seeded from the loaded preferences row (see loadPreferences) and
+  // updated by the daily-rotation effect / shuffleDailyCreed above. Kept in
+  // a ref (not state) since it's bookkeeping for the rotation effect, not
+  // something any component reads directly.
+  const dailyCreedDateRef = useRef<string>('');
 
   // Daily auto-rotation — once per calendar day the card lands on a fresh
-  // quote automatically; the chosen index + date are cached so it stays put
-  // for the rest of the day (and across reloads) until the date rolls over
-  // or the user hits Shuffle.
+  // quote automatically; the chosen index + date are cached (in the Supabase
+  // `preferences` row's dailyCreedState field — see loadPreferences below) so
+  // it stays put for the rest of the day (and across reloads/devices) until
+  // the date rolls over or the user hits Shuffle. This effect only handles
+  // the "date rolled over, pick something new" case; the initial restore of
+  // a same-day pick happens once, straight out of loadPreferences.
   useEffect(() => {
     if (!customCreedQuotesLoaded) return;
-    try {
-      const todayKeyStr = new Date().toLocaleDateString('en-CA');
-      const stored = localStorage.getItem('dailyCreedState');
-      if (stored) {
-        const parsed = JSON.parse(stored);
-        if (parsed && parsed.date === todayKeyStr && typeof parsed.index === 'number' && parsed.index < allCreedQuotes.length) {
-          setCreedIndex(parsed.index);
-          return;
-        }
-      }
-      const newIndex = Math.floor(Math.random() * allCreedQuotes.length);
-      setCreedIndex(newIndex);
-      localStorage.setItem('dailyCreedState', JSON.stringify({ date: todayKeyStr, index: newIndex }));
-    } catch (e) {
-      console.error('Failed to set daily creed quote:', e);
-    }
-  }, [customCreedQuotesLoaded]);
+    const todayKeyStr = new Date().toLocaleDateString('en-CA');
+    if (dailyCreedDateRef.current === todayKeyStr) return; // already rotated today
+    const newIndex = Math.floor(Math.random() * allCreedQuotes.length);
+    dailyCreedDateRef.current = todayKeyStr;
+    setCreedIndex(newIndex);
+  }, [customCreedQuotesLoaded, allCreedQuotes.length]);
 
   // Shuffle — jumps to a different random quote from the combined pool
   // (defaults + the user's favorites) and remembers the pick for today.
   const shuffleDailyCreed = () => {
+    dailyCreedDateRef.current = new Date().toLocaleDateString('en-CA');
     setCreedIndex(prev => {
       if (allCreedQuotes.length <= 1) return prev;
       let next = prev;
       while (next === prev) next = Math.floor(Math.random() * allCreedQuotes.length);
-      try {
-        localStorage.setItem('dailyCreedState', JSON.stringify({ date: new Date().toLocaleDateString('en-CA'), index: next }));
-      } catch (e) {
-        console.error('Failed to save shuffled creed quote:', e);
-      }
       return next;
     });
   };
@@ -869,78 +885,84 @@ export function useAppState() {
     return pnl / risk;
   }, [newTrade.profitLoss, newTrade.riskAmount]);
 
-  // Shared debounced writer for the two large, high-frequency localStorage
-  // payloads below (trading journal + life discipline hub). See
-  // useDebouncedLocalStorageWriter for why this exists.
-  const { write: writeToLocalStorage } = useDebouncedLocalStorageWriter(500);
+  // Shared debounced writers for the large, high-frequency Supabase payloads
+  // below (journal data + preferences). Same rationale as before: these
+  // payloads can carry multi-MB base64 screenshots, so re-serializing +
+  // upserting on every keystroke would stutter the UI.
+  const { write: writeJournalData } = useDebouncedSupabaseWriter(500);
+  const { write: writePreferences } = useDebouncedSupabaseWriter(500);
 
-  // Load from localStorage
-  // Every load goes through migrateStoredData() so data saved by an older
-  // version of the app (missing fields, old shapes, etc.) always comes out
-  // fully-formed for whatever the CURRENT code expects. See the
-  // "DATA SCHEMA VERSIONING & MIGRATION" block near the top of this file.
-  //
-  // NOTE: accounts/trades are deliberately NOT loaded here anymore — they
-  // now live in Supabase (see the "Accounts & Trades: Supabase" effect
-  // below) so they sync across devices and stay private per user. This
-  // effect still owns everything else (rules, strategies, notices, wiki,
-  // etc.), which for now remains on localStorage.
-  useEffect(() => {
-    const stored = localStorage.getItem('tradingJournal');
-    if (stored) {
-      try {
-        const raw = JSON.parse(stored);
-        const migrated = migrateStoredData(raw);
-        setRules(migrated.rules);
-        setStrategies(migrated.strategies);
-        setNotices(migrated.notices);
-        setWikiEntries(migrated.wikiEntries);
-        setSetupTypes(migrated.setupTypes);
-        setConfluences(migrated.confluences);
-        setMistakesList(migrated.mistakesList);
-        setEmotionsList(migrated.emotionsList);
-        setCustomSymbols(migrated.customSymbols);
-        setCustomPillars(migrated.customPillars);
-      } catch (e) {
-        console.error('Failed to load data:', e);
-        showTradeImportToast('error', 'Failed to load saved data — your journal may be corrupted or unreadable. Check the console for details.');
-      }
+  // ==========================================================================
+  // Journal Data: Supabase (per-user, synced across devices)
+  // ==========================================================================
+  // Rules/Playbook (rules, strategies, customPillars), Market Notices,
+  // Knowledge Wiki, and Custom Tags (setupTypes, confluences, mistakesList,
+  // emotionsList, customSymbols) all live together as one JSONB document in
+  // `public.journal_data`, one row per user (`user_id` is the primary key
+  // and the sole thing every query filters on). This mirrors how
+  // accounts/trades already store their full object as `data jsonb` — it
+  // lets the client-side shape evolve without a schema migration every
+  // time, while RLS still guarantees the row is only ever readable/writable
+  // by its owner.
+  const [journalDataLoading, setJournalDataLoading] = useState(true);
+  const hasLoadedJournalDataRef = useRef(false);
+
+  const loadJournalData = useCallback(async (uid: string) => {
+    setJournalDataLoading(true);
+    hasLoadedJournalDataRef.current = false;
+    try {
+      const { data: row, error } = await supabase
+        .from('journal_data')
+        .select('data')
+        .eq('user_id', uid)
+        .maybeSingle();
+      if (error) throw error;
+
+      const migrated = migrateStoredData({ ...(row?.data as StoredData | undefined) });
+      setRules(migrated.rules);
+      setStrategies(migrated.strategies);
+      setNotices(migrated.notices);
+      setWikiEntries(migrated.wikiEntries);
+      setSetupTypes(migrated.setupTypes);
+      setConfluences(migrated.confluences);
+      setMistakesList(migrated.mistakesList);
+      setEmotionsList(migrated.emotionsList);
+      setCustomSymbols(migrated.customSymbols);
+      setCustomPillars(migrated.customPillars);
+    } catch (e) {
+      console.error('Failed to load journal data from Supabase:', e);
+      showTradeImportToast('error', 'Failed to load your Playbook/Notices/Wiki/Tags — check your connection and reload.');
+    } finally {
+      hasLoadedJournalDataRef.current = true;
+      setJournalDataLoading(false);
     }
   }, []);
 
-  // Save to localStorage
-  // Debounced (see useDebouncedLocalStorageWriter) — this payload can carry
-  // multi-MB base64 trade screenshots, so JSON.stringify + setItem is not
-  // free. Without debouncing, every keystroke in a notes field or every
-  // rapid click re-serializes the entire journal synchronously and can
-  // visibly stutter the UI. Writes still land within `delay` ms of the last
-  // change, and are flushed immediately on tab close, so nothing is lost.
-  //
-  // accounts/trades are written as empty arrays here on purpose: they are
-  // no longer sourced from this blob (Supabase is the source of truth for
-  // them now), but keeping the keys present preserves the on-disk shape
-  // for anything (e.g. an old StoredData type, or the legacy-migration
-  // snapshot above) that still expects them to exist.
   useEffect(() => {
-    const data: StoredData = { version: DATA_SCHEMA_VERSION, accounts: [], trades: [], rules, strategies, notices, wikiEntries, setupTypes, confluences, mistakesList, emotionsList, customSymbols, customPillars };
-    let serialized: string;
-    try {
-      serialized = JSON.stringify(data);
-    } catch (e) {
-      console.error('Failed to serialize data:', e);
-      return;
-    }
-    writeToLocalStorage('tradingJournal', serialized, (e: any) => {
-      console.error('Failed to save data:', e);
-      const isQuotaError = e instanceof DOMException && (e.name === 'QuotaExceededError' || e.name === 'NS_ERROR_DOM_QUOTA_REACHED');
-      showTradeImportToast(
-        'error',
-        isQuotaError
-          ? 'Storage is full — this change was NOT saved. Delete some trade images or export a backup and clear old data.'
-          : 'Failed to save your journal — this change may be lost on reload. Check the console for details.'
-      );
-    });
-  }, [rules, strategies, notices, wikiEntries, setupTypes, confluences, mistakesList, emotionsList, customSymbols, customPillars, writeToLocalStorage]);
+    if (userId) loadJournalData(userId);
+  }, [userId, loadJournalData]);
+
+  // Debounced save — fires on every change to any of these slices, but is
+  // deliberately a no-op until the initial load above has actually
+  // completed (hasLoadedJournalDataRef), so the empty default state this
+  // hook starts with can never race ahead and overwrite what's already
+  // saved server-side before it's even been fetched.
+  useEffect(() => {
+    if (!userId || !hasLoadedJournalDataRef.current) return;
+    const payload = { rules, strategies, notices, wikiEntries, setupTypes, confluences, mistakesList, emotionsList, customSymbols, customPillars };
+    writeJournalData(
+      async () => {
+        const { error } = await supabase
+          .from('journal_data')
+          .upsert({ user_id: userId, data: payload }, { onConflict: 'user_id' });
+        if (error) throw error;
+      },
+      (e: any) => {
+        console.error('Failed to save journal data to Supabase:', e);
+        showTradeImportToast('error', 'Failed to save your changes — they may not sync to other devices. Check your connection.');
+      }
+    );
+  }, [userId, rules, strategies, notices, wikiEntries, setupTypes, confluences, mistakesList, emotionsList, customSymbols, customPillars, writeJournalData]);
 
   // ==========================================================================
   // Accounts & Trades: Supabase (per-user, synced across devices)
@@ -1024,24 +1046,17 @@ export function useAppState() {
   // LoginPage and the dashboard (see App.tsx), so this hook — and every
   // piece of state it holds — is never unmounted on sign-out. Without this,
   // a second person signing in on the same browser/tab would briefly see
-  // the previous user's accounts and trades still sitting in state until
-  // the load effect above happened to overwrite them.
+  // the previous user's data still sitting in state until the load effects
+  // happened to overwrite it. The actual reset runs further down (see
+  // "Logout cleanup (continued)" near the end of the Preferences section
+  // below), once every piece of state it touches has been declared.
   const prevUserIdRef = useRef<string | null>(null);
-  useEffect(() => {
-    if (prevUserIdRef.current && !userId) {
-      setAccounts([]);
-      setTrades([]);
-      setSelectedAccounts(['all']);
-      setAccountsTradesLoading(true);
-      hasAttemptedMigrationRef.current = false;
-    }
-    prevUserIdRef.current = userId;
-  }, [userId]);
 
-  // ---- Life Discipline Hub persistence ----
-  // Kept in its own localStorage key, deliberately separate from the trading
-  // journal's versioned schema/migration pipeline above — this is a simple,
-  // self-contained habit tracker and shouldn't need to migrate alongside it.
+  // ---- Life Discipline Hub state ----
+  // Persisted in Supabase as part of the `preferences` row (see the
+  // "Preferences: Supabase" section further down) — kept logically separate
+  // from the journal data's versioned schema/migration pipeline since this
+  // is a simple, self-contained habit tracker.
   // Shape: { startDate, checks: { date: boolean[][] }, graceDays: { date: true },
   //          config: ChallengeConfig }
   // checks[date][categoryIndex][itemIndex] mirrors config.categories order,
@@ -1194,8 +1209,9 @@ export function useAppState() {
   const [categoryPendingDelete, setCategoryPendingDelete] = useState<{ id: string; label: string } | null>(null);
   const [itemPendingDelete, setItemPendingDelete] = useState<{ categoryId: string; id: string; text: string } | null>(null);
 
-  // User-saved challenge presets (persisted to localStorage, separate from
-  // the built-in CHALLENGE_PRESETS templates) + the compact Preset Selector
+  // User-saved challenge presets (persisted to Supabase as part of the
+  // `preferences` row, separate from the built-in CHALLENGE_PRESETS
+  // templates) + the compact Preset Selector
   // Bar's transient UI state (dropdown open, inline "save as" naming row,
   // and the Manage/Delete Presets modal).
   const [userChallengePresets, setUserChallengePresets] = useState<ChallengePreset[]>([]);
@@ -1230,28 +1246,84 @@ export function useAppState() {
   const emptyLifeDisciplineChecks = (config: ChallengeConfig): boolean[][] =>
     config.categories.map(cat => cat.items.map(() => false));
 
-  useEffect(() => {
-    const stored = localStorage.getItem('lifeDisciplineData');
-    if (stored) {
-      try {
-        const parsed = JSON.parse(stored);
-        if (parsed?.startDate) setLifeDisciplineStartDate(parsed.startDate);
-        if (parsed?.checks) setLifeDisciplineChecks(parsed.checks);
-        if (parsed?.graceDays) setLifeDisciplineGraceDays(parsed.graceDays);
-        if (parsed?.missedReasons) setLifeDisciplineMissedReasons(parsed.missedReasons);
-        if (parsed?.recheckNotes) setLifeDisciplineRecheckNotes(parsed.recheckNotes);
-        if (parsed?.config?.categories) setChallengeConfig(parsed.config);
-        if (typeof parsed?.hasStarted === 'boolean') setHasStartedChallenge(parsed.hasStarted);
-      } catch (e) {
-        console.error('Failed to load Life Discipline Hub data:', e);
+  // ==========================================================================
+  // Preferences: Supabase (per-user, synced across devices)
+  // ==========================================================================
+  // Everything that used to be spread across the 'lifeDisciplineData',
+  // 'lifeDisciplineUserPresets', 'customCreedQuotes', and 'dailyCreedState'
+  // localStorage keys (plus theme/privacyMode/pillarsPerRow/preSessionChecklist,
+  // which weren't persisted anywhere before) now lives together as one JSONB
+  // document in `public.preferences`, one row per user, RLS-scoped to
+  // `user_id`. Same single-row-per-user / jsonb-blob shape as `journal_data`
+  // above, for the same reasons.
+  const [preferencesLoading, setPreferencesLoading] = useState(true);
+  const hasLoadedPreferencesRef = useRef(false);
+
+  const loadPreferences = useCallback(async (uid: string) => {
+    setPreferencesLoading(true);
+    hasLoadedPreferencesRef.current = false;
+    try {
+      const { data: row, error } = await supabase
+        .from('preferences')
+        .select('data')
+        .eq('user_id', uid)
+        .maybeSingle();
+      if (error) throw error;
+
+      const p = (row?.data as any) || {};
+      if (p.theme === 'light' || p.theme === 'dark' || p.theme === 'minecraft') setTheme(p.theme);
+      if (typeof p.privacyMode === 'boolean') setPrivacyMode(p.privacyMode);
+      if (typeof p.pillarsPerRow === 'number') setPillarsPerRow(p.pillarsPerRow as PillarsPerRow);
+      if (p.preSessionChecklist && typeof p.preSessionChecklist === 'object') setPreSessionChecklist(p.preSessionChecklist);
+
+      const loadedCreedQuotes: CreedQuote[] = Array.isArray(p.customCreedQuotes) ? p.customCreedQuotes : [];
+      setCustomCreedQuotes(loadedCreedQuotes);
+      const combinedQuoteCount = DEFAULT_CREED_QUOTES.length + loadedCreedQuotes.length;
+      const todayKeyStr = new Date().toLocaleDateString('en-CA');
+      if (p.dailyCreedState?.date === todayKeyStr && typeof p.dailyCreedState?.index === 'number' && p.dailyCreedState.index < combinedQuoteCount) {
+        dailyCreedDateRef.current = todayKeyStr;
+        setCreedIndex(p.dailyCreedState.index);
+      } else {
+        // Date rolled over (or no prior pick) — leave dailyCreedDateRef
+        // unset so the daily-rotation effect immediately picks a fresh one.
+        dailyCreedDateRef.current = '';
       }
+
+      const ld = p.lifeDiscipline || {};
+      if (ld.startDate) setLifeDisciplineStartDate(ld.startDate);
+      setLifeDisciplineChecks(ld.checks || {});
+      setLifeDisciplineGraceDays(ld.graceDays || {});
+      setLifeDisciplineMissedReasons(ld.missedReasons || {});
+      setLifeDisciplineRecheckNotes(ld.recheckNotes || {});
+      setChallengeConfig(ld.config?.categories ? ld.config : DEFAULT_CHALLENGE_CONFIG);
+      setHasStartedChallenge(typeof ld.hasStarted === 'boolean' ? ld.hasStarted : false);
+
+      setUserChallengePresets(Array.isArray(p.userChallengePresets) ? p.userChallengePresets : []);
+    } catch (e) {
+      console.error('Failed to load preferences from Supabase:', e);
+      showTradeImportToast('error', 'Failed to load your settings/Life Discipline Hub — check your connection and reload.');
+    } finally {
+      hasLoadedPreferencesRef.current = true;
+      setPreferencesLoading(false);
+      setCustomCreedQuotesLoaded(true);
     }
   }, []);
 
   useEffect(() => {
-    let serialized: string;
-    try {
-      serialized = JSON.stringify({
+    if (userId) loadPreferences(userId);
+  }, [userId, loadPreferences]);
+
+  // Debounced save — same no-op-until-loaded guard as journal data above.
+  useEffect(() => {
+    if (!userId || !hasLoadedPreferencesRef.current) return;
+    const payload = {
+      theme,
+      privacyMode,
+      pillarsPerRow,
+      preSessionChecklist,
+      customCreedQuotes,
+      dailyCreedState: { date: dailyCreedDateRef.current || new Date().toLocaleDateString('en-CA'), index: creedIndex },
+      lifeDiscipline: {
         startDate: lifeDisciplineStartDate,
         checks: lifeDisciplineChecks,
         graceDays: lifeDisciplineGraceDays,
@@ -1259,38 +1331,77 @@ export function useAppState() {
         recheckNotes: lifeDisciplineRecheckNotes,
         config: challengeConfig,
         hasStarted: hasStartedChallenge,
-      });
-    } catch (e) {
-      console.error('Failed to serialize Life Discipline Hub data:', e);
-      return;
-    }
-    // Debounced for the same reason as the trading journal save above —
-    // this fires on every habit-tile tap, and shouldn't block the tap's
-    // visual feedback.
-    writeToLocalStorage('lifeDisciplineData', serialized, (e: any) => {
-      console.error('Failed to save Life Discipline Hub data:', e);
-    });
-  }, [lifeDisciplineStartDate, lifeDisciplineChecks, lifeDisciplineGraceDays, lifeDisciplineMissedReasons, lifeDisciplineRecheckNotes, challengeConfig, hasStartedChallenge, writeToLocalStorage]);
-
-  useEffect(() => {
-    const stored = localStorage.getItem('lifeDisciplineUserPresets');
-    if (stored) {
-      try {
-        const parsed = JSON.parse(stored);
-        if (Array.isArray(parsed)) setUserChallengePresets(parsed);
-      } catch (e) {
-        console.error('Failed to load saved challenge presets:', e);
+      },
+      userChallengePresets,
+    };
+    writePreferences(
+      async () => {
+        const { error } = await supabase
+          .from('preferences')
+          .upsert({ user_id: userId, data: payload }, { onConflict: 'user_id' });
+        if (error) throw error;
+      },
+      (e: any) => {
+        console.error('Failed to save preferences to Supabase:', e);
       }
-    }
-  }, []);
+    );
+  }, [
+    userId, theme, privacyMode, pillarsPerRow, preSessionChecklist, customCreedQuotes, creedIndex,
+    lifeDisciplineStartDate, lifeDisciplineChecks, lifeDisciplineGraceDays, lifeDisciplineMissedReasons,
+    lifeDisciplineRecheckNotes, challengeConfig, hasStartedChallenge, userChallengePresets, writePreferences,
+  ]);
 
+  // ---- Logout cleanup (continued) ----
+  // See the `prevUserIdRef` declaration up in the Auth section for why this
+  // exists. Placed here (rather than right next to the ref) because it
+  // needs to reference state declared throughout Journal Data and
+  // Preferences above.
   useEffect(() => {
-    try {
-      localStorage.setItem('lifeDisciplineUserPresets', JSON.stringify(userChallengePresets));
-    } catch (e) {
-      console.error('Failed to save challenge presets:', e);
+    if (prevUserIdRef.current && !userId) {
+      // ---- Accounts & Trades ----
+      setAccounts([]);
+      setTrades([]);
+      setSelectedAccounts(['all']);
+      setAccountsTradesLoading(true);
+      hasAttemptedMigrationRef.current = false;
+
+      // ---- Journal Data (Rules/Playbook, Notices, Wiki, Tags) ----
+      setRules([]);
+      setStrategies([]);
+      setCustomPillars([]);
+      setNotices([]);
+      setWikiEntries([]);
+      setSetupTypes([]);
+      setConfluences([]);
+      setMistakesList([]);
+      setEmotionsList(EMOTION_OPTIONS.map(name => ({ id: generateId(), name, color: 'purple' as TagColor })));
+      setCustomSymbols([]);
+      setJournalDataLoading(true);
+      hasLoadedJournalDataRef.current = false;
+
+      // ---- Preferences (settings + Life Discipline Hub + Daily Creed) ----
+      setTheme('dark');
+      setPrivacyMode(false);
+      setPillarsPerRow(3);
+      setPreSessionChecklist({ 'htf-levels': false, 'news-check': false, 'mindset-check': false, 'max-loss-set': false });
+      setCustomCreedQuotes([]);
+      setCreedIndex(0);
+      dailyCreedDateRef.current = '';
+      setLifeDisciplineStartDate(getLocalDateKey());
+      setLifeDisciplineChecks({});
+      setLifeDisciplineGraceDays({});
+      setLifeDisciplineMissedReasons({});
+      setLifeDisciplineRecheckNotes({});
+      setChallengeConfig(DEFAULT_CHALLENGE_CONFIG);
+      setHasStartedChallenge(false);
+      setUserChallengePresets([]);
+      setLoadedPresetId(null);
+      setPreferencesLoading(true);
+      setCustomCreedQuotesLoaded(false);
+      hasLoadedPreferencesRef.current = false;
     }
-  }, [userChallengePresets]);
+    prevUserIdRef.current = userId;
+  }, [userId]);
 
   // Close the "Load Preset" dropdown on outside click.
   useEffect(() => {
@@ -1679,7 +1790,7 @@ export function useAppState() {
   };
 
   // Saves the current draft's Title, Duration, Tokens, Motto and Routines as
-  // a new reusable, user-saved preset (persisted to localStorage). Built-in
+  // a new reusable, user-saved preset (persisted to Supabase). Built-in
   // templates are untouched — this only ever appends to userChallengePresets.
   const saveDraftAsPreset = () => {
     const name = savePresetNameDraft.trim();
@@ -2457,7 +2568,7 @@ export function useAppState() {
           // Psychology Review). It is deliberately NOT derived from
           // rulesFollowed: that field is edited independently in the Trade
           // Detail modal (detailRulesFollowedDraft) and can also get
-          // back-filled by the localStorage migration/normalize pipeline on
+          // back-filled by the migrateStoredData/normalize pipeline on
           // reload — either of which previously caused freshly-imported
           // trades to be silently treated as "reviewed". A brand-new,
           // single-purpose boolean that nothing else in the app writes to
@@ -3472,7 +3583,7 @@ export function useAppState() {
 
   // Backup & Restore
   // Both directions go through the same DATA_SCHEMA_VERSION / migrateStoredData
-  // machinery as the localStorage load effect above, so a backup exported by
+  // machinery as the journal-data load effect above, so a backup exported by
   // an older (or newer) version of the app always imports cleanly.
   //
   // Two distinct export/import paths live below:
@@ -3483,7 +3594,7 @@ export function useAppState() {
   //      Just the trade records, for spreadsheet analysis or external
   //      review. No discipline logs, habits, or full system configuration.
 
-  // Shared shape for the "lifeDisciplineData" localStorage payload, reused
+  // Shared shape for the Life Discipline Hub's Supabase payload, reused
   // by both the full backup export and import so the two stay in sync.
   const buildLifeDisciplineSnapshot = () => ({
     startDate: lifeDisciplineStartDate,
@@ -3588,12 +3699,12 @@ export function useAppState() {
         setEmotionsList(migrated.emotionsList);
         setCustomSymbols(migrated.customSymbols);
         setCustomPillars(migrated.customPillars);
-        localStorage.setItem('tradingJournal', JSON.stringify({ ...migrated, accounts: [], trades: [] }));
 
-        // Accounts/trades now live in Supabase, so a full restore replaces
-        // this user's server-side rows too — otherwise the restored data
-        // would look right until the next reload, when the (unchanged)
-        // Supabase rows would load back in over it.
+        // Everything now lives in Supabase (accounts/trades, journal data,
+        // and preferences), so a full restore replaces this user's
+        // server-side rows too — otherwise the restored data would look
+        // right until the next reload, when the (unchanged) Supabase rows
+        // would load back in over it. No localStorage involved anywhere.
         if (userId) {
           try {
             await supabase.from('trades').delete().eq('user_id', userId);
@@ -3610,9 +3721,26 @@ export function useAppState() {
               );
               if (error) throw error;
             }
+
+            const { error: journalErr } = await supabase.from('journal_data').upsert({
+              user_id: userId,
+              data: {
+                rules: migrated.rules,
+                strategies: migrated.strategies,
+                customPillars: migrated.customPillars,
+                notices: migrated.notices,
+                wikiEntries: migrated.wikiEntries,
+                setupTypes: migrated.setupTypes,
+                confluences: migrated.confluences,
+                mistakesList: migrated.mistakesList,
+                emotionsList: migrated.emotionsList,
+                customSymbols: migrated.customSymbols,
+              },
+            }, { onConflict: 'user_id' });
+            if (journalErr) throw journalErr;
           } catch (err) {
             console.error('Failed to sync restored backup to Supabase:', err);
-            alert('Backup restored locally, but accounts/trades failed to sync to your account — check your connection and try again.');
+            alert('Backup restored locally, but some data failed to sync to your account — check your connection and try again.');
           }
         }
 
@@ -3622,6 +3750,7 @@ export function useAppState() {
         // field is restored independently and anything missing just keeps
         // its current value rather than getting wiped.
         const lifeDiscipline = raw.lifeDisciplineData;
+        let restoredLifeDiscipline: any = null;
         if (lifeDiscipline && typeof lifeDiscipline === 'object') {
           if (lifeDiscipline.startDate) setLifeDisciplineStartDate(lifeDiscipline.startDate);
           if (lifeDiscipline.checks) setLifeDisciplineChecks(lifeDiscipline.checks);
@@ -3630,7 +3759,21 @@ export function useAppState() {
           if (lifeDiscipline.recheckNotes) setLifeDisciplineRecheckNotes(lifeDiscipline.recheckNotes);
           if (lifeDiscipline.config?.categories) setChallengeConfig(lifeDiscipline.config);
           if (typeof lifeDiscipline.hasStarted === 'boolean') setHasStartedChallenge(lifeDiscipline.hasStarted);
-          localStorage.setItem('lifeDisciplineData', JSON.stringify(lifeDiscipline));
+          restoredLifeDiscipline = lifeDiscipline;
+        }
+        if (userId && restoredLifeDiscipline) {
+          try {
+            const { data: existingPrefsRow } = await supabase.from('preferences').select('data').eq('user_id', userId).maybeSingle();
+            const existingPrefs = (existingPrefsRow?.data as any) || {};
+            const { error: prefsErr } = await supabase.from('preferences').upsert({
+              user_id: userId,
+              data: { ...existingPrefs, lifeDiscipline: restoredLifeDiscipline },
+            }, { onConflict: 'user_id' });
+            if (prefsErr) throw prefsErr;
+          } catch (err) {
+            console.error('Failed to sync restored Life Discipline Hub data to Supabase:', err);
+            alert('Backup restored locally, but the Life Discipline Hub failed to sync to your account — check your connection and try again.');
+          }
         }
 
         alert('Full system backup restored successfully!');
@@ -3685,29 +3828,26 @@ export function useAppState() {
   };
 
   // 3. FULL SYSTEM RESET — wipes every feature (Trades, Accounts, Rules
-  // Playbook, Strategies, Wiki, Life Discipline Hub, Daily Creed, saved
-  // presets — everything) back to its factory-default state AND removes
-  // every localStorage key this app writes to.
+  // Playbook, Strategies, Notices, Wiki, Tags, Life Discipline Hub, Daily
+  // Creed, saved presets, and App Preferences — literally everything) back
+  // to its factory-default state, both in React state AND in Supabase
+  // (accounts, trades, journal_data, preferences rows for this user). No
+  // localStorage is involved anywhere, so there's nothing else to clear.
   //
-  // Why this resets so much React state, not just localStorage: the trading
-  // journal and Life Discipline Hub are both persisted through DEBOUNCED
-  // writers (see useDebouncedLocalStorageWriter above) that flush on page
-  // unload. If this function only cleared localStorage and left any of
-  // their source state (rules, customPillars, challengeConfig, etc.)
-  // un-reset, that stale state would get serialized straight back into
-  // localStorage the instant the caller reloads the page — silently
-  // undoing the "clear" for that feature. Resetting every piece of state
-  // that feeds those two blobs guarantees the post-reload flush (if it
-  // fires at all) only ever writes back empty/default data.
-  //
-  // Callers must reload the page immediately after invoking this (see
-  // SettingsModal's "Reset All Journal Data" confirmation flow).
+  // Why this resets so much React state, not just the Supabase rows: all of
+  // it is persisted through DEBOUNCED writers (see useDebouncedSupabaseWriter
+  // above) that flush on tab close. If this function only deleted the
+  // Supabase rows and left any of their source state (rules, customPillars,
+  // challengeConfig, theme, etc.) un-reset, that stale state would get
+  // upserted straight back into Supabase the instant the pending debounce
+  // fires — silently undoing the "clear". Resetting every piece of state
+  // that feeds those two payloads guarantees any in-flight write only ever
+  // writes back empty/default data.
   const handleFullSystemReset = () => {
-    // ---- Accounts & Trades (Supabase) ----
-    // Fire-and-forget: the page reload this action requires (see the
-    // comment above) will re-fetch from Supabase regardless, so there's a
-    // brief window where a reload-before-completion could still show stale
-    // data, but the delete requests are already in flight by then.
+    // ---- Accounts, Trades, Journal Data, Preferences (Supabase) ----
+    // Fire-and-forget: React state is reset synchronously below regardless
+    // of how long these requests take, so the UI reflects the reset
+    // immediately either way.
     if (userId) {
       supabase.from('trades').delete().eq('user_id', userId).then(({ error }) => {
         if (error) console.error('Failed to delete trades from Supabase during reset:', error);
@@ -3715,11 +3855,19 @@ export function useAppState() {
       supabase.from('accounts').delete().eq('user_id', userId).then(({ error }) => {
         if (error) console.error('Failed to delete accounts from Supabase during reset:', error);
       });
+      supabase.from('journal_data').delete().eq('user_id', userId).then(({ error }) => {
+        if (error) console.error('Failed to delete journal data from Supabase during reset:', error);
+      });
+      supabase.from('preferences').delete().eq('user_id', userId).then(({ error }) => {
+        if (error) console.error('Failed to delete preferences from Supabase during reset:', error);
+      });
     }
 
-    // ---- Trading Journal ('tradingJournal' localStorage key) ----
+    // ---- Accounts & Trades ----
     setAccounts([]);
     setTrades([]);
+
+    // ---- Journal Data: Rules/Playbook, Notices, Wiki, Tags ----
     setRules([]);
     setCustomPillars([]); // Rules Playbook custom pillars
     setStrategies([]);
@@ -3731,7 +3879,13 @@ export function useAppState() {
     setEmotionsList(EMOTION_OPTIONS.map(name => ({ id: generateId(), name, color: 'purple' as TagColor })));
     setCustomSymbols([]);
 
-    // ---- Life Discipline Hub ('lifeDisciplineData' localStorage key) ----
+    // ---- App Preferences/Settings ----
+    setTheme('dark');
+    setPrivacyMode(false);
+    setPillarsPerRow(3);
+    setPreSessionChecklist({ 'htf-levels': false, 'news-check': false, 'mindset-check': false, 'max-loss-set': false });
+
+    // ---- Life Discipline Hub ----
     setLifeDisciplineStartDate(getLocalDateKey());
     setLifeDisciplineChecks({});
     setLifeDisciplineGraceDays({});
@@ -3740,23 +3894,14 @@ export function useAppState() {
     setChallengeConfig(DEFAULT_CHALLENGE_CONFIG);
     setHasStartedChallenge(false);
 
-    // ---- User-saved challenge presets ('lifeDisciplineUserPresets') ----
+    // ---- User-saved challenge presets ----
     setUserChallengePresets([]);
     setLoadedPresetId(null);
 
-    // ---- Daily Trading Creed ('customCreedQuotes' / 'dailyCreedState') ----
+    // ---- Daily Trading Creed ----
     setCustomCreedQuotes([]);
-
-    // Explicitly remove the specific keys called out above, then a final
-    // blanket clear() as a catch-all safety net for anything else the app
-    // has ever written (or writes in the future) so this stays a true
-    // 100% factory reset even if a new feature adds its own key later.
-    localStorage.removeItem('tradingJournal');
-    localStorage.removeItem('lifeDisciplineData');
-    localStorage.removeItem('lifeDisciplineUserPresets');
-    localStorage.removeItem('customCreedQuotes');
-    localStorage.removeItem('dailyCreedState');
-    localStorage.clear();
+    setCreedIndex(0);
+    dailyCreedDateRef.current = '';
   };
 
   return {
@@ -3824,6 +3969,8 @@ export function useAppState() {
     trades,
     setTrades,
     accountsTradesLoading,
+    journalDataLoading,
+    preferencesLoading,
     rules,
     setRules,
     strategies,
