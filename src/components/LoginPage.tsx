@@ -7,6 +7,7 @@ import {
   CheckCircle2,
   XCircle,
   TrendingUp,
+  TrendingDown,
   Brain,
   ChevronRight,
   Scale,
@@ -14,6 +15,11 @@ import {
   CloudCog,
   ShieldCheck,
   Users,
+  Flame,
+  Clock,
+  Gauge,
+  Activity,
+  Coins,
 } from 'lucide-react';
 import { signInWithGoogle, signInWithEmail, signUpWithEmail } from '../lib/supabaseClient';
 import { cn } from '../utils/format';
@@ -24,12 +30,17 @@ import { cn } from '../utils/format';
 // Not a dialog/overlay — there's nothing to show "behind" it pre-auth, so it
 // renders as its own screen rather than a modal.
 //
-// Layout: 60/40 split-screen.
-//   - Left  (60%, hidden below lg): ambient, floating showcase canvas built
-//     from static preview cards mirroring the real app screens.
-//   - Right (40%, fixed 480px max, full-width below lg): the actual auth
-//     container — header, Google OAuth, divider, email/password form, mode
-//     switcher, trust badges.
+// Layout: full-viewport "war room map" backdrop + a perfectly centered,
+// crisp auth card floating above it.
+//   - Backdrop (absolute inset-0, hidden below lg): a dense anamorphic 3D
+//     scatter of ~25 static preview tiles pulled from the real app screens
+//     (equity chart, calendar, trade history, gauges, asset tickers, notes,
+//     rules...), spread across the entire viewport edge to edge. Tiles near
+//     the screen's outer edge are large, tilted, and pushed toward the
+//     camera; tiles near the center are small, flat, and pushed back — like
+//     looking down at a curved tactical table from above.
+//   - Foreground: the actual auth container — header, Google OAuth, divider,
+//     email/password form, mode switcher, trust badges.
 //
 // All three auth paths (Google OAuth, email sign in, email sign up) are
 // handled here; the actual Supabase calls live in lib/supabaseClient.ts so
@@ -55,9 +66,12 @@ function GoogleIcon() {
 
 // ============================================================================
 // Showcase preview cards — static, non-interactive mock-ups styled after the
-// real screens (Dashboard's Total P&L hero, Accounts panel, Discipline
-// banner, RulesPlaybook's rule list). Purely decorative: fixed demo numbers,
-// no context/hooks, so the login screen never depends on live app data.
+// real screens (Dashboard's Total P&L hero + equity chart, Accounts panel,
+// Discipline banner, RulesPlaybook's rule list, TradeHistory rows,
+// PerformanceCalendar's heatmap/month grid, MarketNotices, Knowledge Wiki,
+// asset ticker strip, session clock, streak counter, risk gauge). Purely
+// decorative: fixed demo numbers, no context/hooks, so the login screen
+// never depends on live app data.
 // ============================================================================
 
 function PnLPreviewCard() {
@@ -216,6 +230,44 @@ function CalendarHeatmapPreviewCard() {
   );
 }
 
+// Bigger sibling of the heatmap card — a full month grid with day numbers,
+// mirroring CalendarScreen's month view. Used as one of the large "anchor"
+// tiles near the outer edge of the scatter.
+function MonthCalendarPreviewCard() {
+  const days: Array<{ n: number; kind: 'win' | 'loss' | 'none' | 'blank' }> = [
+    { n: 0, kind: 'blank' }, { n: 0, kind: 'blank' }, { n: 1, kind: 'win' }, { n: 2, kind: 'loss' },
+    { n: 3, kind: 'none' }, { n: 4, kind: 'win' }, { n: 5, kind: 'win' },
+    { n: 6, kind: 'loss' }, { n: 7, kind: 'win' }, { n: 8, kind: 'none' }, { n: 9, kind: 'win' },
+    { n: 10, kind: 'loss' }, { n: 11, kind: 'win' }, { n: 12, kind: 'win' },
+    { n: 13, kind: 'none' }, { n: 14, kind: 'win' }, { n: 15, kind: 'loss' }, { n: 16, kind: 'win' },
+    { n: 17, kind: 'win' }, { n: 18, kind: 'none' }, { n: 19, kind: 'win' },
+  ];
+  return (
+    <div className="w-80 rounded-2xl border border-zinc-800/80 bg-zinc-900/70 p-4 shadow-2xl">
+      <div className="flex items-center justify-between mb-3">
+        <p className="text-xs font-semibold text-white">August</p>
+        <p className="text-[10px] text-zinc-500 uppercase tracking-wider">+$9,410</p>
+      </div>
+      <div className="grid grid-cols-7 gap-1">
+        {days.map((d, i) => (
+          <div
+            key={i}
+            className={cn(
+              'aspect-square rounded-md border flex items-center justify-center text-[9px] font-medium tabular-nums',
+              d.kind === 'blank' && 'border-transparent',
+              d.kind === 'win' && 'bg-emerald-500/20 border-emerald-500/40 text-emerald-300',
+              d.kind === 'loss' && 'bg-rose-500/20 border-rose-500/40 text-rose-300',
+              d.kind === 'none' && 'bg-zinc-800/40 border-zinc-800/60 text-zinc-500'
+            )}
+          >
+            {d.kind !== 'blank' ? d.n : ''}
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 // Mirrors TradeHistory's table: header row + a handful of trade rows with
 // date/symbol/side/P&L columns, same uppercase-label header treatment.
 function TradeHistoryPreviewCard() {
@@ -256,6 +308,183 @@ function TradeHistoryPreviewCard() {
   );
 }
 
+// Mirrors Dashboard's equity curve — a small SVG sparkline with a gradient
+// fill under the line, same shape language as renderEquityChart().
+function EquityChartPreviewCard() {
+  const points = [4, 18, 12, 30, 26, 44, 38, 58, 50, 70, 64, 82];
+  const w = 260;
+  const h = 64;
+  const step = w / (points.length - 1);
+  const max = Math.max(...points);
+  const min = Math.min(...points);
+  const coords = points.map((v, i) => {
+    const x = i * step;
+    const y = h - ((v - min) / (max - min)) * h;
+    return `${x.toFixed(1)},${y.toFixed(1)}`;
+  });
+  const line = `M${coords.join(' L')}`;
+  const area = `${line} L${w},${h} L0,${h} Z`;
+  return (
+    <div className="w-72 rounded-2xl border border-zinc-800/80 bg-zinc-900/70 p-4 shadow-2xl">
+      <div className="flex items-center justify-between mb-2">
+        <p className="text-xs font-semibold text-white">Equity Curve</p>
+        <span className="flex items-center gap-1 text-[10px] font-medium text-emerald-400">
+          <TrendingUp className="w-3 h-3" /> +18.2%
+        </span>
+      </div>
+      <svg viewBox={`0 0 ${w} ${h}`} className="w-full h-16" preserveAspectRatio="none">
+        <defs>
+          <linearGradient id="loginEquityFill" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stopColor="rgb(16,185,129)" stopOpacity="0.35" />
+            <stop offset="100%" stopColor="rgb(16,185,129)" stopOpacity="0" />
+          </linearGradient>
+        </defs>
+        <path d={area} fill="url(#loginEquityFill)" stroke="none" />
+        <path d={line} fill="none" stroke="rgb(16,185,129)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+      </svg>
+    </div>
+  );
+}
+
+// Radial win-rate gauge — arc drawn with stroke-dasharray, mirroring the
+// donut-style performance gauges used around the app.
+function WinRateGaugePreviewCard() {
+  const pct = 64.8;
+  const r = 30;
+  const c = 2 * Math.PI * r;
+  const offset = c - (pct / 100) * c;
+  return (
+    <div className="w-56 rounded-2xl border border-zinc-800/80 bg-zinc-900/70 p-4 shadow-2xl flex items-center gap-4">
+      <div className="relative w-[76px] h-[76px] flex-shrink-0">
+        <svg viewBox="0 0 76 76" className="w-full h-full -rotate-90">
+          <circle cx="38" cy="38" r={r} fill="none" stroke="rgb(39,39,42)" strokeWidth="7" />
+          <circle
+            cx="38" cy="38" r={r} fill="none" stroke="rgb(16,185,129)" strokeWidth="7"
+            strokeDasharray={c} strokeDashoffset={offset} strokeLinecap="round"
+          />
+        </svg>
+        <div className="absolute inset-0 flex items-center justify-center">
+          <span className="text-sm font-bold tabular-nums text-white">{pct}%</span>
+        </div>
+      </div>
+      <div>
+        <p className="text-[10px] uppercase tracking-wider text-zinc-500 mb-0.5">Win Rate</p>
+        <p className="text-xs text-zinc-400">312 trades logged</p>
+      </div>
+    </div>
+  );
+}
+
+// Horizontal risk-per-trade gauge with a marker along a gradient track.
+function RiskGaugePreviewCard() {
+  return (
+    <div className="w-64 rounded-2xl border border-zinc-800/80 bg-zinc-900/70 p-4 shadow-2xl">
+      <div className="flex items-center gap-1.5 mb-3">
+        <Gauge className="w-4 h-4 text-amber-400" />
+        <p className="text-xs font-semibold text-white">Risk Per Trade</p>
+      </div>
+      <div className="relative h-2 rounded-full overflow-hidden bg-gradient-to-r from-emerald-500/60 via-amber-500/60 to-rose-500/60 mb-2">
+        <div className="absolute top-1/2 -translate-y-1/2 w-3 h-3 rounded-full bg-white shadow ring-2 ring-zinc-950" style={{ left: '34%' }} />
+      </div>
+      <div className="flex items-baseline justify-between">
+        <span className="text-[10px] text-zinc-500">Target 2.0%</span>
+        <span className="text-sm font-semibold tabular-nums text-white">1.8%</span>
+      </div>
+    </div>
+  );
+}
+
+// Asset ticker strip — small badges for instruments traded, each with a
+// live-style price delta, mirroring icon usage across Dashboard/Trades.
+function AssetTickerPreviewCard() {
+  const assets: Array<{ sym: string; chg: number }> = [
+    { sym: 'NQ', chg: 0.84 },
+    { sym: 'ES', chg: -0.21 },
+    { sym: 'GC', chg: 1.12 },
+    { sym: 'CL', chg: -0.46 },
+  ];
+  return (
+    <div className="w-72 rounded-2xl border border-zinc-800/80 bg-zinc-900/70 p-4 shadow-2xl">
+      <div className="flex items-center gap-1.5 mb-3">
+        <Coins className="w-4 h-4 text-zinc-400" />
+        <p className="text-xs font-semibold text-white">Watchlist</p>
+      </div>
+      <div className="grid grid-cols-2 gap-2">
+        {assets.map((a, i) => (
+          <div key={i} className="flex items-center justify-between rounded-lg bg-zinc-800/50 px-2.5 py-1.5">
+            <span className="text-xs font-semibold text-white">{a.sym}</span>
+            <span className={cn('flex items-center gap-0.5 text-[10px] font-medium tabular-nums', a.chg >= 0 ? 'text-emerald-400' : 'text-rose-400')}>
+              {a.chg >= 0 ? <TrendingUp className="w-3 h-3" /> : <TrendingDown className="w-3 h-3" />}
+              {a.chg >= 0 ? '+' : ''}{a.chg.toFixed(2)}%
+            </span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// Market session clock — three trading sessions with an open/closed dot,
+// paper-textured filler tile.
+function SessionClockPreviewCard() {
+  const sessions: Array<{ name: string; time: string; open: boolean }> = [
+    { name: 'Asia', time: '00:00 – 09:00', open: false },
+    { name: 'London', time: '08:00 – 17:00', open: true },
+    { name: 'New York', time: '13:00 – 22:00', open: true },
+  ];
+  return (
+    <div className="w-64 rounded-2xl border border-zinc-800/80 bg-zinc-900/70 p-4 shadow-2xl">
+      <div className="flex items-center gap-1.5 mb-3">
+        <Clock className="w-4 h-4 text-zinc-400" />
+        <p className="text-xs font-semibold text-white">Sessions</p>
+      </div>
+      <div className="space-y-1.5">
+        {sessions.map((s, i) => (
+          <div key={i} className="flex items-center justify-between text-xs">
+            <span className="flex items-center gap-1.5 text-zinc-300">
+              <span className={cn('w-1.5 h-1.5 rounded-full', s.open ? 'bg-emerald-500' : 'bg-zinc-600')} />
+              {s.name}
+            </span>
+            <span className="text-zinc-500 tabular-nums">{s.time}</span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// Day-streak counter — flame icon + big number, mirrors Discipline streak
+// stats.
+function StreakPreviewCard() {
+  return (
+    <div className="w-56 rounded-2xl border border-zinc-800/80 bg-zinc-900/70 p-4 shadow-2xl flex items-center gap-3">
+      <div className="p-2.5 rounded-xl bg-amber-500/10 flex-shrink-0">
+        <Flame className="w-5 h-5 text-amber-400" />
+      </div>
+      <div>
+        <p className="text-xl font-bold tabular-nums text-white leading-none">12</p>
+        <p className="text-[10px] uppercase tracking-wider text-zinc-500 mt-1">day streak</p>
+      </div>
+    </div>
+  );
+}
+
+// Sticky-note style rule/note card — textured "paper" filler tile, mirrors
+// individual rule entries and journal notes.
+function RuleNotePreviewCard() {
+  return (
+    <div className="w-64 rounded-2xl border border-zinc-800/80 bg-zinc-900/70 p-4 shadow-2xl">
+      <div className="flex items-center gap-1.5 mb-2">
+        <Activity className="w-3.5 h-3.5 text-violet-400" />
+        <p className="text-[10px] uppercase tracking-wider text-zinc-500">Note</p>
+      </div>
+      <p className="text-xs text-zinc-300 leading-relaxed">
+        Cut size in half after two losers in a row. Reset at the next winning day.
+      </p>
+    </div>
+  );
+}
+
 // Mirrors MarketNotices' notice cards.
 function NoticePreviewCard() {
   return (
@@ -282,43 +511,43 @@ function WikiPreviewCard() {
   );
 }
 
-// Every preview variant, cycled with repeats for density — this is what
-// fills the background wall. Deliberately more entries than corners so
-// cards land everywhere: edges, mid-screen, and directly behind the modal
-// (where the modal's own translucent glass shows a soft blurred sliver of
-// whatever's back there instead of a hard void).
-const PREVIEW_CARDS: Array<() => JSX.Element> = [
-  PnLPreviewCard,
-  TradeHistoryPreviewCard,
-  DisciplinePreviewCard,
-  CalendarHeatmapPreviewCard,
-  AccountsPreviewCard,
-  PlaybookPreviewCard,
-  TradeStatsPreviewCard,
-  NoticePreviewCard,
-  WikiPreviewCard,
-  AccountsPreviewCard,
-  CalendarHeatmapPreviewCard,
-  TradeHistoryPreviewCard,
-  DisciplinePreviewCard,
-  PlaybookPreviewCard,
-  PnLPreviewCard,
-  WikiPreviewCard,
-  TradeStatsPreviewCard,
-  NoticePreviewCard,
-];
+// ============================================================================
+// "War room map" backdrop — an anamorphic 3D scatter of ~25 preview tiles
+// spread across the full viewport (100vw x 100vh), edge to edge. The wall
+// isn't a flat grid: each tile's position, rotation, scale and z-depth are
+// derived from its distance from screen center, so tiles near the outer
+// edge read as large, tilted panels leaning toward the viewer, while tiles
+// near the center (behind/beside the modal) read as small, flat details
+// seen from directly above — the "curved tactical table" effect.
+// ============================================================================
 
-// translateZ depth (px) per tile, cycled — negative pushes a card further
-// from the camera (back layer), positive pulls it closer (front layer).
-const DEPTH_CYCLE = [0, -140, 70, -70, 140, -210, 35, -105];
+type Ring = 'outer' | 'mid' | 'inner';
+type Variant = 'glass' | 'paper' | 'glow';
 
-// Depth-based opacity so far-back cards recede slightly, but everything
-// stays clearly readable — floor is high enough that figures never wash
-// out against the dark backdrop.
-function opacityForDepth(depth: number) {
-  const fade = Math.min(Math.abs(depth) / 260, 0.15);
-  return (0.9 - fade).toFixed(2);
+interface TileConfig {
+  Card: () => JSX.Element;
+  top: number; // percent of viewport, may be <0 or >100 to bleed off-edge
+  left: number;
+  ring: Ring;
+  variant: Variant;
+  seed: number;
 }
+
+// Per-ring visual language:
+//  - outer: big, close, heavily tilted — the "leaning off the edge of the map" panels
+//  - mid:   near-neutral scale/depth — the flat mid-ground of the table
+//  - inner: small, flat, pushed back — fine detail glimpsed near the modal
+const RING_CONFIG: Record<Ring, {
+  scaleBase: number; scaleStep: number;
+  zBase: number; zStep: number;
+  maxTilt: number; opacity: number; floatDepth: number;
+}> = {
+  outer: { scaleBase: 1.18, scaleStep: 0.09, zBase: 170, zStep: 45, maxTilt: 32, opacity: 0.95, floatDepth: 28 },
+  mid: { scaleBase: 0.82, scaleStep: 0.07, zBase: -10, zStep: 30, maxTilt: 15, opacity: 0.82, floatDepth: 16 },
+  inner: { scaleBase: 0.46, scaleStep: 0.05, zBase: -190, zStep: 26, maxTilt: 6, opacity: 0.5, floatDepth: 10 },
+};
+
+const ROTATE_Z_JITTER = [-5, 4, -3, 6, -4, 3, 5, -6, 2, -2, 4, -3];
 
 // Float timing/delay cycled per tile so nothing bobs in unison.
 const FLOAT_CYCLE = [
@@ -327,77 +556,163 @@ const FLOAT_CYCLE = [
   { duration: '5s', delay: '0.8s' },
   { duration: '4.3s', delay: '1.2s' },
   { duration: '4.8s', delay: '0.2s' },
+  { duration: '5.4s', delay: '0.6s' },
 ];
 
-// Full-viewport backdrop that sits behind the centered auth modal: a dense,
-// subtly tilted 3D wall of preview cards (perspective + static
-// rotateX/Y/Z), wide enough to overflow both edges of the screen so cards
-// land everywhere — corners, mid-screen, and directly behind the modal
-// itself, where the modal's translucent glass lets a soft blurred sliver
-// show through on either side rather than leaving a bare gap. Ambient
-// emerald glows sit in all four corners for depth. Purely decorative —
+function clamp(n: number, min: number, max: number) {
+  return Math.max(min, Math.min(max, n));
+}
+
+// The 25-tile layout: hand-placed across every edge (top, bottom, left,
+// right, corners), the mid-ground, and a handful of small inner tiles
+// flanking the modal — pulling from 17 distinct card types so nothing
+// repeats back-to-back.
+const TILE_LAYOUT: TileConfig[] = [
+  // ---- outer ring: large, tilted, edge-bleeding anchor panels ----
+  { Card: EquityChartPreviewCard, top: 2, left: 13, ring: 'outer', variant: 'glow', seed: 0 },
+  { Card: MonthCalendarPreviewCard, top: -4, left: 50, ring: 'outer', variant: 'glass', seed: 1 },
+  { Card: TradeHistoryPreviewCard, top: 5, left: 87, ring: 'outer', variant: 'paper', seed: 2 },
+  { Card: WinRateGaugePreviewCard, top: 95, left: 12, ring: 'outer', variant: 'glow', seed: 3 },
+  { Card: PnLPreviewCard, top: 101, left: 50, ring: 'outer', variant: 'glass', seed: 4 },
+  { Card: AssetTickerPreviewCard, top: 93, left: 88, ring: 'outer', variant: 'paper', seed: 5 },
+  { Card: AccountsPreviewCard, top: 46, left: -5, ring: 'outer', variant: 'glow', seed: 6 },
+  { Card: RuleNotePreviewCard, top: 70, left: -7, ring: 'outer', variant: 'paper', seed: 7 },
+  { Card: StreakPreviewCard, top: 40, left: 105, ring: 'outer', variant: 'glow', seed: 8 },
+  { Card: RiskGaugePreviewCard, top: 67, left: 103, ring: 'outer', variant: 'paper', seed: 9 },
+
+  // ---- mid ring: near-neutral scale, fills the mid-ground ----
+  { Card: DisciplinePreviewCard, top: 15, left: 27, ring: 'mid', variant: 'glass', seed: 10 },
+  { Card: CalendarHeatmapPreviewCard, top: 19, left: 75, ring: 'mid', variant: 'paper', seed: 11 },
+  { Card: TradeStatsPreviewCard, top: 79, left: 25, ring: 'mid', variant: 'glass', seed: 12 },
+  { Card: PlaybookPreviewCard, top: 81, left: 73, ring: 'mid', variant: 'paper', seed: 13 },
+  { Card: NoticePreviewCard, top: 30, left: 7, ring: 'mid', variant: 'glow', seed: 14 },
+  { Card: WikiPreviewCard, top: 61, left: 93, ring: 'mid', variant: 'glass', seed: 15 },
+  { Card: SessionClockPreviewCard, top: 9, left: 61, ring: 'mid', variant: 'paper', seed: 16 },
+  { Card: EquityChartPreviewCard, top: 89, left: 45, ring: 'mid', variant: 'glass', seed: 17 },
+  { Card: AssetTickerPreviewCard, top: 50, left: 17, ring: 'mid', variant: 'paper', seed: 18 },
+
+  // ---- inner ring: small, flat details near the modal ----
+  { Card: TradeHistoryPreviewCard, top: 37, left: 22, ring: 'inner', variant: 'glass', seed: 19 },
+  { Card: CalendarHeatmapPreviewCard, top: 59, left: 80, ring: 'inner', variant: 'paper', seed: 20 },
+  { Card: WinRateGaugePreviewCard, top: 23, left: 82, ring: 'inner', variant: 'glow', seed: 21 },
+  { Card: PnLPreviewCard, top: 71, left: 20, ring: 'inner', variant: 'glass', seed: 22 },
+  { Card: RuleNotePreviewCard, top: 13, left: 42, ring: 'inner', variant: 'paper', seed: 23 },
+  { Card: StreakPreviewCard, top: 85, left: 62, ring: 'inner', variant: 'glass', seed: 24 },
+];
+
+// Wraps a preview card with texture/lighting per variant: 'glass' (translucent,
+// blurred edge highlight), 'paper' (subtle diagonal fiber texture), or
+// 'glow' (emerald/cyan ambient projection-panel glow behind it).
+function TileFrame({ variant, children }: { variant: Variant; children: React.ReactNode }) {
+  if (variant === 'glow') {
+    return (
+      <div className="relative">
+        <div className="absolute -inset-10 rounded-full bg-emerald-600/10 blur-[150px] -z-10" aria-hidden="true" />
+        <div className="absolute -inset-6 rounded-2xl bg-cyan-500/5 blur-3xl -z-10" aria-hidden="true" />
+        <div className="rounded-2xl ring-1 ring-emerald-500/25 shadow-[0_0_45px_-8px_rgba(16,185,129,0.5)]">
+          {children}
+        </div>
+      </div>
+    );
+  }
+  if (variant === 'paper') {
+    return (
+      <div
+        className="rounded-2xl ring-1 ring-white/5"
+        style={{ backgroundImage: 'repeating-linear-gradient(135deg, rgba(255,255,255,0.03) 0px, rgba(255,255,255,0.03) 1px, transparent 1px, transparent 7px)' }}
+      >
+        {children}
+      </div>
+    );
+  }
+  return <div className="rounded-2xl ring-1 ring-white/10 backdrop-blur-[1px]">{children}</div>;
+}
+
+// A single positioned/tilted tile in the scatter. Position + rotation +
+// scale + depth are all derived from (top, left) relative to screen center,
+// so the outward "anamorphic" distortion falls out of one formula instead
+// of being hand-tuned per tile.
+function Tile({ Card, top, left, ring, variant, seed }: TileConfig) {
+  const cfg = RING_CONFIG[ring];
+  const dx = clamp((left - 50) / 55, -1, 1);
+  const dy = clamp((top - 50) / 55, -1, 1);
+  const rotateY = (-dx * cfg.maxTilt).toFixed(1);
+  const rotateX = (dy * cfg.maxTilt).toFixed(1);
+  const rotateZ = ROTATE_Z_JITTER[seed % ROTATE_Z_JITTER.length];
+  const scale = (cfg.scaleBase + (seed % 4) * cfg.scaleStep).toFixed(2);
+  const z = cfg.zBase + (seed % 3) * cfg.zStep;
+  const float = FLOAT_CYCLE[seed % FLOAT_CYCLE.length];
+
+  return (
+    <div
+      className="absolute"
+      style={{
+        top: `${top}%`,
+        left: `${left}%`,
+        transform: `translate(-50%, -50%) rotateX(${rotateX}deg) rotateY(${rotateY}deg) rotateZ(${rotateZ}deg) translateZ(${z}px) scale(${scale})`,
+        transformStyle: 'preserve-3d',
+        zIndex: Math.round(z + 300),
+      }}
+    >
+      <div
+        className="login-card-float"
+        style={
+          {
+            opacity: cfg.opacity,
+            animationDuration: float.duration,
+            animationDelay: float.delay,
+            '--depth': `${cfg.floatDepth}px`,
+          } as React.CSSProperties
+        }
+      >
+        <TileFrame variant={variant}>
+          <Card />
+        </TileFrame>
+      </div>
+    </div>
+  );
+}
+
+// Full-viewport backdrop that sits behind the centered auth modal: a dense
+// anamorphic 3D scatter of preview tiles covering every edge of the screen,
+// plus ambient emerald/cyan glows and ambient lighting. Purely decorative —
 // pointer-events disabled so it never intercepts clicks — and hidden below
 // `lg` in favor of a clean, uncluttered modal.
-function CornerPreviewBackdrop() {
+function WarRoomBackdrop() {
   return (
-    <div className="pointer-events-none absolute inset-0 overflow-hidden bg-[#0d0f12]" aria-hidden="true">
-      {/* Ambient emerald glows, one per corner */}
-      <div className="absolute -top-24 -left-24 w-[420px] h-[420px] rounded-full bg-emerald-500/15 blur-[120px]" />
-      <div className="absolute -top-24 -right-24 w-[420px] h-[420px] rounded-full bg-emerald-500/15 blur-[120px]" />
-      <div className="absolute -bottom-24 -left-24 w-[420px] h-[420px] rounded-full bg-emerald-500/15 blur-[120px]" />
-      <div className="absolute -bottom-24 -right-24 w-[420px] h-[420px] rounded-full bg-emerald-500/15 blur-[120px]" />
+    <div className="pointer-events-none absolute inset-0 overflow-hidden bg-[#0a0c0f]" aria-hidden="true">
+      {/* Base ambient glows, one per corner plus a cyan accent, so the deep
+          background never reads as flat black even where no tile lands */}
+      <div className="absolute -top-24 -left-24 w-[460px] h-[460px] rounded-full bg-emerald-600/10 blur-[150px]" />
+      <div className="absolute -top-24 -right-24 w-[460px] h-[460px] rounded-full bg-cyan-500/10 blur-[150px]" />
+      <div className="absolute -bottom-24 -left-24 w-[460px] h-[460px] rounded-full bg-cyan-500/10 blur-[150px]" />
+      <div className="absolute -bottom-24 -right-24 w-[460px] h-[460px] rounded-full bg-emerald-600/10 blur-[150px]" />
+      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[520px] h-[520px] rounded-full bg-emerald-500/5 blur-[160px]" />
 
-      {/* Tilted 3D card wall — overflows both edges (160% of viewport
-          width) so the scatter reads as continuous background, not a
-          handful of pinned tiles. Hidden on small/medium viewports. */}
-      <div className="hidden lg:flex absolute inset-0 items-center justify-center" style={{ perspective: '1400px' }}>
-        <div className="login-scene-drift" style={{ transformStyle: 'preserve-3d' }}>
-          <div
-            className="flex flex-wrap content-center justify-center gap-6 p-6"
-            style={{
-              width: '160vw',
-              maxWidth: 'none',
-              transform: 'rotateX(12deg) rotateY(-16deg) rotateZ(3deg)',
-              transformStyle: 'preserve-3d',
-            }}
-          >
-            {PREVIEW_CARDS.map((Card, i) => {
-              const depth = DEPTH_CYCLE[i % DEPTH_CYCLE.length];
-              const float = FLOAT_CYCLE[i % FLOAT_CYCLE.length];
-              return (
-                <div
-                  key={i}
-                  className="login-card-float"
-                  style={
-                    {
-                      opacity: opacityForDepth(depth),
-                      animationDuration: float.duration,
-                      animationDelay: float.delay,
-                      '--depth': `${depth}px`,
-                    } as React.CSSProperties
-                  }
-                >
-                  <Card />
-                </div>
-              );
-            })}
-          </div>
+      {/* The anamorphic scatter itself — a shared perspective origin at
+          screen center, with a slow independent drift so the whole scene
+          breathes. Hidden on small/medium viewports. */}
+      <div className="hidden lg:block absolute inset-0" style={{ perspective: '1400px' }}>
+        <div className="login-scene-drift absolute inset-0" style={{ transformStyle: 'preserve-3d' }}>
+          {TILE_LAYOUT.map((tile, i) => (
+            <Tile key={i} {...tile} />
+          ))}
         </div>
       </div>
 
-      {/* Soft edge fade so the outer rim recedes slightly and the centered
-          modal stays the clear focal point, without crushing the cards
-          that peek out alongside it into invisibility */}
-      <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,transparent_30%,rgba(13,15,18,0.4)_100%)]" />
+      {/* Soft edge vignette so the outer rim recedes slightly and the
+          centered modal stays the clear focal point, without crushing the
+          tiles that peek out alongside it into invisibility */}
+      <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,transparent_25%,rgba(10,12,15,0.55)_100%)]" />
 
       <style>{`
         @keyframes login-scene-drift {
-          0% { transform: translate3d(-1%, -0.6%, 0) rotate(-0.3deg); }
-          50% { transform: translate3d(1%, 0.6%, 0) rotate(0.3deg); }
-          100% { transform: translate3d(-1%, -0.6%, 0) rotate(-0.3deg); }
+          0% { transform: translate3d(-0.8%, -0.5%, 0) rotate(-0.25deg); }
+          50% { transform: translate3d(0.8%, 0.5%, 0) rotate(0.25deg); }
+          100% { transform: translate3d(-0.8%, -0.5%, 0) rotate(-0.25deg); }
         }
         .login-scene-drift {
-          animation: login-scene-drift 48s ease-in-out infinite;
+          animation: login-scene-drift 52s ease-in-out infinite;
         }
         @keyframes login-card-float {
           0% { transform: translateZ(var(--depth)) translateY(-10px); }
@@ -540,10 +855,10 @@ export function LoginPage() {
     'placeholder:text-zinc-500 outline-none transition-colors focus:border-zinc-500 focus:bg-[#181a1f]';
 
   return (
-    <div className="relative min-h-screen w-full flex items-center justify-center bg-[#0d0f12] px-4 py-10 overflow-hidden">
-      {/* Corner-spread, 3D-tilted preview cards + ambient glows. Purely
-          decorative backdrop behind the centered modal. */}
-      <CornerPreviewBackdrop />
+    <div className="relative min-h-screen w-full flex items-center justify-center bg-[#0a0c0f] px-4 py-10 overflow-hidden">
+      {/* Anamorphic, edge-to-edge scatter of preview tiles + ambient glows.
+          Purely decorative backdrop behind the centered modal. */}
+      <WarRoomBackdrop />
 
       {/* Centered, floating auth modal */}
       <div className="relative z-10 w-full max-w-sm bg-zinc-950/85 backdrop-blur-2xl border border-zinc-800/80 shadow-2xl shadow-black/80 rounded-2xl p-6 sm:p-7">
