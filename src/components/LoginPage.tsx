@@ -427,6 +427,23 @@ export function LoginPage() {
     setShowConfirmPassword(false);
   };
 
+  // Shared by both ways Supabase can signal "this email is already
+  // registered" on sign-up: an explicit error, or (depending on the
+  // project's email-confirmation settings) a 200 response whose `user`
+  // comes back with an empty `identities` array instead of an error.
+  // Unlike switchMode(), this deliberately KEEPS the email the person
+  // already typed — they just switched intents (sign up -> sign in),
+  // not accounts, so re-typing it would just be friction.
+  const handleExistingAccount = () => {
+    setMode('signIn');
+    setPassword('');
+    setConfirmPassword('');
+    setShowPassword(false);
+    setShowConfirmPassword(false);
+    setInfoMsg(null);
+    setErrorMsg('An account with this email already exists. Please Sign In instead.');
+  };
+
   const handleGoogleSignIn = async () => {
     setErrorMsg(null);
     setInfoMsg(null);
@@ -473,7 +490,23 @@ export function LoginPage() {
     setIsSubmitting(false);
 
     if (error) {
+      // Supabase's wording varies by project/version ("User already
+      // registered", "already registered", etc.) so match loosely rather
+      // than on one exact string.
+      if (mode === 'signUp' && /already (registered|exists|in use)/i.test(error.message)) {
+        handleExistingAccount();
+        return;
+      }
       setErrorMsg(error.message);
+      return;
+    }
+
+    // Some Supabase projects don't return an error for a duplicate sign-up
+    // at all — instead `data.user` comes back with an empty `identities`
+    // array (this is how Supabase avoids leaking which emails are already
+    // registered via error responses). Same handling as the error case above.
+    if (mode === 'signUp' && data.user && data.user.identities && data.user.identities.length === 0) {
+      handleExistingAccount();
       return;
     }
 
