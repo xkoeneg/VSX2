@@ -91,6 +91,7 @@ import {
   Dumbbell,
   Coffee,
   Heart,
+  LogOut,
   type LucideIcon,
 } from 'lucide-react';
 import type React from 'react';
@@ -99,6 +100,7 @@ import { AppProvider, useAppContext } from './context/AppContext';
 import { cn } from './utils/format';
 import { Sidebar } from './components/Sidebar';
 import { NotificationBell } from './components/shared/NotificationBell';
+import { LoginPage } from './components/LoginPage';
 
 // ============================================================================
 // Code splitting: screens & modals
@@ -277,7 +279,7 @@ function AppShell() {
     handleDeleteConfluence, handleDeleteMistakeType, handleChangeSetupTypeColor, handleChangeConfluenceColor,
     handleChangeMistakeColor, handleDeleteEmotion, handleChangeEmotionColor, colorForEmotion, colorForMistake,
     handleFileUpload, handleAddImageUrl, handleRemoveImage, handleReorderImages, updateTimeframeNotes,
-    exportBackup, importBackup,
+    exportBackup, importBackup, session, authLoading, signOutUser,
   } = useAppContext();
 
   // Tab-switch flicker fix: `deferredView` lags one render behind `view`
@@ -370,7 +372,7 @@ function AppShell() {
         }
 
         /* ============================================================
-           MOBILE OPTIMIZATION (≤767px / below Tailwind's `md` breakpoint)
+           MOBILE OPTIMIZATION (below 767px / Tailwind's md breakpoint)
            ============================================================
            1. 44px is Apple's (and the generally accepted) minimum
               comfortable touch target — undersized buttons/inputs are the
@@ -818,6 +820,21 @@ function AppShell() {
           <span className={cn("font-bold text-base uppercase tracking-wider", theme !== 'light' ? 'text-white' : 'text-zinc-900')}>
             VSX
           </span>
+          {/* Sign Out — placeholder placement; move this into Sidebar.tsx
+              (both mobile drawer and desktop rail) once that file is in
+              hand, so it's reachable from every screen the same way the
+              rest of the nav is, not just the mobile top bar. */}
+          <button
+            type="button"
+            onClick={() => signOutUser()}
+            aria-label="Sign out"
+            className={cn(
+              "min-w-11 min-h-11 ml-auto flex items-center justify-center rounded-lg transition-colors",
+              theme !== 'light' ? 'text-zinc-400 hover:text-white hover:bg-zinc-800' : 'text-zinc-500 hover:text-zinc-900 hover:bg-zinc-100'
+            )}
+          >
+            <LogOut className="w-4 h-4" />
+          </button>
         </div>
 
         {/* pb stacks a fixed floor (1rem desktop / 1.5rem mobile, matching
@@ -935,7 +952,43 @@ function AppShell() {
 export default function App() {
   return (
     <AppProvider>
-      <AppShell />
+      <AuthGate />
     </AppProvider>
   );
+}
+
+// ============================================================================
+// AuthGate — reads the Supabase session from useAppState (via context) and
+// decides which of three things to render:
+//   1. authLoading  -> brief blank/spinner screen while the very first
+//      supabase.auth.getSession() call resolves (avoids a flash of the
+//      LoginPage for someone who's actually already signed in).
+//   2. no session   -> LoginPage (Google OAuth + email sign in/up).
+//   3. session      -> the real app (AppShell).
+// Sits *inside* AppProvider (not outside it) because it needs
+// useAppContext() to read `session`/`authLoading`, which live in
+// useAppState alongside the rest of the app's state.
+// ============================================================================
+function AuthGate() {
+  const { session, authLoading, theme } = useAppContext();
+
+  if (authLoading) {
+    return (
+      <div className={cn(
+        "h-screen w-full flex items-center justify-center",
+        theme === 'light' ? 'bg-zinc-50' : 'bg-[#0d0f12]'
+      )}>
+        <div className={cn(
+          "w-8 h-8 rounded-full border-2 border-t-transparent animate-spin",
+          theme === 'light' ? 'border-zinc-300' : 'border-zinc-700'
+        )} />
+      </div>
+    );
+  }
+
+  if (!session) {
+    return <LoginPage />;
+  }
+
+  return <AppShell />;
 }
