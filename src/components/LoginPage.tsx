@@ -367,7 +367,7 @@ function WinRateGaugePreviewCard() {
   const beLen = (breakeven / total) * c;
 
   return (
-    <div className="w-56 rounded-2xl border border-white/10 bg-zinc-900/50 backdrop-blur-md p-3 shadow-2xl">
+    <div className="w-56 rounded-2xl border border-white/10 bg-zinc-900/70 p-3 shadow-2xl">
       <div className="flex items-center gap-3">
         <div className="relative w-14 h-14 flex-shrink-0">
           <svg viewBox="0 0 112 112" className="w-full h-full -rotate-90">
@@ -670,12 +670,23 @@ function TileFrame({ variant, children }: { variant: Variant; children: React.Re
   // `transform-gpu` (translateZ(0)) + `will-change` promote each frame to its
   // own GPU compositor layer up front, so the blur/shadow/ring paint happens
   // once off the main thread instead of being recomputed as the parent
-  // Tile's 3D transform settles on mount — this is what kills the stutter.
+  // Tile's 3D transform settles on mount.
+  //
+  // PERF NOTE: `filter: blur()` and `backdrop-filter: blur()` are among the
+  // most expensive things a browser can rasterize, and cost scales with
+  // blur radius. The old glow variant ran TWO blur(150px)/blur(48px) layers
+  // per tile across ~10 glow tiles, all nested inside animating 3D
+  // transforms (the float + scene-drift keyframes) — that combination is
+  // what was actually causing the ongoing jank, not just the mount flash.
+  // Radii below are cut roughly 3-4x (150→48px, 3xl→xl) which is still
+  // visually a soft ambient glow but is dramatically cheaper per frame.
+  // The 'glass' variant's `backdrop-blur-[1px]` is dropped entirely — at
+  // 1px it was doing almost nothing visually while still forcing a
+  // continuous re-sample of whatever's behind it on every animation frame.
   if (variant === 'glow') {
     return (
       <div className="relative transform-gpu" style={{ willChange: 'transform, opacity' }}>
-        <div className="absolute -inset-10 rounded-full bg-emerald-600/10 blur-[150px] -z-10 transform-gpu" aria-hidden="true" />
-        <div className="absolute -inset-6 rounded-2xl bg-cyan-500/5 blur-3xl -z-10 transform-gpu" aria-hidden="true" />
+        <div className="absolute -inset-6 rounded-2xl bg-emerald-600/10 blur-xl -z-10 transform-gpu" aria-hidden="true" />
         <div className="rounded-2xl ring-1 ring-emerald-500/25 shadow-[0_0_45px_-8px_rgba(16,185,129,0.5)] transform-gpu">
           {children}
         </div>
@@ -696,7 +707,7 @@ function TileFrame({ variant, children }: { variant: Variant; children: React.Re
     );
   }
   return (
-    <div className="rounded-2xl ring-1 ring-white/10 backdrop-blur-[1px] transform-gpu" style={{ willChange: 'transform, opacity' }}>
+    <div className="rounded-2xl ring-1 ring-white/10 transform-gpu" style={{ willChange: 'transform, opacity' }}>
       {children}
     </div>
   );
@@ -716,6 +727,15 @@ function Tile({ Card, top, left, ring, variant, seed }: TileConfig) {
   const scale = (cfg.scaleBase + (seed % 4) * cfg.scaleStep).toFixed(2);
   const z = cfg.zBase + (seed % 3) * cfg.zStep;
   const float = FLOAT_CYCLE[seed % FLOAT_CYCLE.length];
+  // PERF: continuous `translateZ` float animation is only applied to the
+  // outer ring. Mid/inner tiles are smaller, further back, and barely
+  // register the bob visually, but each animating layer forces the browser
+  // to keep re-compositing that element every frame — 25 of them running
+  // at once (stacked with the whole-scene drift + several blur filters) is
+  // what was reading as "laggy" during the continuous animation, separate
+  // from the mount flash. Cutting float to just the 10 outer tiles removes
+  // more than half the concurrently-animating layers for free.
+  const shouldFloat = ring === 'outer';
 
   return (
     <div
@@ -730,12 +750,13 @@ function Tile({ Card, top, left, ring, variant, seed }: TileConfig) {
       }}
     >
       <div
-        className="login-card-float transform-gpu"
+        className={shouldFloat ? 'login-card-float transform-gpu' : 'transform-gpu'}
         style={
           {
             opacity: cfg.opacity,
-            animationDuration: float.duration,
-            animationDelay: float.delay,
+            ...(shouldFloat
+              ? { animationDuration: float.duration, animationDelay: float.delay }
+              : { transform: `translateZ(${cfg.floatDepth}px)` }),
             '--depth': `${cfg.floatDepth}px`,
             willChange: 'transform',
           } as React.CSSProperties
