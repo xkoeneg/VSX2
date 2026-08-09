@@ -912,7 +912,7 @@ export function LoginPage() {
           )}
 
           {/* Email / password form */}
-          <form onSubmit={handleSubmit} className="space-y-3">
+          <form onSubmit={handleSubmit} className="space-y-2">
             <div>
               <label htmlFor="auth-email" className="block text-xs font-medium text-zinc-400 mb-1.5">
                 Email
@@ -962,11 +962,6 @@ export function LoginPage() {
                   {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                 </button>
               </div>
-              {mode === 'signUp' && (
-                <p className="mt-1.5 text-[11px] text-zinc-500">
-                  Must be 8+ characters and include a special character (e.g. ! @ # $).
-                </p>
-              )}
             </div>
 
             {mode === 'signUp' && (
