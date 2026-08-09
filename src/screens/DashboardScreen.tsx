@@ -345,7 +345,7 @@ export function DashboardScreen() {
     const midY = height - ((midpoint - domainMin) / domainRange) * height;
 
     return (
-      <div className="w-full">
+      <div className="w-full relative">
         <svg
           viewBox={`0 0 ${chartWidth} ${height}`}
           width="100%"
@@ -362,10 +362,30 @@ export function DashboardScreen() {
           <line x1="0" y1={midY} x2={chartWidth} y2={midY} stroke="#3f3f46" strokeWidth="1" strokeDasharray="4" vectorEffect="non-scaling-stroke" />
           <path d={areaPath} fill={`url(#${gradientId})`} />
           <path d={linePath} fill="none" stroke={strokeColor} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" vectorEffect="non-scaling-stroke" />
-          {coords.map(([x, y], i) => (
-            <circle key={i} cx={x} cy={y} r="2.5" fill={strokeColor} opacity="0.85" vectorEffect="non-scaling-stroke" />
-          ))}
         </svg>
+        {/* Data-point dots are rendered as plain HTML circles positioned by
+            percentage, not as SVG <circle> elements inside the chart's own
+            viewBox. The viewBox above intentionally scales X and Y
+            independently (preserveAspectRatio="none", so the line/fill
+            always fill the container edge-to-edge) — an SVG <circle> caught
+            in that same non-uniform scale would get stretched into an
+            ellipse. Plain divs sized in real pixels are immune to that
+            scaling and stay perfectly round regardless. */}
+        <div className="absolute inset-0 pointer-events-none">
+          {coords.map(([x, y], i) => (
+            <div
+              key={i}
+              className="absolute w-[5px] h-[5px] rounded-full"
+              style={{
+                left: `${(x / chartWidth) * 100}%`,
+                top: `${(y / height) * 100}%`,
+                transform: 'translate(-50%, -50%)',
+                backgroundColor: strokeColor,
+                opacity: 0.85,
+              }}
+            />
+          ))}
+        </div>
       </div>
     );
   };
