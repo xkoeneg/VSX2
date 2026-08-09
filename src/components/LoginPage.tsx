@@ -627,7 +627,7 @@ export function LoginPage() {
           <button
             type="submit"
             disabled={isSubmitting || isGoogleSubmitting}
-            className="w-full h-11 mt-1 flex items-center justify-center gap-2 rounded-lg bg-zinc-100 text-zinc-900 text-sm font-medium hover:bg-emerald-500 hover:text-black transition-all duration-200 shadow-lg shadow-emerald-500/20 disabled:opacity-60 disabled:cursor-not-allowed"
+            className="w-full h-11 mt-1 flex items-center justify-center gap-2 rounded-lg bg-zinc-100 text-zinc-900 text-sm font-medium hover:bg-emerald-500 hover:text-black hover:shadow-lg hover:shadow-emerald-500/25 transition-all duration-200 disabled:opacity-60 disabled:cursor-not-allowed"
           >
             {isSubmitting && <Loader2 className="w-4 h-4 animate-spin" />}
             {mode === 'signIn' ? 'Sign In' : 'Create Account'}
@@ -638,13 +638,13 @@ export function LoginPage() {
         <p className="mt-5 text-center text-xs text-zinc-500">
           {mode === 'signIn' ? (
             <>Don't have an account?{' '}
-              <button type="button" onClick={() => switchMode('signUp')} className="text-zinc-300 hover:text-white underline underline-offset-2">
+              <button type="button" onClick={() => switchMode('signUp')} className="text-zinc-300 hover:text-white hover:underline underline-offset-2 transition-colors duration-200">
                 Sign up
               </button>
             </>
           ) : (
             <>Already have an account?{' '}
-              <button type="button" onClick={() => switchMode('signIn')} className="text-zinc-300 hover:text-white underline underline-offset-2">
+              <button type="button" onClick={() => switchMode('signIn')} className="text-zinc-300 hover:text-white hover:underline underline-offset-2 transition-colors duration-200">
                 Sign in
               </button>
             </>
