@@ -274,7 +274,7 @@ export function SettingsModal() {
     handleDeleteConfluence, handleDeleteMistakeType, handleChangeSetupTypeColor, handleChangeConfluenceColor,
     handleChangeMistakeColor, handleDeleteEmotion, handleChangeEmotionColor, colorForEmotion, colorForMistake,
     handleFileUpload, handleAddImageUrl, handleRemoveImage, handleReorderImages, updateTimeframeNotes,
-    exportBackup, importBackup, exportTradesOnly,
+    exportBackup, importBackup, exportTradesOnly, handleFullSystemReset,
   } = useAppContext();
 
     const [tradesExportFormat, setTradesExportFormat] = useState<'csv' | 'json'>('csv');
@@ -294,11 +294,14 @@ export function SettingsModal() {
 
     const handleConfirmReset = () => {
       if (resetConfirmText !== 'CONFIRM') return;
-      localStorage.clear();
-      setTrades([]);
-      setAccounts([]);
-      setWikiEntries([]);
-      setLifeDisciplineChecks({});
+      // Delegates to useAppState's handleFullSystemReset, which resets every
+      // feature's state (Trades, Accounts, Rules Playbook, Strategies, Wiki,
+      // Life Discipline Hub, Daily Creed, saved presets) AND clears every
+      // localStorage key — previously this only reset trades/accounts/wiki/
+      // lifeDisciplineChecks, so Rules Playbook and the rest of the Life
+      // Discipline Hub (start date, grace days, missed reasons, challenge
+      // config) survived the reset.
+      handleFullSystemReset();
       window.location.reload();
     };
 
