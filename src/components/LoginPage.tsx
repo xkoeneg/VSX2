@@ -12,6 +12,9 @@ import {
   ChevronRight,
   Scale,
   Wallet,
+  CloudCog,
+  ShieldCheck,
+  Users,
 } from 'lucide-react';
 import { signInWithGoogle, signInWithEmail, signUpWithEmail } from '../lib/supabaseClient';
 import { cn } from '../utils/format';
@@ -441,137 +444,143 @@ export function LoginPage() {
     <div className="relative min-h-screen w-full flex items-center justify-center bg-[#0d0f12] px-4 py-10 overflow-hidden">
       <AppPreviewBackdrop />
 
-      <div className="relative z-10 w-full max-w-sm rounded-3xl backdrop-blur-md bg-black/60 border border-white/5 shadow-2xl p-5 sm:p-6">
-        <div className="mb-8 text-center">
-          <span className="font-bold text-2xl uppercase tracking-wider text-white">VSX</span>
-          <p className="mt-1.5 text-sm text-zinc-500">Sign in to your trading journal</p>
+      <div className="relative z-10 w-full max-w-sm bg-zinc-900/80 backdrop-blur-xl border border-zinc-800/80 shadow-2xl shadow-emerald-950/20 rounded-2xl p-6 sm:p-7">
+        {/* Header */}
+        <div className="mb-7 text-center">
+          <h1 className="text-2xl font-bold tracking-tight text-white">Welcome back to VSX</h1>
+          <p className="mt-1.5 text-sm text-zinc-500">Institutional Trading &amp; Discipline Journal</p>
         </div>
 
-        <div className="rounded-2xl border border-zinc-800 bg-[#111318] shadow-2xl overflow-hidden">
-          {/* Sign In / Sign Up tab toggle */}
-          <div className="grid grid-cols-2 gap-1 p-1.5 m-4 mb-0 rounded-xl bg-[#0d0f12] border border-zinc-800">
-            {(['signIn', 'signUp'] as const).map(m => (
-              <button
-                key={m}
-                type="button"
-                onClick={() => switchMode(m)}
-                className={cn(
-                  'h-10 rounded-lg text-sm font-medium transition-colors',
-                  mode === m
-                    ? 'bg-zinc-100 text-zinc-900'
-                    : 'text-zinc-400 hover:text-white'
-                )}
-              >
-                {m === 'signIn' ? 'Sign In' : 'Sign Up'}
-              </button>
-            ))}
+        {/* Google OAuth — front and center */}
+        <button
+          type="button"
+          onClick={handleGoogleSignIn}
+          disabled={isGoogleSubmitting || isSubmitting}
+          className="w-full h-11 flex items-center justify-center gap-2.5 rounded-lg bg-white text-zinc-900 text-sm font-medium hover:bg-zinc-100 transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
+        >
+          {isGoogleSubmitting ? (
+            <Loader2 className="w-4 h-4 animate-spin" />
+          ) : (
+            <GoogleIcon />
+          )}
+          Continue with Google
+        </button>
+
+        <div className="flex items-center gap-3 my-5">
+          <div className="flex-1 h-px bg-zinc-800" />
+          <span className="text-xs text-zinc-500 uppercase tracking-wider">or</span>
+          <div className="flex-1 h-px bg-zinc-800" />
+        </div>
+
+        {/* Error / info banners */}
+        {errorMsg && (
+          <div className="mb-4 flex items-start gap-2 rounded-lg border border-red-900/50 bg-red-950/40 px-3 py-2.5 text-sm text-red-300">
+            <AlertCircle className="w-4 h-4 mt-0.5 flex-shrink-0" />
+            <span>{errorMsg}</span>
+          </div>
+        )}
+        {infoMsg && (
+          <div className="mb-4 flex items-start gap-2 rounded-lg border border-emerald-900/50 bg-emerald-950/40 px-3 py-2.5 text-sm text-emerald-300">
+            <CheckCircle2 className="w-4 h-4 mt-0.5 flex-shrink-0" />
+            <span>{infoMsg}</span>
+          </div>
+        )}
+
+        {/* Email / password form */}
+        <form onSubmit={handleSubmit} className="space-y-3">
+          <div>
+            <label htmlFor="auth-email" className="block text-xs font-medium text-zinc-400 mb-1.5">
+              Email
+            </label>
+            <input
+              id="auth-email"
+              type="email"
+              autoComplete="email"
+              value={email}
+              onChange={e => setEmail(e.target.value)}
+              placeholder="you@example.com"
+              className={inputClass}
+            />
           </div>
 
-          <div className="p-6 pt-5">
-            {/* Google OAuth */}
-            <button
-              type="button"
-              onClick={handleGoogleSignIn}
-              disabled={isGoogleSubmitting || isSubmitting}
-              className="w-full h-11 flex items-center justify-center gap-2.5 rounded-lg bg-white text-zinc-900 text-sm font-medium hover:bg-zinc-100 transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
-            >
-              {isGoogleSubmitting ? (
-                <Loader2 className="w-4 h-4 animate-spin" />
-              ) : (
-                <GoogleIcon />
+          <div>
+            <div className="flex items-center justify-between mb-1.5">
+              <label htmlFor="auth-password" className="block text-xs font-medium text-zinc-400">
+                Password
+              </label>
+              {mode === 'signIn' && (
+                <button
+                  type="button"
+                  onClick={() => setInfoMsg('Password reset isn\'t wired up yet — check back soon.')}
+                  className="text-xs font-medium text-zinc-500 hover:text-white transition-colors"
+                >
+                  Forgot Password?
+                </button>
               )}
-              Continue with Google
-            </button>
-
-            <div className="flex items-center gap-3 my-5">
-              <div className="flex-1 h-px bg-zinc-800" />
-              <span className="text-xs text-zinc-500 uppercase tracking-wider">or</span>
-              <div className="flex-1 h-px bg-zinc-800" />
             </div>
-
-            {/* Error / info banners */}
-            {errorMsg && (
-              <div className="mb-4 flex items-start gap-2 rounded-lg border border-red-900/50 bg-red-950/40 px-3 py-2.5 text-sm text-red-300">
-                <AlertCircle className="w-4 h-4 mt-0.5 flex-shrink-0" />
-                <span>{errorMsg}</span>
-              </div>
-            )}
-            {infoMsg && (
-              <div className="mb-4 flex items-start gap-2 rounded-lg border border-emerald-900/50 bg-emerald-950/40 px-3 py-2.5 text-sm text-emerald-300">
-                <CheckCircle2 className="w-4 h-4 mt-0.5 flex-shrink-0" />
-                <span>{infoMsg}</span>
-              </div>
-            )}
-
-            {/* Email / password form */}
-            <form onSubmit={handleSubmit} className="space-y-3">
-              <div>
-                <label htmlFor="auth-email" className="block text-xs font-medium text-zinc-400 mb-1.5">
-                  Email
-                </label>
-                <input
-                  id="auth-email"
-                  type="email"
-                  autoComplete="email"
-                  value={email}
-                  onChange={e => setEmail(e.target.value)}
-                  placeholder="you@example.com"
-                  className={inputClass}
-                />
-              </div>
-
-              <div>
-                <label htmlFor="auth-password" className="block text-xs font-medium text-zinc-400 mb-1.5">
-                  Password
-                </label>
-                <div className="relative">
-                  <input
-                    id="auth-password"
-                    type={showPassword ? 'text' : 'password'}
-                    autoComplete={mode === 'signIn' ? 'current-password' : 'new-password'}
-                    value={password}
-                    onChange={e => setPassword(e.target.value)}
-                    placeholder={mode === 'signUp' ? 'At least 6 characters' : '••••••••'}
-                    className={cn(inputClass, 'pr-11')}
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowPassword(v => !v)}
-                    aria-label={showPassword ? 'Hide password' : 'Show password'}
-                    className="absolute right-0 top-0 h-11 w-11 flex items-center justify-center text-zinc-500 hover:text-zinc-300 transition-colors"
-                  >
-                    {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                  </button>
-                </div>
-              </div>
-
+            <div className="relative">
+              <input
+                id="auth-password"
+                type={showPassword ? 'text' : 'password'}
+                autoComplete={mode === 'signIn' ? 'current-password' : 'new-password'}
+                value={password}
+                onChange={e => setPassword(e.target.value)}
+                placeholder={mode === 'signUp' ? 'At least 6 characters' : '••••••••'}
+                className={cn(inputClass, 'pr-11')}
+              />
               <button
-                type="submit"
-                disabled={isSubmitting || isGoogleSubmitting}
-                className="w-full h-11 mt-1 flex items-center justify-center gap-2 rounded-lg bg-zinc-100 text-zinc-900 text-sm font-medium hover:bg-white transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
+                type="button"
+                onClick={() => setShowPassword(v => !v)}
+                aria-label={showPassword ? 'Hide password' : 'Show password'}
+                className="absolute right-0 top-0 h-11 w-11 flex items-center justify-center text-zinc-500 hover:text-zinc-300 transition-colors"
               >
-                {isSubmitting && <Loader2 className="w-4 h-4 animate-spin" />}
-                {mode === 'signIn' ? 'Sign In' : 'Create Account'}
+                {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
               </button>
-            </form>
+            </div>
           </div>
-        </div>
 
-        <p className="mt-6 text-center text-xs text-zinc-600">
+          <button
+            type="submit"
+            disabled={isSubmitting || isGoogleSubmitting}
+            className="w-full h-11 mt-1 flex items-center justify-center gap-2 rounded-lg bg-zinc-100 text-zinc-900 text-sm font-medium hover:bg-white transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
+          >
+            {isSubmitting && <Loader2 className="w-4 h-4 animate-spin" />}
+            {mode === 'signIn' ? 'Sign In' : 'Create Account'}
+          </button>
+        </form>
+
+        {/* Bottom form switcher */}
+        <p className="mt-5 text-center text-xs text-zinc-500">
           {mode === 'signIn' ? (
             <>Don't have an account?{' '}
-              <button type="button" onClick={() => switchMode('signUp')} className="text-zinc-400 hover:text-white underline underline-offset-2">
+              <button type="button" onClick={() => switchMode('signUp')} className="text-zinc-300 hover:text-white underline underline-offset-2">
                 Sign up
               </button>
             </>
           ) : (
             <>Already have an account?{' '}
-              <button type="button" onClick={() => switchMode('signIn')} className="text-zinc-400 hover:text-white underline underline-offset-2">
+              <button type="button" onClick={() => switchMode('signIn')} className="text-zinc-300 hover:text-white underline underline-offset-2">
                 Sign in
               </button>
             </>
           )}
         </p>
+
+        {/* Trust badges */}
+        <div className="mt-6 pt-5 border-t border-zinc-800/80 flex items-center justify-center gap-4 text-[10px] uppercase tracking-wider text-zinc-500">
+          <span className="flex items-center gap-1.5">
+            <CloudCog className="w-3.5 h-3.5" />
+            Cloud Synced
+          </span>
+          <span className="flex items-center gap-1.5">
+            <ShieldCheck className="w-3.5 h-3.5" />
+            Encrypted
+          </span>
+          <span className="flex items-center gap-1.5">
+            <Users className="w-3.5 h-3.5" />
+            Multi-Account
+          </span>
+        </div>
       </div>
     </div>
   );
