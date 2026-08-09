@@ -663,6 +663,62 @@ const TILE_LAYOUT: TileConfig[] = [
   { Card: StreakPreviewCard, top: 85, left: 62, ring: 'inner', variant: 'glass', seed: 24 },
 ];
 
+// ============================================================================
+// STATIC 3D RESOLUTION — the anamorphic math (rotation/scale/depth from
+// distance-to-center) runs exactly once, here, at module evaluation time —
+// i.e. as the JS file itself loads and its top-level statements execute,
+// which happens before LoginPage or WarRoomBackdrop ever render. The output
+// is a plain array of literal CSS strings (`outerTransform`, `zIndex`, float
+// timing, etc.), so by the time React renders the very first frame, every
+// tile's 3D position is already a hardcoded value being read off this array
+// — not a calculation happening during/after that render. There is no
+// dynamic layout hook, no effect, and nothing computed post-mount: the
+// `<Tile>` component below does zero math, it only interpolates strings
+// that already exist in RESOLVED_TILES.
+// ============================================================================
+interface ResolvedTile {
+  Card: () => JSX.Element;
+  variant: Variant;
+  outerStyle: React.CSSProperties;
+  innerStyle: React.CSSProperties & Record<string, string | number>;
+}
+
+function resolveTile(tile: TileConfig): ResolvedTile {
+  const cfg = RING_CONFIG[tile.ring];
+  const dx = clamp((tile.left - 50) / 55, -1, 1);
+  const dy = clamp((tile.top - 50) / 55, -1, 1);
+  const rotateY = (-dx * cfg.maxTilt).toFixed(1);
+  const rotateX = (dy * cfg.maxTilt).toFixed(1);
+  const rotateZ = ROTATE_Z_JITTER[tile.seed % ROTATE_Z_JITTER.length];
+  const scale = (cfg.scaleBase + (tile.seed % 4) * cfg.scaleStep).toFixed(2);
+  const z = cfg.zBase + (tile.seed % 3) * cfg.zStep;
+  const float = FLOAT_CYCLE[tile.seed % FLOAT_CYCLE.length];
+
+  return {
+    Card: tile.Card,
+    variant: tile.variant,
+    outerStyle: {
+      top: `${tile.top}%`,
+      left: `${tile.left}%`,
+      transform: `translate(-50%, -50%) rotateX(${rotateX}deg) rotateY(${rotateY}deg) rotateZ(${rotateZ}deg) translateZ(${z}px) scale(${scale})`,
+      transformStyle: 'preserve-3d',
+      zIndex: Math.round(z + 300),
+      willChange: 'transform',
+    },
+    innerStyle: {
+      opacity: cfg.opacity,
+      willChange: 'transform',
+      '--depth': `${cfg.floatDepth}px`,
+      animationDuration: float.duration,
+      animationDelay: float.delay,
+    },
+  };
+}
+
+// Resolved once, at module scope — a hardcoded, static lookup table by the
+// time any component sees it.
+const RESOLVED_TILES: ResolvedTile[] = TILE_LAYOUT.map(resolveTile);
+
 // Wraps a preview card with texture/lighting per variant: 'glass' (translucent,
 // blurred edge highlight), 'paper' (subtle diagonal fiber texture), or
 // 'glow' (emerald/cyan ambient projection-panel glow behind it).
@@ -713,41 +769,15 @@ function TileFrame({ variant, children }: { variant: Variant; children: React.Re
   );
 }
 
-// A single positioned/tilted tile in the scatter. Position + rotation +
-// scale + depth are all derived from (top, left) relative to screen center,
-// so the outward "anamorphic" distortion falls out of one formula instead
-// of being hand-tuned per tile.
-function Tile({ Card, top, left, ring, variant, seed }: TileConfig) {
-  const cfg = RING_CONFIG[ring];
-  const dx = clamp((left - 50) / 55, -1, 1);
-  const dy = clamp((top - 50) / 55, -1, 1);
-  const rotateY = (-dx * cfg.maxTilt).toFixed(1);
-  const rotateX = (dy * cfg.maxTilt).toFixed(1);
-  const rotateZ = ROTATE_Z_JITTER[seed % ROTATE_Z_JITTER.length];
-  const scale = (cfg.scaleBase + (seed % 4) * cfg.scaleStep).toFixed(2);
-  const z = cfg.zBase + (seed % 3) * cfg.zStep;
-  const float = FLOAT_CYCLE[seed % FLOAT_CYCLE.length];
-
-  const innerStyle: React.CSSProperties & Record<string, string | number> = {
-    opacity: cfg.opacity,
-    willChange: 'transform',
-    '--depth': `${cfg.floatDepth}px`,
-    animationDuration: float.duration,
-    animationDelay: float.delay,
-  };
-
+// A single positioned/tilted tile in the scatter. Every value in
+// `outerStyle`/`innerStyle` was already computed at module load (see
+// RESOLVED_TILES above) — this component does no math and has no dynamic
+// hooks. It exists purely to lay out already-static, hardcoded style
+// objects into the DOM, so the very first HTML frame the browser paints
+// already has the correct 3D position, rotation, scale and depth baked in.
+function Tile({ Card, variant, outerStyle, innerStyle }: ResolvedTile) {
   return (
-    <div
-      className="absolute transform-gpu"
-      style={{
-        top: `${top}%`,
-        left: `${left}%`,
-        transform: `translate(-50%, -50%) rotateX(${rotateX}deg) rotateY(${rotateY}deg) rotateZ(${rotateZ}deg) translateZ(${z}px) scale(${scale})`,
-        transformStyle: 'preserve-3d',
-        zIndex: Math.round(z + 300),
-        willChange: 'transform',
-      }}
-    >
+    <div className="absolute transform-gpu" style={outerStyle}>
       <div className="login-card-float transform-gpu" style={innerStyle}>
         <TileFrame variant={variant}>
           <Card />
@@ -799,7 +829,7 @@ function WarRoomBackdrop() {
         }}
       >
         <div className="login-scene-drift absolute inset-0 transform-gpu" style={{ transformStyle: 'preserve-3d', willChange: 'transform' }}>
-          {TILE_LAYOUT.map((tile, i) => (
+          {RESOLVED_TILES.map((tile, i) => (
             <Tile key={i} {...tile} />
           ))}
         </div>
