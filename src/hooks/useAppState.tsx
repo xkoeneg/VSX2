@@ -216,32 +216,52 @@ export function useAppState() {
   // SIGNED_IN handler can call setView without forward-referencing it.
   const [view, setView] = useState<ViewType>('dashboard');
 
+  // Tracks the signed-in user across onAuthStateChange firings so the
+  // effect below can tell a genuine "you just logged in" transition apart
+  // from supabase-js re-emitting a SIGNED_IN event for the SAME user —
+  // which it does on window/tab focus (it revalidates the session on
+  // visibilitychange), on token refresh in some client versions, and when
+  // multiple tabs are open. None of those are an actual new login, so none
+  // of them should ever reset the active screen.
+  const previousUserIdRef = useRef<string | null>(null);
+
   useEffect(() => {
     // Picks up any session already persisted (localStorage, by default)
     // from a previous visit, without waiting for onAuthStateChange to fire.
     supabase.auth.getSession().then(({ data: { session } }) => {
+      previousUserIdRef.current = session?.user?.id ?? null;
       setSession(session);
       setAuthLoading(false);
     });
 
-    // Fires on every subsequent sign-in, sign-out, token refresh, and (for
-    // the Google OAuth redirect flow) when Supabase picks the session up
-    // out of the URL after the provider sends the user back. This is the
-    // single source of truth App.tsx reads to decide LoginPage vs the
-    // dashboard — no manual "did login succeed?" plumbing needed anywhere.
+    // Fires on every subsequent sign-in, sign-out, token refresh, tab
+    // focus/visibility change, and (for the Google OAuth redirect flow)
+    // when Supabase picks the session up out of the URL after the provider
+    // sends the user back. This is the single source of truth App.tsx
+    // reads to decide LoginPage vs the dashboard — no manual "did login
+    // succeed?" plumbing needed anywhere.
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, newSession) => {
+      const previousUserId = previousUserIdRef.current;
+      const newUserId = newSession?.user?.id ?? null;
+
       setSession(newSession);
       setAuthLoading(false);
 
-      // Force the landing screen back to the Dashboard on every fresh
-      // sign-in (password, or Google OAuth bouncing back through this same
-      // listener) so the person never lands on whatever tab happened to be
-      // open in a previous session. Deliberately scoped to SIGNED_IN only —
-      // TOKEN_REFRESHED/USER_UPDATED fire while someone is already using
-      // the app and must never yank them off the screen they're on.
-      if (event === 'SIGNED_IN') {
+      // Force the landing screen back to the Dashboard ONLY on a genuine
+      // fresh sign-in — nobody was signed in a moment ago, and now someone
+      // is (password sign-in, or Google OAuth bouncing back through this
+      // same listener). Checking event === 'SIGNED_IN' alone isn't enough:
+      // supabase-js fires that same event again for the SAME user on
+      // window/tab focus (Alt-Tab back into the app, switching browser
+      // tabs, PWA regaining focus), which — before this check — was
+      // silently yanking people back to Dashboard from whatever screen
+      // they were actually on. Comparing the user id across firings is
+      // what tells a real login apart from that re-emission.
+      if (event === 'SIGNED_IN' && previousUserId === null && newUserId !== null) {
         setView('dashboard');
       }
+
+      previousUserIdRef.current = newUserId;
     });
 
     return () => subscription.unsubscribe();
