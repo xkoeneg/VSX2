@@ -344,6 +344,71 @@ function AppShell() {
         .trade-table-scroll::-webkit-scrollbar-thumb:hover {
           background-color: rgba(161,161,170,0.7);
         }
+        /* Momentum/inertial scrolling for iOS Safari on any horizontally
+           scrollable table wrapper (Trade History, Execution Logs, etc.) —
+           without this, dragging a finger across a narrow table on iOS
+           scrolls in stiff, un-momentum'd steps instead of the native
+           "flick and glide" feel every other scroll surface in iOS has. */
+        .trade-table-scroll,
+        .overflow-x-auto {
+          -webkit-overflow-scrolling: touch;
+        }
+
+        /* Bottom padding that's the larger of our normal spacing scale or
+           the device's home-indicator/gesture-bar safe-area-inset-bottom,
+           so content and action buttons at the bottom of a screen are
+           never obscured by the OS nav bar. env() resolves to 0 on devices
+           without an inset, so this is a no-op there — just the plain
+           1rem/1.5rem it replaces. */
+        .pb-safe {
+          padding-bottom: max(1rem, env(safe-area-inset-bottom));
+        }
+        @media (min-width: 640px) {
+          .pb-safe {
+            padding-bottom: max(1.5rem, env(safe-area-inset-bottom));
+          }
+        }
+
+        /* ============================================================
+           MOBILE OPTIMIZATION (≤767px / below Tailwind's `md` breakpoint)
+           ============================================================
+           1. 44px is Apple's (and the generally accepted) minimum
+              comfortable touch target — undersized buttons/inputs are the
+              #1 cause of mis-taps on a phone. Scoped to mobile only so
+              desktop's denser, mouse-driven layout is untouched.
+           2. iOS Safari auto-zooms the page on focusing any form field
+              whose computed font-size is under 16px. Forcing 16px on
+              inputs/selects/textareas (but deliberately NOT on buttons,
+              where it would blow up icon-button/badge layouts) stops that
+              zoom-and-snap-back jitter every time someone taps a field. */
+        @media (max-width: 767px) {
+          button,
+          a[role="button"],
+          select,
+          input[type="checkbox"],
+          input[type="radio"] {
+            min-height: 44px;
+          }
+          input[type="checkbox"],
+          input[type="radio"] {
+            min-width: 44px;
+          }
+          input,
+          select,
+          textarea {
+            font-size: 16px !important;
+          }
+          /* Removes the ~300ms tap-delay ghost-click Safari/Chrome mobile
+             otherwise waits out to check for a double-tap-to-zoom gesture,
+             and the gray flash Android shows on every tap. */
+          button,
+          a,
+          input,
+          select {
+            touch-action: manipulation;
+            -webkit-tap-highlight-color: transparent;
+          }
+        }
 
         /* Market Notices columns — thin scrollbar, color-matched to each
            column's accent (cyan for Price Action Insights, rose for
@@ -727,17 +792,24 @@ function AppShell() {
 
       {/* MAIN WORKSPACE - ISOLATED SCROLL */}
       <main ref={mainScrollRef} className={cn("flex-1 min-w-0 h-screen overflow-y-auto flex flex-col transition-colors duration-300", theme !== 'light' ? 'bg-zinc-950 text-white' : 'bg-zinc-50 text-zinc-900')}>
-        {/* MOBILE STICKY TOP BAR */}
-        <div className={cn(
-          "md:hidden sticky top-0 z-20 flex items-center gap-3 px-4 py-3 border-b backdrop-blur-sm",
-          theme !== 'light' ? 'bg-zinc-900/95 border-zinc-800' : 'bg-white/95 border-zinc-200'
-        )}>
+        {/* MOBILE STICKY TOP BAR
+            pt uses max(1rem, safe-area-inset-top) so on notched/Dynamic
+            Island phones the bar's content clears the notch instead of
+            sitting flush under it — falls back to a plain 1rem on devices
+            without a safe-area inset (env() resolves to 0 there). */}
+        <div
+          className={cn(
+            "md:hidden sticky top-0 z-20 flex items-center gap-3 px-4 pb-3 border-b backdrop-blur-sm",
+            theme !== 'light' ? 'bg-zinc-900/95 border-zinc-800' : 'bg-white/95 border-zinc-200'
+          )}
+          style={{ paddingTop: 'max(0.75rem, env(safe-area-inset-top))' }}
+        >
           <button
             type="button"
             onClick={() => setIsMobileSidebarOpen(true)}
             aria-label="Open menu"
             className={cn(
-              "p-2 -ml-2 rounded-lg transition-colors",
+              "min-w-11 min-h-11 -ml-2 flex items-center justify-center rounded-lg transition-colors",
               theme !== 'light' ? 'text-zinc-300 hover:text-white hover:bg-zinc-800' : 'text-zinc-600 hover:text-zinc-900 hover:bg-zinc-100'
             )}
           >
@@ -748,7 +820,13 @@ function AppShell() {
           </span>
         </div>
 
-        <div className="flex-1 flex flex-col px-4 pt-4 pb-4 sm:px-6 sm:pt-6 sm:pb-6">
+        {/* pb stacks a fixed floor (1rem desktop / 1.5rem mobile, matching
+            the sm: bump already here) with the device's own home-indicator
+            safe-area-inset-bottom, so on iPhones with a gesture bar the
+            last row of content/buttons never sits underneath it, and on
+            Android 3-button/gesture nav the same floor value still applies
+            since env() resolves to 0 there. */}
+        <div className="flex-1 flex flex-col px-4 pt-4 sm:px-6 sm:pt-6 pb-safe">
           {/* Only one screen is ever mounted here, so Suspense + lazy means the
               initial bundle only has to fetch/parse the screen the user lands
               on — every other screen's code streams in on first navigation
