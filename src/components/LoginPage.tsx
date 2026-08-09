@@ -461,7 +461,7 @@ export function LoginPage() {
     <div className="relative min-h-screen w-full flex items-center justify-center bg-[#0d0f12] px-4 py-10 overflow-hidden">
       <AppPreviewBackdrop />
 
-      <div className="relative z-10 w-full max-w-sm bg-zinc-900/80 backdrop-blur-xl border border-zinc-800/80 shadow-2xl shadow-emerald-950/20 rounded-2xl p-6 sm:p-7">
+      <div className="relative z-10 w-full max-w-sm bg-zinc-950/85 backdrop-blur-2xl border border-zinc-800/80 shadow-2xl shadow-black/80 rounded-2xl p-6 sm:p-7">
         {/* Header */}
         <div className="mb-7 text-center">
           <h1 className="text-2xl font-bold tracking-tight text-white">VSX</h1>
@@ -591,7 +591,7 @@ export function LoginPage() {
           <button
             type="submit"
             disabled={isSubmitting || isGoogleSubmitting}
-            className="w-full h-11 mt-1 flex items-center justify-center gap-2 rounded-lg bg-zinc-100 text-zinc-900 text-sm font-medium hover:bg-white transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
+            className="w-full h-11 mt-1 flex items-center justify-center gap-2 rounded-lg bg-zinc-100 text-zinc-900 text-sm font-medium hover:bg-emerald-500 hover:text-black transition-all duration-200 shadow-lg shadow-emerald-500/20 disabled:opacity-60 disabled:cursor-not-allowed"
           >
             {isSubmitting && <Loader2 className="w-4 h-4 animate-spin" />}
             {mode === 'signIn' ? 'Sign In' : 'Create Account'}
