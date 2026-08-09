@@ -440,7 +440,7 @@ function TradeAnalyticsCard({ trades, stats, privacyMode, theme, tc, tradeFilter
     )}>
       <div className="flex flex-col lg:flex-row items-center lg:items-stretch gap-6">
         {/* Left — donut gauge + legend, ~28% width on large screens */}
-        <div className="flex flex-col items-center gap-4 flex-shrink-0 w-full lg:w-[26%]">
+        <div className="flex flex-col items-center justify-center gap-4 flex-shrink-0 w-full lg:w-[26%]">
           <div className="relative w-[112px] h-[112px] flex-shrink-0">
             <svg viewBox="0 0 112 112" className="w-full h-full -rotate-90">
               <circle cx="56" cy="56" r={r} fill="none" stroke="rgb(39,39,42)" strokeWidth={strokeWidth} />
@@ -516,12 +516,12 @@ function TradeAnalyticsCard({ trades, stats, privacyMode, theme, tc, tradeFilter
         <div className="lg:hidden w-full h-px bg-white/10" />
 
         {/* Right — 4-tile metrics grid, ~72-74% width on large screens */}
-        <div className="flex-1 grid grid-cols-2 lg:grid-cols-4 gap-3">
-          <div className="bg-zinc-800/40 border border-white/5 rounded-lg p-3 hover:border-white/10 transition-colors">
+        <div className="flex-1 grid grid-cols-2 lg:grid-cols-4 gap-3 items-stretch">
+          <div className="flex flex-col justify-center h-full p-4 bg-zinc-800/40 border border-white/5 rounded-lg hover:border-white/10 transition-colors">
             <p className="text-[10px] text-zinc-400 font-medium tracking-wider uppercase mb-1.5">Total Trades</p>
             <p className={cn("text-base font-semibold tabular-nums", tc.text)}>{total}</p>
           </div>
-          <div className="bg-zinc-800/40 border border-white/5 rounded-lg p-3 hover:border-white/10 transition-colors">
+          <div className="flex flex-col justify-center h-full p-4 bg-zinc-800/40 border border-white/5 rounded-lg hover:border-white/10 transition-colors">
             <p className="text-[10px] text-zinc-400 font-medium tracking-wider uppercase mb-1.5">Win / Loss Count</p>
             <p className="text-base font-semibold tabular-nums">
               <span className="text-emerald-500">{wins}W</span>
@@ -529,13 +529,13 @@ function TradeAnalyticsCard({ trades, stats, privacyMode, theme, tc, tradeFilter
               <span className="text-rose-500">{losses}L</span>
             </p>
           </div>
-          <div className="bg-zinc-800/40 border border-white/5 rounded-lg p-3 hover:border-white/10 transition-colors">
+          <div className="flex flex-col justify-center h-full p-4 bg-zinc-800/40 border border-white/5 rounded-lg hover:border-white/10 transition-colors">
             <p className="text-[10px] text-zinc-400 font-medium tracking-wider uppercase mb-1.5">Profit Factor</p>
             <p className={cn("text-base font-semibold tabular-nums", tc.text)}>
               {total > 0 && isFinite(stats.profitFactor) ? stats.profitFactor.toFixed(2) : 'N/A'}
             </p>
           </div>
-          <div className="bg-zinc-800/40 border border-white/5 rounded-lg p-3 hover:border-white/10 transition-colors">
+          <div className="flex flex-col justify-center h-full p-4 bg-zinc-800/40 border border-white/5 rounded-lg hover:border-white/10 transition-colors">
             <p className="text-[10px] text-zinc-400 font-medium tracking-wider uppercase mb-1.5">Avg Win / Avg Loss</p>
             <p className="text-base font-semibold tabular-nums">
               <span className="text-emerald-500">{formatCurrency(stats.avgWin, privacyMode)}</span>
