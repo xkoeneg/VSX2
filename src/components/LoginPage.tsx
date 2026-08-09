@@ -737,6 +737,22 @@ function Tile({ Card, top, left, ring, variant, seed }: TileConfig) {
   // more than half the concurrently-animating layers for free.
   const shouldFloat = ring === 'outer';
 
+  // Built as a plain mutable object (typed loosely to allow the CSS custom
+  // property `--depth`) rather than an inline ternary-spread literal —
+  // TS can't reconcile two differently-shaped inline object literals against
+  // CSSProperties in a single cast, which is what broke the build.
+  const innerStyle: React.CSSProperties & Record<string, string | number> = {
+    opacity: cfg.opacity,
+    willChange: 'transform',
+    '--depth': `${cfg.floatDepth}px`,
+  };
+  if (shouldFloat) {
+    innerStyle.animationDuration = float.duration;
+    innerStyle.animationDelay = float.delay;
+  } else {
+    innerStyle.transform = `translateZ(${cfg.floatDepth}px)`;
+  }
+
   return (
     <div
       className="absolute transform-gpu"
@@ -751,16 +767,7 @@ function Tile({ Card, top, left, ring, variant, seed }: TileConfig) {
     >
       <div
         className={shouldFloat ? 'login-card-float transform-gpu' : 'transform-gpu'}
-        style={
-          {
-            opacity: cfg.opacity,
-            ...(shouldFloat
-              ? { animationDuration: float.duration, animationDelay: float.delay }
-              : { transform: `translateZ(${cfg.floatDepth}px)` }),
-            '--depth': `${cfg.floatDepth}px`,
-            willChange: 'transform',
-          } as React.CSSProperties
-        }
+        style={innerStyle}
       >
         <TileFrame variant={variant}>
           <Card />
