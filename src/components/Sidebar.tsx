@@ -1,4 +1,5 @@
 import type React from 'react';
+import { useEffect, useRef, useState } from 'react';
 import {
   LayoutDashboard,
   BookOpen,
@@ -92,6 +93,8 @@ import {
   Dumbbell,
   Coffee,
   Heart,
+  LogOut,
+  User as UserIcon,
   type LucideIcon,
 } from 'lucide-react';
 import type {
@@ -159,6 +162,7 @@ WikiCategory,
 WikiEntry
 } from '../types';
 import { cn } from '../utils/format';
+import { supabase } from '../lib/supabase';
 import { useAppContext } from '../context/AppContext';
 import { renderStatCard, renderAccountFilter, renderAccountTypeBadge, renderTradingAccountTypeBadge } from '../components/shared/RenderHelpers';
 
@@ -274,6 +278,62 @@ export function Sidebar({ isMobile }: { isMobile: boolean }) {
     handleFileUpload, handleAddImageUrl, handleRemoveImage, handleReorderImages, updateTimeframeNotes,
     exportBackup, importBackup,
   } = useAppContext();
+
+    const [authUser, setAuthUser] = useState<{ email: string | null; name: string | null; avatarUrl: string | null } | null>(null);
+    const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false);
+    const profileMenuRef = useRef<HTMLDivElement>(null);
+
+    // Load the logged-in user and keep it in sync with auth state changes
+    useEffect(() => {
+      let isMounted = true;
+
+      const mapUser = (u: { email?: string | null; user_metadata?: Record<string, unknown> } | null | undefined) => {
+        if (!u) return null;
+        const metadata = (u.user_metadata ?? {}) as Record<string, unknown>;
+        return {
+          email: u.email ?? null,
+          name: (metadata.full_name as string) || (metadata.name as string) || null,
+          avatarUrl: (metadata.avatar_url as string) || (metadata.picture as string) || null,
+        };
+      };
+
+      supabase.auth.getUser().then(({ data }) => {
+        if (isMounted) setAuthUser(mapUser(data.user));
+      });
+
+      const { data: authListener } = supabase.auth.onAuthStateChange((_event, session) => {
+        setAuthUser(mapUser(session?.user));
+      });
+
+      return () => {
+        isMounted = false;
+        authListener?.subscription?.unsubscribe();
+      };
+    }, []);
+
+    // Close the profile popover when clicking outside of it
+    useEffect(() => {
+      if (!isProfileMenuOpen) return;
+      const handleClickOutside = (e: MouseEvent) => {
+        if (profileMenuRef.current && !profileMenuRef.current.contains(e.target as Node)) {
+          setIsProfileMenuOpen(false);
+        }
+      };
+      document.addEventListener('mousedown', handleClickOutside);
+      return () => document.removeEventListener('mousedown', handleClickOutside);
+    }, [isProfileMenuOpen]);
+
+    const handleSignOut = async () => {
+      setIsProfileMenuOpen(false);
+      try {
+        await supabase.auth.signOut();
+      } finally {
+        window.location.href = '/login';
+      }
+    };
+
+    const displayName = authUser?.name || authUser?.email?.split('@')[0] || 'Account';
+    const displayEmail = authUser?.email || '';
 
     const collapsed = !isMobile && sidebarCollapsed;
     return (
@@ -420,21 +480,97 @@ export function Sidebar({ isMobile }: { isMobile: boolean }) {
           </nav>
         </div>
 
-        {/* BOTTOM GROUP: single compact settings footer row, pinned to the bottom */}
-        <div
-          onClick={() => {
-            setIsSettingsModalOpen(true);
-            setIsMobileSidebarOpen(false);
-          }}
-          title={collapsed ? 'Settings' : undefined}
-          className="flex items-center justify-center gap-2 px-3 py-2.5 rounded-lg hover:bg-white/5 cursor-pointer mt-auto border-t border-white/5 select-none"
-        >
-          <Settings className={cn('w-4 h-4 flex-shrink-0', theme !== 'light' ? 'text-zinc-400' : 'text-zinc-500')} />
-          {!collapsed && (
-            <span className={cn('text-sm font-medium truncate select-none', theme !== 'light' ? 'text-zinc-300' : 'text-zinc-700')}>
-              Settings
-            </span>
+        {/* BOTTOM GROUP: user profile section, pinned to the bottom */}
+        <div className="relative mt-auto" ref={profileMenuRef}>
+          {isProfileMenuOpen && (
+            <div
+              className={cn(
+                'absolute bottom-full mb-2 rounded-lg border shadow-lg overflow-hidden z-50',
+                collapsed ? 'left-0 w-48' : 'left-0 right-0',
+                theme !== 'light' ? 'bg-zinc-900 border-zinc-800' : 'bg-white border-zinc-200'
+              )}
+            >
+              <button
+                type="button"
+                onClick={() => {
+                  setIsSettingsModalOpen(true);
+                  setIsMobileSidebarOpen(false);
+                  setIsProfileMenuOpen(false);
+                }}
+                className={cn(
+                  'w-full flex items-center gap-2.5 px-3.5 py-2.5 text-sm transition-colors select-none cursor-pointer',
+                  theme !== 'light' ? 'text-zinc-300 hover:bg-zinc-800' : 'text-zinc-700 hover:bg-zinc-100'
+                )}
+              >
+                <Settings className="w-4 h-4 flex-shrink-0" />
+                <span className="truncate">Settings</span>
+              </button>
+              <button
+                type="button"
+                onClick={handleSignOut}
+                className={cn(
+                  'w-full flex items-center gap-2.5 px-3.5 py-2.5 text-sm transition-colors select-none cursor-pointer border-t',
+                  theme !== 'light' ? 'text-red-400 hover:bg-zinc-800 border-zinc-800' : 'text-red-600 hover:bg-red-50 border-zinc-200'
+                )}
+              >
+                <LogOut className="w-4 h-4 flex-shrink-0" />
+                <span className="truncate">Sign Out</span>
+              </button>
+            </div>
           )}
+
+          <div
+            onClick={() => setIsProfileMenuOpen(prev => !prev)}
+            title={collapsed ? (displayEmail || displayName) : undefined}
+            className={cn(
+              'flex items-center gap-2.5 px-2.5 py-2.5 rounded-lg hover:bg-white/5 cursor-pointer border-t select-none',
+              theme !== 'light' ? 'border-white/5' : 'border-zinc-200',
+              collapsed && 'justify-center px-0'
+            )}
+          >
+            <div
+              className={cn(
+                'relative w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 overflow-hidden',
+                theme !== 'light' ? 'bg-zinc-800 border border-zinc-700' : 'bg-zinc-100 border border-zinc-200'
+              )}
+            >
+              {authUser?.avatarUrl ? (
+                <img src={authUser.avatarUrl} alt={displayName} className="w-full h-full object-cover" />
+              ) : (
+                <UserIcon className={cn('w-4 h-4', theme !== 'light' ? 'text-zinc-400' : 'text-zinc-500')} />
+              )}
+            </div>
+
+            {!collapsed && (
+              <div className="min-w-0 flex-1">
+                <p className={cn('text-sm font-medium truncate select-none', theme !== 'light' ? 'text-white' : 'text-zinc-900')}>
+                  {displayName}
+                </p>
+                {displayEmail && (
+                  <p className={cn('text-xs truncate select-none', theme !== 'light' ? 'text-zinc-500' : 'text-zinc-500')}>
+                    {displayEmail}
+                  </p>
+                )}
+              </div>
+            )}
+
+            {!collapsed && (
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setIsProfileMenuOpen(prev => !prev);
+                }}
+                title="Settings"
+                className={cn(
+                  'p-1.5 rounded-lg transition-colors flex-shrink-0',
+                  theme !== 'light' ? 'text-zinc-400 hover:text-white hover:bg-zinc-800' : 'text-zinc-500 hover:text-zinc-900 hover:bg-zinc-100'
+                )}
+              >
+                <Settings className="w-4 h-4" />
+              </button>
+            )}
+          </div>
         </div>
       </div>
     );
