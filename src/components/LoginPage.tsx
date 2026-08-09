@@ -808,8 +808,8 @@ function WarRoomBackdrop() {
       {/* Soft edge vignette so the outer rim recedes slightly and the
           centered modal stays the clear focal point, without crushing the
           tiles that peek out alongside it into invisibility */}
-      <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,transparent_25%,rgba(10,12,15,0.55)_100%)]" />
-      <div className="absolute inset-0 bg-black/[0.06]" />
+      <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,transparent_15%,rgba(10,12,15,0.75)_100%)]" />
+      <div className="absolute inset-0 bg-black/40" />
 
       <style>{`
         @keyframes login-scatter-reveal {
