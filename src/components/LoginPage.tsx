@@ -192,71 +192,95 @@ function CalendarHeatmapPreviewCard() {
   );
 }
 
-// Every card gets its own float timing/delay so the canvas never bobs in
-// perfect unison. Laid out in normal flow (two rows of two, plus a centered
-// fifth row) rather than absolute positioning, so the set is guaranteed to
-// stay confined to the showcase canvas — it can never drift under the fixed
-// auth panel or leave a void where a card was expected to be.
-const SHOWCASE_ROWS: Array<Array<{ Card: () => JSX.Element; duration: string; delay: string; lift?: boolean }>> = [
-  [
-    { Card: PnLPreviewCard, duration: '7s', delay: '0s' },
-    { Card: AccountsPreviewCard, duration: '8s', delay: '0.6s', lift: true },
-  ],
-  [
-    { Card: DisciplinePreviewCard, duration: '7.5s', delay: '0.3s', lift: true },
-    { Card: PlaybookPreviewCard, duration: '8.5s', delay: '0.9s' },
-  ],
-  [
-    { Card: CalendarHeatmapPreviewCard, duration: '7.8s', delay: '0.45s' },
-  ],
+// One card anchored per viewport corner, each on its own float timing so
+// nothing bobs in unison, and its own translateZ depth so the tilted scene
+// reads with real parallax rather than a flat sticker sheet. Deliberately
+// only 4 cards (not a dense wall) so the corners frame the screen instead
+// of clustering into visual noise behind the modal.
+const CORNER_CARDS: Array<{
+  Card: () => JSX.Element;
+  position: string;
+  depth: string;
+  duration: string;
+  delay: string;
+}> = [
+  { Card: PnLPreviewCard, position: 'top-10 left-6 xl:left-14', depth: '-40px', duration: '7s', delay: '0s' },
+  { Card: AccountsPreviewCard, position: 'top-10 right-6 xl:right-14', depth: '40px', duration: '8s', delay: '0.6s' },
+  { Card: DisciplinePreviewCard, position: 'bottom-10 left-6 xl:left-14', depth: '40px', duration: '7.5s', delay: '0.3s' },
+  { Card: PlaybookPreviewCard, position: 'bottom-10 right-6 xl:right-14', depth: '-40px', duration: '8.5s', delay: '0.9s' },
 ];
 
-// Left-side showcase canvas — ambient emerald glows behind a gently
-// floating, evenly balanced arrangement of every preview card. Strictly
-// decorative and strictly confined to this column (no absolute positioning
-// that could escape its bounds); pointer-events disabled so it never
-// intercepts clicks, and hidden entirely below `lg` in favor of a
-// full-width auth panel.
-function ShowcaseCanvas() {
+// Full-viewport backdrop that sits behind the centered auth modal: a subtly
+// tilted 3D scene (perspective + static rotateX/Y/Z, same as the rest of
+// the app's "living terminal" feel) with one preview card anchored in each
+// corner, plus ambient emerald glows in all four corners for depth. Purely
+// decorative — pointer-events disabled so it never intercepts clicks — and
+// hidden below `lg` where there isn't enough room for corner cards to sit
+// clear of the modal.
+function CornerPreviewBackdrop() {
   return (
-    <div className="relative hidden lg:flex flex-shrink-0 lg:w-[calc(100%-450px)] items-center justify-center overflow-hidden bg-[#0d0f12] px-10 xl:px-16 py-16">
-      {/* Ambient emerald glows, spread so the glow fills every corner */}
-      <div className="absolute -top-10 -left-10 w-96 h-96 rounded-full bg-emerald-500/10 blur-[130px]" />
-      <div className="absolute -top-16 right-0 w-96 h-96 rounded-full bg-emerald-500/10 blur-[130px]" />
-      <div className="absolute -bottom-16 left-1/4 w-96 h-96 rounded-full bg-emerald-500/10 blur-[130px]" />
-      <div className="absolute -bottom-10 -right-10 w-96 h-96 rounded-full bg-emerald-500/10 blur-[130px]" />
-      <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-[420px] h-[420px] rounded-full bg-slate-500/5 blur-[130px]" />
+    <div className="pointer-events-none absolute inset-0 overflow-hidden bg-[#0d0f12]" aria-hidden="true">
+      {/* Ambient emerald glows, one per corner */}
+      <div className="absolute -top-24 -left-24 w-[420px] h-[420px] rounded-full bg-emerald-500/15 blur-[120px]" />
+      <div className="absolute -top-24 -right-24 w-[420px] h-[420px] rounded-full bg-emerald-500/15 blur-[120px]" />
+      <div className="absolute -bottom-24 -left-24 w-[420px] h-[420px] rounded-full bg-emerald-500/15 blur-[120px]" />
+      <div className="absolute -bottom-24 -right-24 w-[420px] h-[420px] rounded-full bg-emerald-500/15 blur-[120px]" />
 
-      {/* Brand mark, anchored top-left of the canvas */}
-      <div className="absolute top-10 left-10 xl:left-16 z-10">
-        <h1 className="text-2xl font-bold tracking-tight text-white">VSX</h1>
-        <p className="mt-1 text-sm text-zinc-500">Institutional Trading &amp; Discipline Journal</p>
-      </div>
-
-      {/* Balanced, staggered card layout — two rows of two, plus a centered
-          fifth card — confined entirely within the canvas's own bounds */}
-      <div className="relative z-10 flex flex-col items-center gap-10 xl:gap-14 w-full max-w-3xl pointer-events-none">
-        {SHOWCASE_ROWS.map((row, rowIdx) => (
-          <div key={rowIdx} className="flex flex-wrap items-start justify-center gap-10 xl:gap-16 w-full">
-            {row.map(({ Card, duration, delay, lift }, i) => (
-              <div key={i} className={cn('scale-105', lift && '-translate-y-4')}>
-                <div style={{ animation: `login-card-float ${duration} ease-in-out ${delay} infinite` }}>
-                  <Card />
-                </div>
+      {/* Tilted 3D scene, corner cards only — hidden on small/medium
+          viewports where they'd otherwise collide with the centered modal */}
+      <div className="hidden lg:block absolute inset-0" style={{ perspective: '1400px' }}>
+        <div
+          className="absolute inset-0 login-scene-drift"
+          style={{ transformStyle: 'preserve-3d' }}
+        >
+          <div
+            className="absolute inset-0"
+            style={{ transform: 'rotateX(12deg) rotateY(-16deg) rotateZ(3deg)', transformStyle: 'preserve-3d' }}
+          >
+            {CORNER_CARDS.map(({ Card, position, depth, duration, delay }, i) => (
+              <div
+                key={i}
+                className={cn('absolute login-card-float', position)}
+                style={
+                  {
+                    animationDuration: duration,
+                    animationDelay: delay,
+                    '--depth': depth,
+                  } as React.CSSProperties
+                }
+              >
+                <Card />
               </div>
             ))}
           </div>
-        ))}
+        </div>
       </div>
 
+      {/* Soft edge fade so the corners recede slightly and the centered
+          modal stays the clear focal point */}
+      <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,transparent_35%,rgba(13,15,18,0.55)_100%)]" />
+
       <style>{`
+        @keyframes login-scene-drift {
+          0% { transform: translate3d(-1%, -0.6%, 0) rotate(-0.3deg); }
+          50% { transform: translate3d(1%, 0.6%, 0) rotate(0.3deg); }
+          100% { transform: translate3d(-1%, -0.6%, 0) rotate(-0.3deg); }
+        }
+        .login-scene-drift {
+          animation: login-scene-drift 48s ease-in-out infinite;
+        }
         @keyframes login-card-float {
-          0% { transform: translateY(0); }
-          50% { transform: translateY(-14px); }
-          100% { transform: translateY(0); }
+          0% { transform: translateZ(var(--depth)) translateY(-10px); }
+          50% { transform: translateZ(var(--depth)) translateY(10px); }
+          100% { transform: translateZ(var(--depth)) translateY(-10px); }
+        }
+        .login-card-float {
+          animation-name: login-card-float;
+          animation-timing-function: ease-in-out;
+          animation-iteration-count: infinite;
         }
         @media (prefers-reduced-motion: reduce) {
-          [style*="login-card-float"] { animation: none !important; }
+          .login-scene-drift, .login-card-float { animation: none !important; }
         }
       `}</style>
     </div>
@@ -386,40 +410,26 @@ export function LoginPage() {
     'placeholder:text-zinc-500 outline-none transition-colors focus:border-zinc-500 focus:bg-[#181a1f]';
 
   return (
-    <div className="min-h-screen w-full flex bg-[#0d0f12] overflow-hidden">
-      {/* Left — ambient, floating product showcase. Fills whatever space
-          remains once the fixed 450px auth panel is subtracted. Hidden
-          below lg, where the panel takes the full width instead. */}
-      <ShowcaseCanvas />
+    <div className="relative min-h-screen w-full flex items-center justify-center bg-[#0d0f12] px-4 py-10 overflow-hidden">
+      {/* Corner-spread, 3D-tilted preview cards + ambient glows. Purely
+          decorative backdrop behind the centered modal. */}
+      <CornerPreviewBackdrop />
 
-      {/* Right — hyper-focused auth container, pinned to the browser's
-          right edge (no trailing margin/padding) so it always reaches the
-          viewport boundary regardless of any outer app padding. Full width,
-          static position below lg, since the showcase canvas is hidden
-          there and there's nothing to pin against. */}
-      <div className="relative w-full lg:fixed lg:right-0 lg:top-0 lg:bottom-0 lg:w-[450px] flex items-center justify-center min-h-screen lg:min-h-0 bg-zinc-950 lg:border-l lg:border-zinc-800/80 backdrop-blur-2xl px-4 py-10 sm:px-8 overflow-y-auto">
-        <div className="w-full max-w-sm">
-          {/* Header — shown here too (not just on the hidden-below-lg
-              showcase canvas) so mobile/tablet still gets the brand mark. */}
-          {/* Header — dynamic per auth mode so the copy never claims
-              "welcome back" for someone signing up for the first time.
-              Mobile/tablet (showcase canvas hidden) keeps the VSX brand
-              mark above the dynamic copy; desktop just shows the copy,
-              since the brand mark already lives on the showcase canvas. */}
-          <div className="mb-7 text-center lg:hidden">
-            <h1 className="text-2xl font-bold tracking-tight text-white">VSX</h1>
-            <p className="mt-1.5 text-sm text-zinc-500">Institutional Trading &amp; Discipline Journal</p>
-          </div>
-          <div className="mb-7 text-center">
-            <h2 className="text-2xl font-semibold tracking-tight text-white">
-              {mode === 'signIn' ? 'Sign In' : 'Create Account'}
-            </h2>
-            <p className="mt-1.5 text-sm text-zinc-500">
-              {mode === 'signIn'
-                ? 'Enter your account details to access your journal.'
-                : 'Start tracking your trading discipline and analytics.'}
-            </p>
-          </div>
+      {/* Centered, floating auth modal */}
+      <div className="relative z-10 w-full max-w-sm bg-zinc-950/85 backdrop-blur-2xl border border-zinc-800/80 shadow-2xl shadow-black/80 rounded-2xl p-6 sm:p-7">
+        {/* Header — brand mark plus dynamic Sign In / Create Account copy
+            so it never claims "welcome back" for a first-time visitor. */}
+        <div className="mb-7 text-center">
+          <p className="text-xs font-semibold tracking-[0.2em] text-emerald-500 uppercase mb-3">VSX</p>
+          <h2 className="text-2xl font-semibold tracking-tight text-white">
+            {mode === 'signIn' ? 'Sign In' : 'Create Account'}
+          </h2>
+          <p className="mt-1.5 text-sm text-zinc-500">
+            {mode === 'signIn'
+              ? 'Enter your account details to access your journal.'
+              : 'Start tracking your trading discipline and analytics.'}
+          </p>
+        </div>
 
           {/* Google OAuth — front and center */}
           <button
@@ -583,7 +593,6 @@ export function LoginPage() {
               Multi-Account
             </span>
           </div>
-        </div>
       </div>
     </div>
   );
