@@ -192,6 +192,11 @@ export function useAppState() {
     await supabase.auth.signOut();
   }, []);
 
+  // Convenience derived value — every accounts/trades Supabase call below
+  // is scoped to this, both to satisfy RLS and as a client-side belt-and-
+  // suspenders check against accidentally reading/writing without a user.
+  const userId = session?.user?.id ?? null;
+
   // State
   const [view, setView] = useState<ViewType>('dashboard');
   const [privacyMode, setPrivacyMode] = useState(false);
@@ -392,6 +397,35 @@ export function useAppState() {
   // Data state
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [trades, setTrades] = useState<Trade[]>([]);
+  // True while the initial Supabase fetch for accounts/trades is in flight
+  // (and again briefly after sign-in). Screens can use this to avoid
+  // flashing an "empty" state before the real data has arrived.
+  const [accountsTradesLoading, setAccountsTradesLoading] = useState(true);
+
+  // One-time snapshot of whatever accounts/trades used to live in
+  // localStorage, captured synchronously on first render — i.e. BEFORE any
+  // effect (including the debounced 'tradingJournal' save effect further
+  // down) has a chance to run and potentially overwrite that key. Used
+  // exactly once, by the Supabase migration effect below, to carry
+  // pre-existing local data up to a freshly-signed-in user's account so it
+  // isn't silently orphaned by this localStorage -> Supabase switch.
+  const legacyAccountsTradesRef = useRef<{ accounts: Account[]; trades: Trade[] } | null>(null);
+  if (legacyAccountsTradesRef.current === null) {
+    try {
+      const stored = localStorage.getItem('tradingJournal');
+      const raw = stored ? JSON.parse(stored) : null;
+      const migratedLegacy = raw ? migrateStoredData(raw) : null;
+      legacyAccountsTradesRef.current = {
+        accounts: migratedLegacy?.accounts ?? [],
+        trades: migratedLegacy?.trades ?? [],
+      };
+    } catch (e) {
+      console.error('Failed to read legacy localStorage accounts/trades for migration:', e);
+      legacyAccountsTradesRef.current = { accounts: [], trades: [] };
+    }
+  }
+  const hasAttemptedMigrationRef = useRef(false);
+
   const [rules, setRules] = useState<Rule[]>([]);
   const [strategies, setStrategies] = useState<Strategy[]>([]);
   const [notices, setNotices] = useState<MarketNotice[]>([]);
@@ -845,14 +879,18 @@ export function useAppState() {
   // version of the app (missing fields, old shapes, etc.) always comes out
   // fully-formed for whatever the CURRENT code expects. See the
   // "DATA SCHEMA VERSIONING & MIGRATION" block near the top of this file.
+  //
+  // NOTE: accounts/trades are deliberately NOT loaded here anymore — they
+  // now live in Supabase (see the "Accounts & Trades: Supabase" effect
+  // below) so they sync across devices and stay private per user. This
+  // effect still owns everything else (rules, strategies, notices, wiki,
+  // etc.), which for now remains on localStorage.
   useEffect(() => {
     const stored = localStorage.getItem('tradingJournal');
     if (stored) {
       try {
         const raw = JSON.parse(stored);
         const migrated = migrateStoredData(raw);
-        setAccounts(migrated.accounts);
-        setTrades(migrated.trades);
         setRules(migrated.rules);
         setStrategies(migrated.strategies);
         setNotices(migrated.notices);
@@ -863,9 +901,6 @@ export function useAppState() {
         setEmotionsList(migrated.emotionsList);
         setCustomSymbols(migrated.customSymbols);
         setCustomPillars(migrated.customPillars);
-        // Write the migrated (current-schema, versioned) shape straight
-        // back to localStorage so the migration only has to run once.
-        localStorage.setItem('tradingJournal', JSON.stringify(migrated));
       } catch (e) {
         console.error('Failed to load data:', e);
         showTradeImportToast('error', 'Failed to load saved data — your journal may be corrupted or unreadable. Check the console for details.');
@@ -880,8 +915,14 @@ export function useAppState() {
   // rapid click re-serializes the entire journal synchronously and can
   // visibly stutter the UI. Writes still land within `delay` ms of the last
   // change, and are flushed immediately on tab close, so nothing is lost.
+  //
+  // accounts/trades are written as empty arrays here on purpose: they are
+  // no longer sourced from this blob (Supabase is the source of truth for
+  // them now), but keeping the keys present preserves the on-disk shape
+  // for anything (e.g. an old StoredData type, or the legacy-migration
+  // snapshot above) that still expects them to exist.
   useEffect(() => {
-    const data: StoredData = { version: DATA_SCHEMA_VERSION, accounts, trades, rules, strategies, notices, wikiEntries, setupTypes, confluences, mistakesList, emotionsList, customSymbols, customPillars };
+    const data: StoredData = { version: DATA_SCHEMA_VERSION, accounts: [], trades: [], rules, strategies, notices, wikiEntries, setupTypes, confluences, mistakesList, emotionsList, customSymbols, customPillars };
     let serialized: string;
     try {
       serialized = JSON.stringify(data);
@@ -891,11 +932,6 @@ export function useAppState() {
     }
     writeToLocalStorage('tradingJournal', serialized, (e: any) => {
       console.error('Failed to save data:', e);
-      // Most common real-world cause here is the localStorage quota being
-      // exceeded (e.g. base64 trade screenshots pushing the journal past
-      // ~5-10MB) — previously this failed completely silently, so trades
-      // could look fine all session and then simply not be there on the
-      // next reopen with zero indication why. Surface it instead.
       const isQuotaError = e instanceof DOMException && (e.name === 'QuotaExceededError' || e.name === 'NS_ERROR_DOM_QUOTA_REACHED');
       showTradeImportToast(
         'error',
@@ -904,7 +940,103 @@ export function useAppState() {
           : 'Failed to save your journal — this change may be lost on reload. Check the console for details.'
       );
     });
-  }, [accounts, trades, rules, strategies, notices, wikiEntries, setupTypes, confluences, mistakesList, emotionsList, customSymbols, customPillars, writeToLocalStorage]);
+  }, [rules, strategies, notices, wikiEntries, setupTypes, confluences, mistakesList, emotionsList, customSymbols, customPillars, writeToLocalStorage]);
+
+  // ==========================================================================
+  // Accounts & Trades: Supabase (per-user, synced across devices)
+  // ==========================================================================
+  // Each row stores the full Account/Trade object as jsonb in `data` (so the
+  // client-side shape can evolve without a schema migration every time),
+  // plus `id`, `user_id`, and (for trades) `account_id` as real columns for
+  // RLS, foreign keys, and indexing. `rowToRecord` reassembles the two back
+  // into a plain Account/Trade for React state.
+  const rowToRecord = useCallback(<T extends { id: string }>(row: { id: string; data: any }): T => ({
+    ...(row.data as T),
+    id: row.id,
+  }), []);
+
+  const loadAccountsAndTrades = useCallback(async (uid: string) => {
+    setAccountsTradesLoading(true);
+    try {
+      const [{ data: accountRows, error: accErr }, { data: tradeRows, error: tradeErr }] = await Promise.all([
+        supabase.from('accounts').select('id, data').eq('user_id', uid),
+        supabase.from('trades').select('id, data').eq('user_id', uid),
+      ]);
+      if (accErr) throw accErr;
+      if (tradeErr) throw tradeErr;
+
+      let loadedAccounts = (accountRows || []).map(r => rowToRecord<Account>(r));
+      let loadedTrades = (tradeRows || []).map(r => rowToRecord<Trade>(r));
+
+      // One-time migration: if this user has nothing in Supabase yet but
+      // this browser had pre-existing accounts/trades in localStorage
+      // (from before this feature shipped), push that data up now instead
+      // of silently orphaning it. Runs at most once per mount.
+      if (
+        !hasAttemptedMigrationRef.current &&
+        loadedAccounts.length === 0 &&
+        loadedTrades.length === 0
+      ) {
+        hasAttemptedMigrationRef.current = true;
+        const legacy = legacyAccountsTradesRef.current;
+        if (legacy && (legacy.accounts.length > 0 || legacy.trades.length > 0)) {
+          try {
+            if (legacy.accounts.length > 0) {
+              const { error } = await supabase.from('accounts').insert(
+                legacy.accounts.map(a => ({ id: a.id, user_id: uid, data: a }))
+              );
+              if (error) throw error;
+            }
+            if (legacy.trades.length > 0) {
+              const { error } = await supabase.from('trades').insert(
+                legacy.trades.map(t => ({ id: t.id, user_id: uid, account_id: t.accountId, data: t }))
+              );
+              if (error) throw error;
+            }
+            loadedAccounts = legacy.accounts;
+            loadedTrades = legacy.trades;
+            showTradeImportToast('success', 'Moved your existing accounts and trades to your account — they’ll now sync across devices.');
+          } catch (e) {
+            console.error('Failed to migrate legacy accounts/trades to Supabase:', e);
+            showTradeImportToast('error', 'Found local accounts/trades but couldn’t sync them to your account. They’re safe locally — try reloading.');
+          }
+        }
+      }
+
+      setAccounts(loadedAccounts);
+      setTrades(loadedTrades);
+    } catch (e) {
+      console.error('Failed to load accounts/trades from Supabase:', e);
+      showTradeImportToast('error', 'Failed to load your accounts/trades — check your connection and reload.');
+    } finally {
+      setAccountsTradesLoading(false);
+    }
+  }, [rowToRecord]);
+
+  useEffect(() => {
+    if (userId) {
+      loadAccountsAndTrades(userId);
+    }
+  }, [userId, loadAccountsAndTrades]);
+
+  // ---- Logout cleanup ----
+  // useAppState() lives inside a single AppProvider that wraps both
+  // LoginPage and the dashboard (see App.tsx), so this hook — and every
+  // piece of state it holds — is never unmounted on sign-out. Without this,
+  // a second person signing in on the same browser/tab would briefly see
+  // the previous user's accounts and trades still sitting in state until
+  // the load effect above happened to overwrite them.
+  const prevUserIdRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (prevUserIdRef.current && !userId) {
+      setAccounts([]);
+      setTrades([]);
+      setSelectedAccounts(['all']);
+      setAccountsTradesLoading(true);
+      hasAttemptedMigrationRef.current = false;
+    }
+    prevUserIdRef.current = userId;
+  }, [userId]);
 
   // ---- Life Discipline Hub persistence ----
   // Kept in its own localStorage key, deliberately separate from the trading
@@ -2139,6 +2271,14 @@ export function useAppState() {
       fixedMinBalance: newAccount.fixedMinBalance || 0,
     };
     setAccounts([...accounts, account]);
+    if (userId) {
+      supabase.from('accounts').insert({ id: account.id, user_id: userId, data: account }).then(({ error }) => {
+        if (error) {
+          console.error('Failed to save account to Supabase:', error);
+          showTradeImportToast('error', 'Failed to save the new account — it may not appear on other devices.');
+        }
+      });
+    }
     setNewAccount({
       name: '',
       startingBalance: 10000,
@@ -2158,7 +2298,16 @@ export function useAppState() {
 
   const handleUpdateAccount = () => {
     if (!editingAccount.id || !editingAccount.name) return;
-    setAccounts(accounts.map(a => a.id === editingAccount.id ? { ...a, ...editingAccount } as Account : a));
+    const updatedAccount = { ...accounts.find(a => a.id === editingAccount.id), ...editingAccount } as Account;
+    setAccounts(accounts.map(a => a.id === editingAccount.id ? updatedAccount : a));
+    if (userId) {
+      supabase.from('accounts').update({ data: updatedAccount }).eq('id', updatedAccount.id).eq('user_id', userId).then(({ error }) => {
+        if (error) {
+          console.error('Failed to update account in Supabase:', error);
+          showTradeImportToast('error', 'Failed to save account changes — it may not sync to other devices.');
+        }
+      });
+    }
     setEditingAccount({});
     resetCalculator();
     setShowEditAccount(null);
@@ -2175,6 +2324,17 @@ export function useAppState() {
     setTrades(trades.filter(t => t.accountId !== id));
     if (selectedAccounts.includes(id)) {
       setSelectedAccounts(selectedAccounts.filter(a => a !== id));
+    }
+    if (userId) {
+      // Trades belonging to this account are removed server-side too, via
+      // the trades.account_id ON DELETE CASCADE foreign key — no separate
+      // trades delete call needed here.
+      supabase.from('accounts').delete().eq('id', id).eq('user_id', userId).then(({ error }) => {
+        if (error) {
+          console.error('Failed to delete account from Supabase:', error);
+          showTradeImportToast('error', 'Failed to delete the account on the server — it may reappear on reload.');
+        }
+      });
     }
     setAccountPendingDelete(null);
   };
@@ -2330,6 +2490,16 @@ export function useAppState() {
       }
 
       setTrades(prev => [...prev, ...newTrades]);
+      if (userId && newTrades.length > 0) {
+        supabase.from('trades').insert(
+          newTrades.map(t => ({ id: t.id, user_id: userId, account_id: t.accountId, data: t }))
+        ).then(({ error }) => {
+          if (error) {
+            console.error('Failed to save imported trades to Supabase:', error);
+            showTradeImportToast('error', 'Imported trades may not have synced to your account — reload to check.');
+          }
+        });
+      }
       if (newCustomSymbols.length > 0) {
         setCustomSymbols(prev => [...prev, ...newCustomSymbols.filter(s => !prev.includes(s))]);
       }
@@ -2387,6 +2557,14 @@ export function useAppState() {
       session: newTrade.session,
     };
     setTrades([...trades, trade]);
+    if (userId) {
+      supabase.from('trades').insert({ id: trade.id, user_id: userId, account_id: trade.accountId, data: trade }).then(({ error }) => {
+        if (error) {
+          console.error('Failed to save trade to Supabase:', error);
+          showTradeImportToast('error', 'Failed to save the new trade — it may not appear on other devices.');
+        }
+      });
+    }
     const symbolValue = newTrade.symbol?.toUpperCase() || '';
     if (symbolValue && !PRESET_SYMBOLS.some(p => p.value === symbolValue) && !customSymbols.includes(symbolValue)) {
       setCustomSymbols(prev => [...prev, symbolValue]);
@@ -2457,6 +2635,14 @@ export function useAppState() {
       session: newTrade.session,
     };
     setTrades(trades.map(t => t.id === editingTrade.id ? updated : t));
+    if (userId) {
+      supabase.from('trades').update({ data: updated, account_id: updated.accountId }).eq('id', updated.id).eq('user_id', userId).then(({ error }) => {
+        if (error) {
+          console.error('Failed to update trade in Supabase:', error);
+          showTradeImportToast('error', 'Failed to save trade changes — it may not sync to other devices.');
+        }
+      });
+    }
     const symbolValue = newTrade.symbol?.toUpperCase() || '';
     if (symbolValue && !PRESET_SYMBOLS.some(p => p.value === symbolValue) && !customSymbols.includes(symbolValue)) {
       setCustomSymbols(prev => [...prev, symbolValue]);
@@ -2476,6 +2662,14 @@ export function useAppState() {
     const id = tradePendingDelete;
     setTrades(prev => prev.filter(t => t.id !== id));
     setSelectedTradeIds(prev => prev.filter(t => t !== id));
+    if (userId) {
+      supabase.from('trades').delete().eq('id', id).eq('user_id', userId).then(({ error }) => {
+        if (error) {
+          console.error('Failed to delete trade from Supabase:', error);
+          showTradeImportToast('error', 'Failed to delete the trade on the server — it may reappear on reload.');
+        }
+      });
+    }
     setTradePendingDelete(null);
     setShowTradeDetail(null);
     setShowExpandGallery(false);
@@ -2485,10 +2679,20 @@ export function useAppState() {
   // trade evaluation preview modal (does not touch the master raw trade setup fields).
   const handleSaveDetailNotes = () => {
     if (!showTradeDetail) return;
-    setTrades(prev => prev.map(t => t.id === showTradeDetail
-      ? { ...t, mistakesAnalysis: detailNotesDraft.mistakesAnalysis, lessonsLearned: detailNotesDraft.lessonsLearned, rulesFollowed: detailRulesFollowedDraft }
-      : t
-    ));
+    let updatedTrade: Trade | null = null;
+    setTrades(prev => prev.map(t => {
+      if (t.id !== showTradeDetail) return t;
+      updatedTrade = { ...t, mistakesAnalysis: detailNotesDraft.mistakesAnalysis, lessonsLearned: detailNotesDraft.lessonsLearned, rulesFollowed: detailRulesFollowedDraft };
+      return updatedTrade;
+    }));
+    if (userId && updatedTrade) {
+      supabase.from('trades').update({ data: updatedTrade }).eq('id', showTradeDetail).eq('user_id', userId).then(({ error }) => {
+        if (error) {
+          console.error('Failed to save trade notes to Supabase:', error);
+          showTradeImportToast('error', 'Failed to save notes — they may not sync to other devices.');
+        }
+      });
+    }
   };
 
   // Saves the Discipline & Psychology Review — updates only emotions, mistakes, and
@@ -2499,15 +2703,25 @@ export function useAppState() {
   const handleSaveDisciplineReview = () => {
     const targetId = showRuleReviewModal || showDisciplineReview;
     if (!targetId) return;
-    setTrades(prev => prev.map(t => t.id === targetId
+    let updatedTrade: Trade | null = null;
+    setTrades(prev => prev.map(t => {
+      if (t.id !== targetId) return t;
       // This is the one and only place isReviewed flips to true — it fires
       // whether the save came from Pending Review's first-time "+ Review"
       // flow (showDisciplineReview) or from re-editing an already-reviewed
       // trade from the Rule Adherence Log (showRuleReviewModal), so a trade
       // only ever leaves Pending Review once this exact save action runs.
-      ? { ...t, emotions: disciplineReviewDraft.emotions, mistakes: disciplineReviewDraft.mistakes, notes: disciplineReviewDraft.notes, isReviewed: true }
-      : t
-    ));
+      updatedTrade = { ...t, emotions: disciplineReviewDraft.emotions, mistakes: disciplineReviewDraft.mistakes, notes: disciplineReviewDraft.notes, isReviewed: true };
+      return updatedTrade;
+    }));
+    if (userId && updatedTrade) {
+      supabase.from('trades').update({ data: updatedTrade }).eq('id', targetId).eq('user_id', userId).then(({ error }) => {
+        if (error) {
+          console.error('Failed to save discipline review to Supabase:', error);
+          showTradeImportToast('error', 'Failed to save review — it may not sync to other devices.');
+        }
+      });
+    }
     if (showRuleReviewModal) {
       setIsEditingRuleReview(false);
     } else {
@@ -2561,10 +2775,19 @@ export function useAppState() {
   };
 
   const confirmDeleteSelectedTrades = () => {
-    setTrades(prev => prev.filter(t => !selectedTradeIds.includes(t.id)));
+    const idsToDelete = selectedTradeIds;
+    setTrades(prev => prev.filter(t => !idsToDelete.includes(t.id)));
     setSelectedTradeIds([]);
     setTradeSelectMode(false);
     setShowDeleteSelectedConfirm(false);
+    if (userId && idsToDelete.length > 0) {
+      supabase.from('trades').delete().in('id', idsToDelete).eq('user_id', userId).then(({ error }) => {
+        if (error) {
+          console.error('Failed to bulk-delete trades from Supabase:', error);
+          showTradeImportToast('error', 'Failed to delete some trades on the server — they may reappear on reload.');
+        }
+      });
+    }
   };
 
   // Helper to get today's date in local YYYY-MM-DD format
@@ -3345,7 +3568,7 @@ export function useAppState() {
     if (!file) return;
 
     const reader = new FileReader();
-    reader.onload = (event) => {
+    reader.onload = async (event) => {
       try {
         const raw = JSON.parse(event.target?.result as string);
         if (!raw || typeof raw !== 'object' || (!Array.isArray(raw.accounts) && !Array.isArray(raw.trades))) {
@@ -3365,7 +3588,33 @@ export function useAppState() {
         setEmotionsList(migrated.emotionsList);
         setCustomSymbols(migrated.customSymbols);
         setCustomPillars(migrated.customPillars);
-        localStorage.setItem('tradingJournal', JSON.stringify(migrated));
+        localStorage.setItem('tradingJournal', JSON.stringify({ ...migrated, accounts: [], trades: [] }));
+
+        // Accounts/trades now live in Supabase, so a full restore replaces
+        // this user's server-side rows too — otherwise the restored data
+        // would look right until the next reload, when the (unchanged)
+        // Supabase rows would load back in over it.
+        if (userId) {
+          try {
+            await supabase.from('trades').delete().eq('user_id', userId);
+            await supabase.from('accounts').delete().eq('user_id', userId);
+            if (migrated.accounts.length > 0) {
+              const { error } = await supabase.from('accounts').insert(
+                migrated.accounts.map((a: Account) => ({ id: a.id, user_id: userId, data: a }))
+              );
+              if (error) throw error;
+            }
+            if (migrated.trades.length > 0) {
+              const { error } = await supabase.from('trades').insert(
+                migrated.trades.map((t: Trade) => ({ id: t.id, user_id: userId, account_id: t.accountId, data: t }))
+              );
+              if (error) throw error;
+            }
+          } catch (err) {
+            console.error('Failed to sync restored backup to Supabase:', err);
+            alert('Backup restored locally, but accounts/trades failed to sync to your account — check your connection and try again.');
+          }
+        }
 
         // Re-hydrate the Life Discipline Hub (active challenge config, daily
         // check logs, grace days, missed-day reasons, and history) if the
@@ -3454,6 +3703,20 @@ export function useAppState() {
   // Callers must reload the page immediately after invoking this (see
   // SettingsModal's "Reset All Journal Data" confirmation flow).
   const handleFullSystemReset = () => {
+    // ---- Accounts & Trades (Supabase) ----
+    // Fire-and-forget: the page reload this action requires (see the
+    // comment above) will re-fetch from Supabase regardless, so there's a
+    // brief window where a reload-before-completion could still show stale
+    // data, but the delete requests are already in flight by then.
+    if (userId) {
+      supabase.from('trades').delete().eq('user_id', userId).then(({ error }) => {
+        if (error) console.error('Failed to delete trades from Supabase during reset:', error);
+      });
+      supabase.from('accounts').delete().eq('user_id', userId).then(({ error }) => {
+        if (error) console.error('Failed to delete accounts from Supabase during reset:', error);
+      });
+    }
+
     // ---- Trading Journal ('tradingJournal' localStorage key) ----
     setAccounts([]);
     setTrades([]);
@@ -3560,6 +3823,7 @@ export function useAppState() {
     setAccounts,
     trades,
     setTrades,
+    accountsTradesLoading,
     rules,
     setRules,
     strategies,
