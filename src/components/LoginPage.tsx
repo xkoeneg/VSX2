@@ -192,11 +192,77 @@ function CalendarHeatmapPreviewCard() {
   );
 }
 
-// One card anchored per viewport corner, each on its own float timing so
+// Mirrors TradeHistory's table: header row + a handful of trade rows with
+// date/symbol/side/P&L columns, same uppercase-label header treatment.
+function TradeHistoryPreviewCard() {
+  const rows: Array<{ date: string; symbol: string; side: string; pnl: number }> = [
+    { date: '08/04', symbol: 'NQ', side: 'Long', pnl: 420.5 },
+    { date: '08/05', symbol: 'ES', side: 'Short', pnl: -180.25 },
+    { date: '08/06', symbol: 'GC', side: 'Long', pnl: 610.0 },
+    { date: '08/07', symbol: 'CL', side: 'Long', pnl: 95.75 },
+  ];
+  return (
+    <div className="w-80 rounded-2xl border border-zinc-800/80 bg-zinc-900/70 shadow-2xl overflow-hidden">
+      <div className="px-4 pt-3 pb-2 border-b border-white/5">
+        <p className="text-xs font-semibold text-white">Trade History</p>
+      </div>
+      <table className="w-full">
+        <thead>
+          <tr className="border-b border-white/5 text-left">
+            <th className="px-3 py-1.5 text-[9px] text-zinc-500 uppercase tracking-wider font-medium">Date</th>
+            <th className="px-3 py-1.5 text-[9px] text-zinc-500 uppercase tracking-wider font-medium">Symbol</th>
+            <th className="px-3 py-1.5 text-[9px] text-zinc-500 uppercase tracking-wider font-medium">Side</th>
+            <th className="px-3 py-1.5 text-[9px] text-zinc-500 uppercase tracking-wider font-medium text-right">P&amp;L</th>
+          </tr>
+        </thead>
+        <tbody>
+          {rows.map((r, i) => (
+            <tr key={i} className="border-b border-white/5 last:border-0">
+              <td className="px-3 py-1.5 text-xs text-zinc-400 whitespace-nowrap">{r.date}</td>
+              <td className="px-3 py-1.5 text-xs text-white font-semibold">{r.symbol}</td>
+              <td className="px-3 py-1.5 text-xs text-zinc-400">{r.side}</td>
+              <td className={cn('px-3 py-1.5 text-xs font-mono text-right font-bold', r.pnl >= 0 ? 'text-emerald-400' : 'text-rose-400')}>
+                {r.pnl >= 0 ? '+' : ''}{r.pnl.toFixed(2)}
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+// Mirrors MarketNotices' notice cards.
+function NoticePreviewCard() {
+  return (
+    <div className="w-64 rounded-2xl border border-zinc-800/80 bg-zinc-900/70 p-4 shadow-2xl">
+      <p className="text-[10px] uppercase tracking-wider text-zinc-500 mb-2">Market Notice</p>
+      <p className="text-sm font-semibold text-white mb-1">FOMC Rate Decision</p>
+      <p className="text-xs text-zinc-500">High impact · 2:00 PM EST</p>
+    </div>
+  );
+}
+
+// Mirrors the Knowledge Wiki's entry cards — category chip + title + snippet.
+function WikiPreviewCard() {
+  return (
+    <div className="w-64 rounded-2xl border border-zinc-800/80 bg-zinc-900/70 p-4 shadow-2xl">
+      <span className="inline-block text-[9px] uppercase tracking-wider px-2 py-0.5 rounded-full bg-violet-500/10 text-violet-400 mb-2">
+        Strategy
+      </span>
+      <p className="text-sm font-semibold text-white mb-1">Order Block Entries</p>
+      <p className="text-xs text-zinc-500 line-clamp-2">
+        Identify the last down candle before an impulsive move up, then wait for price to return to that zone.
+      </p>
+    </div>
+  );
+}
+
+// Two tiles per corner (near + far), each on its own float timing so
 // nothing bobs in unison, and its own translateZ depth so the tilted scene
-// reads with real parallax rather than a flat sticker sheet. Deliberately
-// only 4 cards (not a dense wall) so the corners frame the screen instead
-// of clustering into visual noise behind the modal.
+// reads with real parallax rather than a flat sticker sheet. The "far"
+// tile in each cluster sits further from the edge, toward center, so the
+// canvas actually reads as populated rather than four lonely cards.
 const CORNER_CARDS: Array<{
   Card: () => JSX.Element;
   position: string;
@@ -204,19 +270,27 @@ const CORNER_CARDS: Array<{
   duration: string;
   delay: string;
 }> = [
-  { Card: PnLPreviewCard, position: 'top-10 left-6 xl:left-14', depth: '-40px', duration: '7s', delay: '0s' },
-  { Card: AccountsPreviewCard, position: 'top-10 right-6 xl:right-14', depth: '40px', duration: '8s', delay: '0.6s' },
-  { Card: DisciplinePreviewCard, position: 'bottom-10 left-6 xl:left-14', depth: '40px', duration: '7.5s', delay: '0.3s' },
-  { Card: PlaybookPreviewCard, position: 'bottom-10 right-6 xl:right-14', depth: '-40px', duration: '8.5s', delay: '0.9s' },
+  // Top-left cluster
+  { Card: PnLPreviewCard, position: 'top-8 left-6 xl:left-14', depth: '-40px', duration: '7s', delay: '0s' },
+  { Card: TradeHistoryPreviewCard, position: 'top-64 left-16 xl:left-28', depth: '20px', duration: '9s', delay: '1.1s' },
+  // Top-right cluster
+  { Card: AccountsPreviewCard, position: 'top-8 right-6 xl:right-14', depth: '40px', duration: '8s', delay: '0.6s' },
+  { Card: NoticePreviewCard, position: 'top-60 right-16 xl:right-28', depth: '-30px', duration: '7.8s', delay: '1.4s' },
+  // Bottom-left cluster
+  { Card: DisciplinePreviewCard, position: 'bottom-8 left-6 xl:left-14', depth: '40px', duration: '7.5s', delay: '0.3s' },
+  { Card: WikiPreviewCard, position: 'bottom-60 left-16 xl:left-28', depth: '-25px', duration: '8.3s', delay: '0.8s' },
+  // Bottom-right cluster
+  { Card: PlaybookPreviewCard, position: 'bottom-8 right-6 xl:right-14', depth: '-40px', duration: '8.5s', delay: '0.9s' },
+  { Card: CalendarHeatmapPreviewCard, position: 'bottom-64 right-16 xl:right-28', depth: '30px', duration: '9.2s', delay: '1.7s' },
 ];
 
 // Full-viewport backdrop that sits behind the centered auth modal: a subtly
 // tilted 3D scene (perspective + static rotateX/Y/Z, same as the rest of
-// the app's "living terminal" feel) with one preview card anchored in each
-// corner, plus ambient emerald glows in all four corners for depth. Purely
-// decorative — pointer-events disabled so it never intercepts clicks — and
-// hidden below `lg` where there isn't enough room for corner cards to sit
-// clear of the modal.
+// the app's "living terminal" feel) with a small cluster of preview cards
+// anchored in each corner, plus ambient emerald glows in all four corners
+// for depth. Purely decorative — pointer-events disabled so it never
+// intercepts clicks — and hidden below `lg` where there isn't enough room
+// for corner clusters to sit clear of the modal.
 function CornerPreviewBackdrop() {
   return (
     <div className="pointer-events-none absolute inset-0 overflow-hidden bg-[#0d0f12]" aria-hidden="true">
