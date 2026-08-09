@@ -14,8 +14,8 @@ import { createClient } from '@supabase/supabase-js';
 // for browser use, gated by your Supabase Row Level Security policies, NOT
 // the service_role secret key (never expose that one client-side).
 // ============================================================================
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL as string | undefined;
-const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY as string | undefined;
+const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
 if (!supabaseUrl || !supabaseAnonKey) {
   throw new Error(
