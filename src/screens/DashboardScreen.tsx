@@ -279,32 +279,70 @@ export function DashboardScreen() {
     exportBackup, importBackup,
   } = useAppContext();
 
+  // Converts a series of [x,y] points into a smooth cubic-Bezier SVG path
+  // using Catmull-Rom-to-Bezier interpolation (tension = 1/6, the standard
+  // conversion factor). This keeps the rounded, "smooth curve" look without
+  // the wide overshoot that naive/high-tension smoothing produces — the
+  // curve dips only slightly past each point's true Y value, so the domain
+  // padding below (~12%) is enough to keep it from ever clipping.
+  const buildSmoothPath = (points: readonly (readonly [number, number])[]): string => {
+    if (points.length === 0) return '';
+    if (points.length === 1) return `M ${points[0][0]} ${points[0][1]}`;
+    if (points.length === 2) return `M ${points[0][0]} ${points[0][1]} L ${points[1][0]} ${points[1][1]}`;
+
+    let path = `M ${points[0][0]} ${points[0][1]}`;
+    for (let i = 0; i < points.length - 1; i++) {
+      const p0 = points[i === 0 ? i : i - 1];
+      const p1 = points[i];
+      const p2 = points[i + 1];
+      const p3 = points[i + 2 < points.length ? i + 2 : i + 1];
+      const cp1x = p1[0] + (p2[0] - p0[0]) / 6;
+      const cp1y = p1[1] + (p2[1] - p0[1]) / 6;
+      const cp2x = p2[0] - (p3[0] - p1[0]) / 6;
+      const cp2y = p2[1] - (p3[1] - p1[1]) / 6;
+      path += ` C ${cp1x} ${cp1y}, ${cp2x} ${cp2y}, ${p2[0]} ${p2[1]}`;
+    }
+    return path;
+  };
+
   const renderEquityChart = () => {
     if (equityData.length === 0) {
       return <div className={cn("h-48 flex items-center justify-center text-sm", tc.textMuted)}>No trade data to display yet</div>;
     }
 
-    const min = Math.min(...equityData);
-    const max = Math.max(...equityData);
-    const range = max - min || 1;
+    const dataMin = Math.min(...equityData);
+    const dataMax = Math.max(...equityData);
+    const dataRange = dataMax - dataMin || 1;
     const height = 180;
     const chartWidth = Math.max(equityChartWidth, 200);
     const isPositive = stats.totalPnL >= 0;
     const strokeColor = isPositive ? '#10b981' : '#ef4444';
     const gradientId = `equityFill-${isPositive ? 'up' : 'down'}`;
 
+    // Y-axis domain padding: a small percentage of the data range, just
+    // enough headroom for the smoothed curve's minor overshoot between
+    // points to stay clear of the top/bottom edges. Previously this was an
+    // oversized ~50%-of-height fixed margin, which pushed the whole curve
+    // and its baseline down into a thin band in the middle of the chart —
+    // this keeps the curve spanning the full container height instead.
+    const PADDING_RATIO = 0.12;
+    const padding = dataRange * PADDING_RATIO;
+    const domainMin = dataMin - padding;
+    const domainMax = dataMax + padding;
+    const domainRange = domainMax - domainMin || 1;
+
     const step = chartWidth / Math.max(equityData.length - 1, 1);
     const coords = equityData.map((val, i) => {
       const x = equityData.length === 1 ? chartWidth / 2 : i * step;
-      const y = height - ((val - min) / range) * (height - 40) - 20;
+      const y = height - ((val - domainMin) / domainRange) * height;
       return [x, y] as const;
     });
 
-    const linePath = coords.map(([x, y], i) => `${i === 0 ? 'M' : 'L'} ${x} ${y}`).join(' ');
+    const linePath = buildSmoothPath(coords);
     const areaPath = `${linePath} L ${coords[coords.length - 1][0]} ${height} L ${coords[0][0]} ${height} Z`;
 
-    const midpoint = min + range / 2;
-    const midY = height - ((midpoint - min) / range) * (height - 40) - 20;
+    const midpoint = dataMin + dataRange / 2;
+    const midY = height - ((midpoint - domainMin) / domainRange) * height;
 
     return (
       <div className="w-full">
