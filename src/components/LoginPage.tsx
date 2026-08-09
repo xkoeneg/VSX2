@@ -367,9 +367,9 @@ function WinRateGaugePreviewCard() {
   const beLen = (breakeven / total) * c;
 
   return (
-    <div className="w-[22rem] rounded-2xl border border-white/10 bg-zinc-900/50 backdrop-blur-md p-4 shadow-2xl">
-      <div className="flex items-center gap-4">
-        <div className="relative w-[88px] h-[88px] flex-shrink-0">
+    <div className="w-56 rounded-2xl border border-white/10 bg-zinc-900/50 backdrop-blur-md p-3 shadow-2xl">
+      <div className="flex items-center gap-3">
+        <div className="relative w-14 h-14 flex-shrink-0">
           <svg viewBox="0 0 112 112" className="w-full h-full -rotate-90">
             <circle cx="56" cy="56" r={r} fill="none" stroke="rgb(39,39,42)" strokeWidth={strokeWidth} />
             <circle
@@ -386,48 +386,48 @@ function WinRateGaugePreviewCard() {
             />
           </svg>
           <div className="absolute inset-0 flex flex-col items-center justify-center">
-            <span className="text-base font-bold tabular-nums text-white leading-none">{winRate.toFixed(1)}%</span>
-            <span className="text-[8px] uppercase tracking-wider text-zinc-500 mt-1">Win Rate</span>
+            <span className="text-[10px] font-bold tabular-nums text-white leading-none">{winRate.toFixed(1)}%</span>
+            <span className="text-[6px] uppercase tracking-wider text-zinc-500 mt-0.5">Win Rate</span>
           </div>
         </div>
-        <div className="flex flex-col gap-1">
-          <span className="flex items-center gap-1.5 text-[11px] font-medium">
-            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+        <div className="flex flex-col gap-0.5">
+          <span className="flex items-center gap-1 text-[9px] font-medium">
+            <span className="w-1 h-1 rounded-full bg-emerald-500" />
             <span className="text-zinc-500">Wins</span>
             <span className="text-emerald-400 font-semibold tabular-nums">{wins}</span>
           </span>
-          <span className="flex items-center gap-1.5 text-[11px] font-medium">
-            <span className="w-1.5 h-1.5 rounded-full bg-rose-500" />
+          <span className="flex items-center gap-1 text-[9px] font-medium">
+            <span className="w-1 h-1 rounded-full bg-rose-500" />
             <span className="text-zinc-500">Losses</span>
             <span className="text-rose-400 font-semibold tabular-nums">{losses}</span>
           </span>
-          <span className="flex items-center gap-1.5 text-[11px] font-medium">
-            <span className="w-1.5 h-1.5 rounded-full bg-zinc-400" />
+          <span className="flex items-center gap-1 text-[9px] font-medium">
+            <span className="w-1 h-1 rounded-full bg-zinc-400" />
             <span className="text-zinc-500">B/E</span>
             <span className="text-zinc-300 font-semibold tabular-nums">{breakeven}</span>
           </span>
         </div>
       </div>
-      <div className="mt-3.5 pt-3 border-t border-white/5 grid grid-cols-2 gap-x-3 gap-y-2">
+      <div className="mt-2.5 pt-2 border-t border-white/5 grid grid-cols-2 gap-x-2 gap-y-1.5">
         <div>
-          <p className="text-[8px] uppercase tracking-wider text-zinc-500 mb-0.5">Total Trades</p>
-          <p className="text-xs font-semibold tabular-nums text-white">{total}</p>
+          <p className="text-[6px] uppercase tracking-wider text-zinc-500 mb-0.5">Total Trades</p>
+          <p className="text-[10px] font-semibold tabular-nums text-white">{total}</p>
         </div>
         <div>
-          <p className="text-[8px] uppercase tracking-wider text-zinc-500 mb-0.5">Profit Factor</p>
-          <p className="text-xs font-semibold tabular-nums text-white">2.14</p>
+          <p className="text-[6px] uppercase tracking-wider text-zinc-500 mb-0.5">Profit Factor</p>
+          <p className="text-[10px] font-semibold tabular-nums text-white">2.14</p>
         </div>
         <div>
-          <p className="text-[8px] uppercase tracking-wider text-zinc-500 mb-0.5">Win / Loss</p>
-          <p className="text-xs font-semibold tabular-nums">
+          <p className="text-[6px] uppercase tracking-wider text-zinc-500 mb-0.5">Win / Loss</p>
+          <p className="text-[10px] font-semibold tabular-nums">
             <span className="text-emerald-500">{wins}W</span>
             <span className="text-zinc-600 mx-0.5">-</span>
             <span className="text-rose-500">{losses}L</span>
           </p>
         </div>
         <div>
-          <p className="text-[8px] uppercase tracking-wider text-zinc-500 mb-0.5">Avg Win / Loss</p>
-          <p className="text-xs font-semibold tabular-nums">
+          <p className="text-[6px] uppercase tracking-wider text-zinc-500 mb-0.5">Avg Win / Loss</p>
+          <p className="text-[10px] font-semibold tabular-nums">
             <span className="text-emerald-500">$420</span>
             <span className="text-zinc-600 mx-0.5">/</span>
             <span className="text-rose-500">$180</span>
