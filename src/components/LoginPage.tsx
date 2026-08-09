@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import {
   Eye,
   EyeOff,
@@ -667,12 +667,16 @@ const TILE_LAYOUT: TileConfig[] = [
 // blurred edge highlight), 'paper' (subtle diagonal fiber texture), or
 // 'glow' (emerald/cyan ambient projection-panel glow behind it).
 function TileFrame({ variant, children }: { variant: Variant; children: React.ReactNode }) {
+  // `transform-gpu` (translateZ(0)) + `will-change` promote each frame to its
+  // own GPU compositor layer up front, so the blur/shadow/ring paint happens
+  // once off the main thread instead of being recomputed as the parent
+  // Tile's 3D transform settles on mount — this is what kills the stutter.
   if (variant === 'glow') {
     return (
-      <div className="relative">
-        <div className="absolute -inset-10 rounded-full bg-emerald-600/10 blur-[150px] -z-10" aria-hidden="true" />
-        <div className="absolute -inset-6 rounded-2xl bg-cyan-500/5 blur-3xl -z-10" aria-hidden="true" />
-        <div className="rounded-2xl ring-1 ring-emerald-500/25 shadow-[0_0_45px_-8px_rgba(16,185,129,0.5)]">
+      <div className="relative transform-gpu" style={{ willChange: 'transform, opacity' }}>
+        <div className="absolute -inset-10 rounded-full bg-emerald-600/10 blur-[150px] -z-10 transform-gpu" aria-hidden="true" />
+        <div className="absolute -inset-6 rounded-2xl bg-cyan-500/5 blur-3xl -z-10 transform-gpu" aria-hidden="true" />
+        <div className="rounded-2xl ring-1 ring-emerald-500/25 shadow-[0_0_45px_-8px_rgba(16,185,129,0.5)] transform-gpu">
           {children}
         </div>
       </div>
@@ -681,14 +685,21 @@ function TileFrame({ variant, children }: { variant: Variant; children: React.Re
   if (variant === 'paper') {
     return (
       <div
-        className="rounded-2xl ring-1 ring-white/5"
-        style={{ backgroundImage: 'repeating-linear-gradient(135deg, rgba(255,255,255,0.03) 0px, rgba(255,255,255,0.03) 1px, transparent 1px, transparent 7px)' }}
+        className="rounded-2xl ring-1 ring-white/5 transform-gpu"
+        style={{
+          backgroundImage: 'repeating-linear-gradient(135deg, rgba(255,255,255,0.03) 0px, rgba(255,255,255,0.03) 1px, transparent 1px, transparent 7px)',
+          willChange: 'transform, opacity',
+        }}
       >
         {children}
       </div>
     );
   }
-  return <div className="rounded-2xl ring-1 ring-white/10 backdrop-blur-[1px]">{children}</div>;
+  return (
+    <div className="rounded-2xl ring-1 ring-white/10 backdrop-blur-[1px] transform-gpu" style={{ willChange: 'transform, opacity' }}>
+      {children}
+    </div>
+  );
 }
 
 // A single positioned/tilted tile in the scatter. Position + rotation +
@@ -708,23 +719,25 @@ function Tile({ Card, top, left, ring, variant, seed }: TileConfig) {
 
   return (
     <div
-      className="absolute"
+      className="absolute transform-gpu"
       style={{
         top: `${top}%`,
         left: `${left}%`,
         transform: `translate(-50%, -50%) rotateX(${rotateX}deg) rotateY(${rotateY}deg) rotateZ(${rotateZ}deg) translateZ(${z}px) scale(${scale})`,
         transformStyle: 'preserve-3d',
         zIndex: Math.round(z + 300),
+        willChange: 'transform',
       }}
     >
       <div
-        className="login-card-float"
+        className="login-card-float transform-gpu"
         style={
           {
             opacity: cfg.opacity,
             animationDuration: float.duration,
             animationDelay: float.delay,
             '--depth': `${cfg.floatDepth}px`,
+            willChange: 'transform',
           } as React.CSSProperties
         }
       >
@@ -742,21 +755,52 @@ function Tile({ Card, top, left, ring, variant, seed }: TileConfig) {
 // pointer-events disabled so it never intercepts clicks — and hidden below
 // `lg` in favor of a clean, uncluttered modal.
 function WarRoomBackdrop() {
+  // Mount fade-in: the scatter starts invisible and fades to full opacity
+  // once its own effect fires (i.e. after React has committed the DOM and
+  // the browser has a layout to paint from). This means the very first
+  // paint the user sees is the *finished* 3D-transformed layout, not the
+  // flat/untransformed one snapping into place — the "stutter" was really
+  // that snap, not the animation itself. requestAnimationFrame (rather than
+  // firing immediately in useEffect) guarantees the initial styles have
+  // actually been painted at opacity 0 before we transition, so the browser
+  // has something to interpolate from instead of jumping.
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => {
+    const raf = requestAnimationFrame(() => setMounted(true));
+    return () => cancelAnimationFrame(raf);
+  }, []);
+
   return (
     <div className="pointer-events-none absolute inset-0 overflow-hidden bg-[#0a0c0f]" aria-hidden="true">
       {/* Base ambient glows, one per corner plus a cyan accent, so the deep
-          background never reads as flat black even where no tile lands */}
-      <div className="absolute -top-24 -left-24 w-[460px] h-[460px] rounded-full bg-emerald-600/10 blur-[150px]" />
-      <div className="absolute -top-24 -right-24 w-[460px] h-[460px] rounded-full bg-cyan-500/10 blur-[150px]" />
-      <div className="absolute -bottom-24 -left-24 w-[460px] h-[460px] rounded-full bg-cyan-500/10 blur-[150px]" />
-      <div className="absolute -bottom-24 -right-24 w-[460px] h-[460px] rounded-full bg-emerald-600/10 blur-[150px]" />
-      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[520px] h-[520px] rounded-full bg-emerald-500/5 blur-[160px]" />
+          background never reads as flat black even where no tile lands.
+          transform-gpu promotes these blurred layers to the compositor so
+          they don't get re-painted on every frame of the scatter mounting. */}
+      <div className="absolute -top-24 -left-24 w-[460px] h-[460px] rounded-full bg-emerald-600/10 blur-[150px] transform-gpu" />
+      <div className="absolute -top-24 -right-24 w-[460px] h-[460px] rounded-full bg-cyan-500/10 blur-[150px] transform-gpu" />
+      <div className="absolute -bottom-24 -left-24 w-[460px] h-[460px] rounded-full bg-cyan-500/10 blur-[150px] transform-gpu" />
+      <div className="absolute -bottom-24 -right-24 w-[460px] h-[460px] rounded-full bg-emerald-600/10 blur-[150px] transform-gpu" />
+      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[520px] h-[520px] rounded-full bg-emerald-500/5 blur-[160px] transform-gpu" />
 
       {/* The anamorphic scatter itself — a shared perspective origin at
           screen center, with a slow independent drift so the whole scene
-          breathes. Hidden on small/medium viewports. */}
-      <div className="hidden lg:block absolute inset-0" style={{ perspective: '1400px' }}>
-        <div className="login-scene-drift absolute inset-0" style={{ transformStyle: 'preserve-3d' }}>
+          breathes. Hidden on small/medium viewports.
+          `contain: layout paint` scopes reflow/repaint to this subtree so
+          the 25 tiles computing their 3D transforms on mount can never
+          trigger a layout pass on the auth card or the rest of the page —
+          that cross-subtree reflow was the other half of the stutter.
+          The opacity transition is the actual fade-in; transform-gpu keeps
+          it compositor-only (no repaint) rather than a layout-affecting one. */}
+      <div
+        className="hidden lg:block absolute inset-0 transform-gpu transition-opacity duration-500 ease-out"
+        style={{
+          perspective: '1400px',
+          contain: 'layout paint',
+          opacity: mounted ? 1 : 0,
+          willChange: 'opacity',
+        }}
+      >
+        <div className="login-scene-drift absolute inset-0 transform-gpu" style={{ transformStyle: 'preserve-3d', willChange: 'transform' }}>
           {TILE_LAYOUT.map((tile, i) => (
             <Tile key={i} {...tile} />
           ))}
