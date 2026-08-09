@@ -401,13 +401,24 @@ export function LoginPage() {
         <div className="w-full max-w-sm">
           {/* Header — shown here too (not just on the hidden-below-lg
               showcase canvas) so mobile/tablet still gets the brand mark. */}
+          {/* Header — dynamic per auth mode so the copy never claims
+              "welcome back" for someone signing up for the first time.
+              Mobile/tablet (showcase canvas hidden) keeps the VSX brand
+              mark above the dynamic copy; desktop just shows the copy,
+              since the brand mark already lives on the showcase canvas. */}
           <div className="mb-7 text-center lg:hidden">
             <h1 className="text-2xl font-bold tracking-tight text-white">VSX</h1>
             <p className="mt-1.5 text-sm text-zinc-500">Institutional Trading &amp; Discipline Journal</p>
           </div>
-          <div className="mb-7 text-center hidden lg:block">
-            <h1 className="text-2xl font-bold tracking-tight text-white">Welcome back</h1>
-            <p className="mt-1.5 text-sm text-zinc-500">Sign in to pick up where you left off.</p>
+          <div className="mb-7 text-center">
+            <h2 className="text-2xl font-semibold tracking-tight text-white">
+              {mode === 'signIn' ? 'Sign In' : 'Create Account'}
+            </h2>
+            <p className="mt-1.5 text-sm text-zinc-500">
+              {mode === 'signIn'
+                ? 'Enter your account details to access your journal.'
+                : 'Start tracking your trading discipline and analytics.'}
+            </p>
           </div>
 
           {/* Google OAuth — front and center */}
