@@ -172,7 +172,7 @@ export function Sidebar({ isMobile }: { isMobile: boolean }) {
     view, setView, privacyMode, setPrivacyMode, theme, setTheme, mainScrollRef, isExportConfirmOpen,
     setIsExportConfirmOpen, sidebarCollapsed, setSidebarCollapsed, isSettingsModalOpen,
     setIsSettingsModalOpen, settingsModalTab, setSettingsModalTab, isMobileSidebarOpen,
-    setIsMobileSidebarOpen, galleryView, setGalleryView, tradeSubView, setTradeSubView, dbSearch, setDbSearch,
+    setIsMobileSidebarOpen, galleryView, setGalleryView, dbSearch, setDbSearch,
     dbAccountFilter, setDbAccountFilter, dbSessionFilter, setDbSessionFilter, dbOutcomeFilter,
     setDbOutcomeFilter, dbRulesFilter, setDbRulesFilter, dbPage, setDbPage, dbViewMode, setDbViewMode,
     DB_PAGE_SIZE, tradeFilter, setTradeFilter, tradeSortField, setTradeSortField, tradeSortOrder,
@@ -452,7 +452,18 @@ export function Sidebar({ isMobile }: { isMobile: boolean }) {
                       <button
                         key={item.id}
                         onClick={() => {
-                          if (item.id !== 'trades') setTradeSubView('overview');
+                          // NOTE: tradeSubView is deliberately NOT reset here.
+                          // App.tsx defers `view` via useDeferredValue so the
+                          // outgoing screen stays mounted an extra render
+                          // while the next one's chunk loads. tradeSubView
+                          // isn't deferred, so flipping it here would land
+                          // in-between: TradesScreen still mounted (showing
+                          // Database) but tradeSubView already 'overview' —
+                          // a one-frame flash of the Overview sub-view right
+                          // before the real unmount. TradesScreen resets its
+                          // own tradeSubView in an unmount-cleanup effect
+                          // instead, which only fires once it's actually
+                          // gone, so there's nothing left on screen to flash.
                           setView(item.id);
                           setIsMobileSidebarOpen(false);
                         }}
