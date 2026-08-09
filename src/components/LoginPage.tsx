@@ -7,10 +7,8 @@ import {
   CheckCircle2,
   XCircle,
   TrendingUp,
-  TrendingDown,
   Brain,
   ChevronRight,
-  Scale,
   Wallet,
   CloudCog,
   ShieldCheck,
@@ -24,6 +22,13 @@ import { cn } from '../utils/format';
 // Supabase session (see App.tsx: `!session ? <LoginPage /> : <AppShell />`).
 // Not a dialog/overlay — there's nothing to show "behind" it pre-auth, so it
 // renders as its own screen rather than a modal.
+//
+// Layout: 60/40 split-screen.
+//   - Left  (60%, hidden below lg): ambient, floating showcase canvas built
+//     from static preview cards mirroring the real app screens.
+//   - Right (40%, fixed 480px max, full-width below lg): the actual auth
+//     container — header, Google OAuth, divider, email/password form, mode
+//     switcher, trust badges.
 //
 // All three auth paths (Google OAuth, email sign in, email sign up) are
 // handled here; the actual Supabase calls live in lib/supabaseClient.ts so
@@ -48,12 +53,10 @@ function GoogleIcon() {
 }
 
 // ============================================================================
-// Background preview cards — static, non-interactive mock-ups styled after
-// the real screens (Dashboard's Total P&L hero + Discipline banner +
-// Accounts panel + Win/Loss stat, TradeHistory's table, PerformanceCalendar's
-// heatmap, RulesPlaybook's rule list, MarketNotices, and the Wiki). These are
-// purely decorative: fixed demo numbers, no context/hooks, so the login
-// screen never depends on live app data.
+// Showcase preview cards — static, non-interactive mock-ups styled after the
+// real screens (Dashboard's Total P&L hero, Accounts panel, Discipline
+// banner, RulesPlaybook's rule list). Purely decorative: fixed demo numbers,
+// no context/hooks, so the login screen never depends on live app data.
 // ============================================================================
 
 function PnLPreviewCard() {
@@ -116,27 +119,6 @@ function DisciplinePreviewCard() {
   );
 }
 
-function TradeStatsPreviewCard() {
-  return (
-    <div className="w-64 rounded-2xl border border-zinc-800/80 bg-zinc-900/70 p-4 shadow-2xl flex items-center gap-3">
-      <div className="p-2.5 rounded-xl bg-zinc-800/60 flex-shrink-0">
-        <Scale className="w-4 h-4 text-zinc-400" />
-      </div>
-      <div className="min-w-0">
-        <p className="text-[10px] uppercase tracking-wider font-medium text-zinc-500">Win / Loss Ratio</p>
-        <p className="text-lg font-semibold tabular-nums flex items-baseline gap-1.5">
-          <span>
-            <span className="text-emerald-500">202W</span>
-            <span className="text-zinc-500 mx-1">-</span>
-            <span className="text-rose-500">110L</span>
-          </span>
-          <span className="text-[10px] font-normal text-zinc-500">(312 · 64.8%)</span>
-        </p>
-      </div>
-    </div>
-  );
-}
-
 function AccountsPreviewCard() {
   return (
     <div className="w-72 rounded-2xl border border-zinc-800/80 bg-zinc-900/70 p-4 shadow-2xl relative overflow-hidden">
@@ -156,73 +138,6 @@ function AccountsPreviewCard() {
           <span className="text-xs text-zinc-500">P&amp;L</span>
           <span className="text-sm font-semibold tabular-nums text-emerald-500">+$6,240.00</span>
         </div>
-      </div>
-    </div>
-  );
-}
-
-// Mirrors TradeHistory's table: header row + a handful of trade rows with
-// date/symbol/side/P&L columns, same uppercase-label header treatment.
-function TradeHistoryPreviewCard() {
-  const rows: Array<{ date: string; symbol: string; side: string; pnl: number }> = [
-    { date: '08/04', symbol: 'NQ', side: 'Long', pnl: 420.5 },
-    { date: '08/05', symbol: 'ES', side: 'Short', pnl: -180.25 },
-    { date: '08/06', symbol: 'GC', side: 'Long', pnl: 610.0 },
-    { date: '08/07', symbol: 'CL', side: 'Long', pnl: 95.75 },
-  ];
-  return (
-    <div className="w-80 rounded-2xl border border-zinc-800/80 bg-zinc-900/70 shadow-2xl overflow-hidden">
-      <div className="px-4 pt-3 pb-2 border-b border-white/5">
-        <p className="text-xs font-semibold text-white">Trade History</p>
-      </div>
-      <table className="w-full">
-        <thead>
-          <tr className="border-b border-white/5 text-left">
-            <th className="px-3 py-1.5 text-[9px] text-zinc-500 uppercase tracking-wider font-medium">Date</th>
-            <th className="px-3 py-1.5 text-[9px] text-zinc-500 uppercase tracking-wider font-medium">Symbol</th>
-            <th className="px-3 py-1.5 text-[9px] text-zinc-500 uppercase tracking-wider font-medium">Side</th>
-            <th className="px-3 py-1.5 text-[9px] text-zinc-500 uppercase tracking-wider font-medium text-right">P&amp;L</th>
-          </tr>
-        </thead>
-        <tbody>
-          {rows.map((r, i) => (
-            <tr key={i} className="border-b border-white/5 last:border-0">
-              <td className="px-3 py-1.5 text-xs text-zinc-400 whitespace-nowrap">{r.date}</td>
-              <td className="px-3 py-1.5 text-xs text-white font-semibold">{r.symbol}</td>
-              <td className="px-3 py-1.5 text-xs text-zinc-400">{r.side}</td>
-              <td className={cn('px-3 py-1.5 text-xs font-mono text-right font-bold', r.pnl >= 0 ? 'text-emerald-400' : 'text-rose-400')}>
-                {r.pnl >= 0 ? '+' : ''}{r.pnl.toFixed(2)}
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
-  );
-}
-
-// Mirrors PerformanceCalendar's win/loss heatmap grid — same rounded cells
-// tinted emerald/rose/neutral depending on the day's outcome.
-function CalendarHeatmapPreviewCard() {
-  const cells: Array<'win' | 'loss' | 'none'> = [
-    'win', 'win', 'loss', 'none', 'win', 'loss', 'win',
-    'loss', 'win', 'win', 'none', 'win', 'win', 'loss',
-  ];
-  return (
-    <div className="w-72 rounded-2xl border border-zinc-800/80 bg-zinc-900/70 p-4 shadow-2xl">
-      <p className="text-xs font-semibold text-white mb-3">Performance Calendar</p>
-      <div className="grid grid-cols-7 gap-1.5">
-        {cells.map((c, i) => (
-          <div
-            key={i}
-            className={cn(
-              'aspect-square rounded-md border',
-              c === 'win' && 'bg-emerald-500/25 border-emerald-500/40',
-              c === 'loss' && 'bg-rose-500/25 border-rose-500/40',
-              c === 'none' && 'bg-zinc-800/40 border-zinc-800/60'
-            )}
-          />
-        ))}
       </div>
     </div>
   );
@@ -250,159 +165,66 @@ function PlaybookPreviewCard() {
   );
 }
 
-// Mirrors MarketNotices' notice cards.
-function NoticePreviewCard() {
-  return (
-    <div className="w-64 rounded-2xl border border-zinc-800/80 bg-zinc-900/70 p-4 shadow-2xl">
-      <p className="text-[10px] uppercase tracking-wider text-zinc-500 mb-2">Market Notice</p>
-      <p className="text-sm font-semibold text-white mb-1">FOMC Rate Decision</p>
-      <p className="text-xs text-zinc-500">High impact · 2:00 PM EST</p>
-    </div>
-  );
-}
-
-// Mirrors the Knowledge Wiki's entry cards — category chip + title + snippet.
-function WikiPreviewCard() {
-  return (
-    <div className="w-64 rounded-2xl border border-zinc-800/80 bg-zinc-900/70 p-4 shadow-2xl">
-      <span className="inline-block text-[9px] uppercase tracking-wider px-2 py-0.5 rounded-full bg-violet-500/10 text-violet-400 mb-2">
-        Strategy
-      </span>
-      <p className="text-sm font-semibold text-white mb-1">Order Block Entries</p>
-      <p className="text-xs text-zinc-500 line-clamp-2">
-        Identify the last down candle before an impulsive move up, then wait for price to return to that zone.
-      </p>
-    </div>
-  );
-}
-
-// The cluster of cards that fills the background, cycling through every
-// preview variant so the wall is a mix of every screen, not just a repeat
-// of one card.
-const PREVIEW_CARDS = [
-  PnLPreviewCard,
-  TradeHistoryPreviewCard,
-  DisciplinePreviewCard,
-  CalendarHeatmapPreviewCard,
-  AccountsPreviewCard,
-  PlaybookPreviewCard,
-  TradeStatsPreviewCard,
-  NoticePreviewCard,
-  WikiPreviewCard,
-  AccountsPreviewCard,
-  CalendarHeatmapPreviewCard,
-  TradeHistoryPreviewCard,
-  DisciplinePreviewCard,
-  PlaybookPreviewCard,
-  PnLPreviewCard,
-  WikiPreviewCard,
+// Each showcase tile gets its own float timing/delay so the canvas never
+// bobs in perfect unison, plus a small vertical offset (margin, not
+// transform) so the four cards read as an organic scatter rather than a
+// rigid grid.
+const SHOWCASE_TILES: Array<{
+  Card: () => JSX.Element;
+  offsetClass: string;
+  duration: string;
+  delay: string;
+}> = [
+  { Card: PnLPreviewCard, offsetClass: 'mt-10', duration: '7s', delay: '0s' },
+  { Card: AccountsPreviewCard, offsetClass: 'mt-0', duration: '8s', delay: '0.6s' },
+  { Card: DisciplinePreviewCard, offsetClass: 'mt-4', duration: '7.5s', delay: '0.3s' },
+  { Card: PlaybookPreviewCard, offsetClass: 'mt-16', duration: '8.5s', delay: '0.9s' },
 ];
 
-// translateZ depth (px) per tile, cycled — negative pushes a card further
-// from the camera (back layer), positive pulls it closer (front layer).
-const DEPTH_CYCLE = [0, -140, 70, -70, 140, -210, 35, -105];
-
-// Depth-based opacity so far-back cards recede slightly, but everything
-// stays clearly readable — floor is high enough that charts/figures never
-// wash out against the dark backdrop.
-function opacityForDepth(depth: number) {
-  const fade = Math.min(Math.abs(depth) / 260, 0.15);
-  return (0.9 - fade).toFixed(2);
-}
-
-// Small cycle of floating-animation timings so tiles don't all bob in
-// perfect unison — each tile gets a duration/delay pulled from here.
-const FLOAT_CYCLE = [
-  { duration: '4s', delay: '0s' },
-  { duration: '4.6s', delay: '0.4s' },
-  { duration: '5s', delay: '0.8s' },
-  { duration: '4.3s', delay: '1.2s' },
-  { duration: '4.8s', delay: '0.2s' },
-];
-
-// Dense, wall-to-wall tilted 3D backdrop built from every preview card
-// above. Sits behind the login panel; pointer-events are disabled so it
-// never intercepts clicks. Structure, innermost to outermost:
-//   Card
-//   -> per-tile translateZ depth layer (static, creates the 3D stack)
-//   -> unified rotateX/rotateY/rotateZ cluster (static tilt, req'd by design)
-//   -> single scene-wide drift animation (the "continuous motion" layer)
-//   -> perspective root
-function AppPreviewBackdrop() {
+// Left-side (60%) showcase canvas — ambient emerald glows behind a loosely
+// scattered, gently floating cluster of preview cards. Purely decorative;
+// pointer-events disabled on the animated layer so it never intercepts
+// clicks, and hidden entirely below `lg` in favor of a full-width auth panel.
+function ShowcaseCanvas() {
   return (
-    <div className="pointer-events-none absolute inset-0 overflow-hidden bg-[#0d0f12]" aria-hidden="true">
-      <div className="absolute inset-0 flex items-center justify-center" style={{ perspective: '1400px' }}>
-        <div className="login-scene-drift" style={{ transformStyle: 'preserve-3d' }}>
-          <div
-            className="flex flex-wrap content-start gap-5 p-6"
-            style={{
-              width: '1900px',
-              maxWidth: 'none',
-              transform: 'rotateX(14deg) rotateY(-18deg) rotateZ(4deg)',
-              transformStyle: 'preserve-3d',
-            }}
-          >
-            {PREVIEW_CARDS.map((Card, i) => {
-              const depth = DEPTH_CYCLE[i % DEPTH_CYCLE.length];
-              const float = FLOAT_CYCLE[i % FLOAT_CYCLE.length];
-              return (
-                <div
-                  key={i}
-                  className="login-card-float"
-                  style={
-                    {
-                      opacity: opacityForDepth(depth),
-                      animationDuration: float.duration,
-                      animationDelay: float.delay,
-                      '--depth': `${depth}px`,
-                    } as React.CSSProperties
-                  }
-                >
-                  <Card />
-                </div>
-              );
-            })}
-          </div>
-        </div>
+    <div className="relative hidden lg:flex w-[60%] flex-shrink-0 items-center justify-center overflow-hidden bg-[#0d0f12] px-12 xl:px-20 py-10">
+      {/* Ambient emerald glows */}
+      <div className="absolute -left-32 top-1/4 w-[480px] h-[480px] rounded-full bg-emerald-500/10 blur-[120px]" />
+      <div className="absolute right-0 -bottom-24 w-[420px] h-[420px] rounded-full bg-emerald-500/10 blur-[120px]" />
+      <div className="absolute left-1/3 -top-24 w-[360px] h-[360px] rounded-full bg-slate-500/10 blur-[120px]" />
+
+      {/* Brand mark, anchored top-left of the canvas */}
+      <div className="absolute top-10 left-12 xl:left-20">
+        <h1 className="text-2xl font-bold tracking-tight text-white">VSX</h1>
+        <p className="mt-1 text-sm text-zinc-500">Institutional Trading &amp; Discipline Journal</p>
       </div>
 
-      {/* Ambient glows for depth — green on the left behind the profit
-          metrics, cool slate/blue on the right to balance the palette */}
-      <div className="absolute -left-24 top-1/4 w-[420px] h-[420px] rounded-full bg-emerald-500/15 blur-[120px]" />
-      <div className="absolute -right-24 bottom-1/4 w-[420px] h-[420px] rounded-full bg-slate-500/15 blur-[120px]" />
-
-      {/* Soft fade at the edges so the login panel stays legible, without
-          crushing the preview cards into near-invisibility */}
-      <div className="absolute inset-0 bg-gradient-to-b from-[#0d0f12]/35 via-[#0d0f12]/45 to-[#0d0f12]/70" />
+      {/* Scattered, floating preview cards */}
+      <div className="relative z-10 grid grid-cols-2 gap-10 xl:gap-14 max-w-2xl w-full pointer-events-none">
+        {SHOWCASE_TILES.map(({ Card, offsetClass, duration, delay }, i) => (
+          <div
+            key={i}
+            className={offsetClass}
+            style={{ animation: `login-card-float ${duration} ease-in-out ${delay} infinite` }}
+          >
+            <Card />
+          </div>
+        ))}
+      </div>
 
       <style>{`
-        @keyframes login-scene-drift {
-          0% { transform: translate3d(-1.4%, -1%, 0) rotate(-0.4deg); }
-          50% { transform: translate3d(1.4%, 1%, 0) rotate(0.4deg); }
-          100% { transform: translate3d(-1.4%, -1%, 0) rotate(-0.4deg); }
-        }
-        .login-scene-drift {
-          animation: login-scene-drift 48s ease-in-out infinite;
-        }
         @keyframes login-card-float {
-          0% { transform: translateZ(var(--depth)) translateY(-10px); }
-          50% { transform: translateZ(var(--depth)) translateY(10px); }
-          100% { transform: translateZ(var(--depth)) translateY(-10px); }
-        }
-        .login-card-float {
-          animation-name: login-card-float;
-          animation-timing-function: ease-in-out;
-          animation-iteration-count: infinite;
+          0% { transform: translateY(0); }
+          50% { transform: translateY(-14px); }
+          100% { transform: translateY(0); }
         }
         @media (prefers-reduced-motion: reduce) {
-          .login-scene-drift { animation: none; }
-          .login-card-float { animation: none; }
+          .login-scene-drift, [style*="login-card-float"] { animation: none !important; }
         }
       `}</style>
     </div>
   );
 }
-
 
 export function LoginPage() {
   const [mode, setMode] = useState<AuthMode>('signIn');
@@ -527,177 +349,187 @@ export function LoginPage() {
     'placeholder:text-zinc-500 outline-none transition-colors focus:border-zinc-500 focus:bg-[#181a1f]';
 
   return (
-    <div className="relative min-h-screen w-full flex items-center justify-center bg-[#0d0f12] px-4 py-10 overflow-hidden">
-      <AppPreviewBackdrop />
+    <div className="min-h-screen w-full flex bg-[#0d0f12] overflow-hidden">
+      {/* Left 60% — ambient, floating product showcase. Hidden below lg. */}
+      <ShowcaseCanvas />
 
-      <div className="relative z-10 w-full max-w-sm bg-zinc-950/85 backdrop-blur-2xl border border-zinc-800/80 shadow-2xl shadow-black/80 rounded-2xl p-6 sm:p-7">
-        {/* Header */}
-        <div className="mb-7 text-center">
-          <h1 className="text-2xl font-bold tracking-tight text-white">VSX</h1>
-          <p className="mt-1.5 text-sm text-zinc-500">Institutional Trading &amp; Discipline Journal</p>
-        </div>
-
-        {/* Google OAuth — front and center */}
-        <button
-          type="button"
-          onClick={handleGoogleSignIn}
-          disabled={isGoogleSubmitting || isSubmitting}
-          className="w-full h-11 flex items-center justify-center gap-2.5 rounded-lg bg-white text-zinc-900 text-sm font-medium hover:bg-zinc-100 transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
-        >
-          {isGoogleSubmitting ? (
-            <Loader2 className="w-4 h-4 animate-spin" />
-          ) : (
-            <GoogleIcon />
-          )}
-          Continue with Google
-        </button>
-
-        <div className="flex items-center gap-3 my-5">
-          <div className="flex-1 h-px bg-zinc-800" />
-          <span className="text-xs text-zinc-500 uppercase tracking-wider">or</span>
-          <div className="flex-1 h-px bg-zinc-800" />
-        </div>
-
-        {/* Error / info banners */}
-        {errorMsg && (
-          <div className="mb-4 flex items-start gap-2 rounded-lg border border-red-900/50 bg-red-950/40 px-3 py-2.5 text-sm text-red-300">
-            <AlertCircle className="w-4 h-4 mt-0.5 flex-shrink-0" />
-            <span>{errorMsg}</span>
+      {/* Right 40% (fixed 480px max) — hyper-focused auth container. Full
+          width below lg, since the showcase canvas is hidden there. */}
+      <div className="relative w-full lg:w-[40%] lg:min-w-[420px] lg:max-w-[480px] flex-shrink-0 flex items-center justify-center min-h-screen bg-zinc-950 lg:border-l lg:border-zinc-800/80 backdrop-blur-2xl px-4 py-10 sm:px-8">
+        <div className="w-full max-w-sm">
+          {/* Header — shown here too (not just on the hidden-below-lg
+              showcase canvas) so mobile/tablet still gets the brand mark. */}
+          <div className="mb-7 text-center lg:hidden">
+            <h1 className="text-2xl font-bold tracking-tight text-white">VSX</h1>
+            <p className="mt-1.5 text-sm text-zinc-500">Institutional Trading &amp; Discipline Journal</p>
           </div>
-        )}
-        {infoMsg && (
-          <div className="mb-4 flex items-start gap-2 rounded-lg border border-emerald-900/50 bg-emerald-950/40 px-3 py-2.5 text-sm text-emerald-300">
-            <CheckCircle2 className="w-4 h-4 mt-0.5 flex-shrink-0" />
-            <span>{infoMsg}</span>
-          </div>
-        )}
-
-        {/* Email / password form */}
-        <form onSubmit={handleSubmit} className="space-y-3">
-          <div>
-            <label htmlFor="auth-email" className="block text-xs font-medium text-zinc-400 mb-1.5">
-              Email
-            </label>
-            <input
-              id="auth-email"
-              type="email"
-              autoComplete="email"
-              value={email}
-              onChange={e => setEmail(e.target.value)}
-              placeholder="you@example.com"
-              className={inputClass}
-            />
+          <div className="mb-7 text-center hidden lg:block">
+            <h1 className="text-2xl font-bold tracking-tight text-white">Welcome back</h1>
+            <p className="mt-1.5 text-sm text-zinc-500">Sign in to pick up where you left off.</p>
           </div>
 
-          <div>
-            <div className="flex items-center justify-between mb-1.5">
-              <label htmlFor="auth-password" className="block text-xs font-medium text-zinc-400">
-                Password
-              </label>
-              {mode === 'signIn' && (
-                <button
-                  type="button"
-                  onClick={() => setInfoMsg('Password reset isn\'t wired up yet — check back soon.')}
-                  className="text-xs font-medium text-zinc-500 hover:text-white transition-colors"
-                >
-                  Forgot Password?
-                </button>
-              )}
-            </div>
-            <div className="relative">
-              <input
-                id="auth-password"
-                type={showPassword ? 'text' : 'password'}
-                autoComplete={mode === 'signIn' ? 'current-password' : 'new-password'}
-                value={password}
-                onChange={e => setPassword(e.target.value)}
-                placeholder={mode === 'signUp' ? '8+ characters, 1 special' : '••••••••'}
-                className={cn(inputClass, 'pr-11')}
-              />
-              <button
-                type="button"
-                onClick={() => setShowPassword(v => !v)}
-                aria-label={showPassword ? 'Hide password' : 'Show password'}
-                className="absolute right-0 top-0 h-11 w-11 flex items-center justify-center text-zinc-500 hover:text-zinc-300 transition-colors"
-              >
-                {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-              </button>
-            </div>
-            {mode === 'signUp' && (
-              <p className="mt-1.5 text-[11px] text-zinc-500">
-                Must be 8+ characters and include a special character (e.g. ! @ # $).
-              </p>
+          {/* Google OAuth — front and center */}
+          <button
+            type="button"
+            onClick={handleGoogleSignIn}
+            disabled={isGoogleSubmitting || isSubmitting}
+            className="w-full h-11 flex items-center justify-center gap-2.5 rounded-lg bg-white text-zinc-900 text-sm font-medium hover:bg-zinc-100 transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
+          >
+            {isGoogleSubmitting ? (
+              <Loader2 className="w-4 h-4 animate-spin" />
+            ) : (
+              <GoogleIcon />
             )}
+            Continue with Google
+          </button>
+
+          <div className="flex items-center gap-3 my-5">
+            <div className="flex-1 h-px bg-zinc-800" />
+            <span className="text-xs text-zinc-500 uppercase tracking-wider">or</span>
+            <div className="flex-1 h-px bg-zinc-800" />
           </div>
 
-          {mode === 'signUp' && (
+          {/* Error / info banners */}
+          {errorMsg && (
+            <div className="mb-4 flex items-start gap-2 rounded-lg border border-red-900/50 bg-red-950/40 px-3 py-2.5 text-sm text-red-300">
+              <AlertCircle className="w-4 h-4 mt-0.5 flex-shrink-0" />
+              <span>{errorMsg}</span>
+            </div>
+          )}
+          {infoMsg && (
+            <div className="mb-4 flex items-start gap-2 rounded-lg border border-emerald-900/50 bg-emerald-950/40 px-3 py-2.5 text-sm text-emerald-300">
+              <CheckCircle2 className="w-4 h-4 mt-0.5 flex-shrink-0" />
+              <span>{infoMsg}</span>
+            </div>
+          )}
+
+          {/* Email / password form */}
+          <form onSubmit={handleSubmit} className="space-y-3">
             <div>
-              <label htmlFor="auth-confirm-password" className="block text-xs font-medium text-zinc-400 mb-1.5">
-                Confirm Password
+              <label htmlFor="auth-email" className="block text-xs font-medium text-zinc-400 mb-1.5">
+                Email
               </label>
+              <input
+                id="auth-email"
+                type="email"
+                autoComplete="email"
+                value={email}
+                onChange={e => setEmail(e.target.value)}
+                placeholder="you@example.com"
+                className={inputClass}
+              />
+            </div>
+
+            <div>
+              <div className="flex items-center justify-between mb-1.5">
+                <label htmlFor="auth-password" className="block text-xs font-medium text-zinc-400">
+                  Password
+                </label>
+                {mode === 'signIn' && (
+                  <button
+                    type="button"
+                    onClick={() => setInfoMsg('Password reset isn\'t wired up yet — check back soon.')}
+                    className="text-xs font-medium text-zinc-500 hover:text-white transition-colors"
+                  >
+                    Forgot Password?
+                  </button>
+                )}
+              </div>
               <div className="relative">
                 <input
-                  id="auth-confirm-password"
-                  type={showConfirmPassword ? 'text' : 'password'}
-                  autoComplete="new-password"
-                  value={confirmPassword}
-                  onChange={e => setConfirmPassword(e.target.value)}
-                  placeholder="Re-enter your password"
+                  id="auth-password"
+                  type={showPassword ? 'text' : 'password'}
+                  autoComplete={mode === 'signIn' ? 'current-password' : 'new-password'}
+                  value={password}
+                  onChange={e => setPassword(e.target.value)}
+                  placeholder={mode === 'signUp' ? '8+ characters, 1 special' : '••••••••'}
                   className={cn(inputClass, 'pr-11')}
                 />
                 <button
                   type="button"
-                  onClick={() => setShowConfirmPassword(v => !v)}
-                  aria-label={showConfirmPassword ? 'Hide password' : 'Show password'}
+                  onClick={() => setShowPassword(v => !v)}
+                  aria-label={showPassword ? 'Hide password' : 'Show password'}
                   className="absolute right-0 top-0 h-11 w-11 flex items-center justify-center text-zinc-500 hover:text-zinc-300 transition-colors"
                 >
-                  {showConfirmPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                 </button>
               </div>
+              {mode === 'signUp' && (
+                <p className="mt-1.5 text-[11px] text-zinc-500">
+                  Must be 8+ characters and include a special character (e.g. ! @ # $).
+                </p>
+              )}
             </div>
-          )}
 
-          <button
-            type="submit"
-            disabled={isSubmitting || isGoogleSubmitting}
-            className="w-full h-11 mt-1 flex items-center justify-center gap-2 rounded-lg bg-zinc-100 text-zinc-900 text-sm font-medium hover:bg-emerald-500 hover:text-black hover:shadow-lg hover:shadow-emerald-500/25 transition-all duration-200 disabled:opacity-60 disabled:cursor-not-allowed"
-          >
-            {isSubmitting && <Loader2 className="w-4 h-4 animate-spin" />}
-            {mode === 'signIn' ? 'Sign In' : 'Create Account'}
-          </button>
-        </form>
+            {mode === 'signUp' && (
+              <div>
+                <label htmlFor="auth-confirm-password" className="block text-xs font-medium text-zinc-400 mb-1.5">
+                  Confirm Password
+                </label>
+                <div className="relative">
+                  <input
+                    id="auth-confirm-password"
+                    type={showConfirmPassword ? 'text' : 'password'}
+                    autoComplete="new-password"
+                    value={confirmPassword}
+                    onChange={e => setConfirmPassword(e.target.value)}
+                    placeholder="Re-enter your password"
+                    className={cn(inputClass, 'pr-11')}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowConfirmPassword(v => !v)}
+                    aria-label={showConfirmPassword ? 'Hide password' : 'Show password'}
+                    className="absolute right-0 top-0 h-11 w-11 flex items-center justify-center text-zinc-500 hover:text-zinc-300 transition-colors"
+                  >
+                    {showConfirmPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  </button>
+                </div>
+              </div>
+            )}
 
-        {/* Bottom form switcher */}
-        <p className="mt-5 text-center text-xs text-zinc-500">
-          {mode === 'signIn' ? (
-            <>Don't have an account?{' '}
-              <button type="button" onClick={() => switchMode('signUp')} className="text-zinc-300 hover:text-white hover:underline underline-offset-2 transition-colors duration-200">
-                Sign up
-              </button>
-            </>
-          ) : (
-            <>Already have an account?{' '}
-              <button type="button" onClick={() => switchMode('signIn')} className="text-zinc-300 hover:text-white hover:underline underline-offset-2 transition-colors duration-200">
-                Sign in
-              </button>
-            </>
-          )}
-        </p>
+            <button
+              type="submit"
+              disabled={isSubmitting || isGoogleSubmitting}
+              className="w-full h-11 mt-1 flex items-center justify-center gap-2 rounded-lg bg-zinc-100 text-zinc-900 text-sm font-medium hover:bg-emerald-500 hover:text-black hover:shadow-lg hover:shadow-emerald-500/25 transition-all duration-200 disabled:opacity-60 disabled:cursor-not-allowed"
+            >
+              {isSubmitting && <Loader2 className="w-4 h-4 animate-spin" />}
+              {mode === 'signIn' ? 'Sign In' : 'Create Account'}
+            </button>
+          </form>
 
-        {/* Trust badges */}
-        <div className="mt-6 pt-5 border-t border-zinc-800/80 flex items-center justify-center gap-4 text-[10px] uppercase tracking-wider text-zinc-500">
-          <span className="flex items-center gap-1.5">
-            <CloudCog className="w-3.5 h-3.5" />
-            Cloud Synced
-          </span>
-          <span className="flex items-center gap-1.5">
-            <ShieldCheck className="w-3.5 h-3.5" />
-            Encrypted
-          </span>
-          <span className="flex items-center gap-1.5">
-            <Users className="w-3.5 h-3.5" />
-            Multi-Account
-          </span>
+          {/* Bottom form switcher */}
+          <p className="mt-5 text-center text-xs text-zinc-500">
+            {mode === 'signIn' ? (
+              <>Don't have an account?{' '}
+                <button type="button" onClick={() => switchMode('signUp')} className="text-zinc-300 hover:text-white hover:underline underline-offset-2 transition-colors duration-200">
+                  Sign up
+                </button>
+              </>
+            ) : (
+              <>Already have an account?{' '}
+                <button type="button" onClick={() => switchMode('signIn')} className="text-zinc-300 hover:text-white hover:underline underline-offset-2 transition-colors duration-200">
+                  Sign in
+                </button>
+              </>
+            )}
+          </p>
+
+          {/* Trust badges */}
+          <div className="mt-6 pt-5 border-t border-zinc-800/80 flex items-center justify-center gap-4 text-[10px] uppercase tracking-wider text-zinc-500">
+            <span className="flex items-center gap-1.5">
+              <CloudCog className="w-3.5 h-3.5" />
+              Cloud Synced
+            </span>
+            <span className="flex items-center gap-1.5">
+              <ShieldCheck className="w-3.5 h-3.5" />
+              Encrypted
+            </span>
+            <span className="flex items-center gap-1.5">
+              <Users className="w-3.5 h-3.5" />
+              Multi-Account
+            </span>
+          </div>
         </div>
       </div>
     </div>
