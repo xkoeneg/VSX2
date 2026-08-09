@@ -130,7 +130,14 @@ export const PageHeader: React.FC<{
 }> = ({ title, description, actions }) => (
   <div className="h-14 flex items-center justify-between gap-4">
     <div className="min-w-0">
-      <h1 className="text-2xl font-bold text-white tracking-tight leading-none truncate">
+      {/* leading-snug (not leading-none) + pb-0.5 give descenders (g/y/p/q/j)
+          enough room inside the line box before `truncate`'s overflow-hidden
+          clips it — leading-none's line-height was exactly the font size,
+          so tall/bold glyphs' descenders got cut off at the bottom edge.
+          This pb-0.5 is scoped to the title text itself, not the header
+          row — it doesn't affect the outer spacing contract described in
+          the "NOTE ON PADDING/MARGIN" comment above. */}
+      <h1 className="text-2xl font-bold text-white tracking-tight leading-snug truncate pb-0.5">
         {title}
       </h1>
       {description && (
