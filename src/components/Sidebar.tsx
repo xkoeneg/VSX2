@@ -162,7 +162,8 @@ WikiCategory,
 WikiEntry
 } from '../types';
 import { cn } from '../utils/format';
-import { supabase } from '../lib/supabase';
+import { supabase } from '../lib/supabaseClient';
+import type { AuthChangeEvent, Session } from '@supabase/supabase-js';
 import { useAppContext } from '../context/AppContext';
 import { renderStatCard, renderAccountFilter, renderAccountTypeBadge, renderTradingAccountTypeBadge } from '../components/shared/RenderHelpers';
 
@@ -301,9 +302,11 @@ export function Sidebar({ isMobile }: { isMobile: boolean }) {
         if (isMounted) setAuthUser(mapUser(data.user));
       });
 
-      const { data: authListener } = supabase.auth.onAuthStateChange((_event, session) => {
-        setAuthUser(mapUser(session?.user));
-      });
+      const { data: authListener }: { data: { subscription: any } } = supabase.auth.onAuthStateChange(
+        (_event: AuthChangeEvent, session: Session | null) => {
+          setAuthUser(mapUser(session?.user));
+        }
+      );
 
       return () => {
         isMounted = false;
