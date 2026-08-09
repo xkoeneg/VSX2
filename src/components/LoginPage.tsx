@@ -912,7 +912,7 @@ export function LoginPage() {
           )}
 
           {/* Email / password form */}
-          <form onSubmit={handleSubmit} className="space-y-2">
+          <form onSubmit={handleSubmit} className="space-y-4">
             <div>
               <label htmlFor="auth-email" className="block text-xs font-medium text-zinc-400 mb-1.5">
                 Email
@@ -994,7 +994,7 @@ export function LoginPage() {
             <button
               type="submit"
               disabled={isSubmitting || isGoogleSubmitting}
-              className="w-full h-11 mt-1 flex items-center justify-center gap-2 rounded-lg bg-zinc-100 text-zinc-900 text-sm font-medium hover:bg-emerald-500 hover:text-black hover:shadow-lg hover:shadow-emerald-500/25 transition-all duration-200 disabled:opacity-60 disabled:cursor-not-allowed"
+              className="w-full h-11 flex items-center justify-center gap-2 rounded-lg bg-zinc-100 text-zinc-900 text-sm font-medium hover:bg-emerald-500 hover:text-black hover:shadow-lg hover:shadow-emerald-500/25 transition-all duration-200 disabled:opacity-60 disabled:cursor-not-allowed"
             >
               {isSubmitting && <Loader2 className="w-4 h-4 animate-spin" />}
               {mode === 'signIn' ? 'Sign In' : 'Create Account'}
