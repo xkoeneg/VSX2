@@ -447,7 +447,7 @@ export function LoginPage() {
       <div className="relative z-10 w-full max-w-sm bg-zinc-900/80 backdrop-blur-xl border border-zinc-800/80 shadow-2xl shadow-emerald-950/20 rounded-2xl p-6 sm:p-7">
         {/* Header */}
         <div className="mb-7 text-center">
-          <h1 className="text-2xl font-bold tracking-tight text-white">Welcome back to VSX</h1>
+          <h1 className="text-2xl font-bold tracking-tight text-white">VSX</h1>
           <p className="mt-1.5 text-sm text-zinc-500">Institutional Trading &amp; Discipline Journal</p>
         </div>
 
