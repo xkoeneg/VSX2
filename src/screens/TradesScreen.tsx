@@ -435,13 +435,13 @@ function TradeAnalyticsCard({ trades, stats, privacyMode, theme, tc, tradeFilter
 
   return (
     <div className={cn(
-      "relative overflow-hidden rounded-xl border border-white/10 bg-zinc-900/60 backdrop-blur-md p-5 mb-4",
+      "relative overflow-hidden rounded-xl border border-white/10 bg-zinc-900/60 backdrop-blur-md p-4 mb-4",
       theme === 'light' && 'bg-white border-zinc-200'
     )}>
-      <div className="flex flex-col lg:flex-row items-center lg:items-stretch gap-6">
-        {/* Left — donut gauge + legend, ~28% width on large screens */}
-        <div className="flex flex-col items-center justify-center gap-4 flex-shrink-0 w-full lg:w-[26%]">
-          <div className="relative w-[112px] h-[112px] flex-shrink-0">
+      <div className="flex flex-col lg:flex-row items-center lg:items-center gap-4">
+        {/* Left — donut gauge + legend, compact fixed width */}
+        <div className="flex items-center gap-3 flex-shrink-0 w-full lg:w-auto">
+          <div className="relative w-[72px] h-[72px] flex-shrink-0">
             <svg viewBox="0 0 112 112" className="w-full h-full -rotate-90">
               <circle cx="56" cy="56" r={r} fill="none" stroke="rgb(39,39,42)" strokeWidth={strokeWidth} />
               {winLen > 0 && (
@@ -464,24 +464,24 @@ function TradeAnalyticsCard({ trades, stats, privacyMode, theme, tc, tradeFilter
               )}
             </svg>
             <div className="absolute inset-0 flex flex-col items-center justify-center">
-              <span className={cn("text-lg font-bold tabular-nums leading-none", tc.text)}>
+              <span className={cn("text-sm font-bold tabular-nums leading-none", tc.text)}>
                 {total > 0 ? `${stats.winRate.toFixed(1)}%` : '—'}
               </span>
-              <span className="text-[9px] uppercase tracking-wider text-zinc-500 mt-1.5">Win Rate</span>
+              <span className="text-[7px] uppercase tracking-wider text-zinc-500 mt-1">Win Rate</span>
             </div>
           </div>
 
-          {/* Legend — stacked below the gauge, clickable to filter */}
-          <div className="flex flex-col gap-1.5 w-full max-w-[160px]">
+          {/* Legend — stacked beside the gauge, clickable to filter */}
+          <div className="flex flex-col gap-1 w-full max-w-[130px]">
             <button
               type="button"
               onClick={() => setTradeFilter(prev => prev === 'profit' ? 'all' : 'profit')}
               className={cn(
-                "flex items-center gap-1.5 text-xs font-medium px-2 py-1 rounded-lg transition-colors",
+                "flex items-center gap-1.5 text-[11px] font-medium px-1.5 py-0.5 rounded-md transition-colors",
                 tradeFilter === 'profit' ? 'bg-emerald-500/10 ring-1 ring-emerald-500/40' : 'hover:bg-white/5'
               )}
             >
-              <span className="w-2 h-2 rounded-full bg-emerald-500 flex-shrink-0" />
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 flex-shrink-0" />
               <span className="text-zinc-500">Wins</span>
               <span className="text-emerald-400 font-semibold tabular-nums ml-auto">{wins}</span>
             </button>
@@ -489,11 +489,11 @@ function TradeAnalyticsCard({ trades, stats, privacyMode, theme, tc, tradeFilter
               type="button"
               onClick={() => setTradeFilter(prev => prev === 'loss' ? 'all' : 'loss')}
               className={cn(
-                "flex items-center gap-1.5 text-xs font-medium px-2 py-1 rounded-lg transition-colors",
+                "flex items-center gap-1.5 text-[11px] font-medium px-1.5 py-0.5 rounded-md transition-colors",
                 tradeFilter === 'loss' ? 'bg-rose-500/10 ring-1 ring-rose-500/40' : 'hover:bg-white/5'
               )}
             >
-              <span className="w-2 h-2 rounded-full bg-rose-500 flex-shrink-0" />
+              <span className="w-1.5 h-1.5 rounded-full bg-rose-500 flex-shrink-0" />
               <span className="text-zinc-500">Losses</span>
               <span className="text-rose-400 font-semibold tabular-nums ml-auto">{losses}</span>
             </button>
@@ -501,11 +501,11 @@ function TradeAnalyticsCard({ trades, stats, privacyMode, theme, tc, tradeFilter
               type="button"
               onClick={() => setTradeFilter(prev => prev === 'breakeven' ? 'all' : 'breakeven')}
               className={cn(
-                "flex items-center gap-1.5 text-xs font-medium px-2 py-1 rounded-lg transition-colors",
+                "flex items-center gap-1.5 text-[11px] font-medium px-1.5 py-0.5 rounded-md transition-colors",
                 tradeFilter === 'breakeven' ? 'bg-zinc-400/10 ring-1 ring-zinc-400/40' : 'hover:bg-white/5'
               )}
             >
-              <span className="w-2 h-2 rounded-full bg-zinc-400 flex-shrink-0" />
+              <span className="w-1.5 h-1.5 rounded-full bg-zinc-400 flex-shrink-0" />
               <span className="text-zinc-500">Break-Even</span>
               <span className="text-zinc-300 font-semibold tabular-nums ml-auto">{breakeven}</span>
             </button>
