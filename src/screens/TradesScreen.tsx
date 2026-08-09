@@ -1,5 +1,5 @@
 import type React from 'react';
-import { useState, useMemo, useCallback, memo } from 'react';
+import { useState, useMemo, useCallback, useEffect, memo } from 'react';
 import {
   LayoutDashboard,
   BookOpen,
@@ -503,6 +503,21 @@ export function TradesScreen() {
     exportBackup, importBackup,
   } = useAppContext();
 
+  // Resets the Database sub-view back to Overview once TradesScreen has
+  // actually unmounted — deliberately NOT done from the sidebar's click
+  // handler. App.tsx keeps the outgoing screen mounted for one extra render
+  // via useDeferredValue(view) while the next screen's chunk loads; if this
+  // reset fired synchronously on click instead, tradeSubView would flip to
+  // 'overview' one render before TradesScreen actually unmounts, flashing
+  // the Overview sub-view for a frame. Running it in the cleanup function
+  // ties the reset to the real unmount instead of the click event, so
+  // there's nothing left mounted to flash.
+  useEffect(() => {
+    return () => {
+      setTradeSubView('overview');
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const SORT_FIELD_LABELS = { date: 'Date', pnl: 'P&L', rr: 'R:R' } as const;
   type GallerySize = 'small' | 'medium' | 'large';
