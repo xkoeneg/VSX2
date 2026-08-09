@@ -3216,8 +3216,70 @@ export function useAppState() {
   // Both directions go through the same DATA_SCHEMA_VERSION / migrateStoredData
   // machinery as the localStorage load effect above, so a backup exported by
   // an older (or newer) version of the app always imports cleanly.
+  //
+  // Two distinct export/import paths live below:
+  //   1. Full System Backup & Restore (.json) — exportBackup / importBackup.
+  //      100% of app state, including the Life Discipline Hub. This is the
+  //      default/primary option, capable of a 1:1 restore.
+  //   2. Trades Only Export (.csv or .json) — exportTradesOnly.
+  //      Just the trade records, for spreadsheet analysis or external
+  //      review. No discipline logs, habits, or full system configuration.
+
+  // Shared shape for the "lifeDisciplineData" localStorage payload, reused
+  // by both the full backup export and import so the two stay in sync.
+  const buildLifeDisciplineSnapshot = () => ({
+    startDate: lifeDisciplineStartDate,
+    checks: lifeDisciplineChecks,
+    graceDays: lifeDisciplineGraceDays,
+    missedReasons: lifeDisciplineMissedReasons,
+    recheckNotes: lifeDisciplineRecheckNotes,
+    config: challengeConfig,
+    hasStarted: hasStartedChallenge,
+  });
+
+  // Shared "download this string as a file" helper — prefers the browser's
+  // native Save As dialog (File System Access API) so the user picks the
+  // filename and folder, and falls back to a classic auto-download link.
+  const saveStringAsFile = async (contents: string, defaultFileName: string, mimeType: string, pickerDescription: string) => {
+    const showSaveFilePicker = (window as any).showSaveFilePicker;
+    if (typeof showSaveFilePicker === 'function') {
+      try {
+        const handle = await showSaveFilePicker({
+          suggestedName: defaultFileName,
+          types: [{ description: pickerDescription, accept: { [mimeType]: [`.${defaultFileName.split('.').pop()}`] } }],
+        });
+        const writable = await handle.createWritable();
+        await writable.write(contents);
+        await writable.close();
+        return;
+      } catch (err: any) {
+        // User closed/cancelled the Save As dialog — treat as "changed
+        // their mind", not an error. Don't fall back to auto-download.
+        if (err?.name === 'AbortError') return;
+        // Any other failure (e.g. permission issue): fall through to the
+        // classic download below rather than losing the export entirely.
+      }
+    }
+
+    // Fallback for browsers without Save-As support (Firefox, Safari, etc.)
+    // — this downloads straight to the default Downloads folder.
+    const blob = new Blob([contents], { type: mimeType });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = defaultFileName;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  };
+
+  // 1a. FULL SYSTEM BACKUP — exports 100% of app state: trades, accounts,
+  // the rules playbook, and the complete Life Discipline Hub object (active
+  // challenge config, daily check logs, and history) so a restore can
+  // rehydrate everything 1:1.
   const exportBackup = async () => {
-    const backupData: StoredData & { exportedAt: string } = {
+    const backupData: StoredData & { exportedAt: string; lifeDisciplineData: ReturnType<typeof buildLifeDisciplineSnapshot> } = {
       version: DATA_SCHEMA_VERSION,
       exportedAt: new Date().toISOString(),
       accounts,
@@ -3232,47 +3294,17 @@ export function useAppState() {
       emotionsList,
       customSymbols,
       customPillars,
+      lifeDisciplineData: buildLifeDisciplineSnapshot(),
     };
 
     const jsonString = JSON.stringify(backupData, null, 2);
-    const defaultFileName = `vsx_backup_${new Date().toISOString().split('T')[0]}.json`;
-
-    // Prefer the browser's native "Save As" dialog (File System Access API)
-    // so YOU pick the filename and folder, instead of it silently landing
-    // in Downloads. Supported in Chrome, Edge, and other Chromium browsers.
-    const showSaveFilePicker = (window as any).showSaveFilePicker;
-    if (typeof showSaveFilePicker === 'function') {
-      try {
-        const handle = await showSaveFilePicker({
-          suggestedName: defaultFileName,
-          types: [{ description: 'VSX Backup', accept: { 'application/json': ['.json'] } }],
-        });
-        const writable = await handle.createWritable();
-        await writable.write(jsonString);
-        await writable.close();
-        return;
-      } catch (err: any) {
-        // User closed/cancelled the Save As dialog — treat as "changed
-        // their mind", not an error. Don't fall back to auto-download.
-        if (err?.name === 'AbortError') return;
-        // Any other failure (e.g. permission issue): fall through to the
-        // classic download below rather than losing the export entirely.
-      }
-    }
-
-    // Fallback for browsers without Save-As support (Firefox, Safari, etc.)
-    // — this downloads straight to the default Downloads folder.
-    const blob = new Blob([jsonString], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = defaultFileName;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    URL.revokeObjectURL(url);
+    const defaultFileName = `vsx_full_backup_${new Date().toISOString().split('T')[0]}.json`;
+    await saveStringAsFile(jsonString, defaultFileName, 'application/json', 'VSX Full System Backup');
   };
 
+  // 1b. FULL SYSTEM RESTORE — overwrites and re-hydrates every context
+  // (trading journal AND Life Discipline Hub) so the whole app immediately
+  // matches the imported backup, no reload required.
   const importBackup = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -3282,7 +3314,7 @@ export function useAppState() {
       try {
         const raw = JSON.parse(event.target?.result as string);
         if (!raw || typeof raw !== 'object' || (!Array.isArray(raw.accounts) && !Array.isArray(raw.trades))) {
-          alert('Invalid backup file: this does not look like a trading journal backup.');
+          alert('Invalid backup file: this does not look like a full system backup.');
           return;
         }
         const migrated = migrateStoredData(raw);
@@ -3299,13 +3331,73 @@ export function useAppState() {
         setCustomSymbols(migrated.customSymbols);
         setCustomPillars(migrated.customPillars);
         localStorage.setItem('tradingJournal', JSON.stringify(migrated));
-        alert('Backup restored successfully!');
+
+        // Re-hydrate the Life Discipline Hub (active challenge config, daily
+        // check logs, grace days, missed-day reasons, and history) if the
+        // backup carries it — older backups won't have this key, so each
+        // field is restored independently and anything missing just keeps
+        // its current value rather than getting wiped.
+        const lifeDiscipline = raw.lifeDisciplineData;
+        if (lifeDiscipline && typeof lifeDiscipline === 'object') {
+          if (lifeDiscipline.startDate) setLifeDisciplineStartDate(lifeDiscipline.startDate);
+          if (lifeDiscipline.checks) setLifeDisciplineChecks(lifeDiscipline.checks);
+          if (lifeDiscipline.graceDays) setLifeDisciplineGraceDays(lifeDiscipline.graceDays);
+          if (lifeDiscipline.missedReasons) setLifeDisciplineMissedReasons(lifeDiscipline.missedReasons);
+          if (lifeDiscipline.recheckNotes) setLifeDisciplineRecheckNotes(lifeDiscipline.recheckNotes);
+          if (lifeDiscipline.config?.categories) setChallengeConfig(lifeDiscipline.config);
+          if (typeof lifeDiscipline.hasStarted === 'boolean') setHasStartedChallenge(lifeDiscipline.hasStarted);
+          localStorage.setItem('lifeDisciplineData', JSON.stringify(lifeDiscipline));
+        }
+
+        alert('Full system backup restored successfully!');
       } catch {
         alert('Failed to parse backup file. Please ensure it is a valid JSON file.');
       }
     };
     reader.readAsText(file);
     e.target.value = '';
+  };
+
+  // 2. TRADES ONLY EXPORT — just the trade records (Entry, Exit, Pair,
+  // R:R, PnL, Date, Status, Account), for spreadsheet analysis or sharing
+  // with someone else. Deliberately excludes discipline logs, habits, and
+  // full system configuration. Available as .csv (for Excel/Sheets) or
+  // .json (for re-importing into other tools).
+  const exportTradesOnly = async (format: 'csv' | 'json') => {
+    const accountNameById = new Map(accounts.map(a => [a.id, a.name]));
+    const rows = trades.map(t => {
+      const riskReward = t.riskAmount ? t.profitLoss / t.riskAmount : null;
+      const status = t.profitLoss > 0 ? 'Win' : t.profitLoss < 0 ? 'Loss' : 'Breakeven';
+      return {
+        Date: t.date || '',
+        Account: accountNameById.get(t.accountId) || 'Unknown',
+        Pair: t.symbol || '',
+        Entry: t.entryPrice ?? '',
+        Exit: t.exitPrice ?? '',
+        'R:R': riskReward !== null ? Number(riskReward.toFixed(2)) : '',
+        PnL: t.profitLoss ?? 0,
+        Status: status,
+      };
+    });
+
+    const defaultDate = new Date().toISOString().split('T')[0];
+
+    if (format === 'json') {
+      const jsonString = JSON.stringify(rows, null, 2);
+      await saveStringAsFile(jsonString, `vsx_trades_${defaultDate}.json`, 'application/json', 'VSX Trades Export');
+      return;
+    }
+
+    // CSV — quote every field and escape embedded quotes/commas/newlines so
+    // symbols, notes-free numeric fields, etc. always round-trip cleanly.
+    const headers = ['Date', 'Account', 'Pair', 'Entry', 'Exit', 'R:R', 'PnL', 'Status'];
+    const escapeCsvCell = (value: unknown) => `"${String(value).replace(/"/g, '""')}"`;
+    const csvLines = [
+      headers.join(','),
+      ...rows.map(row => headers.map(h => escapeCsvCell((row as Record<string, unknown>)[h])).join(',')),
+    ];
+    const csvString = csvLines.join('\r\n');
+    await saveStringAsFile(csvString, `vsx_trades_${defaultDate}.csv`, 'text/csv', 'VSX Trades Export');
   };
 
 
@@ -3813,5 +3905,6 @@ export function useAppState() {
     updateTimeframeNotes,
     exportBackup,
     importBackup,
+    exportTradesOnly,
   };
 }
