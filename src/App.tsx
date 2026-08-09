@@ -94,7 +94,7 @@ import {
   type LucideIcon,
 } from 'lucide-react';
 import type React from 'react';
-import { lazy, Suspense, type ComponentType } from 'react';
+import { lazy, Suspense, useDeferredValue, type ComponentType } from 'react';
 import { AppProvider, useAppContext } from './context/AppContext';
 import { cn } from './utils/format';
 import { Sidebar } from './components/Sidebar';
@@ -157,17 +157,10 @@ const AddNoticeModal = lazyNamed<typeof import('./modals/NoticeWikiModals').AddN
 const AddWikiModal = lazyNamed<typeof import('./modals/NoticeWikiModals').AddWikiModal>(() => import('./modals/NoticeWikiModals'), 'AddWikiModal');
 const WikiDetailModal = lazyNamed<typeof import('./modals/NoticeWikiModals').WikiDetailModal>(() => import('./modals/NoticeWikiModals'), 'WikiDetailModal');
 
-// Minimal, GPU-cheap placeholder shown only during the first Suspense
-// fallback for a given screen chunk (see ScreenSuspense usage below).
-// Pure opacity animation — no layout/paint-triggering properties — so it
-// costs nothing on the compositor while the chunk streams in.
-function ScreenLoadingFallback() {
-  return (
-    <div className="flex-1 flex items-center justify-center py-24">
-      <div className="w-8 h-8 rounded-full border-2 border-zinc-700 border-t-zinc-300 animate-spin transform-gpu" />
-    </div>
-  );
-}
+// NOTE: there used to be a `ScreenLoadingFallback` pulse spinner rendered
+// here as the Suspense fallback. It's gone — see the `deferredView` +
+// `fallback={null}` combo below for why removing it (rather than just
+// making it prettier) is the actual fix for the tab-switch flicker.
 
 // ============================================================================
 // AppShell renders the page chrome (sidebar / main content switch / all
@@ -286,6 +279,17 @@ function AppShell() {
     handleFileUpload, handleAddImageUrl, handleRemoveImage, handleReorderImages, updateTimeframeNotes,
     exportBackup, importBackup,
   } = useAppContext();
+
+  // Tab-switch flicker fix: `deferredView` lags one render behind `view`
+  // whenever swapping to it would suspend (i.e. the target screen's lazy
+  // chunk hasn't finished loading yet). React keeps rendering the currently
+  // mounted screen — matching the stale `deferredView` — instead of
+  // unmounting it in favor of the Suspense fallback, so the old screen
+  // just stays on-screen for that last handful of milliseconds and then
+  // swaps directly to the new one once it's ready. No spinner ever
+  // flashes in between. Once the chunk is cached (which happens after the
+  // very first visit to a given tab), this gap is imperceptible.
+  const deferredView = useDeferredValue(view);
 
   return (
     <div className={cn(
@@ -748,18 +752,22 @@ function AppShell() {
           {/* Only one screen is ever mounted here, so Suspense + lazy means the
               initial bundle only has to fetch/parse the screen the user lands
               on — every other screen's code streams in on first navigation
-              to it instead of up front. The tiny pulse fallback only ever
-              shows on that first navigation to a given screen; it's cached
-              (as its own chunk) after that. */}
-          <Suspense fallback={<ScreenLoadingFallback />}>
-            {view === 'dashboard' && <DashboardScreen />}
-            {view === 'trades' && <TradesScreen />}
-            {view === 'discipline' && <DisciplineScreen />}
-            {view === 'lifeDiscipline' && <LifeDisciplineScreen />}
-            {view === 'playbook' && <PlaybookScreen />}
-            {view === 'notices' && <NoticesScreen />}
-            {view === 'wiki' && <WikiScreen />}
-            {view === 'calendar' && <CalendarScreen />}
+              to it instead of up front.
+              We branch on `deferredView` (not `view`) so that switching to a
+              screen whose chunk hasn't loaded yet doesn't unmount the
+              current screen — React keeps it mounted/visible until the new
+              one is ready, then swaps directly, so `fallback={null}` here is
+              safe: the fallback essentially never actually gets used on a
+              tab switch, only (very briefly) on the very first paint. */}
+          <Suspense fallback={null}>
+            {deferredView === 'dashboard' && <DashboardScreen />}
+            {deferredView === 'trades' && <TradesScreen />}
+            {deferredView === 'discipline' && <DisciplineScreen />}
+            {deferredView === 'lifeDiscipline' && <LifeDisciplineScreen />}
+            {deferredView === 'playbook' && <PlaybookScreen />}
+            {deferredView === 'notices' && <NoticesScreen />}
+            {deferredView === 'wiki' && <WikiScreen />}
+            {deferredView === 'calendar' && <CalendarScreen />}
           </Suspense>
         </div>
       </main>
