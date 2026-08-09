@@ -165,37 +165,62 @@ function PlaybookPreviewCard() {
   );
 }
 
-// Each showcase tile gets its own float timing/delay so the canvas never
-// bobs in perfect unison, plus a small vertical offset (margin, not
-// transform) so the four cards read as an organic scatter rather than a
-// rigid grid.
-// One tile per quadrant of the canvas (top-left, top-right, bottom-left,
-// bottom-right) so the cards actually use the full 60% of real estate
-// instead of clumping in the center. `corner` drives absolute positioning;
-// `duration`/`delay` stagger the float so nothing bobs in unison.
-const SHOWCASE_TILES: Array<{
-  Card: () => JSX.Element;
-  corner: string;
-  duration: string;
-  delay: string;
-}> = [
-  { Card: PnLPreviewCard, corner: 'top-32 left-10 xl:left-16', duration: '7s', delay: '0s' },
-  { Card: AccountsPreviewCard, corner: 'top-16 right-10 xl:right-16', duration: '8s', delay: '0.6s' },
-  { Card: DisciplinePreviewCard, corner: 'bottom-16 left-14 xl:left-24', duration: '7.5s', delay: '0.3s' },
-  { Card: PlaybookPreviewCard, corner: 'bottom-12 right-14 xl:right-24', duration: '8.5s', delay: '0.9s' },
+// Mirrors PerformanceCalendar's win/loss heatmap grid — same rounded cells
+// tinted emerald/rose/neutral depending on the day's outcome.
+function CalendarHeatmapPreviewCard() {
+  const cells: Array<'win' | 'loss' | 'none'> = [
+    'win', 'win', 'loss', 'none', 'win', 'loss', 'win',
+    'loss', 'win', 'win', 'none', 'win', 'win', 'loss',
+  ];
+  return (
+    <div className="w-72 rounded-2xl border border-zinc-800/80 bg-zinc-900/70 p-4 shadow-2xl">
+      <p className="text-xs font-semibold text-white mb-3">Performance Calendar</p>
+      <div className="grid grid-cols-7 gap-1.5">
+        {cells.map((c, i) => (
+          <div
+            key={i}
+            className={cn(
+              'aspect-square rounded-md border',
+              c === 'win' && 'bg-emerald-500/25 border-emerald-500/40',
+              c === 'loss' && 'bg-rose-500/25 border-rose-500/40',
+              c === 'none' && 'bg-zinc-800/40 border-zinc-800/60'
+            )}
+          />
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// Every card gets its own float timing/delay so the canvas never bobs in
+// perfect unison. Laid out in normal flow (two rows of two, plus a centered
+// fifth row) rather than absolute positioning, so the set is guaranteed to
+// stay confined to the showcase canvas — it can never drift under the fixed
+// auth panel or leave a void where a card was expected to be.
+const SHOWCASE_ROWS: Array<Array<{ Card: () => JSX.Element; duration: string; delay: string; lift?: boolean }>> = [
+  [
+    { Card: PnLPreviewCard, duration: '7s', delay: '0s' },
+    { Card: AccountsPreviewCard, duration: '8s', delay: '0.6s', lift: true },
+  ],
+  [
+    { Card: DisciplinePreviewCard, duration: '7.5s', delay: '0.3s', lift: true },
+    { Card: PlaybookPreviewCard, duration: '8.5s', delay: '0.9s' },
+  ],
+  [
+    { Card: CalendarHeatmapPreviewCard, duration: '7.8s', delay: '0.45s' },
+  ],
 ];
 
-// Left-side (60%) showcase canvas — ambient emerald glows behind a
-// gently floating cluster of preview cards, one anchored in each corner so
-// the whole canvas feels filled rather than a bunched-up center cluster.
-// Purely decorative; pointer-events disabled on the animated layer so it
-// never intercepts clicks, and hidden entirely below `lg` in favor of a
+// Left-side showcase canvas — ambient emerald glows behind a gently
+// floating, evenly balanced arrangement of every preview card. Strictly
+// decorative and strictly confined to this column (no absolute positioning
+// that could escape its bounds); pointer-events disabled so it never
+// intercepts clicks, and hidden entirely below `lg` in favor of a
 // full-width auth panel.
 function ShowcaseCanvas() {
   return (
-    <div className="relative hidden lg:block flex-1 lg:w-[calc(100%-450px)] overflow-hidden bg-[#0d0f12]">
-      {/* Ambient emerald glows — one behind each quadrant so the glow
-          follows the cards into every corner of the canvas */}
+    <div className="relative hidden lg:flex flex-shrink-0 lg:w-[calc(100%-450px)] items-center justify-center overflow-hidden bg-[#0d0f12] px-10 xl:px-16 py-16">
+      {/* Ambient emerald glows, spread so the glow fills every corner */}
       <div className="absolute -top-10 -left-10 w-96 h-96 rounded-full bg-emerald-500/10 blur-[130px]" />
       <div className="absolute -top-16 right-0 w-96 h-96 rounded-full bg-emerald-500/10 blur-[130px]" />
       <div className="absolute -bottom-16 left-1/4 w-96 h-96 rounded-full bg-emerald-500/10 blur-[130px]" />
@@ -203,19 +228,26 @@ function ShowcaseCanvas() {
       <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-[420px] h-[420px] rounded-full bg-slate-500/5 blur-[130px]" />
 
       {/* Brand mark, anchored top-left of the canvas */}
-      <div className="absolute top-10 left-12 xl:left-20 z-10">
+      <div className="absolute top-10 left-10 xl:left-16 z-10">
         <h1 className="text-2xl font-bold tracking-tight text-white">VSX</h1>
         <p className="mt-1 text-sm text-zinc-500">Institutional Trading &amp; Discipline Journal</p>
       </div>
 
-      {/* Cards, one per corner, each gently floating */}
-      {SHOWCASE_TILES.map(({ Card, corner, duration, delay }, i) => (
-        <div key={i} className={cn('absolute z-10 scale-105 pointer-events-none', corner)}>
-          <div style={{ animation: `login-card-float ${duration} ease-in-out ${delay} infinite` }}>
-            <Card />
+      {/* Balanced, staggered card layout — two rows of two, plus a centered
+          fifth card — confined entirely within the canvas's own bounds */}
+      <div className="relative z-10 flex flex-col items-center gap-10 xl:gap-14 w-full max-w-3xl pointer-events-none">
+        {SHOWCASE_ROWS.map((row, rowIdx) => (
+          <div key={rowIdx} className="flex flex-wrap items-start justify-center gap-10 xl:gap-16 w-full">
+            {row.map(({ Card, duration, delay, lift }, i) => (
+              <div key={i} className={cn('scale-105', lift && '-translate-y-4')}>
+                <div style={{ animation: `login-card-float ${duration} ease-in-out ${delay} infinite` }}>
+                  <Card />
+                </div>
+              </div>
+            ))}
           </div>
-        </div>
-      ))}
+        ))}
+      </div>
 
       <style>{`
         @keyframes login-card-float {
