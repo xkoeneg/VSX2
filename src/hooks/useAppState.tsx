@@ -3400,6 +3400,66 @@ export function useAppState() {
     await saveStringAsFile(csvString, `vsx_trades_${defaultDate}.csv`, 'text/csv', 'VSX Trades Export');
   };
 
+  // 3. FULL SYSTEM RESET — wipes every feature (Trades, Accounts, Rules
+  // Playbook, Strategies, Wiki, Life Discipline Hub, Daily Creed, saved
+  // presets — everything) back to its factory-default state AND removes
+  // every localStorage key this app writes to.
+  //
+  // Why this resets so much React state, not just localStorage: the trading
+  // journal and Life Discipline Hub are both persisted through DEBOUNCED
+  // writers (see useDebouncedLocalStorageWriter above) that flush on page
+  // unload. If this function only cleared localStorage and left any of
+  // their source state (rules, customPillars, challengeConfig, etc.)
+  // un-reset, that stale state would get serialized straight back into
+  // localStorage the instant the caller reloads the page — silently
+  // undoing the "clear" for that feature. Resetting every piece of state
+  // that feeds those two blobs guarantees the post-reload flush (if it
+  // fires at all) only ever writes back empty/default data.
+  //
+  // Callers must reload the page immediately after invoking this (see
+  // SettingsModal's "Reset All Journal Data" confirmation flow).
+  const handleFullSystemReset = () => {
+    // ---- Trading Journal ('tradingJournal' localStorage key) ----
+    setAccounts([]);
+    setTrades([]);
+    setRules([]);
+    setCustomPillars([]); // Rules Playbook custom pillars
+    setStrategies([]);
+    setNotices([]);
+    setWikiEntries([]);
+    setSetupTypes([]);
+    setConfluences([]);
+    setMistakesList([]);
+    setEmotionsList(EMOTION_OPTIONS.map(name => ({ id: generateId(), name, color: 'purple' as TagColor })));
+    setCustomSymbols([]);
+
+    // ---- Life Discipline Hub ('lifeDisciplineData' localStorage key) ----
+    setLifeDisciplineStartDate(getLocalDateKey());
+    setLifeDisciplineChecks({});
+    setLifeDisciplineGraceDays({});
+    setLifeDisciplineRecheckNotes({});
+    setLifeDisciplineMissedReasons({});
+    setChallengeConfig(DEFAULT_CHALLENGE_CONFIG);
+    setHasStartedChallenge(false);
+
+    // ---- User-saved challenge presets ('lifeDisciplineUserPresets') ----
+    setUserChallengePresets([]);
+    setLoadedPresetId(null);
+
+    // ---- Daily Trading Creed ('customCreedQuotes' / 'dailyCreedState') ----
+    setCustomCreedQuotes([]);
+
+    // Explicitly remove the specific keys called out above, then a final
+    // blanket clear() as a catch-all safety net for anything else the app
+    // has ever written (or writes in the future) so this stays a true
+    // 100% factory reset even if a new feature adds its own key later.
+    localStorage.removeItem('tradingJournal');
+    localStorage.removeItem('lifeDisciplineData');
+    localStorage.removeItem('lifeDisciplineUserPresets');
+    localStorage.removeItem('customCreedQuotes');
+    localStorage.removeItem('dailyCreedState');
+    localStorage.clear();
+  };
 
   return {
     view,
@@ -3906,5 +3966,6 @@ export function useAppState() {
     exportBackup,
     importBackup,
     exportTradesOnly,
+    handleFullSystemReset,
   };
 }
