@@ -46,10 +46,11 @@ function GoogleIcon() {
 
 // ============================================================================
 // Background preview cards — static, non-interactive mock-ups styled after
-// the real Dashboard components (Total P&L hero, Discipline status banner,
-// Win/Loss stat card, Accounts panel). These are purely decorative: fixed
-// demo numbers, no context/hooks, so the login screen never depends on
-// live app data.
+// the real screens (Dashboard's Total P&L hero + Discipline banner +
+// Accounts panel + Win/Loss stat, TradeHistory's table, PerformanceCalendar's
+// heatmap, RulesPlaybook's rule list, MarketNotices, and the Wiki). These are
+// purely decorative: fixed demo numbers, no context/hooks, so the login
+// screen never depends on live app data.
 // ============================================================================
 
 function PnLPreviewCard() {
@@ -157,83 +158,212 @@ function AccountsPreviewCard() {
   );
 }
 
-// Tilted, drifting 3D backdrop built from the mock preview cards above.
-// Sits behind the login panel; pointer-events are disabled so it never
-// intercepts clicks, and each card gets a slightly different float
-// duration/delay so the whole scene feels alive rather than uniform.
+// Mirrors TradeHistory's table: header row + a handful of trade rows with
+// date/symbol/side/P&L columns, same uppercase-label header treatment.
+function TradeHistoryPreviewCard() {
+  const rows: Array<{ date: string; symbol: string; side: string; pnl: number }> = [
+    { date: '08/04', symbol: 'NQ', side: 'Long', pnl: 420.5 },
+    { date: '08/05', symbol: 'ES', side: 'Short', pnl: -180.25 },
+    { date: '08/06', symbol: 'GC', side: 'Long', pnl: 610.0 },
+    { date: '08/07', symbol: 'CL', side: 'Long', pnl: 95.75 },
+  ];
+  return (
+    <div className="w-80 rounded-2xl border border-zinc-800/80 bg-zinc-900/70 shadow-2xl overflow-hidden">
+      <div className="px-4 pt-3 pb-2 border-b border-white/5">
+        <p className="text-xs font-semibold text-white">Trade History</p>
+      </div>
+      <table className="w-full">
+        <thead>
+          <tr className="border-b border-white/5 text-left">
+            <th className="px-3 py-1.5 text-[9px] text-zinc-500 uppercase tracking-wider font-medium">Date</th>
+            <th className="px-3 py-1.5 text-[9px] text-zinc-500 uppercase tracking-wider font-medium">Symbol</th>
+            <th className="px-3 py-1.5 text-[9px] text-zinc-500 uppercase tracking-wider font-medium">Side</th>
+            <th className="px-3 py-1.5 text-[9px] text-zinc-500 uppercase tracking-wider font-medium text-right">P&amp;L</th>
+          </tr>
+        </thead>
+        <tbody>
+          {rows.map((r, i) => (
+            <tr key={i} className="border-b border-white/5 last:border-0">
+              <td className="px-3 py-1.5 text-xs text-zinc-400 whitespace-nowrap">{r.date}</td>
+              <td className="px-3 py-1.5 text-xs text-white font-semibold">{r.symbol}</td>
+              <td className="px-3 py-1.5 text-xs text-zinc-400">{r.side}</td>
+              <td className={cn('px-3 py-1.5 text-xs font-mono text-right font-bold', r.pnl >= 0 ? 'text-emerald-400' : 'text-rose-400')}>
+                {r.pnl >= 0 ? '+' : ''}{r.pnl.toFixed(2)}
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+// Mirrors PerformanceCalendar's win/loss heatmap grid — same rounded cells
+// tinted emerald/rose/neutral depending on the day's outcome.
+function CalendarHeatmapPreviewCard() {
+  const cells: Array<'win' | 'loss' | 'none'> = [
+    'win', 'win', 'loss', 'none', 'win', 'loss', 'win',
+    'loss', 'win', 'win', 'none', 'win', 'win', 'loss',
+  ];
+  return (
+    <div className="w-72 rounded-2xl border border-zinc-800/80 bg-zinc-900/70 p-4 shadow-2xl">
+      <p className="text-xs font-semibold text-white mb-3">Performance Calendar</p>
+      <div className="grid grid-cols-7 gap-1.5">
+        {cells.map((c, i) => (
+          <div
+            key={i}
+            className={cn(
+              'aspect-square rounded-md border',
+              c === 'win' && 'bg-emerald-500/25 border-emerald-500/40',
+              c === 'loss' && 'bg-rose-500/25 border-rose-500/40',
+              c === 'none' && 'bg-zinc-800/40 border-zinc-800/60'
+            )}
+          />
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// Mirrors RulesPlaybook's rule list — left-accent-bar rows in a handful of
+// the same accent colors used for rule categories.
+function PlaybookPreviewCard() {
+  const rules: Array<{ label: string; accent: string }> = [
+    { label: 'Wait for confirmation candle', accent: 'border-l-emerald-500' },
+    { label: 'Max 2% risk per trade', accent: 'border-l-violet-500' },
+    { label: 'No trading during news spikes', accent: 'border-l-amber-500' },
+  ];
+  return (
+    <div className="w-72 rounded-2xl border border-zinc-800/80 bg-zinc-900/70 p-4 shadow-2xl">
+      <p className="text-xs font-semibold text-white mb-3">Rules Playbook</p>
+      <div className="space-y-2">
+        {rules.map((r, i) => (
+          <div key={i} className={cn('flex items-center gap-2 rounded-lg border-l-4 bg-zinc-800/40 px-2.5 py-2', r.accent)}>
+            <span className="text-xs text-zinc-300 truncate">{r.label}</span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// Mirrors MarketNotices' notice cards.
+function NoticePreviewCard() {
+  return (
+    <div className="w-64 rounded-2xl border border-zinc-800/80 bg-zinc-900/70 p-4 shadow-2xl">
+      <p className="text-[10px] uppercase tracking-wider text-zinc-500 mb-2">Market Notice</p>
+      <p className="text-sm font-semibold text-white mb-1">FOMC Rate Decision</p>
+      <p className="text-xs text-zinc-500">High impact · 2:00 PM EST</p>
+    </div>
+  );
+}
+
+// Mirrors the Knowledge Wiki's entry cards — category chip + title + snippet.
+function WikiPreviewCard() {
+  return (
+    <div className="w-64 rounded-2xl border border-zinc-800/80 bg-zinc-900/70 p-4 shadow-2xl">
+      <span className="inline-block text-[9px] uppercase tracking-wider px-2 py-0.5 rounded-full bg-violet-500/10 text-violet-400 mb-2">
+        Strategy
+      </span>
+      <p className="text-sm font-semibold text-white mb-1">Order Block Entries</p>
+      <p className="text-xs text-zinc-500 line-clamp-2">
+        Identify the last down candle before an impulsive move up, then wait for price to return to that zone.
+      </p>
+    </div>
+  );
+}
+
+// The cluster of cards that fills the background, cycling through every
+// preview variant so the wall is a mix of every screen, not just a repeat
+// of one card.
+const PREVIEW_CARDS = [
+  PnLPreviewCard,
+  TradeHistoryPreviewCard,
+  DisciplinePreviewCard,
+  CalendarHeatmapPreviewCard,
+  AccountsPreviewCard,
+  PlaybookPreviewCard,
+  TradeStatsPreviewCard,
+  NoticePreviewCard,
+  WikiPreviewCard,
+  AccountsPreviewCard,
+  CalendarHeatmapPreviewCard,
+  TradeHistoryPreviewCard,
+  DisciplinePreviewCard,
+  PlaybookPreviewCard,
+  PnLPreviewCard,
+  WikiPreviewCard,
+];
+
+// translateZ depth (px) per tile, cycled — negative pushes a card further
+// from the camera (back layer), positive pulls it closer (front layer).
+const DEPTH_CYCLE = [0, -140, 70, -70, 140, -210, 35, -105];
+
+// Depth-based opacity so far-back cards recede visually instead of
+// competing for attention with the ones up front.
+function opacityForDepth(depth: number) {
+  const fade = Math.min(Math.abs(depth) / 260, 0.45);
+  return (0.9 - fade).toFixed(2);
+}
+
+// Dense, wall-to-wall tilted 3D backdrop built from every preview card
+// above. Sits behind the login panel; pointer-events are disabled so it
+// never intercepts clicks. Structure, innermost to outermost:
+//   Card
+//   -> per-tile translateZ depth layer (static, creates the 3D stack)
+//   -> unified rotateX/rotateY/rotateZ cluster (static tilt, req'd by design)
+//   -> single scene-wide drift animation (the "continuous motion" layer)
+//   -> perspective root
 function AppPreviewBackdrop() {
   return (
-    <div className="pointer-events-none absolute inset-0 overflow-hidden" aria-hidden="true">
-      <div className="absolute inset-0 flex items-center justify-center" style={{ perspective: '1200px' }}>
-        <div
-          className="relative w-[1500px] max-w-none h-[900px]"
-          style={{
-            transform: 'rotateX(15deg) rotateY(-20deg) rotateZ(5deg)',
-            transformStyle: 'preserve-3d',
-          }}
-        >
+    <div className="pointer-events-none absolute inset-0 overflow-hidden bg-[#0d0f12]" aria-hidden="true">
+      <div className="absolute inset-0 flex items-center justify-center" style={{ perspective: '1400px' }}>
+        <div className="login-scene-drift" style={{ transformStyle: 'preserve-3d' }}>
           <div
-            className="absolute opacity-80 login-float-a"
-            style={{ top: '6%', left: '4%' }}
+            className="flex flex-wrap content-start gap-5 p-6"
+            style={{
+              width: '1900px',
+              maxWidth: 'none',
+              transform: 'rotateX(14deg) rotateY(-18deg) rotateZ(4deg)',
+              transformStyle: 'preserve-3d',
+            }}
           >
-            <PnLPreviewCard />
-          </div>
-
-          <div
-            className="absolute opacity-70 login-float-b hidden md:block"
-            style={{ top: '10%', right: '6%' }}
-          >
-            <DisciplinePreviewCard />
-          </div>
-
-          <div
-            className="absolute opacity-70 login-float-c hidden lg:block"
-            style={{ bottom: '14%', left: '10%' }}
-          >
-            <TradeStatsPreviewCard />
-          </div>
-
-          <div
-            className="absolute opacity-75 login-float-d"
-            style={{ bottom: '8%', right: '10%' }}
-          >
-            <AccountsPreviewCard />
+            {PREVIEW_CARDS.map((Card, i) => {
+              const depth = DEPTH_CYCLE[i % DEPTH_CYCLE.length];
+              return (
+                <div
+                  key={i}
+                  style={{ transform: `translateZ(${depth}px)`, opacity: opacityForDepth(depth) }}
+                >
+                  <Card />
+                </div>
+              );
+            })}
           </div>
         </div>
       </div>
 
       {/* Darken + fade edges so the login panel stays legible */}
-      <div className="absolute inset-0 bg-gradient-to-b from-[#0d0f12]/50 via-[#0d0f12]/70 to-[#0d0f12]" />
-      <div className="absolute inset-0 bg-[#0d0f12]/30" />
+      <div className="absolute inset-0 bg-gradient-to-b from-[#0d0f12]/55 via-[#0d0f12]/75 to-[#0d0f12]" />
+      <div className="absolute inset-0 bg-[#0d0f12]/35" />
 
       <style>{`
-        @keyframes login-float-a {
-          0%, 100% { transform: translate3d(0, 0, 0) rotate(0deg); }
-          50% { transform: translate3d(14px, -22px, 0) rotate(1.5deg); }
+        @keyframes login-scene-drift {
+          0% { transform: translate3d(-1.4%, -1%, 0) rotate(-0.4deg); }
+          50% { transform: translate3d(1.4%, 1%, 0) rotate(0.4deg); }
+          100% { transform: translate3d(-1.4%, -1%, 0) rotate(-0.4deg); }
         }
-        @keyframes login-float-b {
-          0%, 100% { transform: translate3d(0, 0, 0) rotate(0deg); }
-          50% { transform: translate3d(-18px, 18px, 0) rotate(-2deg); }
+        .login-scene-drift {
+          animation: login-scene-drift 48s ease-in-out infinite;
         }
-        @keyframes login-float-c {
-          0%, 100% { transform: translate3d(0, 0, 0) rotate(0deg); }
-          50% { transform: translate3d(12px, 20px, 0) rotate(1deg); }
-        }
-        @keyframes login-float-d {
-          0%, 100% { transform: translate3d(0, 0, 0) rotate(0deg); }
-          50% { transform: translate3d(-14px, -16px, 0) rotate(-1.5deg); }
-        }
-        .login-float-a { animation: login-float-a 22s ease-in-out infinite; }
-        .login-float-b { animation: login-float-b 26s ease-in-out infinite; animation-delay: -4s; }
-        .login-float-c { animation: login-float-c 19s ease-in-out infinite; animation-delay: -9s; }
-        .login-float-d { animation: login-float-d 24s ease-in-out infinite; animation-delay: -13s; }
         @media (prefers-reduced-motion: reduce) {
-          .login-float-a, .login-float-b, .login-float-c, .login-float-d { animation: none; }
+          .login-scene-drift { animation: none; }
         }
       `}</style>
     </div>
   );
 }
+
 
 export function LoginPage() {
   const [mode, setMode] = useState<AuthMode>('signIn');
