@@ -464,7 +464,7 @@ function TradeAnalyticsCard({ trades, stats, privacyMode, theme, tc, tradeFilter
           the label — matching the reference image as-is. */}
       <div className={cardClass}>
         <div className="relative w-11 h-11 flex-shrink-0">
-          <div className="absolute left-1/2 top-1/2 w-24 h-24 -translate-x-1/2 -translate-y-1/2">
+          <div className="absolute left-1/2 top-1/2 w-20 h-20 -translate-x-1/2 -translate-y-1/2">
             <svg viewBox="0 0 112 112" className="w-full h-full -rotate-90">
               <circle cx="56" cy="56" r={r} fill="none" stroke="rgb(39,39,42)" strokeWidth={strokeWidth} />
               {winRateArc > 0 && (
