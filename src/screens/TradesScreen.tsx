@@ -423,24 +423,25 @@ function TradeAnalyticsCard({ trades, stats, privacyMode, theme, tc, tradeFilter
   const wins = trades.filter(t => t.profitLoss >= 10).length;
   const losses = trades.filter(t => t.profitLoss <= -10).length;
   const breakeven = total - wins - losses;
+  const netPnl = trades.reduce((sum, t) => sum + t.profitLoss, 0);
+  const isNetPositive = netPnl >= 0;
 
   // Win Rate donut — single teal arc over a dark track, rounded cap,
-  // starting at 12 o'clock and sweeping clockwise by win rate %. This is a
-  // 1:1 match of the WinRateGaugePreviewCard tile in LoginPage.tsx's
-  // background scatter.
+  // starting at 12 o'clock and sweeping clockwise by win rate %. Sized and
+  // weighted to match the Login screen's WinRateGaugePreviewCard 1:1.
   const r = 42;
-  const strokeWidth = 10;
+  const strokeWidth = 13;
   const c = 2 * Math.PI * r;
   const winRateArc = total > 0 ? (stats.winRate / 100) * c : 0;
 
   const cardClass = cn(
-    "relative bg-zinc-900/50 border border-white/10 rounded-xl p-5 backdrop-blur-md hover:border-white/20 transition-all overflow-hidden",
+    "relative bg-zinc-900/50 border border-white/10 rounded-2xl p-5 backdrop-blur-md hover:border-white/20 hover:bg-zinc-900/70 transition-all overflow-hidden",
     theme === 'light' && 'bg-white border-zinc-200'
   );
   const iconBadgeClass = "absolute top-4 right-4 w-9 h-9 rounded-lg bg-white/5 border border-white/10 flex items-center justify-center";
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4 mb-6">
       {/* Card 1 — Total Trades */}
       <div className={cardClass}>
         <div className={cn(iconBadgeClass, "bg-indigo-500/10 border-indigo-500/20")}>
@@ -450,11 +451,12 @@ function TradeAnalyticsCard({ trades, stats, privacyMode, theme, tc, tradeFilter
         <p className={cn("text-3xl font-bold tabular-nums", tc.text)}>{total}</p>
       </div>
 
-      {/* Card 2 — Win Rate donut, 1:1 match to the Login screen preview tile.
-          Donut + text are grouped tightly (not spread edge-to-edge) so the
-          card reads as one compact unit instead of looking half-empty. */}
+      {/* Card 2 — Win Rate donut. Ring is large (96px) and thick (13px
+          stroke) with the percentage set big and bold inside it, and the
+          label stacked to the right at real reading size — matching the
+          reference screenshot instead of the cramped mini-gauge before. */}
       <div className={cn(cardClass, "flex items-center gap-4")}>
-        <div className="relative w-[68px] h-[68px] flex-shrink-0">
+        <div className="relative w-24 h-24 flex-shrink-0">
           <svg viewBox="0 0 112 112" className="w-full h-full -rotate-90">
             <circle cx="56" cy="56" r={r} fill="none" stroke="rgb(39,39,42)" strokeWidth={strokeWidth} />
             {winRateArc > 0 && (
@@ -465,14 +467,14 @@ function TradeAnalyticsCard({ trades, stats, privacyMode, theme, tc, tradeFilter
             )}
           </svg>
           <div className="absolute inset-0 flex items-center justify-center">
-            <span className={cn("text-sm font-bold tabular-nums leading-none", tc.text)}>
+            <span className={cn("text-xl font-bold tabular-nums leading-none", tc.text)}>
               {total > 0 ? `${stats.winRate.toFixed(1)}%` : '—'}
             </span>
           </div>
         </div>
         <div className="flex flex-col min-w-0">
           <span className="text-[10px] text-zinc-500 font-semibold tracking-wider uppercase">Win Rate</span>
-          <span className={cn("text-base font-semibold mt-1 truncate", tc.text)}>{total} trades logged</span>
+          <span className={cn("text-lg font-semibold mt-1 truncate", tc.text)}>{total} trades logged</span>
         </div>
       </div>
 
@@ -484,38 +486,38 @@ function TradeAnalyticsCard({ trades, stats, privacyMode, theme, tc, tradeFilter
         </div>
         <p className="text-[10px] text-zinc-500 font-semibold tracking-wider uppercase mb-2">Win / Loss Ratio</p>
         <p className="text-2xl font-bold tabular-nums">
-            <button
-              type="button"
-              onClick={() => setTradeFilter(prev => prev === 'profit' ? 'all' : 'profit')}
-              className={cn(
-                "text-emerald-400 rounded transition-colors",
-                tradeFilter === 'profit' ? 'ring-1 ring-emerald-500/40 bg-emerald-500/10 px-1' : 'hover:text-emerald-300'
-              )}
-            >
-              {wins}W
-            </button>
-            <span className="text-zinc-600 mx-1">-</span>
-            <button
-              type="button"
-              onClick={() => setTradeFilter(prev => prev === 'loss' ? 'all' : 'loss')}
-              className={cn(
-                "text-rose-500 rounded transition-colors",
-                tradeFilter === 'loss' ? 'ring-1 ring-rose-500/40 bg-rose-500/10 px-1' : 'hover:text-rose-400'
-              )}
-            >
-              {losses}L
-            </button>
-            <span className="text-zinc-600 mx-1">-</span>
-            <button
-              type="button"
-              onClick={() => setTradeFilter(prev => prev === 'breakeven' ? 'all' : 'breakeven')}
-              className={cn(
-                "text-zinc-400 rounded transition-colors",
-                tradeFilter === 'breakeven' ? 'ring-1 ring-zinc-400/40 bg-zinc-400/10 px-1' : 'hover:text-zinc-300'
-              )}
-            >
-              {breakeven}BE
-            </button>
+          <button
+            type="button"
+            onClick={() => setTradeFilter(prev => prev === 'profit' ? 'all' : 'profit')}
+            className={cn(
+              "text-emerald-400 rounded transition-colors",
+              tradeFilter === 'profit' ? 'ring-1 ring-emerald-500/40 bg-emerald-500/10 px-1' : 'hover:text-emerald-300'
+            )}
+          >
+            {wins}W
+          </button>
+          <span className="text-zinc-600 mx-1">-</span>
+          <button
+            type="button"
+            onClick={() => setTradeFilter(prev => prev === 'loss' ? 'all' : 'loss')}
+            className={cn(
+              "text-rose-500 rounded transition-colors",
+              tradeFilter === 'loss' ? 'ring-1 ring-rose-500/40 bg-rose-500/10 px-1' : 'hover:text-rose-400'
+            )}
+          >
+            {losses}L
+          </button>
+          <span className="text-zinc-600 mx-1">-</span>
+          <button
+            type="button"
+            onClick={() => setTradeFilter(prev => prev === 'breakeven' ? 'all' : 'breakeven')}
+            className={cn(
+              "text-zinc-400 rounded transition-colors",
+              tradeFilter === 'breakeven' ? 'ring-1 ring-zinc-400/40 bg-zinc-400/10 px-1' : 'hover:text-zinc-300'
+            )}
+          >
+            {breakeven}BE
+          </button>
         </p>
       </div>
 
@@ -532,6 +534,22 @@ function TradeAnalyticsCard({ trades, stats, privacyMode, theme, tc, tradeFilter
           <span className="text-emerald-500">{formatCurrency(stats.avgWin, privacyMode)}</span>
           <span className="mx-1">/</span>
           <span className="text-rose-500">{formatCurrency(-stats.avgLoss, privacyMode)}</span>
+        </p>
+      </div>
+
+      {/* Card 5 — Net P&L across the currently filtered trades. This was
+          the one number missing from the row entirely — total trades, win
+          rate, and profit factor all describe *how* you traded, but not
+          the bottom line. Color and icon flip with sign. */}
+      <div className={cardClass}>
+        <div className={cn(iconBadgeClass, isNetPositive ? "bg-emerald-500/10 border-emerald-500/20" : "bg-rose-500/10 border-rose-500/20")}>
+          {isNetPositive
+            ? <TrendingUp className="w-[18px] h-[18px] text-emerald-400" />
+            : <TrendingDown className="w-[18px] h-[18px] text-rose-500" />}
+        </div>
+        <p className="text-[10px] text-zinc-500 font-semibold tracking-wider uppercase mb-2">Net P&amp;L</p>
+        <p className={cn("text-3xl font-bold tabular-nums", isNetPositive ? 'text-emerald-400' : 'text-rose-500')}>
+          {formatCurrency(netPnl, privacyMode)}
         </p>
       </div>
     </div>
