@@ -434,26 +434,27 @@ function TradeAnalyticsCard({ trades, stats, privacyMode, theme, tc, tradeFilter
   const winRateArc = total > 0 ? (stats.winRate / 100) * c : 0;
 
   const cardClass = cn(
-    "bg-zinc-900/50 border border-white/10 rounded-xl p-4 backdrop-blur-md hover:border-white/20 transition-all flex items-center justify-between",
+    "relative bg-zinc-900/50 border border-white/10 rounded-xl p-5 backdrop-blur-md hover:border-white/20 transition-all overflow-hidden",
     theme === 'light' && 'bg-white border-zinc-200'
   );
+  const iconBadgeClass = "absolute top-4 right-4 w-9 h-9 rounded-lg bg-white/5 border border-white/10 flex items-center justify-center";
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
       {/* Card 1 — Total Trades */}
       <div className={cardClass}>
-        <div>
-          <p className="text-[10px] text-zinc-500 font-medium tracking-wider uppercase mb-1.5">Total Trades</p>
-          <p className={cn("text-2xl font-bold tabular-nums", tc.text)}>{total}</p>
+        <div className={cn(iconBadgeClass, "bg-indigo-500/10 border-indigo-500/20")}>
+          <BarChart3 className="w-[18px] h-[18px] text-indigo-400" />
         </div>
-        <div className="w-10 h-10 rounded-lg bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center flex-shrink-0">
-          <BarChart3 className="w-5 h-5 text-indigo-400" />
-        </div>
+        <p className="text-[10px] text-zinc-500 font-semibold tracking-wider uppercase mb-2">Total Trades</p>
+        <p className={cn("text-3xl font-bold tabular-nums", tc.text)}>{total}</p>
       </div>
 
-      {/* Card 2 — Win Rate donut, 1:1 match to the Login screen preview tile */}
-      <div className={cardClass}>
-        <div className="relative w-[72px] h-[72px] flex-shrink-0">
+      {/* Card 2 — Win Rate donut, 1:1 match to the Login screen preview tile.
+          Donut + text are grouped tightly (not spread edge-to-edge) so the
+          card reads as one compact unit instead of looking half-empty. */}
+      <div className={cn(cardClass, "flex items-center gap-4")}>
+        <div className="relative w-[68px] h-[68px] flex-shrink-0">
           <svg viewBox="0 0 112 112" className="w-full h-full -rotate-90">
             <circle cx="56" cy="56" r={r} fill="none" stroke="rgb(39,39,42)" strokeWidth={strokeWidth} />
             {winRateArc > 0 && (
@@ -464,23 +465,25 @@ function TradeAnalyticsCard({ trades, stats, privacyMode, theme, tc, tradeFilter
             )}
           </svg>
           <div className="absolute inset-0 flex items-center justify-center">
-            <span className={cn("text-base font-bold tabular-nums leading-none", tc.text)}>
+            <span className={cn("text-sm font-bold tabular-nums leading-none", tc.text)}>
               {total > 0 ? `${stats.winRate.toFixed(1)}%` : '—'}
             </span>
           </div>
         </div>
-        <div className="flex flex-col ml-3 min-w-0">
-          <span className="text-[10px] text-zinc-500 font-medium tracking-wider uppercase">Win Rate</span>
-          <span className={cn("text-sm font-medium mt-1 truncate", tc.textMuted)}>{total} trades logged</span>
+        <div className="flex flex-col min-w-0">
+          <span className="text-[10px] text-zinc-500 font-semibold tracking-wider uppercase">Win Rate</span>
+          <span className={cn("text-base font-semibold mt-1 truncate", tc.text)}>{total} trades logged</span>
         </div>
       </div>
 
       {/* Card 3 — Win / Loss / Break-Even breakdown; chips stay clickable
           against `tradeFilter`, same as the old bar. */}
       <div className={cardClass}>
-        <div>
-          <p className="text-[10px] text-zinc-500 font-medium tracking-wider uppercase mb-1.5">Win / Loss Ratio</p>
-          <p className="text-xl font-bold tabular-nums">
+        <div className={iconBadgeClass}>
+          <Scale className="w-[18px] h-[18px] text-zinc-400" />
+        </div>
+        <p className="text-[10px] text-zinc-500 font-semibold tracking-wider uppercase mb-2">Win / Loss Ratio</p>
+        <p className="text-2xl font-bold tabular-nums">
             <button
               type="button"
               onClick={() => setTradeFilter(prev => prev === 'profit' ? 'all' : 'profit')}
@@ -513,29 +516,23 @@ function TradeAnalyticsCard({ trades, stats, privacyMode, theme, tc, tradeFilter
             >
               {breakeven}BE
             </button>
-          </p>
-        </div>
-        <div className="w-10 h-10 rounded-lg bg-white/5 border border-white/10 flex items-center justify-center flex-shrink-0">
-          <Scale className="w-5 h-5 text-zinc-400" />
-        </div>
+        </p>
       </div>
 
       {/* Card 4 — Profit Factor / Avg Win & Loss */}
       <div className={cardClass}>
-        <div>
-          <p className="text-[10px] text-zinc-500 font-medium tracking-wider uppercase mb-1.5">Profit Factor</p>
-          <p className={cn("text-xl font-bold tabular-nums mb-2", tc.text)}>
-            {total > 0 && isFinite(stats.profitFactor) ? stats.profitFactor.toFixed(2) : 'N/A'}
-          </p>
-          <p className="text-[11px] font-medium tabular-nums text-zinc-500">
-            <span className="text-emerald-500">{formatCurrency(stats.avgWin, privacyMode)}</span>
-            <span className="mx-1">/</span>
-            <span className="text-rose-500">{formatCurrency(-stats.avgLoss, privacyMode)}</span>
-          </p>
+        <div className={iconBadgeClass}>
+          <Target className="w-[18px] h-[18px] text-zinc-400" />
         </div>
-        <div className="w-10 h-10 rounded-lg bg-white/5 border border-white/10 flex items-center justify-center flex-shrink-0">
-          <Target className="w-5 h-5 text-zinc-400" />
-        </div>
+        <p className="text-[10px] text-zinc-500 font-semibold tracking-wider uppercase mb-2">Profit Factor</p>
+        <p className={cn("text-2xl font-bold tabular-nums mb-1.5", tc.text)}>
+          {total > 0 && isFinite(stats.profitFactor) ? stats.profitFactor.toFixed(2) : 'N/A'}
+        </p>
+        <p className="text-xs font-medium tabular-nums text-zinc-500">
+          <span className="text-emerald-500">{formatCurrency(stats.avgWin, privacyMode)}</span>
+          <span className="mx-1">/</span>
+          <span className="text-rose-500">{formatCurrency(-stats.avgLoss, privacyMode)}</span>
+        </p>
       </div>
     </div>
   );
