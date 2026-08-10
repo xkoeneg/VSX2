@@ -93,7 +93,6 @@ import {
   Dumbbell,
   Coffee,
   Heart,
-  LogOut,
   User as UserIcon,
   type LucideIcon,
 } from 'lucide-react';
@@ -166,6 +165,7 @@ import { supabase } from '../lib/supabaseClient';
 import type { AuthChangeEvent, Session } from '@supabase/supabase-js';
 import { useAppContext } from '../context/AppContext';
 import { renderStatCard, renderAccountFilter, renderAccountTypeBadge, renderTradingAccountTypeBadge } from '../components/shared/RenderHelpers';
+import { UserProfileModal, maskEmail, loadHideEmailPref } from './UserProfileModal';
 
 export function Sidebar({ isMobile }: { isMobile: boolean }) {
   const {
@@ -281,8 +281,8 @@ export function Sidebar({ isMobile }: { isMobile: boolean }) {
   } = useAppContext();
 
     const [authUser, setAuthUser] = useState<{ email: string | null; name: string | null; avatarUrl: string | null } | null>(null);
-    const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false);
-    const profileMenuRef = useRef<HTMLDivElement>(null);
+    const [isUserProfileModalOpen, setIsUserProfileModalOpen] = useState(false);
+    const [hideEmailInUi, setHideEmailInUi] = useState(false);
 
     // Load the logged-in user and keep it in sync with auth state changes
     useEffect(() => {
@@ -299,12 +299,17 @@ export function Sidebar({ isMobile }: { isMobile: boolean }) {
       };
 
       supabase.auth.getUser().then(({ data }) => {
-        if (isMounted) setAuthUser(mapUser(data.user));
+        if (!isMounted) return;
+        const mapped = mapUser(data.user);
+        setAuthUser(mapped);
+        setHideEmailInUi(loadHideEmailPref(mapped?.email ?? null));
       });
 
       const { data: authListener }: { data: { subscription: any } } = supabase.auth.onAuthStateChange(
         (_event: AuthChangeEvent, session: Session | null) => {
-          setAuthUser(mapUser(session?.user));
+          const mapped = mapUser(session?.user);
+          setAuthUser(mapped);
+          setHideEmailInUi(loadHideEmailPref(mapped?.email ?? null));
         }
       );
 
@@ -314,20 +319,8 @@ export function Sidebar({ isMobile }: { isMobile: boolean }) {
       };
     }, []);
 
-    // Close the profile popover when clicking outside of it
-    useEffect(() => {
-      if (!isProfileMenuOpen) return;
-      const handleClickOutside = (e: MouseEvent) => {
-        if (profileMenuRef.current && !profileMenuRef.current.contains(e.target as Node)) {
-          setIsProfileMenuOpen(false);
-        }
-      };
-      document.addEventListener('mousedown', handleClickOutside);
-      return () => document.removeEventListener('mousedown', handleClickOutside);
-    }, [isProfileMenuOpen]);
-
     const handleSignOut = async () => {
-      setIsProfileMenuOpen(false);
+      setIsUserProfileModalOpen(false);
       try {
         await supabase.auth.signOut();
       } finally {
@@ -337,9 +330,11 @@ export function Sidebar({ isMobile }: { isMobile: boolean }) {
 
     const displayName = authUser?.name || authUser?.email?.split('@')[0] || 'Account';
     const displayEmail = authUser?.email || '';
+    const shownEmail = displayEmail ? (hideEmailInUi ? maskEmail(displayEmail) : displayEmail) : '';
 
     const collapsed = !isMobile && sidebarCollapsed;
     return (
+      <>
       <div className="flex flex-col h-full w-full justify-between px-3.5 py-4 select-none">
         {/* TOP GROUP: logo/header row + primary nav items, strictly stacked */}
         <div className="flex flex-col gap-1 w-full min-h-0">
@@ -495,61 +490,10 @@ export function Sidebar({ isMobile }: { isMobile: boolean }) {
         </div>
 
         {/* BOTTOM GROUP: user profile section, pinned to the bottom */}
-        <div className="relative mt-auto" ref={profileMenuRef}>
-          {isProfileMenuOpen && (
-            <div
-              className={cn(
-                'absolute bottom-full mb-2 rounded-lg border shadow-lg overflow-hidden z-50',
-                collapsed ? 'left-0 w-48' : 'left-0 right-0',
-                theme !== 'light' ? 'bg-zinc-900 border-zinc-800' : 'bg-white border-zinc-200'
-              )}
-            >
-              <div
-                className={cn(
-                  'flex items-center gap-2.5 px-3.5 py-3 border-b select-none',
-                  theme !== 'light' ? 'border-zinc-800' : 'border-zinc-200'
-                )}
-              >
-                <div
-                  className={cn(
-                    'relative w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 overflow-hidden',
-                    theme !== 'light' ? 'bg-zinc-800 border border-zinc-700' : 'bg-zinc-100 border border-zinc-200'
-                  )}
-                >
-                  {authUser?.avatarUrl ? (
-                    <img src={authUser.avatarUrl} alt={displayName} className="w-full h-full object-cover" />
-                  ) : (
-                    <UserIcon className={cn('w-4 h-4', theme !== 'light' ? 'text-zinc-400' : 'text-zinc-500')} />
-                  )}
-                </div>
-                <div className="min-w-0 flex-1">
-                  <p className={cn('text-sm font-medium truncate', theme !== 'light' ? 'text-white' : 'text-zinc-900')}>
-                    {displayName}
-                  </p>
-                  {displayEmail && (
-                    <p className={cn('text-xs truncate', theme !== 'light' ? 'text-zinc-500' : 'text-zinc-500')}>
-                      {displayEmail}
-                    </p>
-                  )}
-                </div>
-              </div>
-              <button
-                type="button"
-                onClick={handleSignOut}
-                className={cn(
-                  'w-full flex items-center gap-2.5 px-3.5 py-2.5 text-sm transition-colors select-none cursor-pointer border-t',
-                  theme !== 'light' ? 'text-red-400 hover:bg-zinc-800 border-zinc-800' : 'text-red-600 hover:bg-red-50 border-zinc-200'
-                )}
-              >
-                <LogOut className="w-4 h-4 flex-shrink-0" />
-                <span className="truncate">Sign Out</span>
-              </button>
-            </div>
-          )}
-
+        <div className="relative mt-auto">
           <div
-            onClick={() => setIsProfileMenuOpen(prev => !prev)}
-            title={collapsed ? (displayEmail || displayName) : undefined}
+            onClick={() => setIsUserProfileModalOpen(true)}
+            title={collapsed ? (shownEmail || displayName) : undefined}
             className={cn(
               'flex items-center gap-2.5 px-2.5 py-2.5 rounded-lg hover:bg-white/5 cursor-pointer border-t select-none',
               theme !== 'light' ? 'border-white/5' : 'border-zinc-200',
@@ -574,9 +518,9 @@ export function Sidebar({ isMobile }: { isMobile: boolean }) {
                 <p className={cn('text-sm font-medium truncate select-none', theme !== 'light' ? 'text-white' : 'text-zinc-900')}>
                   {displayName}
                 </p>
-                {displayEmail && (
+                {shownEmail && (
                   <p className={cn('text-xs truncate select-none', theme !== 'light' ? 'text-zinc-500' : 'text-zinc-500')}>
-                    {displayEmail}
+                    {shownEmail}
                   </p>
                 )}
               </div>
@@ -586,8 +530,8 @@ export function Sidebar({ isMobile }: { isMobile: boolean }) {
               <button
                 type="button"
                 onClick={(e) => {
-                  // Gear icon is a direct shortcut to Settings — it does NOT
-                  // open the profile popover, so stop the click from
+                  // Gear icon is a direct shortcut to app Settings — it does
+                  // NOT open the profile modal, so stop the click from
                   // bubbling up to the profile block's own onClick.
                   e.stopPropagation();
                   setIsSettingsModalOpen(true);
@@ -605,5 +549,15 @@ export function Sidebar({ isMobile }: { isMobile: boolean }) {
           </div>
         </div>
       </div>
+
+      <UserProfileModal
+        isOpen={isUserProfileModalOpen}
+        onClose={() => setIsUserProfileModalOpen(false)}
+        authUser={authUser}
+        onAuthUserChange={setAuthUser}
+        onSignOut={handleSignOut}
+        onPrefsSaved={(prefs) => setHideEmailInUi(prefs.hideEmail)}
+      />
+      </>
     );
 }
