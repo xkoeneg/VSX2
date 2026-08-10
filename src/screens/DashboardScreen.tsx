@@ -567,11 +567,17 @@ export function DashboardScreen() {
         {(() => {
           const followed = filteredTrades.filter(t => t.rulesFollowed === 'followed').length;
           const broken = filteredTrades.filter(t => t.rulesFollowed === 'broken').length;
-          const totalRuled = followed + broken;
-          const followRate = totalRuled > 0 ? (followed / totalRuled) * 100 : 0;
-          const isHealthy = totalRuled > 0 && followRate >= 60;
-          const isCritical = totalRuled > 0 && followRate < 40;
-          const isWarning = totalRuled > 0 && followRate >= 40 && followRate < 60;
+          const totalTrades = filteredTrades.length;
+          const pending = Math.max(0, totalTrades - followed - broken);
+          // Honest follow rate: unreviewed trades count against the score, not toward it —
+          // 1 followed out of 10 total shows 10%, not 100%.
+          const followRate = totalTrades > 0 ? (followed / totalTrades) * 100 : 0;
+          const followedPct = totalTrades > 0 ? (followed / totalTrades) * 100 : 0;
+          const brokenPct = totalTrades > 0 ? (broken / totalTrades) * 100 : 0;
+          const pendingPct = totalTrades > 0 ? (pending / totalTrades) * 100 : 0;
+          const isHealthy = totalTrades > 0 && followRate >= 60;
+          const isCritical = totalTrades > 0 && followRate < 40;
+          const isWarning = totalTrades > 0 && followRate >= 40 && followRate < 60;
           return (
             <div
               className={cn(
@@ -597,12 +603,27 @@ export function DashboardScreen() {
                   <span className="text-[10px] text-zinc-500 uppercase tracking-wider whitespace-nowrap">follow rate</span>
                 </div>
 
-                {/* Thin inline progress bar fills remaining space on wider screens */}
-                <div className="hidden sm:block flex-1 max-w-[220px] h-1.5 bg-zinc-800 rounded-full overflow-hidden">
-                  <div
-                    className={cn('h-full rounded-full transition-all duration-500', isHealthy ? 'bg-emerald-500' : isCritical ? 'bg-rose-500' : isWarning ? 'bg-amber-500' : 'bg-zinc-600')}
-                    style={{ width: `${followRate}%` }}
-                  />
+                {/* Thin inline progress bar fills remaining space on wider screens — 3 segments:
+                    followed (green), broken (red), pending/unreviewed (gray). */}
+                <div className="hidden sm:flex flex-1 max-w-[220px] h-1.5 bg-zinc-800 rounded-full overflow-hidden">
+                  {followedPct > 0 && (
+                    <div
+                      className="h-full bg-emerald-500 transition-all duration-500 flex-shrink-0"
+                      style={{ width: `${followedPct}%` }}
+                    />
+                  )}
+                  {brokenPct > 0 && (
+                    <div
+                      className="h-full bg-rose-500 transition-all duration-500 flex-shrink-0"
+                      style={{ width: `${brokenPct}%` }}
+                    />
+                  )}
+                  {pendingPct > 0 && (
+                    <div
+                      className="h-full bg-zinc-600 transition-all duration-500 flex-shrink-0"
+                      style={{ width: `${pendingPct}%` }}
+                    />
+                  )}
                 </div>
               </div>
 
@@ -615,6 +636,10 @@ export function DashboardScreen() {
                 <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-rose-500/10 text-rose-400">
                   <XCircle className="w-3.5 h-3.5 flex-shrink-0" />
                   <span className="text-xs font-semibold tabular-nums">{broken}</span>
+                </div>
+                <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-zinc-500/10 text-zinc-400">
+                  <Clock className="w-3.5 h-3.5 flex-shrink-0" />
+                  <span className="text-xs font-semibold tabular-nums">{pending}</span>
                 </div>
                 <button
                   onClick={() => setView('discipline')}
