@@ -427,12 +427,16 @@ function TradeAnalyticsCard({ trades, stats, privacyMode, theme, tc, tradeFilter
   const isNetPositive = netPnl >= 0;
 
   // Win Rate donut — single teal arc over a dark track, rounded cap,
-  // starting at 12 o'clock and sweeping clockwise by win rate %. Thin
-  // stroke relative to diameter so it reads as a ring, not a slab.
+  // starting at 12 o'clock and sweeping clockwise by win rate %. Thicker
+  // stroke relative to diameter so it reads as a bold ring.
+  // Win rate here is computed locally (wins / total) so breakeven trades
+  // count toward the denominator — intentionally different from
+  // `stats.winRate` (which may be wins / (wins + losses) elsewhere).
+  const winRatePct = total > 0 ? (wins / total) * 100 : 0;
   const r = 42;
-  const strokeWidth = 8;
+  const strokeWidth = 12;
   const c = 2 * Math.PI * r;
-  const winRateArc = total > 0 ? (stats.winRate / 100) * c : 0;
+  const winRateArc = total > 0 ? (winRatePct / 100) * c : 0;
 
   // Shared card shell — same compact icon+label+value pattern as the
   // Discipline Tracker stat tiles, just with a touch more breathing room
@@ -477,7 +481,7 @@ function TradeAnalyticsCard({ trades, stats, privacyMode, theme, tc, tradeFilter
         <div className="min-w-0">
           <p className="text-[10px] text-zinc-500 font-semibold tracking-wider uppercase">Win Rate</p>
           <p className={cn("text-xl font-bold tabular-nums leading-tight", tc.text)}>
-            {total > 0 ? `${stats.winRate.toFixed(1)}%` : '—'}
+            {total > 0 ? `${winRatePct.toFixed(1)}%` : '—'}
           </p>
         </div>
       </div>
