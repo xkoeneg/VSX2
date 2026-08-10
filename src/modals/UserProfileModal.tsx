@@ -17,7 +17,7 @@ import { ModalBackdrop } from '../components/shared/ModalBackdrop';
 import { cn } from '../utils/format';
 import { supabase } from '../lib/supabaseClient';
 
-type AuthUser = { email: string | null; name: string | null; avatarUrl: string | null };
+export type AuthUser = { email: string | null; name: string | null; avatarUrl: string | null };
 
 type ProfilePrefs = {
   hideEmail: boolean;
@@ -60,6 +60,43 @@ export function maskEmail(email: string): string {
 
 function prefsKey(email: string | null): string {
   return `vsx-profile-prefs:${email || 'anon'}`;
+}
+
+const AUTH_CACHE_KEY = 'vsx-auth-user-cache';
+
+// Synchronous last-known-user cache. Read this on initial state so the UI
+// never has to fall back to a placeholder like "Account" while the async
+// Supabase auth fetch is still in flight.
+export function loadCachedAuthUser(): AuthUser | null {
+  try {
+    const raw = localStorage.getItem(AUTH_CACHE_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw);
+    if (!parsed || typeof parsed !== 'object') return null;
+    return {
+      email: typeof parsed.email === 'string' ? parsed.email : null,
+      name: typeof parsed.name === 'string' ? parsed.name : null,
+      avatarUrl: typeof parsed.avatarUrl === 'string' ? parsed.avatarUrl : null,
+    };
+  } catch {
+    return null;
+  }
+}
+
+export function saveCachedAuthUser(user: AuthUser): void {
+  try {
+    localStorage.setItem(AUTH_CACHE_KEY, JSON.stringify(user));
+  } catch {
+    // Best effort only — a full/unavailable localStorage shouldn't break the app.
+  }
+}
+
+export function clearCachedAuthUser(): void {
+  try {
+    localStorage.removeItem(AUTH_CACHE_KEY);
+  } catch {
+    // ignore
+  }
 }
 
 // Lightweight read used by Sidebar to apply "Hide Email in UI" outside the modal itself
@@ -188,32 +225,45 @@ export function UserProfileModal({ isOpen, onClose, authUser, onAuthUserChange, 
   const handleSave = async () => {
     setIsSaving(true);
     setSaveError(null);
+
+    const nextAvatarUrl = uploadedAvatar || (avatarPresetColor ? null : authUser?.avatarUrl ?? null);
+    const nextName = editableName.trim() || null;
+    const nextUser: AuthUser = { email: authUser?.email ?? null, name: nextName, avatarUrl: nextAvatarUrl };
+
+    // 1. Persist locally first. This is the reliable primary store for UI
+    // prefs like hideEmail/publicPreviewEnabled/viewerPasscode plus the
+    // display name/avatar — it must succeed even if the Supabase call below
+    // fails (e.g. a custom profile column isn't set up yet).
     try {
-      const nextAvatarUrl = uploadedAvatar || (avatarPresetColor ? null : authUser?.avatarUrl ?? null);
+      const nextPrefs: ProfilePrefs = { hideEmail, publicPreviewEnabled, viewerPasscode, avatarPresetColor };
+      localStorage.setItem(prefsKey(authUser?.email ?? null), JSON.stringify(nextPrefs));
+      saveCachedAuthUser(nextUser);
+      onPrefsSaved?.(nextPrefs);
+    } catch (localErr) {
+      console.error('Failed to save profile changes locally', localErr);
+      setSaveError('Could not save your changes. Please try again.');
+      setIsSaving(false);
+      return;
+    }
+
+    // 2. Best-effort sync to Supabase. Any failure here (network, missing
+    // column, validation, etc.) is logged but never blocks the local save
+    // that already succeeded above.
+    try {
       const { error } = await supabase.auth.updateUser({
         data: {
-          full_name: editableName.trim() || null,
+          full_name: nextName,
           avatar_url: nextAvatarUrl,
         },
       });
       if (error) throw error;
-
-      const nextPrefs: ProfilePrefs = { hideEmail, publicPreviewEnabled, viewerPasscode, avatarPresetColor };
-      localStorage.setItem(prefsKey(authUser?.email ?? null), JSON.stringify(nextPrefs));
-      onPrefsSaved?.(nextPrefs);
-
-      onAuthUserChange({
-        email: authUser?.email ?? null,
-        name: editableName.trim() || null,
-        avatarUrl: nextAvatarUrl,
-      });
-      onClose();
-    } catch (err) {
-      console.error('Failed to save profile changes', err);
-      setSaveError('Could not save your changes. Please try again.');
-    } finally {
-      setIsSaving(false);
+    } catch (remoteErr) {
+      console.error('Could not sync profile changes to Supabase — local copy is saved', remoteErr);
     }
+
+    onAuthUserChange(nextUser);
+    setIsSaving(false);
+    onClose();
   };
 
   return createPortal(
