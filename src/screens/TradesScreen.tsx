@@ -463,7 +463,7 @@ function TradeAnalyticsCard({ trades, stats, privacyMode, theme, tc, tradeFilter
       {/* Card 2 — Win Rate donut, no trades-count line, just the ring and
           the label — matching the reference image as-is. */}
       <div className={cardClass}>
-        <div className="relative w-16 h-16 flex-shrink-0">
+        <div className="relative w-24 h-24 flex-shrink-0">
           <svg viewBox="0 0 112 112" className="w-full h-full -rotate-90">
             <circle cx="56" cy="56" r={r} fill="none" stroke="rgb(39,39,42)" strokeWidth={strokeWidth} />
             {winRateArc > 0 && (
@@ -474,7 +474,7 @@ function TradeAnalyticsCard({ trades, stats, privacyMode, theme, tc, tradeFilter
             )}
           </svg>
           <div className="absolute inset-0 flex items-center justify-center">
-            <span className={cn("text-xs font-bold tabular-nums leading-none", tc.text)}>
+            <span className={cn("text-base font-bold tabular-nums leading-none", tc.text)}>
               {total > 0 ? `${stats.winRate.toFixed(0)}%` : '—'}
             </span>
           </div>
