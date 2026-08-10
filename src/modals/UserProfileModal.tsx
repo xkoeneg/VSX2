@@ -17,7 +17,7 @@ import { ModalBackdrop } from '../components/shared/ModalBackdrop';
 import { cn } from '../utils/format';
 import { supabase } from '../lib/supabaseClient';
 
-export type AuthUser = { email: string | null; name: string | null; avatarUrl: string | null };
+export type AuthUser = { email: string | null; name: string | null; avatarUrl: string | null; hideEmail?: boolean };
 
 type ProfilePrefs = {
   hideEmail: boolean;
@@ -77,6 +77,7 @@ export function loadCachedAuthUser(): AuthUser | null {
       email: typeof parsed.email === 'string' ? parsed.email : null,
       name: typeof parsed.name === 'string' ? parsed.name : null,
       avatarUrl: typeof parsed.avatarUrl === 'string' ? parsed.avatarUrl : null,
+      hideEmail: typeof parsed.hideEmail === 'boolean' ? parsed.hideEmail : undefined,
     };
   } catch {
     return null;
@@ -164,13 +165,16 @@ export function UserProfileModal({ isOpen, onClose, authUser, onAuthUserChange, 
     setEditableName(authUser?.name ?? '');
     setUploadedAvatar(null);
     setAvatarPresetColor(prefs.avatarPresetColor);
-    setHideEmail(prefs.hideEmail);
+    // authUser.hideEmail (synced from Supabase user_metadata) is the
+    // cross-device source of truth; the local prefs value is only a
+    // same-browser fallback for when that hasn't loaded yet.
+    setHideEmail(typeof authUser?.hideEmail === 'boolean' ? authUser.hideEmail : prefs.hideEmail);
     setPublicPreviewEnabled(prefs.publicPreviewEnabled);
     setViewerPasscode(prefs.viewerPasscode);
     setSaveError(null);
     setAvatarError(null);
     setCopied(false);
-  }, [isOpen, authUser?.email, authUser?.name]);
+  }, [isOpen, authUser?.email, authUser?.name, authUser?.hideEmail]);
 
   if (!isOpen) return null;
 
@@ -228,7 +232,7 @@ export function UserProfileModal({ isOpen, onClose, authUser, onAuthUserChange, 
 
     const nextAvatarUrl = uploadedAvatar || (avatarPresetColor ? null : authUser?.avatarUrl ?? null);
     const nextName = editableName.trim() || null;
-    const nextUser: AuthUser = { email: authUser?.email ?? null, name: nextName, avatarUrl: nextAvatarUrl };
+    const nextUser: AuthUser = { email: authUser?.email ?? null, name: nextName, avatarUrl: nextAvatarUrl, hideEmail };
 
     // 1. Persist locally first. This is the reliable primary store for UI
     // prefs like hideEmail/publicPreviewEnabled/viewerPasscode plus the
@@ -254,6 +258,7 @@ export function UserProfileModal({ isOpen, onClose, authUser, onAuthUserChange, 
         data: {
           full_name: nextName,
           avatar_url: nextAvatarUrl,
+          hide_email: hideEmail,
         },
       });
       if (error) throw error;
