@@ -434,30 +434,34 @@ function TradeAnalyticsCard({ trades, stats, privacyMode, theme, tc, tradeFilter
   const c = 2 * Math.PI * r;
   const winRateArc = total > 0 ? (stats.winRate / 100) * c : 0;
 
-  // Shared card shell — matches the Discipline Tracker stat tiles: compact
-  // p-4, a small circular icon on the left, label + value stacked beside
-  // it. No absolute-positioned icon boxes, no tall empty padding.
+  // Shared card shell — same compact icon+label+value pattern as the
+  // Discipline Tracker stat tiles, just with a touch more breathing room
+  // (p-5) than the very first compact pass so it doesn't feel cramped.
   const cardClass = cn(
-    "bg-zinc-900/50 border border-white/10 rounded-xl p-4 backdrop-blur-md hover:border-white/20 transition-all flex items-center gap-3",
+    "bg-zinc-900/50 border border-white/10 rounded-xl p-5 backdrop-blur-md hover:border-white/20 transition-all flex items-center gap-3",
     theme === 'light' && 'bg-white border-zinc-200'
   );
   const iconCircleClass = "w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 border";
 
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4 mb-6">
-      {/* Card 1 — Total Trades */}
+      {/* Card 1 — Net P&L, now leading the row. */}
       <div className={cardClass}>
-        <div className={cn(iconCircleClass, "bg-indigo-500/10 border-indigo-500/20")}>
-          <BarChart3 className="w-4 h-4 text-indigo-400" />
+        <div className={cn(iconCircleClass, isNetPositive ? "bg-emerald-500/10 border-emerald-500/20" : "bg-rose-500/10 border-rose-500/20")}>
+          {isNetPositive
+            ? <TrendingUp className="w-4 h-4 text-emerald-400" />
+            : <TrendingDown className="w-4 h-4 text-rose-500" />}
         </div>
         <div className="min-w-0">
-          <p className="text-[10px] text-zinc-500 font-semibold tracking-wider uppercase">Total Trades</p>
-          <p className={cn("text-xl font-bold tabular-nums leading-tight", tc.text)}>{total}</p>
+          <p className="text-[10px] text-zinc-500 font-semibold tracking-wider uppercase">Net P&amp;L</p>
+          <p className={cn("text-xl font-bold tabular-nums leading-tight", isNetPositive ? 'text-emerald-400' : 'text-rose-500')}>
+            {formatCurrency(netPnl, privacyMode)}
+          </p>
         </div>
       </div>
 
-      {/* Card 2 — Win Rate donut, same compact height as the other four
-          cards; "logged" dropped so it just reads "N trades". */}
+      {/* Card 2 — Win Rate donut, no trades-count line, just the ring and
+          the label — matching the reference image as-is. */}
       <div className={cardClass}>
         <div className="relative w-12 h-12 flex-shrink-0">
           <svg viewBox="0 0 112 112" className="w-full h-full -rotate-90">
@@ -477,9 +481,8 @@ function TradeAnalyticsCard({ trades, stats, privacyMode, theme, tc, tradeFilter
         </div>
         <div className="min-w-0">
           <p className="text-[10px] text-zinc-500 font-semibold tracking-wider uppercase">Win Rate</p>
-          <p className={cn("text-xl font-bold tabular-nums leading-tight truncate", tc.text)}>
+          <p className={cn("text-xl font-bold tabular-nums leading-tight", tc.text)}>
             {total > 0 ? `${stats.winRate.toFixed(1)}%` : '—'}
-            <span className="text-xs font-medium text-zinc-500 ml-1.5">{total} trades</span>
           </p>
         </div>
       </div>
@@ -547,21 +550,14 @@ function TradeAnalyticsCard({ trades, stats, privacyMode, theme, tc, tradeFilter
         </div>
       </div>
 
-      {/* Card 5 — Net P&L across the currently filtered trades. This was
-          the one number missing from the row entirely — total trades, win
-          rate, and profit factor all describe *how* you traded, but not
-          the bottom line. Color and icon flip with sign. */}
+      {/* Card 5 — Total Trades, now trailing the row. */}
       <div className={cardClass}>
-        <div className={cn(iconCircleClass, isNetPositive ? "bg-emerald-500/10 border-emerald-500/20" : "bg-rose-500/10 border-rose-500/20")}>
-          {isNetPositive
-            ? <TrendingUp className="w-4 h-4 text-emerald-400" />
-            : <TrendingDown className="w-4 h-4 text-rose-500" />}
+        <div className={cn(iconCircleClass, "bg-indigo-500/10 border-indigo-500/20")}>
+          <BarChart3 className="w-4 h-4 text-indigo-400" />
         </div>
         <div className="min-w-0">
-          <p className="text-[10px] text-zinc-500 font-semibold tracking-wider uppercase">Net P&amp;L</p>
-          <p className={cn("text-xl font-bold tabular-nums leading-tight", isNetPositive ? 'text-emerald-400' : 'text-rose-500')}>
-            {formatCurrency(netPnl, privacyMode)}
-          </p>
+          <p className="text-[10px] text-zinc-500 font-semibold tracking-wider uppercase">Total Trades</p>
+          <p className={cn("text-xl font-bold tabular-nums leading-tight", tc.text)}>{total}</p>
         </div>
       </div>
     </div>
