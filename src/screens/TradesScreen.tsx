@@ -441,13 +441,13 @@ function TradeAnalyticsCard({ trades, stats, privacyMode, theme, tc, tradeFilter
     "bg-zinc-900/50 border border-white/10 rounded-xl p-5 backdrop-blur-md hover:border-white/20 transition-all flex items-center gap-3",
     theme === 'light' && 'bg-white border-zinc-200'
   );
-  const iconCircleClass = "w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0 border";
+  const iconCircleClass = "p-2.5 rounded-xl flex-shrink-0";
 
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4 mb-6">
       {/* Card 1 — Net P&L, now leading the row. */}
       <div className={cardClass}>
-        <div className={cn(iconCircleClass, isNetPositive ? "bg-emerald-500/10 border-emerald-500/20" : "bg-rose-500/10 border-rose-500/20")}>
+        <div className={cn(iconCircleClass, isNetPositive ? "bg-emerald-500/10" : "bg-rose-500/10")}>
           {isNetPositive
             ? <TrendingUp className="w-4 h-4 text-emerald-400" />
             : <TrendingDown className="w-4 h-4 text-rose-500" />}
@@ -490,7 +490,7 @@ function TradeAnalyticsCard({ trades, stats, privacyMode, theme, tc, tradeFilter
       {/* Card 3 — Win / Loss / Break-Even breakdown; chips stay clickable
           against `tradeFilter`, same as the old bar. */}
       <div className={cardClass}>
-        <div className={cn(iconCircleClass, "bg-white/5 border-white/10")}>
+        <div className={cn(iconCircleClass, "bg-white/5")}>
           <Scale className="w-4 h-4 text-zinc-400" />
         </div>
         <div className="min-w-0">
@@ -534,7 +534,7 @@ function TradeAnalyticsCard({ trades, stats, privacyMode, theme, tc, tradeFilter
 
       {/* Card 4 — Profit Factor / Avg Win & Loss */}
       <div className={cardClass}>
-        <div className={cn(iconCircleClass, "bg-white/5 border-white/10")}>
+        <div className={cn(iconCircleClass, "bg-white/5")}>
           <Target className="w-4 h-4 text-zinc-400" />
         </div>
         <div className="min-w-0">
@@ -552,7 +552,7 @@ function TradeAnalyticsCard({ trades, stats, privacyMode, theme, tc, tradeFilter
 
       {/* Card 5 — Total Trades, now trailing the row. */}
       <div className={cardClass}>
-        <div className={cn(iconCircleClass, "bg-indigo-500/10 border-indigo-500/20")}>
+        <div className={cn(iconCircleClass, "bg-indigo-500/10")}>
           <BarChart3 className="w-4 h-4 text-indigo-400" />
         </div>
         <div className="min-w-0">
