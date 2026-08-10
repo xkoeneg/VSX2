@@ -94,6 +94,7 @@ import {
   Coffee,
   Heart,
   User as UserIcon,
+  LogOut,
   type LucideIcon,
 } from 'lucide-react';
 import type {
@@ -165,7 +166,7 @@ import { supabase } from '../lib/supabaseClient';
 import type { AuthChangeEvent, Session } from '@supabase/supabase-js';
 import { useAppContext } from '../context/AppContext';
 import { renderStatCard, renderAccountFilter, renderAccountTypeBadge, renderTradingAccountTypeBadge } from '../components/shared/RenderHelpers';
-import { UserProfileModal, maskEmail, loadHideEmailPref } from '../modals/UserProfileModal';
+import { UserProfileModal, loadHideEmailPref } from '../modals/UserProfileModal';
 
 export function Sidebar({ isMobile }: { isMobile: boolean }) {
   const {
@@ -283,6 +284,29 @@ export function Sidebar({ isMobile }: { isMobile: boolean }) {
     const [authUser, setAuthUser] = useState<{ email: string | null; name: string | null; avatarUrl: string | null } | null>(null);
     const [isUserProfileModalOpen, setIsUserProfileModalOpen] = useState(false);
     const [hideEmailInUi, setHideEmailInUi] = useState(false);
+    const [isProfilePopoverOpen, setIsProfilePopoverOpen] = useState(false);
+    const profilePopoverRef = useRef<HTMLDivElement>(null);
+
+    // Close the profile popover on outside click / Escape
+    useEffect(() => {
+      if (!isProfilePopoverOpen) return;
+
+      const handleClickOutside = (e: MouseEvent) => {
+        if (profilePopoverRef.current && !profilePopoverRef.current.contains(e.target as Node)) {
+          setIsProfilePopoverOpen(false);
+        }
+      };
+      const handleEscape = (e: KeyboardEvent) => {
+        if (e.key === 'Escape') setIsProfilePopoverOpen(false);
+      };
+
+      document.addEventListener('mousedown', handleClickOutside);
+      document.addEventListener('keydown', handleEscape);
+      return () => {
+        document.removeEventListener('mousedown', handleClickOutside);
+        document.removeEventListener('keydown', handleEscape);
+      };
+    }, [isProfilePopoverOpen]);
 
     // Load the logged-in user and keep it in sync with auth state changes
     useEffect(() => {
@@ -330,7 +354,7 @@ export function Sidebar({ isMobile }: { isMobile: boolean }) {
 
     const displayName = authUser?.name || authUser?.email?.split('@')[0] || 'Account';
     const displayEmail = authUser?.email || '';
-    const shownEmail = displayEmail ? (hideEmailInUi ? maskEmail(displayEmail) : displayEmail) : '';
+    const shownEmail = displayEmail && !hideEmailInUi ? displayEmail : '';
 
     const collapsed = !isMobile && sidebarCollapsed;
     return (
@@ -490,9 +514,48 @@ export function Sidebar({ isMobile }: { isMobile: boolean }) {
         </div>
 
         {/* BOTTOM GROUP: user profile section, pinned to the bottom */}
-        <div className="relative mt-auto">
+        <div className="relative mt-auto" ref={profilePopoverRef}>
+          {isProfilePopoverOpen && (
+            <div
+              className={cn(
+                'absolute bottom-full left-0 mb-2 w-56 rounded-lg border shadow-2xl overflow-hidden z-20',
+                theme !== 'light' ? 'bg-zinc-900 border-white/10' : 'bg-white border-zinc-200'
+              )}
+            >
+              <button
+                type="button"
+                onClick={() => {
+                  setIsProfilePopoverOpen(false);
+                  setIsUserProfileModalOpen(true);
+                  setIsMobileSidebarOpen(false);
+                }}
+                className={cn(
+                  'w-full flex items-center gap-2.5 px-3.5 py-2.5 text-sm text-left transition-colors select-none',
+                  theme !== 'light' ? 'text-zinc-200 hover:bg-zinc-800' : 'text-zinc-700 hover:bg-zinc-100'
+                )}
+              >
+                <UserIcon className="w-4 h-4 flex-shrink-0" />
+                Profile Settings
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setIsProfilePopoverOpen(false);
+                  handleSignOut();
+                }}
+                className={cn(
+                  'w-full flex items-center gap-2.5 px-3.5 py-2.5 text-sm text-left transition-colors select-none border-t',
+                  theme !== 'light' ? 'border-white/5 text-red-400/80 hover:bg-red-950/20 hover:text-red-300' : 'border-zinc-200 text-red-500/80 hover:bg-red-50 hover:text-red-600'
+                )}
+              >
+                <LogOut className="w-4 h-4 flex-shrink-0" />
+                Sign Out
+              </button>
+            </div>
+          )}
+
           <div
-            onClick={() => setIsUserProfileModalOpen(true)}
+            onClick={() => setIsProfilePopoverOpen(prev => !prev)}
             title={collapsed ? (shownEmail || displayName) : undefined}
             className={cn(
               'flex items-center gap-2.5 px-2.5 py-2.5 rounded-lg hover:bg-white/5 cursor-pointer border-t select-none',
