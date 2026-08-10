@@ -166,7 +166,7 @@ import { supabase } from '../lib/supabaseClient';
 import type { AuthChangeEvent, Session } from '@supabase/supabase-js';
 import { useAppContext } from '../context/AppContext';
 import { renderStatCard, renderAccountFilter, renderAccountTypeBadge, renderTradingAccountTypeBadge } from '../components/shared/RenderHelpers';
-import { UserProfileModal, loadHideEmailPref } from '../modals/UserProfileModal';
+import { UserProfileModal, loadHideEmailPref, loadCachedAuthUser, saveCachedAuthUser, clearCachedAuthUser, type AuthUser } from '../modals/UserProfileModal';
 
 export function Sidebar({ isMobile }: { isMobile: boolean }) {
   const {
@@ -281,11 +281,19 @@ export function Sidebar({ isMobile }: { isMobile: boolean }) {
     exportBackup, importBackup,
   } = useAppContext();
 
-    const [authUser, setAuthUser] = useState<{ email: string | null; name: string | null; avatarUrl: string | null } | null>(null);
+    const [authUser, setAuthUser] = useState<AuthUser | null>(() => loadCachedAuthUser());
     const [isUserProfileModalOpen, setIsUserProfileModalOpen] = useState(false);
-    const [hideEmailInUi, setHideEmailInUi] = useState(false);
+    const [hideEmailInUi, setHideEmailInUi] = useState(() => loadHideEmailPref(loadCachedAuthUser()?.email ?? null));
     const [isProfilePopoverOpen, setIsProfilePopoverOpen] = useState(false);
     const profilePopoverRef = useRef<HTMLDivElement>(null);
+
+    // Keep state updates (from the modal or from auth events) synced to the
+    // local cache immediately, so a reload always has the latest known
+    // profile available before the async auth fetch resolves.
+    const handleAuthUserChange = (user: AuthUser) => {
+      setAuthUser(user);
+      saveCachedAuthUser(user);
+    };
 
     // Close the profile popover on outside click / Escape
     useEffect(() => {
@@ -327,6 +335,7 @@ export function Sidebar({ isMobile }: { isMobile: boolean }) {
         const mapped = mapUser(data.user);
         setAuthUser(mapped);
         setHideEmailInUi(loadHideEmailPref(mapped?.email ?? null));
+        if (mapped) saveCachedAuthUser(mapped); else clearCachedAuthUser();
       });
 
       const { data: authListener }: { data: { subscription: any } } = supabase.auth.onAuthStateChange(
@@ -334,6 +343,7 @@ export function Sidebar({ isMobile }: { isMobile: boolean }) {
           const mapped = mapUser(session?.user);
           setAuthUser(mapped);
           setHideEmailInUi(loadHideEmailPref(mapped?.email ?? null));
+          if (mapped) saveCachedAuthUser(mapped); else clearCachedAuthUser();
         }
       );
 
@@ -345,6 +355,7 @@ export function Sidebar({ isMobile }: { isMobile: boolean }) {
 
     const handleSignOut = async () => {
       setIsUserProfileModalOpen(false);
+      clearCachedAuthUser();
       try {
         await supabase.auth.signOut();
       } finally {
@@ -617,7 +628,7 @@ export function Sidebar({ isMobile }: { isMobile: boolean }) {
         isOpen={isUserProfileModalOpen}
         onClose={() => setIsUserProfileModalOpen(false)}
         authUser={authUser}
-        onAuthUserChange={setAuthUser}
+        onAuthUserChange={handleAuthUserChange}
         onSignOut={handleSignOut}
         onPrefsSaved={(prefs) => setHideEmailInUi(prefs.hideEmail)}
       />
