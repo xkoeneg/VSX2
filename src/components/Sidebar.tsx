@@ -168,6 +168,15 @@ import { useAppContext } from '../context/AppContext';
 import { renderStatCard, renderAccountFilter, renderAccountTypeBadge, renderTradingAccountTypeBadge } from '../components/shared/RenderHelpers';
 import { UserProfileModal, loadHideEmailPref, loadCachedAuthUser, saveCachedAuthUser, clearCachedAuthUser, type AuthUser } from '../modals/UserProfileModal';
 
+// authUser.hideEmail (synced from Supabase user_metadata) is the
+// cross-device source of truth for this preference; loadHideEmailPref
+// reads a same-browser-only localStorage fallback for use before that
+// synced value has ever loaded on this device.
+function resolveHideEmail(user: AuthUser | null): boolean {
+  if (user && typeof user.hideEmail === 'boolean') return user.hideEmail;
+  return loadHideEmailPref(user?.email ?? null);
+}
+
 export function Sidebar({ isMobile }: { isMobile: boolean }) {
   const {
     view, setView, privacyMode, setPrivacyMode, theme, setTheme, mainScrollRef, isExportConfirmOpen,
@@ -283,7 +292,7 @@ export function Sidebar({ isMobile }: { isMobile: boolean }) {
 
     const [authUser, setAuthUser] = useState<AuthUser | null>(() => loadCachedAuthUser());
     const [isUserProfileModalOpen, setIsUserProfileModalOpen] = useState(false);
-    const [hideEmailInUi, setHideEmailInUi] = useState(() => loadHideEmailPref(loadCachedAuthUser()?.email ?? null));
+    const [hideEmailInUi, setHideEmailInUi] = useState(() => resolveHideEmail(loadCachedAuthUser()));
     const [isProfilePopoverOpen, setIsProfilePopoverOpen] = useState(false);
     const profilePopoverRef = useRef<HTMLDivElement>(null);
 
@@ -292,6 +301,7 @@ export function Sidebar({ isMobile }: { isMobile: boolean }) {
     // profile available before the async auth fetch resolves.
     const handleAuthUserChange = (user: AuthUser) => {
       setAuthUser(user);
+      setHideEmailInUi(resolveHideEmail(user));
       saveCachedAuthUser(user);
     };
 
@@ -319,37 +329,79 @@ export function Sidebar({ isMobile }: { isMobile: boolean }) {
     // Load the logged-in user and keep it in sync with auth state changes
     useEffect(() => {
       let isMounted = true;
+      let hasResolved = false;
+      let retryCount = 0;
+      let retryTimer: ReturnType<typeof setTimeout> | null = null;
 
-      const mapUser = (u: { email?: string | null; user_metadata?: Record<string, unknown> } | null | undefined) => {
+      const mapUser = (u: { email?: string | null; user_metadata?: Record<string, unknown> } | null | undefined): AuthUser | null => {
         if (!u) return null;
         const metadata = (u.user_metadata ?? {}) as Record<string, unknown>;
         return {
           email: u.email ?? null,
           name: (metadata.full_name as string) || (metadata.name as string) || null,
           avatarUrl: (metadata.avatar_url as string) || (metadata.picture as string) || null,
+          hideEmail: typeof metadata.hide_email === 'boolean' ? (metadata.hide_email as boolean) : undefined,
         };
       };
 
-      supabase.auth.getUser().then(({ data }) => {
+      const applyUser = (mapped: AuthUser | null) => {
         if (!isMounted) return;
-        const mapped = mapUser(data.user);
+        hasResolved = true;
         setAuthUser(mapped);
-        setHideEmailInUi(loadHideEmailPref(mapped?.email ?? null));
+        setHideEmailInUi(resolveHideEmail(mapped));
         if (mapped) saveCachedAuthUser(mapped); else clearCachedAuthUser();
-      });
+      };
+
+      // getSession() reads the already-persisted session straight from
+      // localStorage and resolves almost instantly. getUser() instead makes
+      // a network round-trip to re-verify the token with the server — that
+      // call is what was stalling for a long time right after a fresh
+      // login or in a newly opened/incognito tab, leaving the sidebar stuck
+      // on a placeholder name until the tab regained focus.
+      const fetchAuth = () => {
+        supabase.auth.getSession()
+          .then(({ data }) => applyUser(mapUser(data.session?.user)))
+          .catch(() => {
+            // onAuthStateChange below will still catch up once auth settles
+          });
+      };
+
+      fetchAuth();
 
       const { data: authListener }: { data: { subscription: any } } = supabase.auth.onAuthStateChange(
         (_event: AuthChangeEvent, session: Session | null) => {
-          const mapped = mapUser(session?.user);
-          setAuthUser(mapped);
-          setHideEmailInUi(loadHideEmailPref(mapped?.email ?? null));
-          if (mapped) saveCachedAuthUser(mapped); else clearCachedAuthUser();
+          applyUser(mapUser(session?.user));
         }
       );
+
+      // Self-healing retry: the very first session check can still stall
+      // (browser tab throttling, or the auth client's own internal
+      // locking), so retry a few times on a short backoff, and immediately
+      // whenever the tab becomes visible/focused again — this is exactly
+      // what manually alt-tabbing was working around, now handled
+      // automatically instead of requiring the user to do it by hand.
+      const scheduleRetry = () => {
+        if (hasResolved || retryCount >= 5) return;
+        retryCount += 1;
+        retryTimer = setTimeout(() => {
+          if (!hasResolved) fetchAuth();
+          scheduleRetry();
+        }, 1000 * retryCount);
+      };
+      scheduleRetry();
+
+      const handleVisible = () => {
+        if (document.visibilityState === 'visible' && !hasResolved) fetchAuth();
+      };
+      document.addEventListener('visibilitychange', handleVisible);
+      window.addEventListener('focus', handleVisible);
 
       return () => {
         isMounted = false;
         authListener?.subscription?.unsubscribe();
+        if (retryTimer) clearTimeout(retryTimer);
+        document.removeEventListener('visibilitychange', handleVisible);
+        window.removeEventListener('focus', handleVisible);
       };
     }, []);
 
