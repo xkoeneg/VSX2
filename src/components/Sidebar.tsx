@@ -165,7 +165,7 @@ import { supabase } from '../lib/supabaseClient';
 import type { AuthChangeEvent, Session } from '@supabase/supabase-js';
 import { useAppContext } from '../context/AppContext';
 import { renderStatCard, renderAccountFilter, renderAccountTypeBadge, renderTradingAccountTypeBadge } from '../components/shared/RenderHelpers';
-import { UserProfileModal, maskEmail, loadHideEmailPref } from './UserProfileModal';
+import { UserProfileModal, maskEmail, loadHideEmailPref } from '../modals/UserProfileModal';
 
 export function Sidebar({ isMobile }: { isMobile: boolean }) {
   const {
