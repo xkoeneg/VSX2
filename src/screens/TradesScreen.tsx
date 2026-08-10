@@ -424,125 +424,117 @@ function TradeAnalyticsCard({ trades, stats, privacyMode, theme, tc, tradeFilter
   const losses = trades.filter(t => t.profitLoss <= -10).length;
   const breakeven = total - wins - losses;
 
-  // Donut geometry — three stacked arcs (win / loss / breakeven) drawn as
-  // separate circles sharing one radius, each offset by the arcs before it.
+  // Win Rate donut — single teal arc over a dark track, rounded cap,
+  // starting at 12 o'clock and sweeping clockwise by win rate %. This is a
+  // 1:1 match of the WinRateGaugePreviewCard tile in LoginPage.tsx's
+  // background scatter.
   const r = 42;
-  const strokeWidth = 12;
+  const strokeWidth = 10;
   const c = 2 * Math.PI * r;
-  const winLen = total > 0 ? (wins / total) * c : 0;
-  const lossLen = total > 0 ? (losses / total) * c : 0;
-  const beLen = total > 0 ? (breakeven / total) * c : 0;
+  const winRateArc = total > 0 ? (stats.winRate / 100) * c : 0;
+
+  const cardClass = cn(
+    "bg-zinc-900/50 border border-white/10 rounded-xl p-4 backdrop-blur-md hover:border-white/20 transition-all flex items-center justify-between",
+    theme === 'light' && 'bg-white border-zinc-200'
+  );
 
   return (
-    <div className={cn(
-      "relative overflow-hidden rounded-xl border border-white/10 bg-zinc-900/60 backdrop-blur-md p-4 mb-4",
-      theme === 'light' && 'bg-white border-zinc-200'
-    )}>
-      <div className="flex flex-col lg:flex-row items-center lg:items-center gap-4">
-        {/* Left — donut gauge + legend, compact fixed width */}
-        <div className="flex items-center gap-3 flex-shrink-0 w-full lg:w-auto">
-          <div className="relative w-[72px] h-[72px] flex-shrink-0">
-            <svg viewBox="0 0 112 112" className="w-full h-full -rotate-90">
-              <circle cx="56" cy="56" r={r} fill="none" stroke="rgb(39,39,42)" strokeWidth={strokeWidth} />
-              {winLen > 0 && (
-                <circle
-                  cx="56" cy="56" r={r} fill="none" stroke="rgb(16,185,129)" strokeWidth={strokeWidth}
-                  strokeDasharray={`${winLen} ${c - winLen}`} strokeDashoffset={0} strokeLinecap="butt"
-                />
-              )}
-              {lossLen > 0 && (
-                <circle
-                  cx="56" cy="56" r={r} fill="none" stroke="rgb(244,63,94)" strokeWidth={strokeWidth}
-                  strokeDasharray={`${lossLen} ${c - lossLen}`} strokeDashoffset={-winLen} strokeLinecap="butt"
-                />
-              )}
-              {beLen > 0 && (
-                <circle
-                  cx="56" cy="56" r={r} fill="none" stroke="rgb(161,161,170)" strokeWidth={strokeWidth}
-                  strokeDasharray={`${beLen} ${c - beLen}`} strokeDashoffset={-(winLen + lossLen)} strokeLinecap="butt"
-                />
-              )}
-            </svg>
-            <div className="absolute inset-0 flex flex-col items-center justify-center">
-              <span className={cn("text-sm font-bold tabular-nums leading-none", tc.text)}>
-                {total > 0 ? `${stats.winRate.toFixed(1)}%` : '—'}
-              </span>
-              <span className="text-[7px] uppercase tracking-wider text-zinc-500 mt-1">Win Rate</span>
-            </div>
-          </div>
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+      {/* Card 1 — Total Trades */}
+      <div className={cardClass}>
+        <div>
+          <p className="text-[10px] text-zinc-500 font-medium tracking-wider uppercase mb-1.5">Total Trades</p>
+          <p className={cn("text-2xl font-bold tabular-nums", tc.text)}>{total}</p>
+        </div>
+        <div className="w-10 h-10 rounded-lg bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center flex-shrink-0">
+          <BarChart3 className="w-5 h-5 text-indigo-400" />
+        </div>
+      </div>
 
-          {/* Legend — stacked beside the gauge, clickable to filter */}
-          <div className="flex flex-col gap-1 w-full max-w-[130px]">
+      {/* Card 2 — Win Rate donut, 1:1 match to the Login screen preview tile */}
+      <div className={cardClass}>
+        <div className="relative w-[72px] h-[72px] flex-shrink-0">
+          <svg viewBox="0 0 112 112" className="w-full h-full -rotate-90">
+            <circle cx="56" cy="56" r={r} fill="none" stroke="rgb(39,39,42)" strokeWidth={strokeWidth} />
+            {winRateArc > 0 && (
+              <circle
+                cx="56" cy="56" r={r} fill="none" stroke="rgb(16,185,129)" strokeWidth={strokeWidth}
+                strokeDasharray={`${winRateArc} ${c - winRateArc}`} strokeLinecap="round"
+              />
+            )}
+          </svg>
+          <div className="absolute inset-0 flex items-center justify-center">
+            <span className={cn("text-base font-bold tabular-nums leading-none", tc.text)}>
+              {total > 0 ? `${stats.winRate.toFixed(1)}%` : '—'}
+            </span>
+          </div>
+        </div>
+        <div className="flex flex-col ml-3 min-w-0">
+          <span className="text-[10px] text-zinc-500 font-medium tracking-wider uppercase">Win Rate</span>
+          <span className={cn("text-sm font-medium mt-1 truncate", tc.textMuted)}>{total} trades logged</span>
+        </div>
+      </div>
+
+      {/* Card 3 — Win / Loss / Break-Even breakdown; chips stay clickable
+          against `tradeFilter`, same as the old bar. */}
+      <div className={cardClass}>
+        <div>
+          <p className="text-[10px] text-zinc-500 font-medium tracking-wider uppercase mb-1.5">Win / Loss Ratio</p>
+          <p className="text-xl font-bold tabular-nums">
             <button
               type="button"
               onClick={() => setTradeFilter(prev => prev === 'profit' ? 'all' : 'profit')}
               className={cn(
-                "flex items-center gap-1.5 text-[11px] font-medium px-1.5 py-0.5 rounded-md transition-colors",
-                tradeFilter === 'profit' ? 'bg-emerald-500/10 ring-1 ring-emerald-500/40' : 'hover:bg-white/5'
+                "text-emerald-400 rounded transition-colors",
+                tradeFilter === 'profit' ? 'ring-1 ring-emerald-500/40 bg-emerald-500/10 px-1' : 'hover:text-emerald-300'
               )}
             >
-              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 flex-shrink-0" />
-              <span className="text-zinc-500">Wins</span>
-              <span className="text-emerald-400 font-semibold tabular-nums ml-auto">{wins}</span>
+              {wins}W
             </button>
+            <span className="text-zinc-600 mx-1">-</span>
             <button
               type="button"
               onClick={() => setTradeFilter(prev => prev === 'loss' ? 'all' : 'loss')}
               className={cn(
-                "flex items-center gap-1.5 text-[11px] font-medium px-1.5 py-0.5 rounded-md transition-colors",
-                tradeFilter === 'loss' ? 'bg-rose-500/10 ring-1 ring-rose-500/40' : 'hover:bg-white/5'
+                "text-rose-500 rounded transition-colors",
+                tradeFilter === 'loss' ? 'ring-1 ring-rose-500/40 bg-rose-500/10 px-1' : 'hover:text-rose-400'
               )}
             >
-              <span className="w-1.5 h-1.5 rounded-full bg-rose-500 flex-shrink-0" />
-              <span className="text-zinc-500">Losses</span>
-              <span className="text-rose-400 font-semibold tabular-nums ml-auto">{losses}</span>
+              {losses}L
             </button>
+            <span className="text-zinc-600 mx-1">-</span>
             <button
               type="button"
               onClick={() => setTradeFilter(prev => prev === 'breakeven' ? 'all' : 'breakeven')}
               className={cn(
-                "flex items-center gap-1.5 text-[11px] font-medium px-1.5 py-0.5 rounded-md transition-colors",
-                tradeFilter === 'breakeven' ? 'bg-zinc-400/10 ring-1 ring-zinc-400/40' : 'hover:bg-white/5'
+                "text-zinc-400 rounded transition-colors",
+                tradeFilter === 'breakeven' ? 'ring-1 ring-zinc-400/40 bg-zinc-400/10 px-1' : 'hover:text-zinc-300'
               )}
             >
-              <span className="w-1.5 h-1.5 rounded-full bg-zinc-400 flex-shrink-0" />
-              <span className="text-zinc-500">Break-Even</span>
-              <span className="text-zinc-300 font-semibold tabular-nums ml-auto">{breakeven}</span>
+              {breakeven}BE
             </button>
-          </div>
+          </p>
         </div>
+        <div className="w-10 h-10 rounded-lg bg-white/5 border border-white/10 flex items-center justify-center flex-shrink-0">
+          <Scale className="w-5 h-5 text-zinc-400" />
+        </div>
+      </div>
 
-        <div className="hidden lg:block border-r border-white/10 self-stretch" />
-        <div className="lg:hidden w-full h-px bg-white/10" />
-
-        {/* Right — 4-tile metrics grid, ~72-74% width on large screens */}
-        <div className="flex-1 grid grid-cols-2 lg:grid-cols-4 gap-3 items-stretch">
-          <div className="flex flex-col justify-center h-full p-4 bg-zinc-800/40 border border-white/5 rounded-lg hover:border-white/10 transition-colors">
-            <p className="text-[10px] text-zinc-400 font-medium tracking-wider uppercase mb-1.5">Total Trades</p>
-            <p className={cn("text-base font-semibold tabular-nums", tc.text)}>{total}</p>
-          </div>
-          <div className="flex flex-col justify-center h-full p-4 bg-zinc-800/40 border border-white/5 rounded-lg hover:border-white/10 transition-colors">
-            <p className="text-[10px] text-zinc-400 font-medium tracking-wider uppercase mb-1.5">Win / Loss Count</p>
-            <p className="text-base font-semibold tabular-nums">
-              <span className="text-emerald-500">{wins}W</span>
-              <span className="text-zinc-600 mx-1">-</span>
-              <span className="text-rose-500">{losses}L</span>
-            </p>
-          </div>
-          <div className="flex flex-col justify-center h-full p-4 bg-zinc-800/40 border border-white/5 rounded-lg hover:border-white/10 transition-colors">
-            <p className="text-[10px] text-zinc-400 font-medium tracking-wider uppercase mb-1.5">Profit Factor</p>
-            <p className={cn("text-base font-semibold tabular-nums", tc.text)}>
-              {total > 0 && isFinite(stats.profitFactor) ? stats.profitFactor.toFixed(2) : 'N/A'}
-            </p>
-          </div>
-          <div className="flex flex-col justify-center h-full p-4 bg-zinc-800/40 border border-white/5 rounded-lg hover:border-white/10 transition-colors">
-            <p className="text-[10px] text-zinc-400 font-medium tracking-wider uppercase mb-1.5">Avg Win / Avg Loss</p>
-            <p className="text-base font-semibold tabular-nums">
-              <span className="text-emerald-500">{formatCurrency(stats.avgWin, privacyMode)}</span>
-              <span className="text-zinc-600 mx-1">/</span>
-              <span className="text-rose-500">{formatCurrency(-stats.avgLoss, privacyMode)}</span>
-            </p>
-          </div>
+      {/* Card 4 — Profit Factor / Avg Win & Loss */}
+      <div className={cardClass}>
+        <div>
+          <p className="text-[10px] text-zinc-500 font-medium tracking-wider uppercase mb-1.5">Profit Factor</p>
+          <p className={cn("text-xl font-bold tabular-nums mb-2", tc.text)}>
+            {total > 0 && isFinite(stats.profitFactor) ? stats.profitFactor.toFixed(2) : 'N/A'}
+          </p>
+          <p className="text-[11px] font-medium tabular-nums text-zinc-500">
+            <span className="text-emerald-500">{formatCurrency(stats.avgWin, privacyMode)}</span>
+            <span className="mx-1">/</span>
+            <span className="text-rose-500">{formatCurrency(-stats.avgLoss, privacyMode)}</span>
+          </p>
+        </div>
+        <div className="w-10 h-10 rounded-lg bg-white/5 border border-white/10 flex items-center justify-center flex-shrink-0">
+          <Target className="w-5 h-5 text-zinc-400" />
         </div>
       </div>
     </div>
@@ -822,14 +814,12 @@ export function TradesScreen() {
         </div>
       )}
 
-      {/* HEADER ANALYTICS CARD — replaces the old flat text metrics bar with a
-          donut gauge (Win/Loss/BE distribution, win rate in the center) plus a
-          breakdown grid (total trades, win/loss count, profit factor, avg
-          win/loss). The three legend chips keep the old bar's click-to-filter
-          behavior: clicking one toggles `tradeFilter` to narrow the gallery +
-          table below to just that outcome; clicking the active one again
-          clears it back to 'all'. This card's shape is mirrored by the
-          WinRateGaugePreviewCard in LoginPage.tsx's background scatter. */}
+      {/* HEADER ANALYTICS ROW — 4 standalone stat cards: Total Trades, a
+          Win Rate donut (1:1 match to the Login screen's win-rate preview
+          tile), the Win/Loss/BE breakdown, and Profit Factor + Avg Win/Loss.
+          The W/L/BE values in card 3 stay clickable against `tradeFilter`:
+          clicking one narrows the gallery + table below to just that
+          outcome, clicking the active one again clears it back to 'all'. */}
       <TradeAnalyticsCard
         trades={accountFilteredTrades}
         stats={stats}
