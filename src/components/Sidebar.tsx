@@ -518,7 +518,7 @@ export function Sidebar({ isMobile }: { isMobile: boolean }) {
           {isProfilePopoverOpen && (
             <div
               className={cn(
-                'absolute bottom-full left-0 mb-2 w-56 rounded-lg border shadow-2xl overflow-hidden z-20',
+                'absolute bottom-full left-0 right-0 w-full mb-2 z-50 box-border rounded-xl border shadow-2xl overflow-hidden',
                 theme !== 'light' ? 'bg-zinc-900 border-white/10' : 'bg-white border-zinc-200'
               )}
             >
