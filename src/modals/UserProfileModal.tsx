@@ -5,7 +5,6 @@ import {
   X,
   Camera,
   Eye,
-  EyeOff,
   Copy,
   Check,
   LogOut,
@@ -139,7 +138,6 @@ export function UserProfileModal({ isOpen, onClose, authUser, onAuthUserChange, 
   if (!isOpen) return null;
 
   const displayEmail = authUser?.email || '';
-  const emailForDisplay = displayEmail ? (hideEmail ? maskEmail(displayEmail) : displayEmail) : '';
 
   const currentAvatarSrc = uploadedAvatar || (!avatarPresetColor ? authUser?.avatarUrl || null : null);
   const currentPreset = avatarPresetColor ? AVATAR_PRESETS.find(p => p.id === avatarPresetColor) : null;
@@ -307,7 +305,7 @@ export function UserProfileModal({ isOpen, onClose, authUser, onAuthUserChange, 
           <div className="flex items-center justify-between gap-4 mb-2">
             <div className="min-w-0">
               <p className="text-sm font-medium text-white">Hide Email in UI</p>
-              <p className="text-xs text-zinc-500">Mask your email address wherever it's shown</p>
+              <p className="text-xs text-zinc-500">Completely omit your email address wherever it's shown</p>
             </div>
             <button
               type="button"
@@ -322,10 +320,10 @@ export function UserProfileModal({ isOpen, onClose, authUser, onAuthUserChange, 
               <span className={cn('absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-white shadow transition-transform', hideEmail && 'translate-x-4')} />
             </button>
           </div>
-          {displayEmail && (
+          {displayEmail && !hideEmail && (
             <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-zinc-800/50 border border-zinc-800">
-              {hideEmail ? <EyeOff className="w-3.5 h-3.5 text-zinc-500 flex-shrink-0" /> : <Eye className="w-3.5 h-3.5 text-zinc-500 flex-shrink-0" />}
-              <span className="text-xs text-zinc-400 truncate font-mono">{emailForDisplay}</span>
+              <Eye className="w-3.5 h-3.5 text-zinc-500 flex-shrink-0" />
+              <span className="text-xs text-zinc-400 truncate font-mono">{displayEmail}</span>
             </div>
           )}
         </div>
