@@ -504,21 +504,35 @@ export function Sidebar({ isMobile }: { isMobile: boolean }) {
                 theme !== 'light' ? 'bg-zinc-900 border-zinc-800' : 'bg-white border-zinc-200'
               )}
             >
-              <button
-                type="button"
-                onClick={() => {
-                  setIsSettingsModalOpen(true);
-                  setIsMobileSidebarOpen(false);
-                  setIsProfileMenuOpen(false);
-                }}
+              <div
                 className={cn(
-                  'w-full flex items-center gap-2.5 px-3.5 py-2.5 text-sm transition-colors select-none cursor-pointer',
-                  theme !== 'light' ? 'text-zinc-300 hover:bg-zinc-800' : 'text-zinc-700 hover:bg-zinc-100'
+                  'flex items-center gap-2.5 px-3.5 py-3 border-b select-none',
+                  theme !== 'light' ? 'border-zinc-800' : 'border-zinc-200'
                 )}
               >
-                <Settings className="w-4 h-4 flex-shrink-0" />
-                <span className="truncate">Settings</span>
-              </button>
+                <div
+                  className={cn(
+                    'relative w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 overflow-hidden',
+                    theme !== 'light' ? 'bg-zinc-800 border border-zinc-700' : 'bg-zinc-100 border border-zinc-200'
+                  )}
+                >
+                  {authUser?.avatarUrl ? (
+                    <img src={authUser.avatarUrl} alt={displayName} className="w-full h-full object-cover" />
+                  ) : (
+                    <UserIcon className={cn('w-4 h-4', theme !== 'light' ? 'text-zinc-400' : 'text-zinc-500')} />
+                  )}
+                </div>
+                <div className="min-w-0 flex-1">
+                  <p className={cn('text-sm font-medium truncate', theme !== 'light' ? 'text-white' : 'text-zinc-900')}>
+                    {displayName}
+                  </p>
+                  {displayEmail && (
+                    <p className={cn('text-xs truncate', theme !== 'light' ? 'text-zinc-500' : 'text-zinc-500')}>
+                      {displayEmail}
+                    </p>
+                  )}
+                </div>
+              </div>
               <button
                 type="button"
                 onClick={handleSignOut}
@@ -572,8 +586,12 @@ export function Sidebar({ isMobile }: { isMobile: boolean }) {
               <button
                 type="button"
                 onClick={(e) => {
+                  // Gear icon is a direct shortcut to Settings — it does NOT
+                  // open the profile popover, so stop the click from
+                  // bubbling up to the profile block's own onClick.
                   e.stopPropagation();
-                  setIsProfileMenuOpen(prev => !prev);
+                  setIsSettingsModalOpen(true);
+                  setIsMobileSidebarOpen(false);
                 }}
                 title="Settings"
                 className={cn(
