@@ -575,16 +575,28 @@ export function DashboardScreen() {
           const followedPct = totalTrades > 0 ? (followed / totalTrades) * 100 : 0;
           const brokenPct = totalTrades > 0 ? (broken / totalTrades) * 100 : 0;
           const pendingPct = totalTrades > 0 ? (pending / totalTrades) * 100 : 0;
-          const isHealthy = totalTrades > 0 && followRate >= 60;
-          const isCritical = totalTrades > 0 && followRate < 40;
-          const isWarning = totalTrades > 0 && followRate >= 40 && followRate < 60;
+          // 5-tier status scale:
+          //   0–30   -> red, glowing   (critical, emphasized)
+          //   30–50  -> red            (critical)
+          //   50–60  -> yellow         (warning)
+          //   60–80  -> green          (healthy)
+          //   80–100 -> green, glowing (healthy, emphasized)
+          const isCriticalGlow = totalTrades > 0 && followRate < 30;
+          const isCritical = totalTrades > 0 && followRate >= 30 && followRate < 50;
+          const isWarning = totalTrades > 0 && followRate >= 50 && followRate < 60;
+          const isHealthy = totalTrades > 0 && followRate >= 60 && followRate < 80;
+          const isHealthyGlow = totalTrades > 0 && followRate >= 80;
+          const isRed = isCriticalGlow || isCritical;
+          const isGreen = isHealthy || isHealthyGlow;
           return (
             <div
               className={cn(
                 'relative flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 rounded-2xl border border-l-4 bg-zinc-900/40 border-zinc-800/80 p-4 sm:px-5 sm:py-3.5 min-w-0 transition-all duration-300',
-                isHealthy && 'border-l-emerald-500 shadow-[0_0_18px_rgba(16,185,129,0.12)]',
-                isWarning && 'border-l-amber-500 shadow-[0_0_18px_rgba(245,158,11,0.10)]',
-                isCritical && 'border-l-rose-500 shadow-[0_0_18px_rgba(244,63,94,0.12)]'
+                isRed && 'border-l-rose-500',
+                isWarning && 'border-l-amber-500',
+                isGreen && 'border-l-emerald-500',
+                isCriticalGlow && 'shadow-[0_0_22px_rgba(244,63,94,0.22)]',
+                isHealthyGlow && 'shadow-[0_0_22px_rgba(16,185,129,0.22)]'
               )}
             >
               {/* Left: label + headline follow rate — its own flex-wrap group so the
@@ -597,7 +609,7 @@ export function DashboardScreen() {
                 </div>
 
                 <div className="flex items-baseline gap-1.5 flex-shrink-0">
-                  <span className={cn('text-2xl font-bold tabular-nums leading-none', isHealthy ? 'text-emerald-400' : isCritical ? 'text-rose-400' : isWarning ? 'text-amber-400' : 'text-white')}>
+                  <span className={cn('text-2xl font-bold tabular-nums leading-none', isGreen ? 'text-emerald-400' : isRed ? 'text-rose-400' : isWarning ? 'text-amber-400' : 'text-white')}>
                     {followRate.toFixed(0)}%
                   </span>
                   <span className="text-[10px] text-zinc-500 uppercase tracking-wider whitespace-nowrap">follow rate</span>
