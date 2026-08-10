@@ -572,9 +572,6 @@ export function DashboardScreen() {
           // Honest follow rate: unreviewed trades count against the score, not toward it —
           // 1 followed out of 10 total shows 10%, not 100%.
           const followRate = totalTrades > 0 ? (followed / totalTrades) * 100 : 0;
-          const followedPct = totalTrades > 0 ? (followed / totalTrades) * 100 : 0;
-          const brokenPct = totalTrades > 0 ? (broken / totalTrades) * 100 : 0;
-          const pendingPct = totalTrades > 0 ? (pending / totalTrades) * 100 : 0;
           // 5-tier status scale:
           //   0–30   -> red, glowing   (critical, emphasized)
           //   30–50  -> red            (critical)
@@ -615,27 +612,19 @@ export function DashboardScreen() {
                   <span className="text-[10px] text-zinc-500 uppercase tracking-wider whitespace-nowrap">follow rate</span>
                 </div>
 
-                {/* Thin inline progress bar fills remaining space on wider screens — 3 segments:
-                    followed (green), broken (red), pending/unreviewed (gray). */}
-                <div className="hidden sm:flex flex-1 max-w-[220px] h-1.5 bg-zinc-800 rounded-full overflow-hidden">
-                  {followedPct > 0 && (
-                    <div
-                      className="h-full bg-emerald-500 transition-all duration-500 flex-shrink-0"
-                      style={{ width: `${followedPct}%` }}
-                    />
-                  )}
-                  {brokenPct > 0 && (
-                    <div
-                      className="h-full bg-rose-500 transition-all duration-500 flex-shrink-0"
-                      style={{ width: `${brokenPct}%` }}
-                    />
-                  )}
-                  {pendingPct > 0 && (
-                    <div
-                      className="h-full bg-zinc-600 transition-all duration-500 flex-shrink-0"
-                      style={{ width: `${pendingPct}%` }}
-                    />
-                  )}
+                {/* Thin inline progress bar fills remaining space on wider screens — single
+                    fill proportional to the honest follow rate, colored by status tier so a
+                    low rate reads as a short red bar rather than a full segmented bar. */}
+                <div className="hidden sm:block flex-1 max-w-[220px] h-1.5 bg-zinc-800 rounded-full overflow-hidden">
+                  <div
+                    className={cn(
+                      'h-full rounded-full transition-all duration-500',
+                      isRed && 'bg-rose-500',
+                      isWarning && 'bg-amber-500',
+                      isGreen && 'bg-emerald-500'
+                    )}
+                    style={{ width: `${followRate}%` }}
+                  />
                 </div>
               </div>
 
