@@ -434,10 +434,11 @@ function TradeAnalyticsCard({ trades, stats, privacyMode, theme, tc, tradeFilter
   const c = 2 * Math.PI * r;
   const winRateArc = total > 0 ? (stats.winRate / 100) * c : 0;
 
-  const cardClass = cn(
-    "relative bg-zinc-900/50 border border-white/10 rounded-2xl p-5 backdrop-blur-md hover:border-white/20 hover:bg-zinc-900/70 transition-all overflow-hidden",
+  const cardBase = cn(
+    "relative bg-zinc-900/50 border border-white/10 rounded-2xl backdrop-blur-md hover:border-white/20 hover:bg-zinc-900/70 transition-all overflow-hidden",
     theme === 'light' && 'bg-white border-zinc-200'
   );
+  const cardClass = cn(cardBase, "p-5");
   const iconBadgeClass = "absolute top-4 right-4 w-9 h-9 rounded-lg bg-white/5 border border-white/10 flex items-center justify-center";
 
   return (
@@ -451,12 +452,14 @@ function TradeAnalyticsCard({ trades, stats, privacyMode, theme, tc, tradeFilter
         <p className={cn("text-3xl font-bold tabular-nums", tc.text)}>{total}</p>
       </div>
 
-      {/* Card 2 — Win Rate donut. Ring is large (96px) and thick (13px
-          stroke) with the percentage set big and bold inside it, and the
-          label stacked to the right at real reading size — matching the
-          reference screenshot instead of the cramped mini-gauge before. */}
-      <div className={cn(cardClass, "flex items-center gap-4")}>
-        <div className="relative w-24 h-24 flex-shrink-0">
+      {/* Card 2 — Win Rate donut. Ring is large (128px) and thick, filling
+          most of the card's height; percentage text is kept small relative
+          to the ring so it doesn't dominate it, and padding is tightened
+          (p-3 instead of p-5) to make room for the bigger ring without the
+          card itself growing — the grid still stretches every card in the
+          row to match this one's height. */}
+      <div className={cn(cardBase, "p-3 flex items-center gap-3")}>
+        <div className="relative w-32 h-32 flex-shrink-0">
           <svg viewBox="0 0 112 112" className="w-full h-full -rotate-90">
             <circle cx="56" cy="56" r={r} fill="none" stroke="rgb(39,39,42)" strokeWidth={strokeWidth} />
             {winRateArc > 0 && (
@@ -467,7 +470,7 @@ function TradeAnalyticsCard({ trades, stats, privacyMode, theme, tc, tradeFilter
             )}
           </svg>
           <div className="absolute inset-0 flex items-center justify-center">
-            <span className={cn("text-xl font-bold tabular-nums leading-none", tc.text)}>
+            <span className={cn("text-lg font-bold tabular-nums leading-none", tc.text)}>
               {total > 0 ? `${stats.winRate.toFixed(1)}%` : '—'}
             </span>
           </div>
