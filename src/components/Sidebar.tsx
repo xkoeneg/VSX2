@@ -353,14 +353,24 @@ export function Sidebar({ isMobile }: { isMobile: boolean }) {
       };
 
       // getSession() reads the already-persisted session straight from
-      // localStorage and resolves almost instantly. getUser() instead makes
-      // a network round-trip to re-verify the token with the server — that
-      // call is what was stalling for a long time right after a fresh
-      // login or in a newly opened/incognito tab, leaving the sidebar stuck
-      // on a placeholder name until the tab regained focus.
+      // localStorage and resolves almost instantly, giving a fast initial
+      // paint. Its user object reflects claims embedded in the JWT at the
+      // time it was issued though, which can lag behind account-level
+      // changes made elsewhere (e.g. toggling "Hide Email" on a different
+      // browser/device) until the token refreshes. So after the fast paint,
+      // reconcile in the background with getUser(), which verifies with the
+      // server and returns the authoritative, fully up-to-date record —
+      // this corrects things like hideEmail shortly after without blocking
+      // (or re-stalling) the initial render.
       const fetchAuth = () => {
         supabase.auth.getSession()
-          .then(({ data }) => applyUser(mapUser(data.session?.user)))
+          .then(({ data }) => {
+            applyUser(mapUser(data.session?.user));
+            return supabase.auth.getUser();
+          })
+          .then((result) => {
+            if (result) applyUser(mapUser(result.data.user));
+          })
           .catch(() => {
             // onAuthStateChange below will still catch up once auth settles
           });
