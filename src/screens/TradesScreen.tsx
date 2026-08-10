@@ -478,7 +478,7 @@ function TradeAnalyticsCard({ trades, stats, privacyMode, theme, tc, tradeFilter
             )}
           </svg>
         </div>
-        <div className="min-w-0 -ml-1.5">
+        <div className="min-w-0 -ml-1">
           <p className="text-[10px] text-zinc-500 font-semibold tracking-wider uppercase">Win Rate</p>
           <p className={cn("text-xl font-bold tabular-nums leading-tight", tc.text)}>
             {total > 0 ? `${winRatePct.toFixed(1)}%` : '—'}
