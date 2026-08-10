@@ -427,39 +427,39 @@ function TradeAnalyticsCard({ trades, stats, privacyMode, theme, tc, tradeFilter
   const isNetPositive = netPnl >= 0;
 
   // Win Rate donut — single teal arc over a dark track, rounded cap,
-  // starting at 12 o'clock and sweeping clockwise by win rate %. Sized and
-  // weighted to match the Login screen's WinRateGaugePreviewCard 1:1.
+  // starting at 12 o'clock and sweeping clockwise by win rate %. Thin
+  // stroke relative to diameter so it reads as a ring, not a slab.
   const r = 42;
-  const strokeWidth = 13;
+  const strokeWidth = 8;
   const c = 2 * Math.PI * r;
   const winRateArc = total > 0 ? (stats.winRate / 100) * c : 0;
 
-  const cardBase = cn(
-    "relative bg-zinc-900/50 border border-white/10 rounded-2xl backdrop-blur-md hover:border-white/20 hover:bg-zinc-900/70 transition-all overflow-hidden",
+  // Shared card shell — matches the Discipline Tracker stat tiles: compact
+  // p-4, a small circular icon on the left, label + value stacked beside
+  // it. No absolute-positioned icon boxes, no tall empty padding.
+  const cardClass = cn(
+    "bg-zinc-900/50 border border-white/10 rounded-xl p-4 backdrop-blur-md hover:border-white/20 transition-all flex items-center gap-3",
     theme === 'light' && 'bg-white border-zinc-200'
   );
-  const cardClass = cn(cardBase, "p-5");
-  const iconBadgeClass = "absolute top-4 right-4 w-9 h-9 rounded-lg bg-white/5 border border-white/10 flex items-center justify-center";
+  const iconCircleClass = "w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 border";
 
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4 mb-6">
       {/* Card 1 — Total Trades */}
       <div className={cardClass}>
-        <div className={cn(iconBadgeClass, "bg-indigo-500/10 border-indigo-500/20")}>
-          <BarChart3 className="w-[18px] h-[18px] text-indigo-400" />
+        <div className={cn(iconCircleClass, "bg-indigo-500/10 border-indigo-500/20")}>
+          <BarChart3 className="w-4 h-4 text-indigo-400" />
         </div>
-        <p className="text-[10px] text-zinc-500 font-semibold tracking-wider uppercase mb-2">Total Trades</p>
-        <p className={cn("text-3xl font-bold tabular-nums", tc.text)}>{total}</p>
+        <div className="min-w-0">
+          <p className="text-[10px] text-zinc-500 font-semibold tracking-wider uppercase">Total Trades</p>
+          <p className={cn("text-xl font-bold tabular-nums leading-tight", tc.text)}>{total}</p>
+        </div>
       </div>
 
-      {/* Card 2 — Win Rate donut. Ring is large (128px) and thick, filling
-          most of the card's height; percentage text is kept small relative
-          to the ring so it doesn't dominate it, and padding is tightened
-          (p-3 instead of p-5) to make room for the bigger ring without the
-          card itself growing — the grid still stretches every card in the
-          row to match this one's height. */}
-      <div className={cn(cardBase, "p-3 flex items-center gap-3")}>
-        <div className="relative w-32 h-32 flex-shrink-0">
+      {/* Card 2 — Win Rate donut, same compact height as the other four
+          cards; "logged" dropped so it just reads "N trades". */}
+      <div className={cardClass}>
+        <div className="relative w-12 h-12 flex-shrink-0">
           <svg viewBox="0 0 112 112" className="w-full h-full -rotate-90">
             <circle cx="56" cy="56" r={r} fill="none" stroke="rgb(39,39,42)" strokeWidth={strokeWidth} />
             {winRateArc > 0 && (
@@ -470,74 +470,81 @@ function TradeAnalyticsCard({ trades, stats, privacyMode, theme, tc, tradeFilter
             )}
           </svg>
           <div className="absolute inset-0 flex items-center justify-center">
-            <span className={cn("text-lg font-bold tabular-nums leading-none", tc.text)}>
-              {total > 0 ? `${stats.winRate.toFixed(1)}%` : '—'}
+            <span className={cn("text-[10px] font-bold tabular-nums leading-none", tc.text)}>
+              {total > 0 ? `${stats.winRate.toFixed(0)}%` : '—'}
             </span>
           </div>
         </div>
-        <div className="flex flex-col min-w-0">
-          <span className="text-[10px] text-zinc-500 font-semibold tracking-wider uppercase">Win Rate</span>
-          <span className={cn("text-lg font-semibold mt-1 truncate", tc.text)}>{total} trades logged</span>
+        <div className="min-w-0">
+          <p className="text-[10px] text-zinc-500 font-semibold tracking-wider uppercase">Win Rate</p>
+          <p className={cn("text-xl font-bold tabular-nums leading-tight truncate", tc.text)}>
+            {total > 0 ? `${stats.winRate.toFixed(1)}%` : '—'}
+            <span className="text-xs font-medium text-zinc-500 ml-1.5">{total} trades</span>
+          </p>
         </div>
       </div>
 
       {/* Card 3 — Win / Loss / Break-Even breakdown; chips stay clickable
           against `tradeFilter`, same as the old bar. */}
       <div className={cardClass}>
-        <div className={iconBadgeClass}>
-          <Scale className="w-[18px] h-[18px] text-zinc-400" />
+        <div className={cn(iconCircleClass, "bg-white/5 border-white/10")}>
+          <Scale className="w-4 h-4 text-zinc-400" />
         </div>
-        <p className="text-[10px] text-zinc-500 font-semibold tracking-wider uppercase mb-2">Win / Loss Ratio</p>
-        <p className="text-2xl font-bold tabular-nums">
-          <button
-            type="button"
-            onClick={() => setTradeFilter(prev => prev === 'profit' ? 'all' : 'profit')}
-            className={cn(
-              "text-emerald-400 rounded transition-colors",
-              tradeFilter === 'profit' ? 'ring-1 ring-emerald-500/40 bg-emerald-500/10 px-1' : 'hover:text-emerald-300'
-            )}
-          >
-            {wins}W
-          </button>
-          <span className="text-zinc-600 mx-1">-</span>
-          <button
-            type="button"
-            onClick={() => setTradeFilter(prev => prev === 'loss' ? 'all' : 'loss')}
-            className={cn(
-              "text-rose-500 rounded transition-colors",
-              tradeFilter === 'loss' ? 'ring-1 ring-rose-500/40 bg-rose-500/10 px-1' : 'hover:text-rose-400'
-            )}
-          >
-            {losses}L
-          </button>
-          <span className="text-zinc-600 mx-1">-</span>
-          <button
-            type="button"
-            onClick={() => setTradeFilter(prev => prev === 'breakeven' ? 'all' : 'breakeven')}
-            className={cn(
-              "text-zinc-400 rounded transition-colors",
-              tradeFilter === 'breakeven' ? 'ring-1 ring-zinc-400/40 bg-zinc-400/10 px-1' : 'hover:text-zinc-300'
-            )}
-          >
-            {breakeven}BE
-          </button>
-        </p>
+        <div className="min-w-0">
+          <p className="text-[10px] text-zinc-500 font-semibold tracking-wider uppercase">Win / Loss Ratio</p>
+          <p className="text-xl font-bold tabular-nums leading-tight">
+            <button
+              type="button"
+              onClick={() => setTradeFilter(prev => prev === 'profit' ? 'all' : 'profit')}
+              className={cn(
+                "text-emerald-400 rounded transition-colors",
+                tradeFilter === 'profit' ? 'ring-1 ring-emerald-500/40 bg-emerald-500/10 px-1' : 'hover:text-emerald-300'
+              )}
+            >
+              {wins}W
+            </button>
+            <span className="text-zinc-600 mx-1">-</span>
+            <button
+              type="button"
+              onClick={() => setTradeFilter(prev => prev === 'loss' ? 'all' : 'loss')}
+              className={cn(
+                "text-rose-500 rounded transition-colors",
+                tradeFilter === 'loss' ? 'ring-1 ring-rose-500/40 bg-rose-500/10 px-1' : 'hover:text-rose-400'
+              )}
+            >
+              {losses}L
+            </button>
+            <span className="text-zinc-600 mx-1">-</span>
+            <button
+              type="button"
+              onClick={() => setTradeFilter(prev => prev === 'breakeven' ? 'all' : 'breakeven')}
+              className={cn(
+                "text-zinc-400 rounded transition-colors",
+                tradeFilter === 'breakeven' ? 'ring-1 ring-zinc-400/40 bg-zinc-400/10 px-1' : 'hover:text-zinc-300'
+              )}
+            >
+              {breakeven}BE
+            </button>
+          </p>
+        </div>
       </div>
 
       {/* Card 4 — Profit Factor / Avg Win & Loss */}
       <div className={cardClass}>
-        <div className={iconBadgeClass}>
-          <Target className="w-[18px] h-[18px] text-zinc-400" />
+        <div className={cn(iconCircleClass, "bg-white/5 border-white/10")}>
+          <Target className="w-4 h-4 text-zinc-400" />
         </div>
-        <p className="text-[10px] text-zinc-500 font-semibold tracking-wider uppercase mb-2">Profit Factor</p>
-        <p className={cn("text-2xl font-bold tabular-nums mb-1.5", tc.text)}>
-          {total > 0 && isFinite(stats.profitFactor) ? stats.profitFactor.toFixed(2) : 'N/A'}
-        </p>
-        <p className="text-xs font-medium tabular-nums text-zinc-500">
-          <span className="text-emerald-500">{formatCurrency(stats.avgWin, privacyMode)}</span>
-          <span className="mx-1">/</span>
-          <span className="text-rose-500">{formatCurrency(-stats.avgLoss, privacyMode)}</span>
-        </p>
+        <div className="min-w-0">
+          <p className="text-[10px] text-zinc-500 font-semibold tracking-wider uppercase">Profit Factor</p>
+          <p className={cn("text-xl font-bold tabular-nums leading-tight", tc.text)}>
+            {total > 0 && isFinite(stats.profitFactor) ? stats.profitFactor.toFixed(2) : 'N/A'}
+            <span className="text-xs font-medium tabular-nums text-zinc-500 ml-1.5">
+              <span className="text-emerald-500">{formatCurrency(stats.avgWin, privacyMode)}</span>
+              <span className="mx-0.5">/</span>
+              <span className="text-rose-500">{formatCurrency(-stats.avgLoss, privacyMode)}</span>
+            </span>
+          </p>
+        </div>
       </div>
 
       {/* Card 5 — Net P&L across the currently filtered trades. This was
@@ -545,15 +552,17 @@ function TradeAnalyticsCard({ trades, stats, privacyMode, theme, tc, tradeFilter
           rate, and profit factor all describe *how* you traded, but not
           the bottom line. Color and icon flip with sign. */}
       <div className={cardClass}>
-        <div className={cn(iconBadgeClass, isNetPositive ? "bg-emerald-500/10 border-emerald-500/20" : "bg-rose-500/10 border-rose-500/20")}>
+        <div className={cn(iconCircleClass, isNetPositive ? "bg-emerald-500/10 border-emerald-500/20" : "bg-rose-500/10 border-rose-500/20")}>
           {isNetPositive
-            ? <TrendingUp className="w-[18px] h-[18px] text-emerald-400" />
-            : <TrendingDown className="w-[18px] h-[18px] text-rose-500" />}
+            ? <TrendingUp className="w-4 h-4 text-emerald-400" />
+            : <TrendingDown className="w-4 h-4 text-rose-500" />}
         </div>
-        <p className="text-[10px] text-zinc-500 font-semibold tracking-wider uppercase mb-2">Net P&amp;L</p>
-        <p className={cn("text-3xl font-bold tabular-nums", isNetPositive ? 'text-emerald-400' : 'text-rose-500')}>
-          {formatCurrency(netPnl, privacyMode)}
-        </p>
+        <div className="min-w-0">
+          <p className="text-[10px] text-zinc-500 font-semibold tracking-wider uppercase">Net P&amp;L</p>
+          <p className={cn("text-xl font-bold tabular-nums leading-tight", isNetPositive ? 'text-emerald-400' : 'text-rose-500')}>
+            {formatCurrency(netPnl, privacyMode)}
+          </p>
+        </div>
       </div>
     </div>
   );
