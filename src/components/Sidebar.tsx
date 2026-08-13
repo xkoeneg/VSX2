@@ -341,6 +341,8 @@ export function Sidebar({ isMobile }: { isMobile: boolean }) {
           name: (metadata.full_name as string) || (metadata.name as string) || null,
           avatarUrl: (metadata.avatar_url as string) || (metadata.picture as string) || null,
           hideEmail: typeof metadata.hide_email === 'boolean' ? (metadata.hide_email as boolean) : undefined,
+          publicPreviewEnabled: typeof metadata.public_preview_enabled === 'boolean' ? (metadata.public_preview_enabled as boolean) : undefined,
+          viewerPasscode: typeof metadata.viewer_passcode === 'string' ? (metadata.viewer_passcode as string) : undefined,
         };
       };
 
