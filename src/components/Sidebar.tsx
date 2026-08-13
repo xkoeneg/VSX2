@@ -344,12 +344,32 @@ export function Sidebar({ isMobile }: { isMobile: boolean }) {
         };
       };
 
-      const applyUser = (mapped: AuthUser | null) => {
+      const applyUser = (mapped: AuthUser | null, opts?: { authoritative?: boolean }) => {
         if (!isMounted) return;
-        hasResolved = true;
-        setAuthUser(mapped);
-        setHideEmailInUi(resolveHideEmail(mapped));
-        if (mapped) saveCachedAuthUser(mapped); else clearCachedAuthUser();
+
+        if (mapped) {
+          hasResolved = true;
+          setAuthUser(mapped);
+          setHideEmailInUi(resolveHideEmail(mapped));
+          saveCachedAuthUser(mapped);
+          return;
+        }
+
+        // No user came back. Right after a refresh, getSession()/getUser()
+        // can legitimately return nothing for a moment before the session
+        // is rehydrated from storage — that's a transient false-negative,
+        // not a sign-out. Only treat it as authoritative (wipe the cached
+        // profile, fall back to "Account") when the caller has confirmed
+        // it via an explicit SIGNED_OUT event. Otherwise leave the current
+        // (likely still-correct, cached) authUser alone and — crucially —
+        // do NOT set hasResolved, so scheduleRetry/visibilitychange keep
+        // trying until a real answer comes back.
+        if (opts?.authoritative) {
+          hasResolved = true;
+          setAuthUser(null);
+          setHideEmailInUi(resolveHideEmail(null));
+          clearCachedAuthUser();
+        }
       };
 
       // getSession() reads the already-persisted session straight from
@@ -380,7 +400,7 @@ export function Sidebar({ isMobile }: { isMobile: boolean }) {
 
       const { data: authListener }: { data: { subscription: any } } = supabase.auth.onAuthStateChange(
         (_event: AuthChangeEvent, session: Session | null) => {
-          applyUser(mapUser(session?.user));
+          applyUser(mapUser(session?.user), { authoritative: _event === 'SIGNED_OUT' });
         }
       );
 
