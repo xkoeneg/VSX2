@@ -149,7 +149,7 @@ function TradeAnalyticsCard({ trades, stats, tradeFilter, setTradeFilter }: Trad
   const c = 2 * Math.PI * r;
   const winRateArc = total > 0 ? (winRatePct / 100) * c : 0;
 
-  const cardClass = "bg-zinc-900/50 border border-white/10 rounded-xl p-6 backdrop-blur-md hover:border-white/20 transition-all flex items-center gap-3";
+  const cardClass = "bg-zinc-900/50 border border-white/10 rounded-xl p-6 backdrop-blur-md hover:border-white/20 transition-all flex items-center gap-3 [container-type:inline-size]";
   const iconCircleClass = "p-3 rounded-xl flex-shrink-0";
 
   return (
@@ -203,35 +203,35 @@ function TradeAnalyticsCard({ trades, stats, tradeFilter, setTradeFilter }: Trad
         </div>
         <div className="min-w-0">
           <p className="text-[10px] text-zinc-500 font-semibold tracking-wider uppercase">Win / Loss Ratio</p>
-          <p className="text-xl font-bold tabular-nums leading-tight">
+          <p className="text-[clamp(0.75rem,7cqw,1.25rem)] font-bold tabular-nums leading-tight whitespace-nowrap">
             <button
               type="button"
               onClick={() => setTradeFilter(prev => prev === 'profit' ? 'all' : 'profit')}
               className={cn(
                 "text-emerald-400 rounded transition-colors",
-                tradeFilter === 'profit' ? 'ring-1 ring-emerald-500/40 bg-emerald-500/10 px-1' : 'hover:text-emerald-300'
+                tradeFilter === 'profit' ? 'ring-1 ring-emerald-500/40 bg-emerald-500/10 px-0.5' : 'hover:text-emerald-300'
               )}
             >
               {wins}W
             </button>
-            <span className="text-zinc-600 mx-1">-</span>
+            <span className="text-zinc-600 mx-0.5">-</span>
             <button
               type="button"
               onClick={() => setTradeFilter(prev => prev === 'loss' ? 'all' : 'loss')}
               className={cn(
                 "text-rose-500 rounded transition-colors",
-                tradeFilter === 'loss' ? 'ring-1 ring-rose-500/40 bg-rose-500/10 px-1' : 'hover:text-rose-400'
+                tradeFilter === 'loss' ? 'ring-1 ring-rose-500/40 bg-rose-500/10 px-0.5' : 'hover:text-rose-400'
               )}
             >
               {losses}L
             </button>
-            <span className="text-zinc-600 mx-1">-</span>
+            <span className="text-zinc-600 mx-0.5">-</span>
             <button
               type="button"
               onClick={() => setTradeFilter(prev => prev === 'breakeven' ? 'all' : 'breakeven')}
               className={cn(
                 "text-zinc-400 rounded transition-colors",
-                tradeFilter === 'breakeven' ? 'ring-1 ring-zinc-400/40 bg-zinc-400/10 px-1' : 'hover:text-zinc-300'
+                tradeFilter === 'breakeven' ? 'ring-1 ring-zinc-400/40 bg-zinc-400/10 px-0.5' : 'hover:text-zinc-300'
               )}
             >
               {breakeven}BE
@@ -247,13 +247,13 @@ function TradeAnalyticsCard({ trades, stats, tradeFilter, setTradeFilter }: Trad
         </div>
         <div className="min-w-0">
           <p className="text-[10px] text-zinc-500 font-semibold tracking-wider uppercase">Profit Factor</p>
-          <p className="text-xl font-bold tabular-nums leading-tight text-white">
+          <p className="text-[clamp(0.85rem,7cqw,1.25rem)] font-bold tabular-nums leading-tight text-white whitespace-nowrap">
             {total > 0 && isFinite(stats.profitFactor) ? stats.profitFactor.toFixed(2) : 'N/A'}
-            <span className="text-xs font-medium tabular-nums text-zinc-500 ml-1.5">
-              <span className="text-emerald-500">{formatMoney(stats.avgWin)}</span>
-              <span className="mx-0.5">/</span>
-              <span className="text-rose-500">{formatMoney(-stats.avgLoss)}</span>
-            </span>
+          </p>
+          <p className="text-[clamp(0.6rem,3cqw,0.75rem)] font-medium tabular-nums leading-tight whitespace-nowrap">
+            <span className="text-emerald-500">{formatMoney(stats.avgWin)}</span>
+            <span className="text-zinc-500 mx-0.5">/</span>
+            <span className="text-rose-500">{formatMoney(-stats.avgLoss)}</span>
           </p>
         </div>
       </div>
