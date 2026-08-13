@@ -163,7 +163,6 @@ WikiEntry
 } from '../types';
 import { cn } from '../utils/format';
 import { supabase } from '../lib/supabaseClient';
-import type { AuthChangeEvent, Session } from '@supabase/supabase-js';
 import { useAppContext } from '../context/AppContext';
 import { renderStatCard, renderAccountFilter, renderAccountTypeBadge, renderTradingAccountTypeBadge } from '../components/shared/RenderHelpers';
 import { UserProfileModal, loadHideEmailPref, loadCachedAuthUser, saveCachedAuthUser, clearCachedAuthUser, type AuthUser } from '../modals/UserProfileModal';
@@ -287,7 +286,7 @@ export function Sidebar({ isMobile }: { isMobile: boolean }) {
     handleDeleteConfluence, handleDeleteMistakeType, handleChangeSetupTypeColor, handleChangeConfluenceColor,
     handleChangeMistakeColor, handleDeleteEmotion, handleChangeEmotionColor, colorForEmotion, colorForMistake,
     handleFileUpload, handleAddImageUrl, handleRemoveImage, handleReorderImages, updateTimeframeNotes,
-    exportBackup, importBackup,
+    exportBackup, importBackup, session,
   } = useAppContext();
 
     const [authUser, setAuthUser] = useState<AuthUser | null>(() => loadCachedAuthUser());
@@ -326,145 +325,85 @@ export function Sidebar({ isMobile }: { isMobile: boolean }) {
       };
     }, [isProfilePopoverOpen]);
 
-    // Load the logged-in user and keep it in sync with auth state changes
+    // Load the logged-in user's display data (name/avatar/hide-email/
+    // passcode) and keep it in sync whenever the session changes.
+    //
+    // This used to run its own independent supabase.auth.getSession() /
+    // onAuthStateChange() listener here, in parallel with the one
+    // useAppState() already runs (see AppContext / `session` above). Two
+    // concurrent listeners racing to initialize against the same
+    // supabase-js auth client is a known source of internal lock
+    // contention — it manifested as the sidebar getting stuck showing
+    // "Account" after login/refresh until something (switching tabs,
+    // alt-tab) happened to nudge the lock loose, which made it look like
+    // tab-focus was somehow "fixing" it rather than just coincidentally
+    // unsticking a stuck internal lock. Deriving from the single `session`
+    // AppContext already owns removes the duplicate listener — and
+    // therefore the race — entirely. This effect now only ever talks to
+    // the plain `profiles` table, never supabase.auth.*.
     useEffect(() => {
-      let isMounted = true;
-      let hasResolved = false;
-      let retryCount = 0;
+      let cancelled = false;
       let retryTimer: ReturnType<typeof setTimeout> | null = null;
+      const rawUser = session?.user ?? null;
 
-      type RawAuthUser = { id?: string; email?: string | null; user_metadata?: Record<string, unknown> } | null | undefined;
-      type ProfileRow = { display_name: string | null; hide_email: boolean | null; viewer_passcode: string | null } | null;
+      const applyUser = (mapped: AuthUser | null) => {
+        if (cancelled) return;
+        setAuthUser(mapped);
+        setHideEmailInUi(resolveHideEmail(mapped));
+        if (mapped) saveCachedAuthUser(mapped); else clearCachedAuthUser();
+      };
 
-      // hide_email / display_name / viewer_passcode now live in
-      // public.profiles, NOT auth user_metadata — some OAuth providers
-      // silently overwrite user_metadata with fresh provider claims on
-      // every sign-in, which was wiping these settings. avatar_url is
-      // still sourced from user_metadata (it's fine for that to reflect
-      // the provider's picture / an uploaded data URL).
-      const fetchProfile = async (userId: string | undefined): Promise<ProfileRow> => {
-        if (!userId) return null;
+      if (!rawUser) {
+        // useAppState only ever clears `session` on an explicit SIGNED_OUT
+        // event now (not on a transient blip), so a null session here is
+        // trustworthy — genuinely signed out.
+        applyUser(null);
+        return () => { cancelled = true; };
+      }
+
+      const metadata = (rawUser.user_metadata ?? {}) as Record<string, unknown>;
+
+      // hide_email / display_name / viewer_passcode live in public.profiles,
+      // NOT auth user_metadata — some OAuth providers silently overwrite
+      // user_metadata with fresh provider claims on every sign-in, which
+      // was wiping these settings. avatar_url is still sourced from
+      // user_metadata (fine for that to reflect the provider's picture /
+      // an uploaded data URL).
+      const loadProfile = async (attempt = 0): Promise<void> => {
         try {
-          const { data, error } = await supabase
+          const { data: profile, error } = await supabase
             .from('profiles')
             .select('display_name, hide_email, viewer_passcode')
-            .eq('id', userId)
+            .eq('id', rawUser.id)
             .maybeSingle();
           if (error) throw error;
-          return data as ProfileRow;
+          if (cancelled) return;
+          applyUser({
+            id: rawUser.id,
+            email: rawUser.email ?? null,
+            name: profile?.display_name || (metadata.full_name as string) || (metadata.name as string) || null,
+            avatarUrl: (metadata.avatar_url as string) || (metadata.picture as string) || null,
+            hideEmail: typeof profile?.hide_email === 'boolean' ? profile.hide_email : undefined,
+            viewerPasscode: typeof profile?.viewer_passcode === 'string' ? (profile.viewer_passcode ?? undefined) : undefined,
+          });
         } catch (err) {
           console.error('Could not load profile row', err);
-          return null;
+          // This is now a plain data fetch, not an auth/session race, so a
+          // few short retries comfortably covers an ordinary network blip
+          // without needing visibilitychange/focus workarounds.
+          if (!cancelled && attempt < 3) {
+            retryTimer = setTimeout(() => loadProfile(attempt + 1), 1000 * (attempt + 1));
+          }
         }
       };
 
-      const mapUser = (u: RawAuthUser, profile: ProfileRow): AuthUser | null => {
-        if (!u) return null;
-        const metadata = (u.user_metadata ?? {}) as Record<string, unknown>;
-        return {
-          id: u.id ?? null,
-          email: u.email ?? null,
-          name: profile?.display_name || (metadata.full_name as string) || (metadata.name as string) || null,
-          avatarUrl: (metadata.avatar_url as string) || (metadata.picture as string) || null,
-          hideEmail: typeof profile?.hide_email === 'boolean' ? profile.hide_email : undefined,
-          viewerPasscode: typeof profile?.viewer_passcode === 'string' ? profile.viewer_passcode ?? undefined : undefined,
-        };
-      };
-
-      const applyUser = (mapped: AuthUser | null, opts?: { authoritative?: boolean }) => {
-        if (!isMounted) return;
-
-        if (mapped) {
-          hasResolved = true;
-          setAuthUser(mapped);
-          setHideEmailInUi(resolveHideEmail(mapped));
-          saveCachedAuthUser(mapped);
-          return;
-        }
-
-        // No user came back. Right after a refresh, getSession()/getUser()
-        // can legitimately return nothing for a moment before the session
-        // is rehydrated from storage — that's a transient false-negative,
-        // not a sign-out. Only treat it as authoritative (wipe the cached
-        // profile, fall back to "Account") when the caller has confirmed
-        // it via an explicit SIGNED_OUT event. Otherwise leave the current
-        // (likely still-correct, cached) authUser alone and — crucially —
-        // do NOT set hasResolved, so scheduleRetry/visibilitychange keep
-        // trying until a real answer comes back.
-        if (opts?.authoritative) {
-          hasResolved = true;
-          setAuthUser(null);
-          setHideEmailInUi(resolveHideEmail(null));
-          clearCachedAuthUser();
-        }
-      };
-
-      // getSession() reads the already-persisted session straight from
-      // localStorage and resolves almost instantly, giving a fast initial
-      // paint. Its user object reflects claims embedded in the JWT at the
-      // time it was issued though, which can lag behind account-level
-      // changes made elsewhere (e.g. toggling "Hide Email" on a different
-      // browser/device) until the token refreshes. So after the fast paint,
-      // reconcile in the background with getUser(), which verifies with the
-      // server and returns the authoritative, fully up-to-date record. The
-      // profiles-table row is re-fetched on both passes since it can't be
-      // embedded in the JWT the way user_metadata is.
-      const fetchAuth = () => {
-        supabase.auth.getSession()
-          .then(async ({ data }) => {
-            const rawUser = data.session?.user;
-            applyUser(mapUser(rawUser, await fetchProfile(rawUser?.id)));
-            return supabase.auth.getUser();
-          })
-          .then(async (result) => {
-            if (!result) return;
-            const rawUser = result.data.user;
-            applyUser(mapUser(rawUser, await fetchProfile(rawUser?.id)));
-          })
-          .catch(() => {
-            // onAuthStateChange below will still catch up once auth settles
-          });
-      };
-
-      fetchAuth();
-
-      const { data: authListener }: { data: { subscription: any } } = supabase.auth.onAuthStateChange(
-        async (_event: AuthChangeEvent, session: Session | null) => {
-          const profile = await fetchProfile(session?.user?.id);
-          applyUser(mapUser(session?.user, profile), { authoritative: _event === 'SIGNED_OUT' });
-        }
-      );
-
-      // Self-healing retry: the very first session check can still stall
-      // (browser tab throttling, or the auth client's own internal
-      // locking), so retry a few times on a short backoff, and immediately
-      // whenever the tab becomes visible/focused again — this is exactly
-      // what manually alt-tabbing was working around, now handled
-      // automatically instead of requiring the user to do it by hand.
-      const scheduleRetry = () => {
-        if (hasResolved || retryCount >= 5) return;
-        retryCount += 1;
-        retryTimer = setTimeout(() => {
-          if (!hasResolved) fetchAuth();
-          scheduleRetry();
-        }, 1000 * retryCount);
-      };
-      scheduleRetry();
-
-      const handleVisible = () => {
-        if (document.visibilityState === 'visible' && !hasResolved) fetchAuth();
-      };
-      document.addEventListener('visibilitychange', handleVisible);
-      window.addEventListener('focus', handleVisible);
+      loadProfile();
 
       return () => {
-        isMounted = false;
-        authListener?.subscription?.unsubscribe();
+        cancelled = true;
         if (retryTimer) clearTimeout(retryTimer);
-        document.removeEventListener('visibilitychange', handleVisible);
-        window.removeEventListener('focus', handleVisible);
       };
-    }, []);
+    }, [session?.user?.id]);
 
     const handleSignOut = async () => {
       setIsUserProfileModalOpen(false);
