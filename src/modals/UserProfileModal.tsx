@@ -31,6 +31,15 @@ export type AuthUser = {
   avatarPresetColor?: string | null;
   hideEmail?: boolean;
   viewerPasscode?: string;
+  // Cross-device source of truth for whether /preview/[id] is currently
+  // reachable at all for this user (see public_preview_enabled in
+  // sql/001_preview_access.sql). Wiring this in fully means loading it
+  // wherever AuthUser is populated from `profiles` on sign-in — that logic
+  // lives in context/AppContext.tsx, which wasn't part of what I could see
+  // here, so for now it's read the same way viewerPasscode already is
+  // below (authUser value wins, falls back to the local-only cache) and
+  // needs that same fetch added on the AppContext side to be fully synced.
+  publicPreviewEnabled?: boolean;
 };
 
 type ProfilePrefs = {
@@ -193,12 +202,14 @@ export function UserProfileModal({ isOpen, onClose, authUser, onAuthUserChange, 
       authUser && typeof authUser.avatarPresetColor !== 'undefined' ? authUser.avatarPresetColor : prefs.avatarPresetColor
     );
     setHideEmail(typeof authUser?.hideEmail === 'boolean' ? authUser.hideEmail : prefs.hideEmail);
-    setPublicPreviewEnabled(prefs.publicPreviewEnabled);
+    setPublicPreviewEnabled(
+      typeof authUser?.publicPreviewEnabled === 'boolean' ? authUser.publicPreviewEnabled : prefs.publicPreviewEnabled
+    );
     setViewerPasscode(authUser?.viewerPasscode || prefs.viewerPasscode);
     setSaveError(null);
     setAvatarError(null);
     setCopied(false);
-  }, [isOpen, authUser?.email, authUser?.name, authUser?.hideEmail, authUser?.viewerPasscode, authUser?.avatarPresetColor]);
+  }, [isOpen, authUser?.email, authUser?.name, authUser?.hideEmail, authUser?.viewerPasscode, authUser?.avatarPresetColor, authUser?.publicPreviewEnabled]);
 
   if (!isOpen) return null;
 
@@ -234,8 +245,12 @@ export function UserProfileModal({ isOpen, onClose, authUser, onAuthUserChange, 
     setUploadedAvatar(null);
   };
 
+  // NOTE: this used to be `btoa(displayEmail)...` — a hash of the email,
+  // not the actual user id. That silently broke the /preview/[user_id]
+  // route (get_preview_journal looks up profiles by real id), so this now
+  // uses authUser.id directly, same as what's stored in `profiles.id`.
   const publicPreviewLink = `${typeof window !== 'undefined' ? window.location.origin : ''}/preview/${
-    displayEmail ? btoa(displayEmail).replace(/[^a-zA-Z0-9]/g, '').slice(0, 10) : 'demo'
+    authUser?.id || 'demo'
   }`;
 
   const handleCopyLink = async () => {
@@ -264,6 +279,7 @@ export function UserProfileModal({ isOpen, onClose, authUser, onAuthUserChange, 
       avatarPresetColor,
       hideEmail,
       viewerPasscode,
+      publicPreviewEnabled,
     };
 
     // 1. Persist locally first. This is the reliable primary store for UI
@@ -308,6 +324,12 @@ export function UserProfileModal({ isOpen, onClose, authUser, onAuthUserChange, 
         display_name: nextName,
         hide_email: hideEmail,
         viewer_passcode: viewerPasscode,
+        // Previously local-only (see the comment on `ProfilePrefs` above),
+        // which meant switching this off didn't actually revoke an
+        // already-shared preview link for anyone who still had it —
+        // get_preview_journal() checks this column server-side, so it now
+        // has to be persisted for the toggle to mean anything.
+        public_preview_enabled: publicPreviewEnabled,
         avatar_url: nextAvatarUrl,
         avatar_preset_color: avatarPresetColor,
         updated_at: new Date().toISOString(),
