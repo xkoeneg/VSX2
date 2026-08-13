@@ -18,11 +18,11 @@ import { cn } from '../utils/format';
 import { supabase } from '../lib/supabaseClient';
 
 export type AuthUser = {
+  id: string | null;
   email: string | null;
   name: string | null;
   avatarUrl: string | null;
   hideEmail?: boolean;
-  publicPreviewEnabled?: boolean;
   viewerPasscode?: string;
 };
 
@@ -80,18 +80,12 @@ export function loadCachedAuthUser(): AuthUser | null {
     if (!raw) return null;
     const parsed = JSON.parse(raw);
     if (!parsed || typeof parsed !== 'object') return null;
-    const coerceBool = (v: unknown): boolean | undefined => {
-      if (typeof v === 'boolean') return v;
-      if (v === 'true') return true;
-      if (v === 'false') return false;
-      return undefined;
-    };
     return {
+      id: typeof parsed.id === 'string' ? parsed.id : null,
       email: typeof parsed.email === 'string' ? parsed.email : null,
       name: typeof parsed.name === 'string' ? parsed.name : null,
       avatarUrl: typeof parsed.avatarUrl === 'string' ? parsed.avatarUrl : null,
-      hideEmail: coerceBool(parsed.hideEmail),
-      publicPreviewEnabled: coerceBool(parsed.publicPreviewEnabled),
+      hideEmail: typeof parsed.hideEmail === 'boolean' ? parsed.hideEmail : undefined,
       viewerPasscode: typeof parsed.viewerPasscode === 'string' ? parsed.viewerPasscode : undefined,
     };
   } catch {
@@ -180,17 +174,18 @@ export function UserProfileModal({ isOpen, onClose, authUser, onAuthUserChange, 
     setEditableName(authUser?.name ?? '');
     setUploadedAvatar(null);
     setAvatarPresetColor(prefs.avatarPresetColor);
-    // authUser.hideEmail / publicPreviewEnabled / viewerPasscode (synced from
-    // Supabase user_metadata) are the cross-device source of truth; the
-    // local prefs value is only a same-browser fallback for when that
-    // hasn't loaded yet (e.g. first paint before the auth fetch resolves).
+    // authUser.hideEmail / viewerPasscode are synced from the public.profiles
+    // table (cross-device source of truth); the local prefs value is only a
+    // same-browser fallback for when that hasn't loaded yet (e.g. first
+    // paint before the auth fetch resolves). publicPreviewEnabled isn't in
+    // the profiles table yet, so it stays local-only for now.
     setHideEmail(typeof authUser?.hideEmail === 'boolean' ? authUser.hideEmail : prefs.hideEmail);
-    setPublicPreviewEnabled(typeof authUser?.publicPreviewEnabled === 'boolean' ? authUser.publicPreviewEnabled : prefs.publicPreviewEnabled);
+    setPublicPreviewEnabled(prefs.publicPreviewEnabled);
     setViewerPasscode(authUser?.viewerPasscode || prefs.viewerPasscode);
     setSaveError(null);
     setAvatarError(null);
     setCopied(false);
-  }, [isOpen, authUser?.email, authUser?.name, authUser?.hideEmail, authUser?.publicPreviewEnabled, authUser?.viewerPasscode]);
+  }, [isOpen, authUser?.email, authUser?.name, authUser?.hideEmail, authUser?.viewerPasscode]);
 
   if (!isOpen) return null;
 
@@ -249,18 +244,18 @@ export function UserProfileModal({ isOpen, onClose, authUser, onAuthUserChange, 
     const nextAvatarUrl = uploadedAvatar || (avatarPresetColor ? null : authUser?.avatarUrl ?? null);
     const nextName = editableName.trim() || null;
     const nextUser: AuthUser = {
+      id: authUser?.id ?? null,
       email: authUser?.email ?? null,
       name: nextName,
       avatarUrl: nextAvatarUrl,
       hideEmail,
-      publicPreviewEnabled,
       viewerPasscode,
     };
 
     // 1. Persist locally first. This is the reliable primary store for UI
-    // prefs like hideEmail/publicPreviewEnabled/viewerPasscode plus the
-    // display name/avatar — it must succeed even if the Supabase call below
-    // fails (e.g. a custom profile column isn't set up yet).
+    // prefs like publicPreviewEnabled (still local-only) plus an instant
+    // mirror of everything else — it must succeed even if the network
+    // calls below fail.
     try {
       const nextPrefs: ProfilePrefs = { hideEmail, publicPreviewEnabled, viewerPasscode, avatarPresetColor };
       localStorage.setItem(prefsKey(authUser?.email ?? null), JSON.stringify(nextPrefs));
@@ -273,18 +268,34 @@ export function UserProfileModal({ isOpen, onClose, authUser, onAuthUserChange, 
       return;
     }
 
-    // 2. Best-effort sync to Supabase. Any failure here (network, missing
-    // column, validation, etc.) is logged but never blocks the local save
-    // that already succeeded above.
+    // 2. Sync display_name / hide_email / viewer_passcode to public.profiles
+    // — deliberately NOT auth user_metadata. Some OAuth providers overwrite
+    // user_metadata wholesale with fresh provider claims on every sign-in,
+    // which was silently wiping these settings on other browsers/devices.
+    // The profiles table is a normal RLS-protected row keyed by user id, so
+    // it isn't touched by the auth/OAuth flow at all.
+    try {
+      const userId = authUser?.id;
+      if (!userId) throw new Error('No authenticated user id — cannot sync profile.');
+      const { error } = await supabase.from('profiles').upsert({
+        id: userId,
+        display_name: nextName,
+        hide_email: hideEmail,
+        viewer_passcode: viewerPasscode,
+        updated_at: new Date().toISOString(),
+      });
+      if (error) throw error;
+    } catch (remoteErr) {
+      console.error('Could not sync profile to Supabase — local copy is saved', remoteErr);
+      setSaveError('Saved on this device, but syncing to your account failed — it may not show up on other browsers yet.');
+    }
+
+    // 3. Avatar is still stored on the auth user (user_metadata) rather than
+    // in profiles — best-effort, and fine if a provider's own picture claim
+    // clobbers it on next OAuth sign-in, since that's the same source.
     try {
       const { error } = await supabase.auth.updateUser({
-        data: {
-          full_name: nextName,
-          avatar_url: nextAvatarUrl,
-          hide_email: hideEmail,
-          public_preview_enabled: publicPreviewEnabled,
-          viewer_passcode: viewerPasscode,
-        },
+        data: { avatar_url: nextAvatarUrl },
       });
       if (error) throw error;
 
