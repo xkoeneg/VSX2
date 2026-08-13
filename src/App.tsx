@@ -95,12 +95,13 @@ import {
   type LucideIcon,
 } from 'lucide-react';
 import type React from 'react';
-import { lazy, Suspense, useDeferredValue, type ComponentType } from 'react';
+import { lazy, Suspense, useDeferredValue, useEffect, useState, type ComponentType } from 'react';
 import { AppProvider, useAppContext } from './context/AppContext';
 import { cn } from './utils/format';
 import { Sidebar } from './components/Sidebar';
 import { NotificationBell } from './components/shared/NotificationBell';
 import { LoginPage } from './components/LoginPage';
+import { PreviewScreen } from './screens/PreviewScreen';
 
 // ============================================================================
 // Code splitting: screens & modals
@@ -949,7 +950,50 @@ function AppShell() {
   );
 }
 
+// ============================================================================
+// /preview/[user_id] — parsed from window.location.pathname since this app
+// doesn't use a router (no react-router-dom / next.js routing anywhere in
+// the codebase; `view` is plain component state, not a URL). This is a
+// minimal manual "route" check: it runs once at mount, entirely outside
+// AppProvider/AuthGate, so a viewer never needs a Supabase session (or even
+// a signed-out flash of LoginPage) to reach the passcode gate — visiting
+// the link is enough. Deep-linking to /preview/[id] works whether or not
+// the visitor is separately signed into their own account in another tab.
+// ============================================================================
+function usePreviewRoute(): { userId: string | null; exit: () => void } {
+  const [userId, setUserId] = useState<string | null>(() => {
+    if (typeof window === 'undefined') return null;
+    const match = window.location.pathname.match(/^\/preview\/([^/]+)\/?$/);
+    return match ? decodeURIComponent(match[1]) : null;
+  });
+
+  useEffect(() => {
+    const onPopState = () => {
+      const match = window.location.pathname.match(/^\/preview\/([^/]+)\/?$/);
+      setUserId(match ? decodeURIComponent(match[1]) : null);
+    };
+    window.addEventListener('popstate', onPopState);
+    return () => window.removeEventListener('popstate', onPopState);
+  }, []);
+
+  const exit = () => {
+    window.history.pushState({}, '', '/');
+    setUserId(null);
+  };
+
+  return { userId, exit };
+}
+
 export default function App() {
+  const { userId: previewUserId, exit: exitPreview } = usePreviewRoute();
+
+  // Preview is a fully separate, unauthenticated surface — it intentionally
+  // sits outside <AppProvider> so a viewer's session never mixes with (or
+  // requires) the journal owner's app state.
+  if (previewUserId) {
+    return <PreviewScreen userId={previewUserId} onExit={exitPreview} />;
+  }
+
   return (
     <AppProvider>
       <AuthGate />
