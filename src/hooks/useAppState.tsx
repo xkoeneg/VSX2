@@ -226,12 +226,41 @@ export function useAppState() {
   const previousUserIdRef = useRef<string | null>(null);
 
   useEffect(() => {
+    let isMounted = true;
+
+    const applySession = (newSession: Session | null, opts?: { authoritative?: boolean }) => {
+      if (!isMounted) return;
+
+      if (newSession) {
+        previousUserIdRef.current = newSession.user?.id ?? null;
+        setSession(newSession);
+        setAuthLoading(false);
+        return;
+      }
+
+      // No session came back. This can be a transient false-negative —
+      // the same race that used to flicker the sidebar's display name back
+      // to "Account" on refresh — not necessarily a real sign-out. If we
+      // treated it as authoritative here, `userId` below would briefly go
+      // null, and any add/edit/delete a person makes during that window
+      // would silently skip its Supabase write (see the `if (userId)`
+      // guards further down) with no error and no retry — invisible data
+      // loss that only surfaces on the next reload. So: only actually
+      // clear the session (and send the user to LoginPage / stop syncing)
+      // on an explicit SIGNED_OUT event. Otherwise keep whatever session
+      // we already have and let the next getSession()/onAuthStateChange
+      // firing correct things.
+      if (opts?.authoritative) {
+        previousUserIdRef.current = null;
+        setSession(null);
+      }
+      setAuthLoading(false);
+    };
+
     // Picks up any session already persisted (localStorage, by default)
     // from a previous visit, without waiting for onAuthStateChange to fire.
     supabase.auth.getSession().then(({ data: { session } }) => {
-      previousUserIdRef.current = session?.user?.id ?? null;
-      setSession(session);
-      setAuthLoading(false);
+      applySession(session);
     });
 
     // Fires on every subsequent sign-in, sign-out, token refresh, tab
@@ -244,8 +273,7 @@ export function useAppState() {
       const previousUserId = previousUserIdRef.current;
       const newUserId = newSession?.user?.id ?? null;
 
-      setSession(newSession);
-      setAuthLoading(false);
+      applySession(newSession, { authoritative: event === 'SIGNED_OUT' });
 
       // Force the landing screen back to the Dashboard ONLY on a genuine
       // fresh sign-in — nobody was signed in a moment ago, and now someone
@@ -260,11 +288,12 @@ export function useAppState() {
       if (event === 'SIGNED_IN' && previousUserId === null && newUserId !== null) {
         setView('dashboard');
       }
-
-      previousUserIdRef.current = newUserId;
     });
 
-    return () => subscription.unsubscribe();
+    return () => {
+      isMounted = false;
+      subscription.unsubscribe();
+    };
   }, []);
 
   const signOutUser = useCallback(async () => {
@@ -2422,6 +2451,11 @@ export function useAppState() {
           showTradeImportToast('error', 'Failed to save the new account — it may not appear on other devices.');
         }
       });
+    } else {
+      // Not a silent no-op: without this, the account only ever exists in
+      // local React state and vanishes on the next reload with no warning.
+      console.error('Cannot save account to Supabase: no authenticated user id.');
+      showTradeImportToast('error', 'Not signed in — this account was NOT saved and will be lost on refresh.');
     }
     setNewAccount({
       name: '',
@@ -2451,6 +2485,9 @@ export function useAppState() {
           showTradeImportToast('error', 'Failed to save account changes — it may not sync to other devices.');
         }
       });
+    } else {
+      console.error('Cannot update account in Supabase: no authenticated user id.');
+      showTradeImportToast('error', 'Not signed in — these account changes were NOT saved and will be lost on refresh.');
     }
     setEditingAccount({});
     resetCalculator();
@@ -2479,6 +2516,9 @@ export function useAppState() {
           showTradeImportToast('error', 'Failed to delete the account on the server — it may reappear on reload.');
         }
       });
+    } else {
+      console.error('Cannot delete account from Supabase: no authenticated user id.');
+      showTradeImportToast('error', 'Not signed in — this account was only removed locally and may reappear on reload.');
     }
     setAccountPendingDelete(null);
   };
@@ -2634,15 +2674,20 @@ export function useAppState() {
       }
 
       setTrades(prev => [...prev, ...newTrades]);
-      if (userId && newTrades.length > 0) {
-        supabase.from('trades').insert(
-          newTrades.map(t => ({ id: t.id, user_id: userId, account_id: t.accountId, data: t }))
-        ).then(({ error }) => {
-          if (error) {
-            console.error('Failed to save imported trades to Supabase:', error);
-            showTradeImportToast('error', 'Imported trades may not have synced to your account — reload to check.');
-          }
-        });
+      if (newTrades.length > 0) {
+        if (userId) {
+          supabase.from('trades').insert(
+            newTrades.map(t => ({ id: t.id, user_id: userId, account_id: t.accountId, data: t }))
+          ).then(({ error }) => {
+            if (error) {
+              console.error('Failed to save imported trades to Supabase:', error);
+              showTradeImportToast('error', 'Imported trades may not have synced to your account — reload to check.');
+            }
+          });
+        } else {
+          console.error('Cannot save imported trades to Supabase: no authenticated user id.');
+          showTradeImportToast('error', 'Not signed in — imported trades were NOT saved and will be lost on refresh.');
+        }
       }
       if (newCustomSymbols.length > 0) {
         setCustomSymbols(prev => [...prev, ...newCustomSymbols.filter(s => !prev.includes(s))]);
@@ -2708,6 +2753,9 @@ export function useAppState() {
           showTradeImportToast('error', 'Failed to save the new trade — it may not appear on other devices.');
         }
       });
+    } else {
+      console.error('Cannot save trade to Supabase: no authenticated user id.');
+      showTradeImportToast('error', 'Not signed in — this trade was NOT saved and will be lost on refresh.');
     }
     const symbolValue = newTrade.symbol?.toUpperCase() || '';
     if (symbolValue && !PRESET_SYMBOLS.some(p => p.value === symbolValue) && !customSymbols.includes(symbolValue)) {
@@ -2786,6 +2834,9 @@ export function useAppState() {
           showTradeImportToast('error', 'Failed to save trade changes — it may not sync to other devices.');
         }
       });
+    } else {
+      console.error('Cannot update trade in Supabase: no authenticated user id.');
+      showTradeImportToast('error', 'Not signed in — these trade changes were NOT saved and will be lost on refresh.');
     }
     const symbolValue = newTrade.symbol?.toUpperCase() || '';
     if (symbolValue && !PRESET_SYMBOLS.some(p => p.value === symbolValue) && !customSymbols.includes(symbolValue)) {
@@ -2813,6 +2864,9 @@ export function useAppState() {
           showTradeImportToast('error', 'Failed to delete the trade on the server — it may reappear on reload.');
         }
       });
+    } else {
+      console.error('Cannot delete trade from Supabase: no authenticated user id.');
+      showTradeImportToast('error', 'Not signed in — this trade was only removed locally and may reappear on reload.');
     }
     setTradePendingDelete(null);
     setShowTradeDetail(null);
@@ -2829,13 +2883,18 @@ export function useAppState() {
       updatedTrade = { ...t, mistakesAnalysis: detailNotesDraft.mistakesAnalysis, lessonsLearned: detailNotesDraft.lessonsLearned, rulesFollowed: detailRulesFollowedDraft };
       return updatedTrade;
     }));
-    if (userId && updatedTrade) {
-      supabase.from('trades').update({ data: updatedTrade }).eq('id', showTradeDetail).eq('user_id', userId).then(({ error }) => {
-        if (error) {
-          console.error('Failed to save trade notes to Supabase:', error);
-          showTradeImportToast('error', 'Failed to save notes — they may not sync to other devices.');
-        }
-      });
+    if (updatedTrade) {
+      if (userId) {
+        supabase.from('trades').update({ data: updatedTrade }).eq('id', showTradeDetail).eq('user_id', userId).then(({ error }) => {
+          if (error) {
+            console.error('Failed to save trade notes to Supabase:', error);
+            showTradeImportToast('error', 'Failed to save notes — they may not sync to other devices.');
+          }
+        });
+      } else {
+        console.error('Cannot save trade notes to Supabase: no authenticated user id.');
+        showTradeImportToast('error', 'Not signed in — these notes were NOT saved and will be lost on refresh.');
+      }
     }
   };
 
@@ -2858,13 +2917,18 @@ export function useAppState() {
       updatedTrade = { ...t, emotions: disciplineReviewDraft.emotions, mistakes: disciplineReviewDraft.mistakes, notes: disciplineReviewDraft.notes, isReviewed: true };
       return updatedTrade;
     }));
-    if (userId && updatedTrade) {
-      supabase.from('trades').update({ data: updatedTrade }).eq('id', targetId).eq('user_id', userId).then(({ error }) => {
-        if (error) {
-          console.error('Failed to save discipline review to Supabase:', error);
-          showTradeImportToast('error', 'Failed to save review — it may not sync to other devices.');
-        }
-      });
+    if (updatedTrade) {
+      if (userId) {
+        supabase.from('trades').update({ data: updatedTrade }).eq('id', targetId).eq('user_id', userId).then(({ error }) => {
+          if (error) {
+            console.error('Failed to save discipline review to Supabase:', error);
+            showTradeImportToast('error', 'Failed to save review — it may not sync to other devices.');
+          }
+        });
+      } else {
+        console.error('Cannot save discipline review to Supabase: no authenticated user id.');
+        showTradeImportToast('error', 'Not signed in — this review was NOT saved and will be lost on refresh.');
+      }
     }
     if (showRuleReviewModal) {
       setIsEditingRuleReview(false);
@@ -2924,13 +2988,18 @@ export function useAppState() {
     setSelectedTradeIds([]);
     setTradeSelectMode(false);
     setShowDeleteSelectedConfirm(false);
-    if (userId && idsToDelete.length > 0) {
-      supabase.from('trades').delete().in('id', idsToDelete).eq('user_id', userId).then(({ error }) => {
-        if (error) {
-          console.error('Failed to bulk-delete trades from Supabase:', error);
-          showTradeImportToast('error', 'Failed to delete some trades on the server — they may reappear on reload.');
-        }
-      });
+    if (idsToDelete.length > 0) {
+      if (userId) {
+        supabase.from('trades').delete().in('id', idsToDelete).eq('user_id', userId).then(({ error }) => {
+          if (error) {
+            console.error('Failed to bulk-delete trades from Supabase:', error);
+            showTradeImportToast('error', 'Failed to delete some trades on the server — they may reappear on reload.');
+          }
+        });
+      } else {
+        console.error('Cannot bulk-delete trades from Supabase: no authenticated user id.');
+        showTradeImportToast('error', 'Not signed in — those trades were only removed locally and may reappear on reload.');
+      }
     }
   };
 
