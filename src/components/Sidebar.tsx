@@ -165,7 +165,7 @@ import { cn } from '../utils/format';
 import { supabase } from '../lib/supabaseClient';
 import { useAppContext } from '../context/AppContext';
 import { renderStatCard, renderAccountFilter, renderAccountTypeBadge, renderTradingAccountTypeBadge } from '../components/shared/RenderHelpers';
-import { UserProfileModal, loadHideEmailPref, loadCachedAuthUser, saveCachedAuthUser, clearCachedAuthUser, type AuthUser } from '../modals/UserProfileModal';
+import { UserProfileModal, loadHideEmailPref, loadCachedAuthUser, saveCachedAuthUser, clearCachedAuthUser, AVATAR_PRESETS, getInitials, type AuthUser } from '../modals/UserProfileModal';
 
 // authUser.hideEmail (synced from the public.profiles table) is the
 // cross-device source of truth for this preference; loadHideEmailPref
@@ -373,7 +373,7 @@ export function Sidebar({ isMobile }: { isMobile: boolean }) {
         try {
           const { data: profile, error } = await supabase
             .from('profiles')
-            .select('display_name, hide_email, viewer_passcode, avatar_url')
+            .select('display_name, hide_email, viewer_passcode, avatar_url, avatar_preset_color')
             .eq('id', rawUser.id)
             .maybeSingle();
           if (error) throw error;
@@ -392,6 +392,11 @@ export function Sidebar({ isMobile }: { isMobile: boolean }) {
             // metadata is kept only as a fallback for a provider's OAuth
             // picture on first login before profiles.avatar_url is set.
             avatarUrl: profile?.avatar_url || (metadata.avatar_url as string) || (metadata.picture as string) || null,
+            // Preset-color initials bubble, chosen in Profile Settings.
+            // Needs its own field (rather than being folded into
+            // avatarUrl) because it's a swatch id + initials render, not
+            // an image src.
+            avatarPresetColor: typeof profile?.avatar_preset_color === 'string' ? profile.avatar_preset_color : null,
             hideEmail: typeof profile?.hide_email === 'boolean' ? profile.hide_email : undefined,
             viewerPasscode: typeof profile?.viewer_passcode === 'string' ? (profile.viewer_passcode ?? undefined) : undefined,
           });
@@ -426,6 +431,11 @@ export function Sidebar({ isMobile }: { isMobile: boolean }) {
 
     const displayName = authUser?.name || authUser?.email?.split('@')[0] || 'Account';
     const displayEmail = authUser?.email || '';
+    // Preset color chosen in Profile Settings — renders as solid-color
+    // initials here rather than an image, same as the modal's own preview.
+    const avatarPreset = authUser?.avatarPresetColor
+      ? AVATAR_PRESETS.find(p => p.id === authUser.avatarPresetColor)
+      : null;
     const shownEmail = displayEmail && !hideEmailInUi ? displayEmail : '';
 
     const collapsed = !isMobile && sidebarCollapsed;
@@ -638,10 +648,14 @@ export function Sidebar({ isMobile }: { isMobile: boolean }) {
             <div
               className={cn(
                 'relative w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 overflow-hidden',
-                theme !== 'light' ? 'bg-zinc-800 border border-zinc-700' : 'bg-zinc-100 border border-zinc-200'
+                avatarPreset ? avatarPreset.className : (theme !== 'light' ? 'bg-zinc-800 border border-zinc-700' : 'bg-zinc-100 border border-zinc-200')
               )}
             >
-              {authUser?.avatarUrl ? (
+              {avatarPreset ? (
+                <span className="text-[11px] font-semibold text-white select-none">
+                  {getInitials(displayName)}
+                </span>
+              ) : authUser?.avatarUrl ? (
                 <img src={authUser.avatarUrl} alt={displayName} className="w-full h-full object-cover" />
               ) : (
                 <UserIcon className={cn('w-4 h-4', theme !== 'light' ? 'text-zinc-400' : 'text-zinc-500')} />
