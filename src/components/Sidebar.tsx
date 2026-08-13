@@ -373,7 +373,7 @@ export function Sidebar({ isMobile }: { isMobile: boolean }) {
         try {
           const { data: profile, error } = await supabase
             .from('profiles')
-            .select('display_name, hide_email, viewer_passcode')
+            .select('display_name, hide_email, viewer_passcode, avatar_url')
             .eq('id', rawUser.id)
             .maybeSingle();
           if (error) throw error;
@@ -382,7 +382,16 @@ export function Sidebar({ isMobile }: { isMobile: boolean }) {
             id: rawUser.id,
             email: rawUser.email ?? null,
             name: profile?.display_name || (metadata.full_name as string) || (metadata.name as string) || null,
-            avatarUrl: (metadata.avatar_url as string) || (metadata.picture as string) || null,
+            // avatar_url now lives on public.profiles (a plain column),
+            // NOT auth user_metadata. It used to be sourced from
+            // user_metadata via supabase.auth.updateUser(), but that
+            // embeds the value directly into the JWT — a base64 image
+            // there bloats every subsequent request's Authorization
+            // header past Supabase's edge proxy limits and kills the
+            // connection (ERR_CONNECTION_RESET / ERR_HTTP2_PROTOCOL_ERROR).
+            // metadata is kept only as a fallback for a provider's OAuth
+            // picture on first login before profiles.avatar_url is set.
+            avatarUrl: profile?.avatar_url || (metadata.avatar_url as string) || (metadata.picture as string) || null,
             hideEmail: typeof profile?.hide_email === 'boolean' ? profile.hide_email : undefined,
             viewerPasscode: typeof profile?.viewer_passcode === 'string' ? (profile.viewer_passcode ?? undefined) : undefined,
           });
