@@ -429,10 +429,13 @@ function TradeAnalyticsCard({ trades, stats, privacyMode, theme, tc, tradeFilter
   // Win Rate donut — single teal arc over a dark track, rounded cap,
   // starting at 12 o'clock and sweeping clockwise by win rate %. Thicker
   // stroke relative to diameter so it reads as a bold ring.
-  // Win rate here is computed locally (wins / total) so breakeven trades
-  // count toward the denominator — intentionally different from
-  // `stats.winRate` (which may be wins / (wins + losses) elsewhere).
-  const winRatePct = total > 0 ? (wins / total) * 100 : 0;
+  // Win rate is the standard wins / total computation: every trade counts
+  // as either a win or a loss by the actual sign of its P&L (a +$3 "BE"
+  // trade still counts as a win here), so there's no neutral bucket
+  // diluting the percentage. This intentionally differs from the W/L/BE
+  // chip counts below, which still use the $10 breakeven band for display.
+  const winRateWins = trades.filter(t => t.profitLoss > 0).length;
+  const winRatePct = total > 0 ? (winRateWins / total) * 100 : 0;
   const r = 42;
   const strokeWidth = 12;
   const c = 2 * Math.PI * r;
