@@ -90,6 +90,17 @@ function formatMoney(value: number): string {
   return `${sign}$${Math.abs(value).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 }
 
+// Compact variant for tight mobile calendar cells — mirrors the main app's
+// formatCurrencyCompact (e.g. $1.2k instead of $1,200.00).
+function formatMoneyCompact(value: number): string {
+  const sign = value < 0 ? '-' : '';
+  const abs = Math.abs(value);
+  if (abs >= 1000) {
+    return `${sign}$${(abs / 1000).toLocaleString(undefined, { minimumFractionDigits: 1, maximumFractionDigits: 1 })}k`;
+  }
+  return `${sign}$${abs.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`;
+}
+
 function formatDateLabel(iso: string): string {
   const d = new Date(iso);
   if (Number.isNaN(d.getTime())) return iso;
@@ -269,12 +280,18 @@ function UnlockedPreview({
     return { total, winRate, totalPnl, profitFactor };
   }, [data.trades]);
 
-  const dailyPnl = useMemo(() => {
-    const map = new Map<string, number>();
+  const dailyStats = useMemo(() => {
+    const map = new Map<string, { pnl: number; trades: number }>();
     for (const t of data.trades) {
       const key = t.date?.slice(0, 10);
       if (!key) continue;
-      map.set(key, (map.get(key) || 0) + t.profitLoss);
+      const existing = map.get(key);
+      if (existing) {
+        existing.pnl += t.profitLoss;
+        existing.trades += 1;
+      } else {
+        map.set(key, { pnl: t.profitLoss, trades: 1 });
+      }
     }
     return map;
   }, [data.trades]);
@@ -413,7 +430,7 @@ function UnlockedPreview({
             </>
           ) : (
             /* Performance Calendar tab */
-            <MonthCalendar monthCursor={monthCursor} setMonthCursor={setMonthCursor} dailyPnl={dailyPnl} />
+            <MonthCalendar monthCursor={monthCursor} setMonthCursor={setMonthCursor} dailyStats={dailyStats} />
           )}
         </div>
       </div>
@@ -555,75 +572,217 @@ function StatCard({ icon, label, value, positive }: { icon: React.ReactNode; lab
   );
 }
 
+// Mirrors the main app's `CalendarScreen` grid 1:1: same card chrome, cell
+// borders/colors, P&L + trade-count badges, week recap column, legend, and
+// nav control styling. Deliberately NOT reusing the main app's day-detail
+// click-through (day cells here are read-only display, not clickable).
 function MonthCalendar({
   monthCursor,
   setMonthCursor,
-  dailyPnl,
+  dailyStats,
 }: {
   monthCursor: Date;
   setMonthCursor: React.Dispatch<React.SetStateAction<Date>>;
-  dailyPnl: Map<string, number>;
+  dailyStats: Map<string, { pnl: number; trades: number }>;
 }) {
+  const monthNames = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+  const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+
   const year = monthCursor.getFullYear();
   const month = monthCursor.getMonth();
   const firstDay = new Date(year, month, 1);
   const startWeekday = firstDay.getDay();
   const daysInMonth = new Date(year, month + 1, 0).getDate();
-  const cells: (number | null)[] = [
-    ...Array(startWeekday).fill(null),
-    ...Array.from({ length: daysInMonth }, (_, i) => i + 1),
-  ];
-
   const pad = (n: number) => String(n).padStart(2, '0');
 
+  type DayCell = { day: number | null; pnl: number; trades: number };
+
+  const paddedDays: DayCell[] = [
+    ...Array.from({ length: startWeekday }, (): DayCell => ({ day: null, pnl: 0, trades: 0 })),
+    ...Array.from({ length: daysInMonth }, (_, i): DayCell => {
+      const day = i + 1;
+      const key = `${year}-${pad(month + 1)}-${pad(day)}`;
+      const stat = dailyStats.get(key);
+      return { day, pnl: stat?.pnl ?? 0, trades: stat?.trades ?? 0 };
+    }),
+  ];
+  while (paddedDays.length % 7 !== 0) paddedDays.push({ day: null, pnl: 0, trades: 0 });
+  const weeks: DayCell[][] = [];
+  for (let i = 0; i < paddedDays.length; i += 7) weeks.push(paddedDays.slice(i, i + 7));
+
+  const goToPrevMonth = () => setMonthCursor(prev => new Date(prev.getFullYear(), prev.getMonth() - 1, 1));
+  const goToNextMonth = () => setMonthCursor(prev => new Date(prev.getFullYear(), prev.getMonth() + 1, 1));
+
   return (
-    <div className="bg-zinc-900/60 border border-zinc-800 rounded-lg p-4">
-      <div className="flex items-center justify-between mb-3">
-        <p className="text-sm font-medium text-white">
-          {monthCursor.toLocaleDateString(undefined, { month: 'long', year: 'numeric' })}
-        </p>
-        <div className="flex items-center gap-1">
+    <div className="space-y-3">
+      {/* Month/year nav — identical control styling to the main app's Calendar header */}
+      <div className="flex items-center justify-between">
+        <p className="text-sm font-medium text-white">Performance Calendar</p>
+        <div className="flex items-center gap-2 h-9 select-none">
           <button
             type="button"
-            onClick={() => setMonthCursor(prev => new Date(prev.getFullYear(), prev.getMonth() - 1, 1))}
-            className="p-1.5 rounded-lg text-zinc-400 hover:text-white hover:bg-zinc-800 transition-colors"
+            onClick={goToPrevMonth}
+            className="h-9 w-9 flex items-center justify-center flex-shrink-0 rounded-lg text-xs font-medium border border-zinc-700 bg-zinc-800 text-zinc-300 select-none transition-colors hover:bg-zinc-700 active:scale-95"
           >
             <ChevronLeft className="w-4 h-4" />
           </button>
+          <div className="h-9 flex items-center px-3 rounded-lg border border-zinc-700 bg-zinc-800 text-zinc-300 select-none">
+            <span className="text-xs font-medium whitespace-nowrap select-none">{monthNames[month]} {year}</span>
+          </div>
           <button
             type="button"
-            onClick={() => setMonthCursor(prev => new Date(prev.getFullYear(), prev.getMonth() + 1, 1))}
-            className="p-1.5 rounded-lg text-zinc-400 hover:text-white hover:bg-zinc-800 transition-colors"
+            onClick={goToNextMonth}
+            className="h-9 w-9 flex items-center justify-center flex-shrink-0 rounded-lg text-xs font-medium border border-zinc-700 bg-zinc-800 text-zinc-300 select-none transition-colors hover:bg-zinc-700 active:scale-95"
           >
             <ChevronRight className="w-4 h-4" />
           </button>
         </div>
       </div>
-      <div className="grid grid-cols-7 gap-1 text-center text-[10px] text-zinc-600 mb-1">
-        {['S', 'M', 'T', 'W', 'T', 'F', 'S'].map((d, i) => <div key={i}>{d}</div>)}
-      </div>
-      <div className="grid grid-cols-7 gap-1">
-        {cells.map((day, idx) => {
-          if (day === null) return <div key={idx} />;
-          const key = `${year}-${pad(month + 1)}-${pad(day)}`;
-          const pnl = dailyPnl.get(key);
-          return (
-            <div
-              key={idx}
-              className={cn(
-                'aspect-square rounded-md flex items-center justify-center text-[11px] font-medium',
-                pnl === undefined
-                  ? 'bg-zinc-800/40 text-zinc-600'
-                  : pnl >= 0
-                    ? 'bg-emerald-500/20 text-emerald-300'
-                    : 'bg-rose-500/20 text-rose-300'
-              )}
-              title={pnl !== undefined ? formatMoney(pnl) : undefined}
-            >
-              {day}
-            </div>
-          );
-        })}
+
+      <div className="bg-zinc-900/50 border border-zinc-800 rounded-2xl p-3 sm:p-4">
+        {/* Desktop/tablet: 8-column grid (7 days + Week recap column) */}
+        <div className="hidden md:block">
+          <div className="grid grid-cols-8 gap-2 mb-2">
+            {dayNames.map(day => (
+              <div key={day} className="text-center text-xs text-zinc-500 font-medium py-2">{day}</div>
+            ))}
+            <div className="text-center text-xs text-zinc-500 font-medium py-2">Week</div>
+          </div>
+
+          <div className="space-y-2">
+            {weeks.map((week, wi) => {
+              const weekRealDays = week.filter(d => d.day !== null);
+              const weekPnl = weekRealDays.reduce((s, d) => s + d.pnl, 0);
+              const weekTradingDays = weekRealDays.filter(d => d.trades > 0).length;
+              const hasWeekData = weekTradingDays > 0;
+              return (
+                <div key={wi} className="grid grid-cols-8 gap-2">
+                  {week.map((day, di) => (
+                    <div
+                      key={di}
+                      className={cn(
+                        'rounded-xl p-2.5 min-h-[92px] flex flex-col justify-between min-w-0 transition-colors',
+                        day.day === null ? 'bg-transparent' :
+                        day.trades === 0 ? 'bg-zinc-800/30 border border-zinc-800/60' :
+                        day.pnl > 0 ? 'bg-emerald-500/15 border border-emerald-500/30 hover:bg-emerald-500/25' :
+                        day.pnl < 0 ? 'bg-rose-500/15 border border-rose-500/30 hover:bg-rose-500/25' :
+                        'bg-zinc-800/40 border border-zinc-700/60'
+                      )}
+                    >
+                      {day.day !== null && (
+                        <>
+                          <span className="text-xs text-zinc-500 font-medium">{day.day}</span>
+                          {day.trades > 0 ? (
+                            <div className="min-w-0">
+                              <p className={cn('text-sm font-bold font-mono truncate', day.pnl > 0 ? 'text-emerald-400' : day.pnl < 0 ? 'text-rose-400' : 'text-zinc-300')}>
+                                {formatMoney(day.pnl)}
+                              </p>
+                              <p className="text-[10px] text-zinc-500 mt-0.5">{day.trades} trade{day.trades !== 1 ? 's' : ''}</p>
+                            </div>
+                          ) : (
+                            <span className="text-xs text-zinc-700">—</span>
+                          )}
+                        </>
+                      )}
+                    </div>
+                  ))}
+
+                  {/* Week recap cell */}
+                  <div className={cn(
+                    'rounded-xl p-2.5 min-h-[92px] flex flex-col items-center justify-center min-w-0 border',
+                    !hasWeekData ? 'bg-zinc-900/40 border-zinc-800/50' :
+                    weekPnl > 0 ? 'bg-emerald-500/10 border-emerald-500/25' :
+                    weekPnl < 0 ? 'bg-rose-500/10 border-rose-500/25' :
+                    'bg-zinc-800/40 border-zinc-700/60'
+                  )}>
+                    {hasWeekData ? (
+                      <>
+                        <p className="text-[9px] text-zinc-500 uppercase tracking-wider">Week {wi + 1}</p>
+                        <p className={cn('text-sm font-bold font-mono truncate', weekPnl > 0 ? 'text-emerald-400' : weekPnl < 0 ? 'text-rose-400' : 'text-zinc-300')}>
+                          {formatMoney(weekPnl)}
+                        </p>
+                        <p className="text-[10px] text-zinc-600">{weekTradingDays} day{weekTradingDays !== 1 ? 's' : ''}</p>
+                      </>
+                    ) : (
+                      <span className="text-xs text-zinc-700">—</span>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Mobile: 7-column grid; Week recap collapses to a summary line under each week */}
+        <div className="md:hidden">
+          <div className="grid grid-cols-7 gap-1">
+            {dayNames.map(day => (
+              <div key={day} className="text-center text-[10px] text-zinc-500 font-medium py-1 truncate">{day.slice(0, 2)}</div>
+            ))}
+          </div>
+
+          <div className="space-y-1 mt-1">
+            {weeks.map((week, wi) => {
+              const weekRealDays = week.filter(d => d.day !== null);
+              const weekPnl = weekRealDays.reduce((s, d) => s + d.pnl, 0);
+              const weekTradingDays = weekRealDays.filter(d => d.trades > 0).length;
+              const hasWeekData = weekTradingDays > 0;
+              return (
+                <div key={wi} className="space-y-0.5">
+                  <div className="grid grid-cols-7 gap-1">
+                    {week.map((day, di) => (
+                      <div
+                        key={di}
+                        className={cn(
+                          'rounded-lg p-1 min-h-[44px] flex flex-col justify-between min-w-0 transition-colors',
+                          day.day === null ? 'bg-transparent' :
+                          day.trades === 0 ? 'bg-zinc-800/30 border border-zinc-800/60' :
+                          day.pnl > 0 ? 'bg-emerald-500/15 border border-emerald-500/30' :
+                          day.pnl < 0 ? 'bg-rose-500/15 border border-rose-500/30' :
+                          'bg-zinc-800/40 border border-zinc-700/60'
+                        )}
+                      >
+                        {day.day !== null && (
+                          <>
+                            <span className="text-[9px] text-zinc-500 font-medium">{day.day}</span>
+                            {day.trades > 0 ? (
+                              <p className={cn('text-[9px] font-bold font-mono truncate leading-tight', day.pnl > 0 ? 'text-emerald-400' : day.pnl < 0 ? 'text-rose-400' : 'text-zinc-300')}>
+                                {formatMoneyCompact(day.pnl)}
+                              </p>
+                            ) : (
+                              <span className="text-[9px] text-zinc-700">—</span>
+                            )}
+                          </>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+
+                  {hasWeekData && (
+                    <div className="flex items-center justify-between px-1 text-[10px]">
+                      <span className="text-zinc-500">Week {wi + 1} · {weekTradingDays} day{weekTradingDays !== 1 ? 's' : ''}</span>
+                      <span className={cn('font-mono font-semibold', weekPnl > 0 ? 'text-emerald-400' : weekPnl < 0 ? 'text-rose-400' : 'text-zinc-400')}>
+                        {formatMoney(weekPnl)}
+                      </span>
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+
+        <div className="flex items-center gap-4 mt-4 pt-4 border-t border-zinc-800/70 flex-wrap">
+          <span className="flex items-center gap-1.5 text-xs text-zinc-500">
+            <span className="w-2.5 h-2.5 rounded-sm bg-emerald-500/40 border border-emerald-500/50" /> Profit
+          </span>
+          <span className="flex items-center gap-1.5 text-xs text-zinc-500">
+            <span className="w-2.5 h-2.5 rounded-sm bg-rose-500/40 border border-rose-500/50" /> Loss
+          </span>
+          <span className="flex items-center gap-1.5 text-xs text-zinc-500">
+            <span className="w-2.5 h-2.5 rounded-sm bg-zinc-800/60 border border-zinc-700/60" /> No trades
+          </span>
+        </div>
       </div>
     </div>
   );
