@@ -436,6 +436,11 @@ function TradeAnalyticsCard({ trades, stats, privacyMode, theme, tc, tradeFilter
   // chip counts below, which still use the $10 breakeven band for display.
   const winRateWins = trades.filter(t => t.profitLoss > 0).length;
   const winRatePct = total > 0 ? (winRateWins / total) * 100 : 0;
+  // Win rate counting breakeven trades (the $10 band used for the W/L/BE
+  // chips below) as wins rather than losses — gives a second, more
+  // forgiving read on the same trades, shown as a small secondary figure
+  // next to the exact win rate above.
+  const winRateWithBEPct = total > 0 ? ((wins + breakeven) / total) * 100 : 0;
   const r = 42;
   const strokeWidth = 12;
   const c = 2 * Math.PI * r;
@@ -483,9 +488,14 @@ function TradeAnalyticsCard({ trades, stats, privacyMode, theme, tc, tradeFilter
         </div>
         <div className="min-w-0 -ml-1">
           <p className="text-[10px] text-zinc-500 font-semibold tracking-wider uppercase">Win Rate</p>
-          <p className={cn("text-xl font-bold tabular-nums leading-tight", tc.text)}>
-            {total > 0 ? `${winRatePct.toFixed(1)}%` : '—'}
-          </p>
+          <div className="flex items-baseline gap-1.5">
+            <p className={cn("text-xl font-bold tabular-nums leading-tight", tc.text)}>
+              {total > 0 ? `${winRatePct.toFixed(1)}%` : '—'}
+            </p>
+            <p className="text-[11px] text-zinc-500 font-medium tabular-nums leading-tight" title="Win rate counting breakeven trades as wins">
+              {total > 0 ? `${winRateWithBEPct.toFixed(1)}% w/ BE` : ''}
+            </p>
+          </div>
         </div>
       </div>
 
