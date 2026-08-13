@@ -20,8 +20,10 @@ import {
   Gauge,
   Activity,
   Coins,
+  Lock,
+  X,
 } from 'lucide-react';
-import { signInWithGoogle, signInWithEmail, signUpWithEmail } from '../lib/supabaseClient';
+import { signInWithGoogle, signInWithEmail, signUpWithEmail, supabase } from '../lib/supabaseClient';
 import { cn } from '../utils/format';
 
 // ============================================================================
@@ -887,6 +889,50 @@ export function LoginPage() {
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [infoMsg, setInfoMsg] = useState<string | null>(null);
 
+  // "Have a Viewer Passcode?" — a second, unrelated entry path for people
+  // who were shared a read-only preview but don't have (and don't need) an
+  // account of their own. Kept as local state on this same screen rather
+  // than a route, since — like the rest of this app — there's no router;
+  // finding the owner and redirecting is what actually changes the URL
+  // (see handleViewerPasscodeSubmit below).
+  const [showPasscodeGate, setShowPasscodeGate] = useState(false);
+  const [viewerPasscodeInput, setViewerPasscodeInput] = useState('');
+  const [isCheckingPasscode, setIsCheckingPasscode] = useState(false);
+  const [passcodeError, setPasscodeError] = useState<string | null>(null);
+
+  const handleViewerPasscodeSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!viewerPasscodeInput.trim()) {
+      setPasscodeError('Enter a viewer passcode.');
+      return;
+    }
+    setIsCheckingPasscode(true);
+    setPasscodeError(null);
+    try {
+      // find_user_by_viewer_passcode is a SECURITY DEFINER RPC — it looks
+      // the passcode up server-side and returns only a user id (or
+      // nothing). The passcode itself is verified again on the preview
+      // page itself before any journal data loads, so this step is just
+      // "which journal does this code belong to", not the actual gate.
+      const { data: matchedUserId, error } = await supabase.rpc('find_user_by_viewer_passcode', {
+        p_passcode: viewerPasscodeInput.trim(),
+      });
+      if (error) throw error;
+      if (!matchedUserId) {
+        setPasscodeError("That passcode doesn't match any shared journal.");
+        setIsCheckingPasscode(false);
+        return;
+      }
+      // Full navigation (not client-side state) so App.tsx's route check
+      // picks up /preview/[id] fresh, outside AppProvider/AuthGate.
+      window.location.href = `/preview/${matchedUserId}`;
+    } catch (err) {
+      console.error('Viewer passcode lookup failed', err);
+      setPasscodeError('Something went wrong looking that up. Please try again.');
+      setIsCheckingPasscode(false);
+    }
+  };
+
   const switchMode = (next: AuthMode) => {
     setMode(next);
     setErrorMsg(null);
@@ -1161,6 +1207,18 @@ export function LoginPage() {
             )}
           </p>
 
+          {/* Viewer passcode entry — separate from the account auth above;
+              anyone with a passcode can reach a read-only preview without
+              creating or signing into an account. */}
+          <button
+            type="button"
+            onClick={() => { setShowPasscodeGate(true); setPasscodeError(null); setViewerPasscodeInput(''); }}
+            className="w-full mt-3 flex items-center justify-center gap-1.5 text-xs text-zinc-500 hover:text-zinc-300 transition-colors"
+          >
+            <Eye className="w-3.5 h-3.5" />
+            Have a Viewer Passcode?
+          </button>
+
           {/* Trust badges */}
           <div className="mt-6 pt-5 border-t border-zinc-800/80 flex items-center justify-center gap-4 text-[10px] uppercase tracking-wider text-zinc-500">
             <span className="flex items-center gap-1.5">
@@ -1177,6 +1235,66 @@ export function LoginPage() {
             </span>
           </div>
       </div>
+
+      {showPasscodeGate && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4"
+          onClick={() => setShowPasscodeGate(false)}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            className="relative w-full max-w-sm bg-zinc-950/95 border border-zinc-800/80 rounded-2xl p-6 shadow-2xl"
+          >
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-base font-semibold text-white flex items-center gap-2">
+                <Eye className="w-4 h-4 text-emerald-400" />
+                Viewer Passcode
+              </h3>
+              <button
+                type="button"
+                onClick={() => setShowPasscodeGate(false)}
+                className="p-1.5 rounded-lg text-zinc-400 hover:text-white hover:bg-zinc-800 transition-colors"
+                aria-label="Close"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+            <p className="text-xs text-zinc-500 mb-4">
+              Enter the passcode someone shared with you to view their trading journal in read-only mode.
+            </p>
+
+            {passcodeError && (
+              <div className="mb-4 flex items-start gap-2 rounded-lg border border-red-900/50 bg-red-950/40 px-3 py-2.5 text-sm text-red-300">
+                <AlertCircle className="w-4 h-4 mt-0.5 flex-shrink-0" />
+                <span>{passcodeError}</span>
+              </div>
+            )}
+
+            <form onSubmit={handleViewerPasscodeSubmit} className="space-y-3">
+              <div className="relative">
+                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-500" />
+                <input
+                  type="text"
+                  autoFocus
+                  autoComplete="off"
+                  value={viewerPasscodeInput}
+                  onChange={(e) => setViewerPasscodeInput(e.target.value.toUpperCase().slice(0, 16))}
+                  placeholder="e.g. 7K2QX9RT"
+                  className={cn(inputClass, 'pl-9 font-mono tracking-widest placeholder:tracking-normal placeholder:font-sans')}
+                />
+              </div>
+              <button
+                type="submit"
+                disabled={isCheckingPasscode}
+                className="w-full h-11 flex items-center justify-center gap-2 rounded-lg bg-zinc-100 text-zinc-900 text-sm font-medium hover:bg-emerald-500 hover:text-black transition-all duration-200 disabled:opacity-60 disabled:cursor-not-allowed"
+              >
+                {isCheckingPasscode && <Loader2 className="w-4 h-4 animate-spin" />}
+                {isCheckingPasscode ? 'Looking up…' : 'View Journal'}
+              </button>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
