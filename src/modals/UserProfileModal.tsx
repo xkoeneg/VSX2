@@ -22,6 +22,13 @@ export type AuthUser = {
   email: string | null;
   name: string | null;
   avatarUrl: string | null;
+  // When set, the small avatar bubble should render as solid-color
+  // initials instead of `avatarUrl` — mirrors public.profiles.avatar_preset_color.
+  // Kept in AuthUser (not just local ProfilePrefs) so Sidebar's own small
+  // avatar bubble can actually see which preset was picked; it used to
+  // live only in the modal's local ProfilePrefs, which Sidebar never had
+  // access to, so a chosen preset color never showed up outside the modal.
+  avatarPresetColor?: string | null;
   hideEmail?: boolean;
   viewerPasscode?: string;
 };
@@ -33,7 +40,9 @@ type ProfilePrefs = {
   avatarPresetColor: string | null;
 };
 
-const AVATAR_PRESETS: { id: string; className: string }[] = [
+// Exported so Sidebar's own small avatar bubble can render the same
+// preset swatch + initials treatment as this modal does.
+export const AVATAR_PRESETS: { id: string; className: string }[] = [
   { id: 'emerald', className: 'bg-gradient-to-br from-emerald-400 to-emerald-700' },
   { id: 'cyan', className: 'bg-gradient-to-br from-cyan-400 to-cyan-700' },
   { id: 'purple', className: 'bg-gradient-to-br from-purple-400 to-purple-700' },
@@ -52,7 +61,7 @@ function generatePasscode(length = 8): string {
   return out;
 }
 
-function getInitials(name: string): string {
+export function getInitials(name: string): string {
   const parts = name.trim().split(/\s+/).filter(Boolean);
   if (parts.length === 0) return '?';
   if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
@@ -85,6 +94,7 @@ export function loadCachedAuthUser(): AuthUser | null {
       email: typeof parsed.email === 'string' ? parsed.email : null,
       name: typeof parsed.name === 'string' ? parsed.name : null,
       avatarUrl: typeof parsed.avatarUrl === 'string' ? parsed.avatarUrl : null,
+      avatarPresetColor: typeof parsed.avatarPresetColor === 'string' ? parsed.avatarPresetColor : null,
       hideEmail: typeof parsed.hideEmail === 'boolean' ? parsed.hideEmail : undefined,
       viewerPasscode: typeof parsed.viewerPasscode === 'string' ? parsed.viewerPasscode : undefined,
     };
@@ -173,19 +183,22 @@ export function UserProfileModal({ isOpen, onClose, authUser, onAuthUserChange, 
     const prefs = loadPrefs(authUser?.email ?? null);
     setEditableName(authUser?.name ?? '');
     setUploadedAvatar(null);
-    setAvatarPresetColor(prefs.avatarPresetColor);
-    // authUser.hideEmail / viewerPasscode are synced from the public.profiles
-    // table (cross-device source of truth); the local prefs value is only a
-    // same-browser fallback for when that hasn't loaded yet (e.g. first
-    // paint before the auth fetch resolves). publicPreviewEnabled isn't in
-    // the profiles table yet, so it stays local-only for now.
+    // authUser.avatarPresetColor / hideEmail / viewerPasscode are synced
+    // from the public.profiles table (cross-device source of truth); the
+    // local prefs value is only a same-browser fallback for when that
+    // hasn't loaded yet (e.g. first paint before the auth fetch resolves).
+    // publicPreviewEnabled isn't in the profiles table yet, so it stays
+    // local-only for now.
+    setAvatarPresetColor(
+      authUser && typeof authUser.avatarPresetColor !== 'undefined' ? authUser.avatarPresetColor : prefs.avatarPresetColor
+    );
     setHideEmail(typeof authUser?.hideEmail === 'boolean' ? authUser.hideEmail : prefs.hideEmail);
     setPublicPreviewEnabled(prefs.publicPreviewEnabled);
     setViewerPasscode(authUser?.viewerPasscode || prefs.viewerPasscode);
     setSaveError(null);
     setAvatarError(null);
     setCopied(false);
-  }, [isOpen, authUser?.email, authUser?.name, authUser?.hideEmail, authUser?.viewerPasscode]);
+  }, [isOpen, authUser?.email, authUser?.name, authUser?.hideEmail, authUser?.viewerPasscode, authUser?.avatarPresetColor]);
 
   if (!isOpen) return null;
 
@@ -248,6 +261,7 @@ export function UserProfileModal({ isOpen, onClose, authUser, onAuthUserChange, 
       email: authUser?.email ?? null,
       name: nextName,
       avatarUrl: nextAvatarUrl,
+      avatarPresetColor,
       hideEmail,
       viewerPasscode,
     };
@@ -295,6 +309,7 @@ export function UserProfileModal({ isOpen, onClose, authUser, onAuthUserChange, 
         hide_email: hideEmail,
         viewer_passcode: viewerPasscode,
         avatar_url: nextAvatarUrl,
+        avatar_preset_color: avatarPresetColor,
         updated_at: new Date().toISOString(),
       });
       if (error) throw error;
