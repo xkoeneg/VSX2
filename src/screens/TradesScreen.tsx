@@ -436,11 +436,12 @@ function TradeAnalyticsCard({ trades, stats, privacyMode, theme, tc, tradeFilter
   // chip counts below, which still use the $10 breakeven band for display.
   const winRateWins = trades.filter(t => t.profitLoss > 0).length;
   const winRatePct = total > 0 ? (winRateWins / total) * 100 : 0;
-  // Win rate counting breakeven trades (the $10 band used for the W/L/BE
-  // chips below) as wins rather than losses — gives a second, more
-  // forgiving read on the same trades, shown as a small secondary figure
-  // next to the exact win rate above.
-  const winRateWithBEPct = total > 0 ? ((wins + breakeven) / total) * 100 : 0;
+  // Win rate counting breakeven trades against the rate (using the $10
+  // band shared with the W/L/BE chips below, where a trade only counts
+  // as a win if it clears the $10 threshold) — a stricter, less forgiving
+  // read on the same trades, shown as a small secondary figure next to
+  // the exact win rate above.
+  const winRateWithBEPct = total > 0 ? (wins / total) * 100 : 0;
   const r = 42;
   const strokeWidth = 12;
   const c = 2 * Math.PI * r;
