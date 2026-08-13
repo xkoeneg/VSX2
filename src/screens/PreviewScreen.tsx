@@ -12,8 +12,8 @@ import {
   TrendingUp,
   TrendingDown,
   Target,
-  DollarSign,
-  Percent,
+  Scale,
+  BarChart3,
 } from 'lucide-react';
 import { supabase } from '../lib/supabaseClient';
 import { cn } from '../utils/format';
@@ -104,6 +104,172 @@ function getInitials(name: string): string {
   if (parts.length === 0) return '?';
   if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
   return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+}
+
+// ============================================================================
+// TradeAnalyticsCard — ported from TradesScreen.tsx's header analytics card
+// (Net P&L, Win Rate donut, Win/Loss/BE breakdown, Profit Factor + Avg
+// Win/Loss, Total Trades). Adapted for this read-only screen:
+//   - takes PreviewTrade[] instead of Trade[]
+//   - no privacyMode (this screen has no privacy toggle — numbers are
+//     always shown as-is) and no theme switching (always dark)
+//   - uses the local formatMoney() helper instead of formatCurrency()
+// ============================================================================
+
+type PreviewTradeFilter = 'all' | 'profit' | 'loss' | 'breakeven';
+
+interface TradeAnalyticsCardProps {
+  trades: PreviewTrade[];
+  stats: {
+    totalTrades: number;
+    winRate: number;
+    profitFactor: number;
+    avgWin: number;
+    avgLoss: number;
+  };
+  tradeFilter: PreviewTradeFilter;
+  setTradeFilter: React.Dispatch<React.SetStateAction<PreviewTradeFilter>>;
+}
+
+function TradeAnalyticsCard({ trades, stats, tradeFilter, setTradeFilter }: TradeAnalyticsCardProps) {
+  const total = trades.length;
+  const wins = trades.filter(t => t.profitLoss >= 10).length;
+  const losses = trades.filter(t => t.profitLoss <= -10).length;
+  const breakeven = total - wins - losses;
+  const netPnl = trades.reduce((sum, t) => sum + t.profitLoss, 0);
+  const isNetPositive = netPnl >= 0;
+
+  // Win Rate donut — single teal arc over a dark track, rounded cap,
+  // starting at 12 o'clock and sweeping clockwise by win rate %.
+  const winRateWins = trades.filter(t => t.profitLoss > 0).length;
+  const winRatePct = total > 0 ? (winRateWins / total) * 100 : 0;
+  const winRateWithBEPct = total > 0 ? (wins / total) * 100 : 0;
+  const r = 42;
+  const strokeWidth = 12;
+  const c = 2 * Math.PI * r;
+  const winRateArc = total > 0 ? (winRatePct / 100) * c : 0;
+
+  const cardClass = "bg-zinc-900/50 border border-white/10 rounded-xl p-6 backdrop-blur-md hover:border-white/20 transition-all flex items-center gap-3";
+  const iconCircleClass = "p-3 rounded-xl flex-shrink-0";
+
+  return (
+    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4 items-start">
+      {/* Card 1 — Net P&L */}
+      <div className={cardClass}>
+        <div className={cn(iconCircleClass, isNetPositive ? "bg-emerald-500/10" : "bg-rose-500/10")}>
+          {isNetPositive
+            ? <TrendingUp className="w-5 h-5 text-emerald-400" />
+            : <TrendingDown className="w-5 h-5 text-rose-500" />}
+        </div>
+        <div className="min-w-0">
+          <p className="text-[10px] text-zinc-500 font-semibold tracking-wider uppercase">Net P&amp;L</p>
+          <p className={cn("text-xl font-bold tabular-nums leading-tight", isNetPositive ? 'text-emerald-400' : 'text-rose-500')}>
+            {formatMoney(netPnl)}
+          </p>
+        </div>
+      </div>
+
+      {/* Card 2 — Win Rate donut */}
+      <div className={cardClass}>
+        <div className="relative w-11 h-11 -ml-1.5 flex-shrink-0">
+          <svg viewBox="0 0 112 112" className="w-full h-full -rotate-90">
+            <circle cx="56" cy="56" r={r} fill="none" stroke="rgb(39,39,42)" strokeWidth={strokeWidth} />
+            {winRateArc > 0 && (
+              <circle
+                cx="56" cy="56" r={r} fill="none" stroke="rgb(16,185,129)" strokeWidth={strokeWidth}
+                strokeDasharray={`${winRateArc} ${c - winRateArc}`} strokeLinecap="round"
+              />
+            )}
+          </svg>
+        </div>
+        <div className="min-w-0 -ml-1">
+          <p className="text-[10px] text-zinc-500 font-semibold tracking-wider uppercase">Win Rate</p>
+          <div className="flex items-baseline gap-1.5">
+            <p className="text-xl font-bold tabular-nums leading-tight text-white">
+              {total > 0 ? `${winRatePct.toFixed(1)}%` : '—'}
+            </p>
+            <p className="text-[11px] text-zinc-500 font-medium tabular-nums leading-tight" title="Win rate counting breakeven trades as wins">
+              {total > 0 ? `${winRateWithBEPct.toFixed(1)}% w/ BE` : ''}
+            </p>
+          </div>
+        </div>
+      </div>
+
+      {/* Card 3 — Win / Loss / Break-Even breakdown; chips stay clickable
+          against `tradeFilter`, narrowing the Trade History list below. */}
+      <div className={cardClass}>
+        <div className={cn(iconCircleClass, "bg-white/5")}>
+          <Scale className="w-5 h-5 text-zinc-400" />
+        </div>
+        <div className="min-w-0">
+          <p className="text-[10px] text-zinc-500 font-semibold tracking-wider uppercase">Win / Loss Ratio</p>
+          <p className="text-xl font-bold tabular-nums leading-tight">
+            <button
+              type="button"
+              onClick={() => setTradeFilter(prev => prev === 'profit' ? 'all' : 'profit')}
+              className={cn(
+                "text-emerald-400 rounded transition-colors",
+                tradeFilter === 'profit' ? 'ring-1 ring-emerald-500/40 bg-emerald-500/10 px-1' : 'hover:text-emerald-300'
+              )}
+            >
+              {wins}W
+            </button>
+            <span className="text-zinc-600 mx-1">-</span>
+            <button
+              type="button"
+              onClick={() => setTradeFilter(prev => prev === 'loss' ? 'all' : 'loss')}
+              className={cn(
+                "text-rose-500 rounded transition-colors",
+                tradeFilter === 'loss' ? 'ring-1 ring-rose-500/40 bg-rose-500/10 px-1' : 'hover:text-rose-400'
+              )}
+            >
+              {losses}L
+            </button>
+            <span className="text-zinc-600 mx-1">-</span>
+            <button
+              type="button"
+              onClick={() => setTradeFilter(prev => prev === 'breakeven' ? 'all' : 'breakeven')}
+              className={cn(
+                "text-zinc-400 rounded transition-colors",
+                tradeFilter === 'breakeven' ? 'ring-1 ring-zinc-400/40 bg-zinc-400/10 px-1' : 'hover:text-zinc-300'
+              )}
+            >
+              {breakeven}BE
+            </button>
+          </p>
+        </div>
+      </div>
+
+      {/* Card 4 — Profit Factor / Avg Win & Loss */}
+      <div className={cardClass}>
+        <div className={cn(iconCircleClass, "bg-white/5")}>
+          <Target className="w-5 h-5 text-zinc-400" />
+        </div>
+        <div className="min-w-0">
+          <p className="text-[10px] text-zinc-500 font-semibold tracking-wider uppercase">Profit Factor</p>
+          <p className="text-xl font-bold tabular-nums leading-tight text-white">
+            {total > 0 && isFinite(stats.profitFactor) ? stats.profitFactor.toFixed(2) : 'N/A'}
+            <span className="text-xs font-medium tabular-nums text-zinc-500 ml-1.5">
+              <span className="text-emerald-500">{formatMoney(stats.avgWin)}</span>
+              <span className="mx-0.5">/</span>
+              <span className="text-rose-500">{formatMoney(-stats.avgLoss)}</span>
+            </span>
+          </p>
+        </div>
+      </div>
+
+      {/* Card 5 — Total Trades */}
+      <div className={cardClass}>
+        <div className={cn(iconCircleClass, "bg-indigo-500/10")}>
+          <BarChart3 className="w-5 h-5 text-indigo-400" />
+        </div>
+        <div className="min-w-0">
+          <p className="text-[10px] text-zinc-500 font-semibold tracking-wider uppercase">Total Trades</p>
+          <p className="text-xl font-bold tabular-nums leading-tight text-white">{total}</p>
+        </div>
+      </div>
+    </div>
+  );
 }
 
 interface PreviewScreenProps {
@@ -261,14 +427,27 @@ function UnlockedPreview({
 
   const stats = useMemo(() => {
     const total = data.trades.length;
-    const wins = data.trades.filter(t => t.profitLoss > 0).length;
+    const winningTrades = data.trades.filter(t => t.profitLoss > 0);
+    const losingTrades = data.trades.filter(t => t.profitLoss < 0);
+    const wins = winningTrades.length;
     const totalPnl = data.trades.reduce((sum, t) => sum + t.profitLoss, 0);
-    const grossWin = data.trades.filter(t => t.profitLoss > 0).reduce((s, t) => s + t.profitLoss, 0);
-    const grossLoss = Math.abs(data.trades.filter(t => t.profitLoss < 0).reduce((s, t) => s + t.profitLoss, 0));
+    const grossWin = winningTrades.reduce((s, t) => s + t.profitLoss, 0);
+    const grossLoss = Math.abs(losingTrades.reduce((s, t) => s + t.profitLoss, 0));
     const winRate = total > 0 ? (wins / total) * 100 : 0;
     const profitFactor = grossLoss > 0 ? grossWin / grossLoss : grossWin > 0 ? Infinity : 0;
-    return { total, winRate, totalPnl, profitFactor };
+    const avgWin = winningTrades.length > 0 ? grossWin / winningTrades.length : 0;
+    const avgLoss = losingTrades.length > 0 ? grossLoss / losingTrades.length : 0;
+    return { total, totalTrades: total, winRate, totalPnl, profitFactor, avgWin, avgLoss };
   }, [data.trades]);
+
+  const [tradeFilter, setTradeFilter] = useState<PreviewTradeFilter>('all');
+
+  const filteredSortedTrades = useMemo(() => {
+    if (tradeFilter === 'all') return sortedTrades;
+    if (tradeFilter === 'profit') return sortedTrades.filter(t => t.profitLoss >= 10);
+    if (tradeFilter === 'loss') return sortedTrades.filter(t => t.profitLoss <= -10);
+    return sortedTrades.filter(t => t.profitLoss > -10 && t.profitLoss < 10);
+  }, [sortedTrades, tradeFilter]);
 
   const dailyStats = useMemo(() => {
     const map = new Map<string, { pnl: number; trades: number }>();
@@ -336,41 +515,41 @@ function UnlockedPreview({
         <MonthCalendar monthCursor={monthCursor} setMonthCursor={setMonthCursor} dailyStats={dailyStats} />
 
         {/* Section 2: Analytics / stats cards (middle) — no edit actions
-            anywhere on this screen. */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-          <StatCard
-            icon={<DollarSign className="w-4 h-4" />}
-            label="Total P&L"
-            value={formatMoney(stats.totalPnl)}
-            positive={stats.totalPnl >= 0}
-          />
-          <StatCard
-            icon={<Percent className="w-4 h-4" />}
-            label="Win Rate"
-            value={`${stats.winRate.toFixed(1)}%`}
-            positive={stats.winRate >= 50}
-          />
-          <StatCard
-            icon={<Target className="w-4 h-4" />}
-            label="Total Trades"
-            value={String(stats.total)}
-          />
-          <StatCard
-            icon={stats.profitFactor >= 1 ? <TrendingUp className="w-4 h-4" /> : <TrendingDown className="w-4 h-4" />}
-            label="Profit Factor"
-            value={Number.isFinite(stats.profitFactor) ? stats.profitFactor.toFixed(2) : '∞'}
-            positive={stats.profitFactor >= 1}
-          />
-        </div>
+            anywhere on this screen. Ported from TradesScreen's header
+            analytics row (Net P&L, Win Rate donut, Win/Loss/BE breakdown,
+            Profit Factor + Avg Win/Loss, Total Trades). The W/L/BE chips
+            stay clickable and narrow the Trade History list below. */}
+        <TradeAnalyticsCard
+          trades={data.trades}
+          stats={stats}
+          tradeFilter={tradeFilter}
+          setTradeFilter={setTradeFilter}
+        />
+        {tradeFilter !== 'all' && (
+          <div className="flex items-center gap-2 -mt-4">
+            <span className="text-xs text-zinc-500">
+              Showing only {tradeFilter === 'profit' ? 'wins' : tradeFilter === 'loss' ? 'losses' : 'breakeven trades'}
+            </span>
+            <button
+              type="button"
+              onClick={() => setTradeFilter('all')}
+              className="text-xs text-zinc-500 hover:text-white underline transition-colors"
+            >
+              Clear
+            </button>
+          </div>
+        )}
 
         {/* Section 3: Trade History (bottom) */}
         <div>
           <h2 className="text-sm font-medium text-zinc-400 mb-3">Trade History</h2>
           <div className="space-y-2">
-            {sortedTrades.length === 0 && (
-              <p className="text-sm text-zinc-600 py-8 text-center">No trades to show yet.</p>
+            {filteredSortedTrades.length === 0 && (
+              <p className="text-sm text-zinc-600 py-8 text-center">
+                {sortedTrades.length === 0 ? 'No trades to show yet.' : 'No trades match this filter.'}
+              </p>
             )}
-            {sortedTrades.map(trade => {
+            {filteredSortedTrades.map(trade => {
               const account = trade.accountId ? accountsById.get(trade.accountId) : undefined;
               return (
                 <button
@@ -411,23 +590,6 @@ function UnlockedPreview({
           onClose={() => setOpenTradeId(null)}
         />
       )}
-    </div>
-  );
-}
-
-function StatCard({ icon, label, value, positive }: { icon: React.ReactNode; label: string; value: string; positive?: boolean }) {
-  return (
-    <div className="bg-zinc-900/60 border border-zinc-800 rounded-lg p-3">
-      <div className="flex items-center gap-1.5 text-zinc-500 mb-1.5">
-        {icon}
-        <span className="text-xs">{label}</span>
-      </div>
-      <p className={cn(
-        'text-lg font-semibold',
-        positive === undefined ? 'text-white' : positive ? 'text-emerald-400' : 'text-rose-400'
-      )}>
-        {value}
-      </p>
     </div>
   );
 }
