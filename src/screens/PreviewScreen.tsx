@@ -14,7 +14,8 @@ import {
   Target,
   DollarSign,
   Percent,
-  User as UserIcon,
+  Activity,
+  Calendar,
 } from 'lucide-react';
 import { supabase } from '../lib/supabaseClient';
 import { cn } from '../utils/format';
@@ -77,6 +78,12 @@ type PreviewData = {
   accounts: PreviewAccount[];
   trades: PreviewTrade[];
 };
+
+// Preview mode only ever exposes these two tabs — no Dashboard, no
+// Settings, no Add Trade. Kept as its own narrow union (rather than
+// reusing the app-wide `ViewType`) so nothing else is even reachable
+// from this screen's state.
+type PreviewTab = 'trades' | 'calendar';
 
 function formatMoney(value: number): string {
   const sign = value < 0 ? '-' : '';
@@ -242,6 +249,8 @@ function UnlockedPreview({
   monthCursor: Date;
   setMonthCursor: React.Dispatch<React.SetStateAction<Date>>;
 }) {
+  const [previewTab, setPreviewTab] = useState<PreviewTab>('trades');
+  const [isMobileNavOpen, setIsMobileNavOpen] = useState(false);
   const displayName = data.profile.displayName || 'This Trader';
   const accountsById = useMemo(() => new Map(data.accounts.map(a => [a.id, a])), [data.accounts]);
   const sortedTrades = useMemo(
@@ -273,113 +282,139 @@ function UnlockedPreview({
   const openTrade = openTradeId ? data.trades.find(t => t.id === openTradeId) || null : null;
 
   return (
-    <div className="min-h-screen w-full bg-[#0d0f12] text-white">
-      {/* Read-only banner — always visible, never scrolls away, matches the
-          "Exit Preview" requirement in the spec. */}
-      <div className="sticky top-0 z-30 bg-amber-500/10 border-b border-amber-500/30 backdrop-blur-sm">
-        <div className="max-w-6xl mx-auto px-4 py-2.5 flex items-center justify-between gap-3">
-          <p className="text-sm text-amber-200 flex items-center gap-2 min-w-0">
-            <span className="flex-shrink-0">👀</span>
-            <span className="truncate">
-              Viewing <span className="font-semibold text-amber-100">{displayName}'s</span> Journal
-              <span className="hidden sm:inline"> (Read-Only Mode)</span>
-            </span>
-          </p>
-          <button
-            type="button"
-            onClick={onExit}
-            className="flex-shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-zinc-900/80 text-zinc-200 hover:bg-zinc-800 border border-zinc-700 transition-colors"
-          >
-            <X className="w-3.5 h-3.5" />
-            Exit Preview
-          </button>
-        </div>
-      </div>
+    <div className="min-h-screen w-full bg-[#0d0f12] text-white flex">
+      <PreviewSidebar
+        activeTab={previewTab}
+        onTabChange={(tab) => {
+          setPreviewTab(tab);
+          setIsMobileNavOpen(false);
+        }}
+        isMobileNavOpen={isMobileNavOpen}
+        onCloseMobileNav={() => setIsMobileNavOpen(false)}
+      />
 
-      <div className="max-w-6xl mx-auto px-4 py-6 space-y-6">
-        {/* Header */}
-        <div className="flex items-center gap-3">
-          <div className="w-11 h-11 rounded-full bg-zinc-800 border border-zinc-700 flex items-center justify-center overflow-hidden flex-shrink-0">
-            {data.profile.avatarUrl ? (
-              <img src={data.profile.avatarUrl} alt={displayName} className="w-full h-full object-cover" />
-            ) : (
-              <span className="text-sm font-semibold text-zinc-300">{getInitials(displayName)}</span>
-            )}
+      <div className="flex-1 min-w-0 flex flex-col">
+        {/* Read-only banner — always visible, never scrolls away, matches the
+            "Exit Preview" requirement in the spec. */}
+        <div className="sticky top-0 z-30 bg-amber-500/10 border-b border-amber-500/30 backdrop-blur-sm">
+          <div className="px-4 py-2.5 flex items-center justify-between gap-3">
+            <div className="flex items-center gap-2 min-w-0">
+              <button
+                type="button"
+                onClick={() => setIsMobileNavOpen(true)}
+                className="md:hidden flex-shrink-0 p-1.5 -ml-1 rounded-lg text-amber-200 hover:bg-amber-500/10 transition-colors"
+                aria-label="Open menu"
+              >
+                <PanelIcon />
+              </button>
+              <p className="text-sm text-amber-200 flex items-center gap-2 min-w-0">
+                <span className="flex-shrink-0">👀</span>
+                <span className="truncate">
+                  Viewing <span className="font-semibold text-amber-100">{displayName}'s</span> Journal
+                  <span className="hidden sm:inline"> (Read-Only Mode)</span>
+                </span>
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={onExit}
+              className="flex-shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-zinc-900/80 text-zinc-200 hover:bg-zinc-800 border border-zinc-700 transition-colors"
+            >
+              <X className="w-3.5 h-3.5" />
+              Exit Preview
+            </button>
           </div>
-          <div className="min-w-0">
-            <h1 className="text-lg font-semibold truncate">{displayName}'s Trading Journal</h1>
-            <p className="text-xs text-zinc-500">Read-only preview — no edit access, personal notes hidden</p>
-          </div>
-        </div>
-
-        {/* High-level stats — no edit actions anywhere on this screen. */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-          <StatCard
-            icon={<DollarSign className="w-4 h-4" />}
-            label="Total P&L"
-            value={formatMoney(stats.totalPnl)}
-            positive={stats.totalPnl >= 0}
-          />
-          <StatCard
-            icon={<Percent className="w-4 h-4" />}
-            label="Win Rate"
-            value={`${stats.winRate.toFixed(1)}%`}
-            positive={stats.winRate >= 50}
-          />
-          <StatCard
-            icon={<Target className="w-4 h-4" />}
-            label="Total Trades"
-            value={String(stats.total)}
-          />
-          <StatCard
-            icon={stats.profitFactor >= 1 ? <TrendingUp className="w-4 h-4" /> : <TrendingDown className="w-4 h-4" />}
-            label="Profit Factor"
-            value={Number.isFinite(stats.profitFactor) ? stats.profitFactor.toFixed(2) : '∞'}
-            positive={stats.profitFactor >= 1}
-          />
         </div>
 
-        {/* Calendar heatmap */}
-        <MonthCalendar monthCursor={monthCursor} setMonthCursor={setMonthCursor} dailyPnl={dailyPnl} />
-
-        {/* Trade list */}
-        <div>
-          <h2 className="text-sm font-medium text-zinc-400 mb-3">Trade History</h2>
-          <div className="space-y-2">
-            {sortedTrades.length === 0 && (
-              <p className="text-sm text-zinc-600 py-8 text-center">No trades to show yet.</p>
-            )}
-            {sortedTrades.map(trade => {
-              const account = trade.accountId ? accountsById.get(trade.accountId) : undefined;
-              return (
-                <button
-                  key={trade.id}
-                  type="button"
-                  onClick={() => setOpenTradeId(trade.id)}
-                  className="w-full flex items-center justify-between gap-3 bg-zinc-900/60 hover:bg-zinc-900 border border-zinc-800 rounded-lg px-4 py-3 text-left transition-colors"
-                >
-                  <div className="min-w-0 flex items-center gap-3">
-                    <div className={cn(
-                      'w-1.5 h-8 rounded-full flex-shrink-0',
-                      trade.profitLoss >= 0 ? 'bg-emerald-500' : 'bg-rose-500'
-                    )} />
-                    <div className="min-w-0">
-                      <p className="text-sm font-medium text-white truncate">{trade.symbol}</p>
-                      <p className="text-xs text-zinc-500 truncate">
-                        {account?.name || 'Account'} · {formatDateLabel(trade.date)}
-                      </p>
-                    </div>
-                  </div>
-                  <span className={cn(
-                    'text-sm font-semibold flex-shrink-0',
-                    trade.profitLoss >= 0 ? 'text-emerald-400' : 'text-rose-400'
-                  )}>
-                    {formatMoney(trade.profitLoss)}
-                  </span>
-                </button>
-              );
-            })}
+        <div className="max-w-6xl w-full mx-auto px-4 py-6 space-y-6">
+          {/* Header */}
+          <div className="flex items-center gap-3">
+            <div className="w-11 h-11 rounded-full bg-zinc-800 border border-zinc-700 flex items-center justify-center overflow-hidden flex-shrink-0">
+              {data.profile.avatarUrl ? (
+                <img src={data.profile.avatarUrl} alt={displayName} className="w-full h-full object-cover" />
+              ) : (
+                <span className="text-sm font-semibold text-zinc-300">{getInitials(displayName)}</span>
+              )}
+            </div>
+            <div className="min-w-0">
+              <h1 className="text-lg font-semibold truncate">{displayName}'s Trading Journal</h1>
+              <p className="text-xs text-zinc-500">Read-only preview — no edit access, personal notes hidden</p>
+            </div>
           </div>
+
+          {previewTab === 'trades' ? (
+            <>
+              {/* High-level stats — no edit actions anywhere on this screen. */}
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                <StatCard
+                  icon={<DollarSign className="w-4 h-4" />}
+                  label="Total P&L"
+                  value={formatMoney(stats.totalPnl)}
+                  positive={stats.totalPnl >= 0}
+                />
+                <StatCard
+                  icon={<Percent className="w-4 h-4" />}
+                  label="Win Rate"
+                  value={`${stats.winRate.toFixed(1)}%`}
+                  positive={stats.winRate >= 50}
+                />
+                <StatCard
+                  icon={<Target className="w-4 h-4" />}
+                  label="Total Trades"
+                  value={String(stats.total)}
+                />
+                <StatCard
+                  icon={stats.profitFactor >= 1 ? <TrendingUp className="w-4 h-4" /> : <TrendingDown className="w-4 h-4" />}
+                  label="Profit Factor"
+                  value={Number.isFinite(stats.profitFactor) ? stats.profitFactor.toFixed(2) : '∞'}
+                  positive={stats.profitFactor >= 1}
+                />
+              </div>
+
+              {/* Trade list */}
+              <div>
+                <h2 className="text-sm font-medium text-zinc-400 mb-3">Trade History</h2>
+                <div className="space-y-2">
+                  {sortedTrades.length === 0 && (
+                    <p className="text-sm text-zinc-600 py-8 text-center">No trades to show yet.</p>
+                  )}
+                  {sortedTrades.map(trade => {
+                    const account = trade.accountId ? accountsById.get(trade.accountId) : undefined;
+                    return (
+                      <button
+                        key={trade.id}
+                        type="button"
+                        onClick={() => setOpenTradeId(trade.id)}
+                        className="w-full flex items-center justify-between gap-3 bg-zinc-900/60 hover:bg-zinc-900 border border-zinc-800 rounded-lg px-4 py-3 text-left transition-colors"
+                      >
+                        <div className="min-w-0 flex items-center gap-3">
+                          <div className={cn(
+                            'w-1.5 h-8 rounded-full flex-shrink-0',
+                            trade.profitLoss >= 0 ? 'bg-emerald-500' : 'bg-rose-500'
+                          )} />
+                          <div className="min-w-0">
+                            <p className="text-sm font-medium text-white truncate">{trade.symbol}</p>
+                            <p className="text-xs text-zinc-500 truncate">
+                              {account?.name || 'Account'} · {formatDateLabel(trade.date)}
+                            </p>
+                          </div>
+                        </div>
+                        <span className={cn(
+                          'text-sm font-semibold flex-shrink-0',
+                          trade.profitLoss >= 0 ? 'text-emerald-400' : 'text-rose-400'
+                        )}>
+                          {formatMoney(trade.profitLoss)}
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            </>
+          ) : (
+            /* Performance Calendar tab */
+            <MonthCalendar monthCursor={monthCursor} setMonthCursor={setMonthCursor} dailyPnl={dailyPnl} />
+          )}
         </div>
       </div>
 
@@ -391,6 +426,115 @@ function UnlockedPreview({
         />
       )}
     </div>
+  );
+}
+
+// ----------------------------------------------------------------------------
+// Minimal, self-contained preview sidebar.
+//
+// Deliberately NOT the real `Sidebar.tsx` — that component reads dozens of
+// fields off `useAppContext()` (the same full-app, authenticated-owner
+// context PreviewScreen intentionally avoids per the module comment at the
+// top of this file). Reusing it here would either require faking that
+// entire context or threading a bunch of no-op state through it just to
+// satisfy its props. This sidebar hardcodes exactly the two tabs preview
+// mode is allowed to show — nothing else is reachable from it.
+// ----------------------------------------------------------------------------
+const PREVIEW_TABS: { id: PreviewTab; icon: React.ElementType; label: string }[] = [
+  { id: 'trades', icon: TrendingUp, label: 'Trade History' },
+  { id: 'calendar', icon: Calendar, label: 'Performance Calendar' },
+];
+
+function PanelIcon() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <rect x="3" y="3" width="18" height="18" rx="2" />
+      <line x1="9" y1="3" x2="9" y2="21" />
+    </svg>
+  );
+}
+
+function PreviewSidebar({
+  activeTab,
+  onTabChange,
+  isMobileNavOpen,
+  onCloseMobileNav,
+}: {
+  activeTab: PreviewTab;
+  onTabChange: (tab: PreviewTab) => void;
+  isMobileNavOpen: boolean;
+  onCloseMobileNav: () => void;
+}) {
+  const nav = (
+    <div className="flex flex-col h-full w-full px-3.5 py-4 select-none">
+      <div className="pb-4 mb-2 border-b border-zinc-800 flex items-center justify-between">
+        <div className="flex items-center gap-3 min-w-0">
+          <div className="relative w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 bg-gradient-to-br from-zinc-800 to-zinc-900 border border-emerald-500/20">
+            <Activity className="w-[18px] h-[18px] text-emerald-400 drop-shadow-[0_0_6px_rgba(52,211,153,0.55)]" />
+          </div>
+          <div className="min-w-0 flex-1">
+            <h1 className="font-bold text-lg uppercase tracking-wider leading-none truncate text-white">VSX</h1>
+            <p className="text-[10px] font-medium uppercase tracking-widest truncate mt-0.5 text-zinc-500">
+              Trading Journal
+            </p>
+          </div>
+        </div>
+        <button
+          type="button"
+          onClick={onCloseMobileNav}
+          aria-label="Close menu"
+          className="md:hidden p-1.5 rounded-lg text-zinc-400 hover:text-white hover:bg-zinc-800 transition-colors flex-shrink-0"
+        >
+          <X className="w-4 h-4" />
+        </button>
+      </div>
+
+      {/* Only these two tabs are reachable in preview mode — no Dashboard,
+          no Settings, no Add Trade. */}
+      <nav className="flex flex-col gap-1 w-full">
+        {PREVIEW_TABS.map(tab => {
+          const isActive = activeTab === tab.id;
+          return (
+            <button
+              key={tab.id}
+              type="button"
+              onClick={() => onTabChange(tab.id)}
+              className={cn(
+                'w-full flex items-center gap-3 pl-2.5 pr-3 py-2.5 rounded-lg border-l-4 transition-all text-sm cursor-pointer',
+                isActive
+                  ? 'border-cyan-400 bg-cyan-500/10 text-white font-medium'
+                  : 'border-transparent text-zinc-400 hover:text-white hover:bg-zinc-800/50'
+              )}
+            >
+              <tab.icon className={cn('w-4 h-4 flex-shrink-0', isActive ? 'text-cyan-300' : 'text-cyan-400/80')} />
+              <span className="truncate">{tab.label}</span>
+            </button>
+          );
+        })}
+      </nav>
+
+      <div className="mt-auto pt-4 border-t border-zinc-800 flex items-center gap-2 text-xs text-zinc-600">
+        <Eye className="w-3.5 h-3.5 flex-shrink-0" />
+        <span>Read-only preview</span>
+      </div>
+    </div>
+  );
+
+  return (
+    <>
+      {/* Desktop: static column */}
+      <div className="hidden md:block w-60 flex-shrink-0 bg-[#0a0c0f] border-r border-zinc-800">
+        {nav}
+      </div>
+
+      {/* Mobile: slide-over drawer */}
+      {isMobileNavOpen && (
+        <div className="md:hidden fixed inset-0 z-40 flex">
+          <div className="w-64 h-full bg-[#0a0c0f] border-r border-zinc-800">{nav}</div>
+          <div className="flex-1 bg-black/60 backdrop-blur-sm" onClick={onCloseMobileNav} />
+        </div>
+      )}
+    </>
   );
 }
 
