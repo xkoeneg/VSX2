@@ -80,12 +80,18 @@ export function loadCachedAuthUser(): AuthUser | null {
     if (!raw) return null;
     const parsed = JSON.parse(raw);
     if (!parsed || typeof parsed !== 'object') return null;
+    const coerceBool = (v: unknown): boolean | undefined => {
+      if (typeof v === 'boolean') return v;
+      if (v === 'true') return true;
+      if (v === 'false') return false;
+      return undefined;
+    };
     return {
       email: typeof parsed.email === 'string' ? parsed.email : null,
       name: typeof parsed.name === 'string' ? parsed.name : null,
       avatarUrl: typeof parsed.avatarUrl === 'string' ? parsed.avatarUrl : null,
-      hideEmail: typeof parsed.hideEmail === 'boolean' ? parsed.hideEmail : undefined,
-      publicPreviewEnabled: typeof parsed.publicPreviewEnabled === 'boolean' ? parsed.publicPreviewEnabled : undefined,
+      hideEmail: coerceBool(parsed.hideEmail),
+      publicPreviewEnabled: coerceBool(parsed.publicPreviewEnabled),
       viewerPasscode: typeof parsed.viewerPasscode === 'string' ? parsed.viewerPasscode : undefined,
     };
   } catch {
@@ -281,6 +287,21 @@ export function UserProfileModal({ isOpen, onClose, authUser, onAuthUserChange, 
         },
       });
       if (error) throw error;
+
+      // updateUser() already returns the fresh user object, but the
+      // *session* (and its JWT) other parts of the app read via
+      // getSession() can still be serving a token minted before this
+      // write. Force a refresh so a subsequent getSession() call — in
+      // this tab or another — sees the new metadata immediately rather
+      // than waiting for the token's normal refresh cycle.
+      try {
+        await supabase.auth.refreshSession();
+      } catch (refreshErr) {
+        // Non-fatal: the metadata write above already succeeded, and
+        // onAuthStateChange / the next natural token refresh will
+        // eventually pick it up regardless.
+        console.error('Metadata saved, but session refresh failed', refreshErr);
+      }
     } catch (remoteErr) {
       console.error('Could not sync profile changes to Supabase — local copy is saved', remoteErr);
     }
