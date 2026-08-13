@@ -168,7 +168,7 @@ import { useAppContext } from '../context/AppContext';
 import { renderStatCard, renderAccountFilter, renderAccountTypeBadge, renderTradingAccountTypeBadge } from '../components/shared/RenderHelpers';
 import { UserProfileModal, loadHideEmailPref, loadCachedAuthUser, saveCachedAuthUser, clearCachedAuthUser, type AuthUser } from '../modals/UserProfileModal';
 
-// authUser.hideEmail (synced from Supabase user_metadata) is the
+// authUser.hideEmail (synced from the public.profiles table) is the
 // cross-device source of truth for this preference; loadHideEmailPref
 // reads a same-browser-only localStorage fallback for use before that
 // synced value has ever loaded on this device.
@@ -333,30 +333,41 @@ export function Sidebar({ isMobile }: { isMobile: boolean }) {
       let retryCount = 0;
       let retryTimer: ReturnType<typeof setTimeout> | null = null;
 
-      const mapUser = (u: { email?: string | null; user_metadata?: Record<string, unknown> } | null | undefined): AuthUser | null => {
+      type RawAuthUser = { id?: string; email?: string | null; user_metadata?: Record<string, unknown> } | null | undefined;
+      type ProfileRow = { display_name: string | null; hide_email: boolean | null; viewer_passcode: string | null } | null;
+
+      // hide_email / display_name / viewer_passcode now live in
+      // public.profiles, NOT auth user_metadata — some OAuth providers
+      // silently overwrite user_metadata with fresh provider claims on
+      // every sign-in, which was wiping these settings. avatar_url is
+      // still sourced from user_metadata (it's fine for that to reflect
+      // the provider's picture / an uploaded data URL).
+      const fetchProfile = async (userId: string | undefined): Promise<ProfileRow> => {
+        if (!userId) return null;
+        try {
+          const { data, error } = await supabase
+            .from('profiles')
+            .select('display_name, hide_email, viewer_passcode')
+            .eq('id', userId)
+            .maybeSingle();
+          if (error) throw error;
+          return data as ProfileRow;
+        } catch (err) {
+          console.error('Could not load profile row', err);
+          return null;
+        }
+      };
+
+      const mapUser = (u: RawAuthUser, profile: ProfileRow): AuthUser | null => {
         if (!u) return null;
         const metadata = (u.user_metadata ?? {}) as Record<string, unknown>;
-        // Coerce leniently: Supabase can hand back these values in shapes
-        // other than a strict JS boolean (e.g. a string "true"/"false" if
-        // they were ever written by a different client), and a strict
-        // `typeof === 'boolean'` check would silently drop that to
-        // `undefined` — which then falls through to the localStorage
-        // fallback and, on a fresh browser with no local cache, defaults
-        // to "show email". Treat any recognizable truthy/falsy shape as
-        // valid instead of only the exact boolean type.
-        const coerceBool = (v: unknown): boolean | undefined => {
-          if (typeof v === 'boolean') return v;
-          if (v === 'true') return true;
-          if (v === 'false') return false;
-          return undefined;
-        };
         return {
+          id: u.id ?? null,
           email: u.email ?? null,
-          name: (metadata.full_name as string) || (metadata.name as string) || null,
+          name: profile?.display_name || (metadata.full_name as string) || (metadata.name as string) || null,
           avatarUrl: (metadata.avatar_url as string) || (metadata.picture as string) || null,
-          hideEmail: coerceBool(metadata.hide_email),
-          publicPreviewEnabled: coerceBool(metadata.public_preview_enabled),
-          viewerPasscode: typeof metadata.viewer_passcode === 'string' ? (metadata.viewer_passcode as string) : undefined,
+          hideEmail: typeof profile?.hide_email === 'boolean' ? profile.hide_email : undefined,
+          viewerPasscode: typeof profile?.viewer_passcode === 'string' ? profile.viewer_passcode ?? undefined : undefined,
         };
       };
 
@@ -395,17 +406,20 @@ export function Sidebar({ isMobile }: { isMobile: boolean }) {
       // changes made elsewhere (e.g. toggling "Hide Email" on a different
       // browser/device) until the token refreshes. So after the fast paint,
       // reconcile in the background with getUser(), which verifies with the
-      // server and returns the authoritative, fully up-to-date record —
-      // this corrects things like hideEmail shortly after without blocking
-      // (or re-stalling) the initial render.
+      // server and returns the authoritative, fully up-to-date record. The
+      // profiles-table row is re-fetched on both passes since it can't be
+      // embedded in the JWT the way user_metadata is.
       const fetchAuth = () => {
         supabase.auth.getSession()
-          .then(({ data }) => {
-            applyUser(mapUser(data.session?.user));
+          .then(async ({ data }) => {
+            const rawUser = data.session?.user;
+            applyUser(mapUser(rawUser, await fetchProfile(rawUser?.id)));
             return supabase.auth.getUser();
           })
-          .then((result) => {
-            if (result) applyUser(mapUser(result.data.user));
+          .then(async (result) => {
+            if (!result) return;
+            const rawUser = result.data.user;
+            applyUser(mapUser(rawUser, await fetchProfile(rawUser?.id)));
           })
           .catch(() => {
             // onAuthStateChange below will still catch up once auth settles
@@ -415,8 +429,9 @@ export function Sidebar({ isMobile }: { isMobile: boolean }) {
       fetchAuth();
 
       const { data: authListener }: { data: { subscription: any } } = supabase.auth.onAuthStateChange(
-        (_event: AuthChangeEvent, session: Session | null) => {
-          applyUser(mapUser(session?.user), { authoritative: _event === 'SIGNED_OUT' });
+        async (_event: AuthChangeEvent, session: Session | null) => {
+          const profile = await fetchProfile(session?.user?.id);
+          applyUser(mapUser(session?.user, profile), { authoritative: _event === 'SIGNED_OUT' });
         }
       );
 
