@@ -17,7 +17,14 @@ import { ModalBackdrop } from '../components/shared/ModalBackdrop';
 import { cn } from '../utils/format';
 import { supabase } from '../lib/supabaseClient';
 
-export type AuthUser = { email: string | null; name: string | null; avatarUrl: string | null; hideEmail?: boolean };
+export type AuthUser = {
+  email: string | null;
+  name: string | null;
+  avatarUrl: string | null;
+  hideEmail?: boolean;
+  publicPreviewEnabled?: boolean;
+  viewerPasscode?: string;
+};
 
 type ProfilePrefs = {
   hideEmail: boolean;
@@ -78,6 +85,8 @@ export function loadCachedAuthUser(): AuthUser | null {
       name: typeof parsed.name === 'string' ? parsed.name : null,
       avatarUrl: typeof parsed.avatarUrl === 'string' ? parsed.avatarUrl : null,
       hideEmail: typeof parsed.hideEmail === 'boolean' ? parsed.hideEmail : undefined,
+      publicPreviewEnabled: typeof parsed.publicPreviewEnabled === 'boolean' ? parsed.publicPreviewEnabled : undefined,
+      viewerPasscode: typeof parsed.viewerPasscode === 'string' ? parsed.viewerPasscode : undefined,
     };
   } catch {
     return null;
@@ -165,16 +174,17 @@ export function UserProfileModal({ isOpen, onClose, authUser, onAuthUserChange, 
     setEditableName(authUser?.name ?? '');
     setUploadedAvatar(null);
     setAvatarPresetColor(prefs.avatarPresetColor);
-    // authUser.hideEmail (synced from Supabase user_metadata) is the
-    // cross-device source of truth; the local prefs value is only a
-    // same-browser fallback for when that hasn't loaded yet.
+    // authUser.hideEmail / publicPreviewEnabled / viewerPasscode (synced from
+    // Supabase user_metadata) are the cross-device source of truth; the
+    // local prefs value is only a same-browser fallback for when that
+    // hasn't loaded yet (e.g. first paint before the auth fetch resolves).
     setHideEmail(typeof authUser?.hideEmail === 'boolean' ? authUser.hideEmail : prefs.hideEmail);
-    setPublicPreviewEnabled(prefs.publicPreviewEnabled);
-    setViewerPasscode(prefs.viewerPasscode);
+    setPublicPreviewEnabled(typeof authUser?.publicPreviewEnabled === 'boolean' ? authUser.publicPreviewEnabled : prefs.publicPreviewEnabled);
+    setViewerPasscode(authUser?.viewerPasscode || prefs.viewerPasscode);
     setSaveError(null);
     setAvatarError(null);
     setCopied(false);
-  }, [isOpen, authUser?.email, authUser?.name, authUser?.hideEmail]);
+  }, [isOpen, authUser?.email, authUser?.name, authUser?.hideEmail, authUser?.publicPreviewEnabled, authUser?.viewerPasscode]);
 
   if (!isOpen) return null;
 
@@ -232,7 +242,14 @@ export function UserProfileModal({ isOpen, onClose, authUser, onAuthUserChange, 
 
     const nextAvatarUrl = uploadedAvatar || (avatarPresetColor ? null : authUser?.avatarUrl ?? null);
     const nextName = editableName.trim() || null;
-    const nextUser: AuthUser = { email: authUser?.email ?? null, name: nextName, avatarUrl: nextAvatarUrl, hideEmail };
+    const nextUser: AuthUser = {
+      email: authUser?.email ?? null,
+      name: nextName,
+      avatarUrl: nextAvatarUrl,
+      hideEmail,
+      publicPreviewEnabled,
+      viewerPasscode,
+    };
 
     // 1. Persist locally first. This is the reliable primary store for UI
     // prefs like hideEmail/publicPreviewEnabled/viewerPasscode plus the
@@ -259,6 +276,8 @@ export function UserProfileModal({ isOpen, onClose, authUser, onAuthUserChange, 
           full_name: nextName,
           avatar_url: nextAvatarUrl,
           hide_email: hideEmail,
+          public_preview_enabled: publicPreviewEnabled,
+          viewer_passcode: viewerPasscode,
         },
       });
       if (error) throw error;
