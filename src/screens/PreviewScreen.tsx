@@ -316,7 +316,7 @@ function UnlockedPreview({
       {/* Single-column, full-width, vertically scrolling feed. Section order
           is fixed per spec: profile header, then Calendar, then Stats, then
           Trade History — no tabs, nothing to switch between. */}
-      <div className="max-w-3xl w-full mx-auto px-4 py-6 space-y-8">
+      <div className="max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-8">
         {/* Profile header */}
         <div className="flex items-center gap-3">
           <div className="w-11 h-11 rounded-full bg-zinc-800 border border-zinc-700 flex items-center justify-center overflow-hidden flex-shrink-0">
