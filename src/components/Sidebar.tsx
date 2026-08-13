@@ -336,12 +336,26 @@ export function Sidebar({ isMobile }: { isMobile: boolean }) {
       const mapUser = (u: { email?: string | null; user_metadata?: Record<string, unknown> } | null | undefined): AuthUser | null => {
         if (!u) return null;
         const metadata = (u.user_metadata ?? {}) as Record<string, unknown>;
+        // Coerce leniently: Supabase can hand back these values in shapes
+        // other than a strict JS boolean (e.g. a string "true"/"false" if
+        // they were ever written by a different client), and a strict
+        // `typeof === 'boolean'` check would silently drop that to
+        // `undefined` — which then falls through to the localStorage
+        // fallback and, on a fresh browser with no local cache, defaults
+        // to "show email". Treat any recognizable truthy/falsy shape as
+        // valid instead of only the exact boolean type.
+        const coerceBool = (v: unknown): boolean | undefined => {
+          if (typeof v === 'boolean') return v;
+          if (v === 'true') return true;
+          if (v === 'false') return false;
+          return undefined;
+        };
         return {
           email: u.email ?? null,
           name: (metadata.full_name as string) || (metadata.name as string) || null,
           avatarUrl: (metadata.avatar_url as string) || (metadata.picture as string) || null,
-          hideEmail: typeof metadata.hide_email === 'boolean' ? (metadata.hide_email as boolean) : undefined,
-          publicPreviewEnabled: typeof metadata.public_preview_enabled === 'boolean' ? (metadata.public_preview_enabled as boolean) : undefined,
+          hideEmail: coerceBool(metadata.hide_email),
+          publicPreviewEnabled: coerceBool(metadata.public_preview_enabled),
           viewerPasscode: typeof metadata.viewer_passcode === 'string' ? (metadata.viewer_passcode as string) : undefined,
         };
       };
