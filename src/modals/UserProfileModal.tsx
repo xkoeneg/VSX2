@@ -268,12 +268,24 @@ export function UserProfileModal({ isOpen, onClose, authUser, onAuthUserChange, 
       return;
     }
 
-    // 2. Sync display_name / hide_email / viewer_passcode to public.profiles
-    // — deliberately NOT auth user_metadata. Some OAuth providers overwrite
-    // user_metadata wholesale with fresh provider claims on every sign-in,
-    // which was silently wiping these settings on other browsers/devices.
-    // The profiles table is a normal RLS-protected row keyed by user id, so
-    // it isn't touched by the auth/OAuth flow at all.
+    // 2. Sync display_name / hide_email / viewer_passcode / avatar_url to
+    // public.profiles — deliberately NOT auth user_metadata. Some OAuth
+    // providers overwrite user_metadata wholesale with fresh provider
+    // claims on every sign-in, which was silently wiping these settings on
+    // other browsers/devices. The profiles table is a normal RLS-protected
+    // row keyed by user id, so it isn't touched by the auth/OAuth flow at
+    // all.
+    //
+    // avatar_url used to be synced via supabase.auth.updateUser({ data:
+    // { avatar_url } }), which writes into auth user_metadata — and
+    // user_metadata gets embedded directly into every JWT access token
+    // Supabase issues. A base64-encoded photo there bloats every
+    // subsequent request's Authorization header past Supabase's edge
+    // proxy limits, and the connection gets killed before a response can
+    // even form (net::ERR_CONNECTION_RESET / ERR_HTTP2_PROTOCOL_ERROR) —
+    // which then breaks every other Supabase call in the app, not just
+    // this one. Storing it as a plain profiles column avoids the JWT
+    // entirely, so there's no updateUser()/refreshSession() step anymore.
     try {
       const userId = authUser?.id;
       if (!userId) throw new Error('No authenticated user id — cannot sync profile.');
@@ -282,39 +294,13 @@ export function UserProfileModal({ isOpen, onClose, authUser, onAuthUserChange, 
         display_name: nextName,
         hide_email: hideEmail,
         viewer_passcode: viewerPasscode,
+        avatar_url: nextAvatarUrl,
         updated_at: new Date().toISOString(),
       });
       if (error) throw error;
     } catch (remoteErr) {
       console.error('Could not sync profile to Supabase — local copy is saved', remoteErr);
       setSaveError('Saved on this device, but syncing to your account failed — it may not show up on other browsers yet.');
-    }
-
-    // 3. Avatar is still stored on the auth user (user_metadata) rather than
-    // in profiles — best-effort, and fine if a provider's own picture claim
-    // clobbers it on next OAuth sign-in, since that's the same source.
-    try {
-      const { error } = await supabase.auth.updateUser({
-        data: { avatar_url: nextAvatarUrl },
-      });
-      if (error) throw error;
-
-      // updateUser() already returns the fresh user object, but the
-      // *session* (and its JWT) other parts of the app read via
-      // getSession() can still be serving a token minted before this
-      // write. Force a refresh so a subsequent getSession() call — in
-      // this tab or another — sees the new metadata immediately rather
-      // than waiting for the token's normal refresh cycle.
-      try {
-        await supabase.auth.refreshSession();
-      } catch (refreshErr) {
-        // Non-fatal: the metadata write above already succeeded, and
-        // onAuthStateChange / the next natural token refresh will
-        // eventually pick it up regardless.
-        console.error('Metadata saved, but session refresh failed', refreshErr);
-      }
-    } catch (remoteErr) {
-      console.error('Could not sync profile changes to Supabase — local copy is saved', remoteErr);
     }
 
     onAuthUserChange(nextUser);
