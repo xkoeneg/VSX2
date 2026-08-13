@@ -1,0 +1,12 @@
+// Merge this into your existing vercel.json (or create one if you don't
+// have one). Without it, a hard navigation / page refresh on
+// /preview/[user_id] will 404 — Vercel has no server route for that path,
+// only your SPA's index.html knows (via App.tsx's usePreviewRoute) how to
+// handle it, so every unmatched path needs to fall through to index.html.
+// If you already have a catch-all rewrite to index.html, you likely don't
+// need to change anything.
+{
+  "rewrites": [
+    { "source": "/(.*)", "destination": "/index.html" }
+  ]
+}
