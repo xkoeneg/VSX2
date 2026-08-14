@@ -34,7 +34,41 @@ export const calculateAccountMetrics = (
 
   let highestBalance = startingBalance;
 
-  if (tradingType === 'FUTURES' && maxDrawdownAllowance > 0) {
+  if (tradingType === 'FUTURES' && account.type === 'Funded' && maxDrawdownAllowance > 0) {
+    // Funded stage uses a simpler running peak-equity trailing stop instead
+    // of the Eval-stage day-by-day EOD tracking below — most funded futures
+    // programs trail off live/intraday peak equity, not just close-of-day.
+    // Scoped to trades since the last payout reset (cycleStartedAt) so a
+    // reset genuinely restarts the trailing calculation from a flat peak.
+    const cycleTrades = account.cycleStartedAt
+      ? accountTrades.filter(t => new Date(t.timestamp).getTime() >= new Date(account.cycleStartedAt!).getTime())
+      : accountTrades;
+    const sortedCycleTrades = [...cycleTrades].sort((a, b) =>
+      new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
+    );
+
+    let runningBalance = startingBalance;
+    let peakEquity = startingBalance;
+    for (const trade of sortedCycleTrades) {
+      runningBalance += trade.profitLoss;
+      peakEquity = Math.max(peakEquity, runningBalance);
+    }
+
+    const thresholdLockAmount = account.thresholdLockAmount ?? startingBalance;
+
+    // Trailing minimum rises dollar-for-dollar with peak equity until it
+    // clears thresholdLockAmount, then Math.min holds it there for good —
+    // "rise while trailing, then lock" in a single expression.
+    threshold = Math.min(thresholdLockAmount, peakEquity - maxDrawdownAllowance);
+    isLocked = (peakEquity - maxDrawdownAllowance) >= thresholdLockAmount;
+    lockThreshold = isLocked ? thresholdLockAmount : undefined;
+
+    highestBalance = peakEquity;
+    drawdownAmount = Math.max(0, highestBalance - currentBalance);
+    drawdownProgress = Math.min((drawdownAmount / maxDrawdownAllowance) * 100, 100);
+    isBreached = currentBalance <= threshold;
+
+  } else if (tradingType === 'FUTURES' && maxDrawdownAllowance > 0) {
     const sortedTrades = [...accountTrades].sort((a, b) =>
       new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
     );
@@ -120,6 +154,8 @@ export const calculateAccountMetrics = (
     ? Math.min((accountPnL / account.profitTarget) * 100, 100)
     : 0;
 
+  const bufferAvailable = currentBalance - threshold;
+
   return {
     currentBalance,
     highestBalance,
@@ -130,6 +166,7 @@ export const calculateAccountMetrics = (
     isBreached,
     isLocked,
     lockThreshold,
+    bufferAvailable,
   };
 };
 
