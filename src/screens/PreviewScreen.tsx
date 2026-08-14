@@ -20,6 +20,7 @@ import {
 import { supabase } from '../lib/supabaseClient';
 import { cn } from '../utils/format';
 import { SessionBadge } from '../components/shared/SessionBadge';
+import { SESSION_SHORT_LABEL } from '../constants/trading';
 
 // ============================================================================
 // PreviewScreen — the `/preview/[user_id]` destination.
@@ -376,6 +377,72 @@ function PreviewFeaturedCard({ trade, account, displayNumber, onOpenDetail }: Pr
   );
 }
 
+// ============================================================================
+// PreviewTradeRow — ported 1:1 from TradesScreen.tsx's `TradeRow` (the
+// dense table row shown in the "table" view). Same markup/classNames/column
+// order as the original. Trimmed for this read-only screen the same way
+// PreviewFeaturedCard above is:
+//   - no privacyMode (numbers always shown as-is)
+//   - no trackingNumber badge (PreviewTrade has no trackingNumber field)
+//   - uses PreviewTrade/PreviewAccount types, local formatMoney(), and
+//     formatDateLabel() instead of formatCurrency()/formatCurrencyAbsolute()/formatDate()
+// ============================================================================
+
+interface PreviewTradeRowProps {
+  trade: PreviewTrade;
+  account: PreviewAccount | undefined;
+  displayNumber: number;
+  onOpenDetail: (id: string) => void;
+}
+
+function PreviewTradeRow({ trade, account, displayNumber, onOpenDetail }: PreviewTradeRowProps) {
+  const isWin = trade.profitLoss >= 0;
+  const isBreakeven = Math.abs(trade.profitLoss) < 10;
+  const rowRR = trade.riskAmount && trade.riskAmount > 0 ? trade.profitLoss / trade.riskAmount : null;
+  const position = trade.profitLoss >= 0 ? 'Long' : 'Short';
+  return (
+    <tr
+      onClick={() => onOpenDetail(trade.id)}
+      className="border-b border-zinc-800/70 hover:bg-white/[0.02] cursor-pointer transition-colors"
+    >
+      <td className="px-3 py-2.5">
+        <span className={cn(
+          'text-[10px] font-bold px-2 py-0.5 rounded uppercase tracking-wide',
+          isBreakeven ? 'bg-zinc-700/40 text-zinc-300' : isWin ? 'bg-emerald-500/15 text-emerald-400' : 'bg-rose-500/10 text-rose-500'
+        )}>
+          {isBreakeven ? 'B/E' : isWin ? 'Win' : 'Loss'}
+        </span>
+      </td>
+      <td className="px-3 py-2.5 text-sm text-zinc-400 whitespace-nowrap">{formatDateLabel(trade.date)}</td>
+      <td className="px-3 py-2.5">
+        <div className="flex items-center gap-1.5 min-w-0">
+          <span className="text-sm text-zinc-500 font-mono flex-shrink-0">{displayNumber}</span>
+        </div>
+      </td>
+      <td className="px-3 py-2.5 text-sm text-zinc-400">
+        {trade.session ? (SESSION_SHORT_LABEL[trade.session] || trade.session.toLowerCase()) : '-'}
+      </td>
+      <td className="px-3 py-2.5 text-sm text-zinc-400">{position}</td>
+      <td className="px-3 py-2.5 text-sm font-mono text-right font-bold whitespace-nowrap">
+        <span className={isWin ? 'text-emerald-400' : 'text-rose-500'}>{formatMoney(trade.profitLoss)}</span>
+      </td>
+      <td className="px-3 py-2.5 text-xs font-medium text-right whitespace-nowrap">
+        {rowRR !== null ? (
+          <span className={cn('px-1.5 py-0.5 rounded border', rowRR >= 1 ? 'text-emerald-400 border-emerald-500/30 bg-emerald-500/10' : rowRR >= 0 ? 'text-zinc-300 border-zinc-700 bg-zinc-800/60' : 'text-rose-500 border-rose-500/30 bg-rose-500/10')}>
+            {rowRR >= 1 ? '+' : ''}{rowRR.toFixed(2)}R
+          </span>
+        ) : '-'}
+      </td>
+      <td className="px-3 py-2.5 text-sm text-zinc-400 text-right whitespace-nowrap">
+        {trade.riskAmount && trade.riskAmount > 0 ? formatMoney(trade.riskAmount) : '-'}
+      </td>
+      <td className="px-3 py-2.5 text-sm text-white font-semibold truncate max-w-[100px]">{trade.symbol}</td>
+      <td className="px-3 py-2.5 text-sm text-zinc-400 truncate max-w-[120px]">{trade.setupTypes.join(', ') || '-'}</td>
+      <td className="px-3 py-2.5 text-sm text-zinc-400 truncate max-w-[120px]">{account?.name || '-'}</td>
+    </tr>
+  );
+}
+
 interface PreviewScreenProps {
   userId: string;
   /** Called when the viewer clicks "Exit Preview" — App.tsx wires this to strip the /preview path. */
@@ -665,20 +732,61 @@ function UnlockedPreview({
               {sortedTrades.length === 0 ? 'No trades to show yet.' : 'No trades match this filter.'}
             </p>
           ) : (
-            <div
-              className="preview-gallery-scroll bg-zinc-900/40 border border-zinc-800/80 rounded-2xl max-h-[520px] overflow-y-auto overscroll-contain scroll-smooth p-5 shadow-[0_20px_45px_rgba(0,0,0,0.5),inset_0_2px_12px_rgba(0,0,0,0.25)]"
-              style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
-            >
-              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
-                {filteredSortedTrades.map(trade => (
-                  <PreviewFeaturedCard
-                    key={trade.id}
-                    trade={trade}
-                    account={trade.accountId ? accountsById.get(trade.accountId) : undefined}
-                    displayNumber={tradeNumberById.get(trade.id) ?? 0}
-                    onOpenDetail={setOpenTradeId}
-                  />
-                ))}
+            <div className="space-y-4">
+              <div
+                className="preview-gallery-scroll bg-zinc-900/40 border border-zinc-800/80 rounded-2xl max-h-[520px] overflow-y-auto overscroll-contain scroll-smooth p-5 shadow-[0_20px_45px_rgba(0,0,0,0.5),inset_0_2px_12px_rgba(0,0,0,0.25)]"
+                style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
+              >
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
+                  {filteredSortedTrades.map(trade => (
+                    <PreviewFeaturedCard
+                      key={trade.id}
+                      trade={trade}
+                      account={trade.accountId ? accountsById.get(trade.accountId) : undefined}
+                      displayNumber={tradeNumberById.get(trade.id) ?? 0}
+                      onOpenDetail={setOpenTradeId}
+                    />
+                  ))}
+                </div>
+              </div>
+
+              {/* Table view — ported 1:1 from TradesScreen.tsx's
+                  "Full-page table" (dbViewMode === 'table') branch: same
+                  column set/order and cell styling, rendering
+                  PreviewTradeRow (the read-only PreviewTrade port of
+                  TradeRow) instead of TradeRow. No pagination — this screen
+                  doesn't have TradesScreen's page-size state. */}
+              <div className="bg-zinc-900/40 border border-zinc-800/80 rounded-xl overflow-hidden">
+                <div className="overflow-x-auto">
+                  <table className="w-full min-w-[1100px]">
+                    <thead>
+                      <tr className="border-b border-zinc-800/70 text-left bg-white/[0.02]">
+                        <th className="px-3 py-2.5 text-[11px] text-zinc-500 uppercase tracking-wider font-medium">Outcome</th>
+                        <th className="px-3 py-2.5 text-[11px] text-zinc-500 uppercase tracking-wider font-medium">Date</th>
+                        <th className="px-3 py-2.5 text-[11px] text-zinc-500 uppercase tracking-wider font-medium">Trade #</th>
+                        <th className="px-3 py-2.5 text-[11px] text-zinc-500 uppercase tracking-wider font-medium">Session</th>
+                        <th className="px-3 py-2.5 text-[11px] text-zinc-500 uppercase tracking-wider font-medium">Position</th>
+                        <th className="px-3 py-2.5 text-[11px] text-zinc-500 uppercase tracking-wider font-medium text-right">Net P&amp;L</th>
+                        <th className="px-3 py-2.5 text-[11px] text-zinc-500 uppercase tracking-wider font-medium text-right">R Multiple</th>
+                        <th className="px-3 py-2.5 text-[11px] text-zinc-500 uppercase tracking-wider font-medium text-right">Risk ($)</th>
+                        <th className="px-3 py-2.5 text-[11px] text-zinc-500 uppercase tracking-wider font-medium">Symbol</th>
+                        <th className="px-3 py-2.5 text-[11px] text-zinc-500 uppercase tracking-wider font-medium">Strategy</th>
+                        <th className="px-3 py-2.5 text-[11px] text-zinc-500 uppercase tracking-wider font-medium">Account</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {filteredSortedTrades.map(trade => (
+                        <PreviewTradeRow
+                          key={trade.id}
+                          trade={trade}
+                          account={trade.accountId ? accountsById.get(trade.accountId) : undefined}
+                          displayNumber={tradeNumberById.get(trade.id) ?? 0}
+                          onOpenDetail={setOpenTradeId}
+                        />
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
               </div>
             </div>
           )}
