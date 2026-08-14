@@ -436,7 +436,7 @@ export function AddStrategyModal() {
               {newStrategy.steps.length > 0 && (
                 <div className="space-y-3">
                   {newStrategy.steps.map((step, idx) => (
-                    <div key={step.id} className="rounded-lg border border-zinc-700 bg-zinc-900 p-3 space-y-2.5">
+                    <div key={step.id} className="rounded-lg border border-zinc-700 bg-zinc-800/60 p-3 space-y-2.5">
                       <div className="flex items-center justify-between">
                         <span className="text-xs font-bold uppercase tracking-wider text-zinc-400">Step {idx + 1}</span>
                         <button
@@ -453,7 +453,7 @@ export function AddStrategyModal() {
                         value={step.title}
                         onChange={(e) => updateStrategyStep(step.id, 'title', e.target.value)}
                         placeholder={`Step ${idx + 1}: Asian High Sweep & MSS`}
-                        className="w-full bg-zinc-900 border border-zinc-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-zinc-600"
+                        className="w-full bg-zinc-900/70 border border-zinc-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-zinc-600"
                       />
                       <textarea
                         ref={(el) => { if (el) { el.style.height = 'auto'; el.style.height = `${el.scrollHeight}px`; } }}
@@ -466,7 +466,7 @@ export function AddStrategyModal() {
                         }}
                         placeholder="Notes / checklist rule for this step..."
                         rows={2}
-                        className="w-full bg-zinc-900 border border-zinc-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-zinc-600 resize-none overflow-hidden"
+                        className="w-full bg-zinc-900/70 border border-zinc-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-zinc-600 resize-none overflow-hidden"
                       />
                       <div>
                         <div className="grid grid-cols-3 gap-2">
