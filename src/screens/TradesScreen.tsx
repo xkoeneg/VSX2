@@ -192,7 +192,7 @@ import { renderStatCard, renderAccountFilter, renderAccountTypeBadge, renderTrad
 
 interface TradeFeaturedCardProps {
   trade: Trade;
-  account: Account | undefined;
+  accountDisplayName: string | undefined;
   privacyMode: boolean;
   tradeSelectMode: boolean;
   isSelected: boolean;
@@ -203,14 +203,14 @@ interface TradeFeaturedCardProps {
 
 const tradeFeaturedCardPropsAreEqual = (prev: TradeFeaturedCardProps, next: TradeFeaturedCardProps) =>
   prev.trade === next.trade &&
-  prev.account === next.account &&
+  prev.accountDisplayName === next.accountDisplayName &&
   prev.privacyMode === next.privacyMode &&
   prev.tradeSelectMode === next.tradeSelectMode &&
   prev.isSelected === next.isSelected &&
   prev.displayNumber === next.displayNumber;
 
 const TradeFeaturedCard = memo(function TradeFeaturedCard({
-  trade, account, privacyMode, tradeSelectMode, isSelected, displayNumber, onOpenDetail, onToggleSelected,
+  trade, accountDisplayName, privacyMode, tradeSelectMode, isSelected, displayNumber, onOpenDetail, onToggleSelected,
 }: TradeFeaturedCardProps) {
   const coverImage = trade.executionImages[0]?.url || trade.timeframes.flatMap(tf => tf.images)[0]?.url;
   const isWin = trade.profitLoss >= 0;
@@ -305,7 +305,7 @@ const TradeFeaturedCard = memo(function TradeFeaturedCard({
             {trade.trackingNumber && <TrackingBadge value={trade.trackingNumber} size="sm" />}
           </div>
         </div>
-        <p className="text-xs text-zinc-300 truncate mt-0.5">{account?.name}</p>
+        <p className="text-xs text-zinc-300 truncate mt-0.5">{accountDisplayName}</p>
         {/* Fixed-height row so cards without a session still take up the same
             vertical space as cards that have one — keeps every card (and every
             grid row) the exact same height. */}
@@ -329,7 +329,7 @@ const TradeFeaturedCard = memo(function TradeFeaturedCard({
 
 interface TradeRowProps {
   trade: Trade;
-  account: Account | undefined;
+  accountDisplayName: string | undefined;
   privacyMode: boolean;
   displayNumber: number;
   onOpenDetail: (id: string) => void;
@@ -337,11 +337,11 @@ interface TradeRowProps {
 
 const tradeRowPropsAreEqual = (prev: TradeRowProps, next: TradeRowProps) =>
   prev.trade === next.trade &&
-  prev.account === next.account &&
+  prev.accountDisplayName === next.accountDisplayName &&
   prev.privacyMode === next.privacyMode &&
   prev.displayNumber === next.displayNumber;
 
-const TradeRow = memo(function TradeRow({ trade, account, privacyMode, displayNumber, onOpenDetail }: TradeRowProps) {
+const TradeRow = memo(function TradeRow({ trade, accountDisplayName, privacyMode, displayNumber, onOpenDetail }: TradeRowProps) {
   const isWin = trade.profitLoss >= 0;
   const isBreakeven = Math.abs(trade.profitLoss) < 10;
   const rowRR = trade.riskAmount > 0 ? trade.profitLoss / trade.riskAmount : null;
@@ -385,7 +385,7 @@ const TradeRow = memo(function TradeRow({ trade, account, privacyMode, displayNu
       </td>
       <td className="px-3 py-2.5 text-sm text-white font-semibold truncate max-w-[100px]">{trade.symbol}</td>
       <td className="px-3 py-2.5 text-sm text-zinc-400 truncate max-w-[120px]">{trade.setupTypes.join(', ') || '-'}</td>
-      <td className="px-3 py-2.5 text-sm text-zinc-400 truncate max-w-[120px]">{account?.name || '-'}</td>
+      <td className="px-3 py-2.5 text-sm text-zinc-400 truncate max-w-[120px]">{accountDisplayName || '-'}</td>
     </tr>
   );
 }, tradeRowPropsAreEqual);
@@ -752,6 +752,43 @@ export function TradesScreen() {
     return map;
   }, [accounts]);
 
+  // Trade cards/rows show the account name next to every single trade, so a
+  // broker-style name like "Main - 514181822" is mostly noise — the trailing
+  // account number rarely helps unless it's the only thing telling two
+  // accounts apart. `getAccountNameParts` only treats a trailing run of 3+
+  // digits (optionally separated by a space/dash) as an account-number
+  // suffix — short trailing digits ("Account 2") and plain multi-word names
+  // ("John Oliver") don't match, so those are always shown as-is.
+  const getAccountNameParts = (name: string): { base: string; hasNumberSuffix: boolean } => {
+    const trimmed = (name || '').trim();
+    const m = trimmed.match(/^(.+?)[\s-]*(\d{3,})$/);
+    if (!m || !m[1].trim()) return { base: trimmed, hasNumberSuffix: false };
+    return { base: m[1].trim(), hasNumberSuffix: true };
+  };
+
+  // Per-account short display name: the base name with the number suffix
+  // hidden, UNLESS another account shares the same base — then the number
+  // is kept (on every account sharing that base) so they stay distinguishable.
+  const accountDisplayNameById = useMemo(() => {
+    const parts = new Map<string, { base: string; hasNumberSuffix: boolean }>();
+    const baseCounts = new Map<string, number>();
+    for (const a of accounts) {
+      const p = getAccountNameParts(a.name);
+      parts.set(a.id, p);
+      if (p.hasNumberSuffix) {
+        const key = p.base.toLowerCase();
+        baseCounts.set(key, (baseCounts.get(key) || 0) + 1);
+      }
+    }
+    const map = new Map<string, string>();
+    for (const a of accounts) {
+      const p = parts.get(a.id)!;
+      const isAmbiguous = p.hasNumberSuffix && (baseCounts.get(p.base.toLowerCase()) || 0) > 1;
+      map.set(a.id, p.hasNumberSuffix && !isAmbiguous ? p.base : a.name);
+    }
+    return map;
+  }, [accounts]);
+
   // Stable callback identities for the memoized card/row components below —
   // setShowTradeDetail is already a useState setter (always stable);
   // toggleTradeSelected is itself wrapped in useCallback in useAppState.
@@ -763,7 +800,7 @@ export function TradesScreen() {
     <TradeFeaturedCard
       key={trade.id}
       trade={trade}
-      account={accountsById.get(trade.accountId)}
+      accountDisplayName={accountDisplayNameById.get(trade.accountId)}
       privacyMode={privacyMode}
       tradeSelectMode={tradeSelectMode}
       isSelected={selectedTradeIds.includes(trade.id)}
@@ -930,7 +967,7 @@ export function TradesScreen() {
                 </thead>
                 <tbody>
                   {recentPreviewTrades.map(trade => {
-                    const account = accountsById.get(trade.accountId);
+                    const accountName = accountDisplayNameById.get(trade.accountId);
                     const isWin = trade.profitLoss >= 0;
                     const rowRR = trade.riskAmount > 0 ? trade.profitLoss / trade.riskAmount : null;
                     const side = trade.profitLoss >= 0 ? 'LONG' : 'SHORT';
@@ -978,7 +1015,7 @@ export function TradesScreen() {
                         </td>
                         <td className="px-3 py-2.5 text-sm text-zinc-400 whitespace-nowrap">{formatDate(trade.date)}</td>
                         <td className="px-3 py-2.5 text-sm text-zinc-400 whitespace-nowrap truncate max-w-[160px]">
-                          {account ? account.name : '-'}
+                          {accountName || '-'}
                         </td>
                         <td className="px-3 py-2.5 text-sm text-white font-semibold truncate max-w-[100px]">{trade.symbol}</td>
                         <td className="px-3 py-2.5 whitespace-nowrap">
@@ -1309,7 +1346,7 @@ export function TradesScreen() {
                     <TradeRow
                       key={trade.id}
                       trade={trade}
-                      account={accountsById.get(trade.accountId)}
+                      accountDisplayName={accountDisplayNameById.get(trade.accountId)}
                       privacyMode={privacyMode}
                       displayNumber={getDisplayTradeNumber(trade)}
                       onOpenDetail={handleOpenTradeDetail}
