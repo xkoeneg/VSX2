@@ -51,15 +51,18 @@ type PreviewTrade = {
   id: string;
   /** Stable, DB-assigned trade number (e.g. the `trade_number` column, or
    *  whatever ordinal the main app's `getDisplayTradeNumber` renders for
-   *  this row). This is what the #42-style badge shows. It must come
-   *  straight from the RPC — never be recomputed client-side by re-sorting
-   *  the fetched array — or it can drift from the number the main app
-   *  shows for the same trade. */
-  tradeNumber: number;
+   *  this row). This is what the #42-style badge shows, and it's the ONLY
+   *  way to guarantee the badge matches the main app for same-day trades.
+   *  Optional because `get_preview_journal` doesn't select it yet — see the
+   *  TODO in the fetch handler below. Until the RPC is updated, badges fall
+   *  back to a locally-computed ordinal that is NOT guaranteed to match the
+   *  main app when trades share a date. */
+  tradeNumber?: number;
   /** Row insert timestamp — used only as the tiebreaker when two trades
    *  share the same `date`, to match the main app's
-   *  `trade_date DESC, created_at DESC` ordering. */
-  createdAt: string;
+   *  `trade_date DESC, created_at DESC` ordering. Optional for the same
+   *  reason as `tradeNumber` above. */
+  createdAt?: string;
   accountId: string | null;
   symbol: string;
   date: string;
@@ -482,10 +485,12 @@ export function PreviewScreen({ userId, onExit }: PreviewScreenProps) {
         setIsVerifying(false);
         return;
       }
-      // NOTE: `get_preview_journal` must return `tradeNumber` and
-      // `createdAt` on every trade row (see sql/001_preview_access.sql) —
-      // the sort order and #-badges above depend on both being present and
-      // matching what the main app's query returns for the same trade.
+      // TODO(backend): `get_preview_journal` needs to select and return
+      // `tradeNumber` (the same ordinal the main app's getDisplayTradeNumber
+      // shows) and `createdAt` on every trade row — see
+      // sql/001_preview_access.sql. Until then this screen uses a
+      // best-effort fallback (see fallbackNumberById below) that can
+      // disagree with the main app for same-day trades.
       setData({
         profile: rpcData.profile,
         accounts: rpcData.accounts || [],
@@ -598,22 +603,49 @@ function UnlockedPreview({
 }) {
   const displayName = data.profile.displayName || 'This Trader';
   const accountsById = useMemo(() => new Map(data.accounts.map(a => [a.id, a])), [data.accounts]);
-  // Matches the main app's ordering exactly: `ORDER BY trade_date DESC,
-  // created_at DESC`. The previous version only compared `date`, so same-day
-  // trades kept whatever order the RPC happened to return them in — which
-  // didn't necessarily match the main app, causing the #42 badge to land on
-  // a different trade (and therefore a different P&L) between the two
-  // screens. `date` comparison alone is also not a safe tiebreaker even if
-  // it were used consistently, since two trades opened on the same calendar
-  // day can carry the exact same `date` string.
+  // Matches the main app's ordering: `ORDER BY trade_date DESC, created_at
+  // DESC`. The previous version compared `a.date < b.date ? 1 : -1`, which
+  // returns -1 for EVERY tied pair instead of 0 — an invalid comparator
+  // that scrambles same-day trades into an unpredictable order (this is
+  // what put -$51.77 ahead of +$111.08 despite both being Aug 13). Fixed to
+  // return 0 on a genuine tie, and to use `createdAt` as the real
+  // tiebreaker when it's present.
+  //
+  // IMPORTANT CAVEAT: `createdAt` isn't returned by `get_preview_journal`
+  // yet (see the TODO in handleUnlock below), so it's `undefined` on every
+  // trade right now. When both sides are `undefined` the comparator falls
+  // through to `0`, which just preserves whatever order the RPC's `trades`
+  // array happened to arrive in — there is no client-side way to recover
+  // the *correct* same-day order without an actual field from the DB, since
+  // `date` alone doesn't disambiguate same-day trades. This is why the
+  // reordering can still look wrong until the RPC change lands.
   const sortedTrades = useMemo(
     () =>
       [...data.trades].sort((a, b) => {
         if (a.date !== b.date) return a.date < b.date ? 1 : -1;
-        return a.createdAt < b.createdAt ? 1 : a.createdAt > b.createdAt ? -1 : 0;
+        if (a.createdAt && b.createdAt && a.createdAt !== b.createdAt) {
+          return a.createdAt < b.createdAt ? 1 : -1;
+        }
+        return 0;
       }),
     [data.trades]
   );
+
+  // Badge numbers: prefer the DB-assigned `tradeNumber` (matches the main
+  // app exactly). Until the RPC returns it, fall back to a locally-computed
+  // ordinal (newest trade in `sortedTrades` = highest number) so the badge
+  // at least shows *something* instead of going blank — but this fallback
+  // can disagree with the main app whenever trades share a date, for the
+  // same reason described above.
+  const fallbackNumberById = useMemo(() => {
+    const map = new Map<string, number>();
+    const total = sortedTrades.length;
+    sortedTrades.forEach((t, i) => map.set(t.id, total - i));
+    return map;
+  }, [sortedTrades]);
+
+  const getDisplayNumber = (trade: PreviewTrade) =>
+    trade.tradeNumber ?? fallbackNumberById.get(trade.id) ?? 0;
 
   const stats = useMemo(() => {
     const total = data.trades.length;
@@ -869,7 +901,7 @@ function UnlockedPreview({
                       key={trade.id}
                       trade={trade}
                       account={trade.accountId ? accountsById.get(trade.accountId) : undefined}
-                      displayNumber={trade.tradeNumber}
+                      displayNumber={getDisplayNumber(trade)}
                       onOpenDetail={setOpenTradeId}
                     />
                   ))}
@@ -907,7 +939,7 @@ function UnlockedPreview({
                           key={trade.id}
                           trade={trade}
                           account={trade.accountId ? accountsById.get(trade.accountId) : undefined}
-                          displayNumber={trade.tradeNumber}
+                          displayNumber={getDisplayNumber(trade)}
                           onOpenDetail={setOpenTradeId}
                         />
                       ))}
