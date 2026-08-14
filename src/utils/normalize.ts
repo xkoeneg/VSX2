@@ -195,6 +195,7 @@ export const normalizeStrategy = (s: any): Strategy => ({
   id: typeof s?.id === 'string' ? s.id : generateId(),
   title: normalizeStringField(s?.title),
   market: normalizeStringField(s?.market),
+  description: normalizeStringField(s?.description),
   steps: normalizeStrategySteps(s?.steps),
   images: normalizeStrategyImages(s),
 });
