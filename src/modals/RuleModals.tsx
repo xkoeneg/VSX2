@@ -715,19 +715,21 @@ export function ManageRulesModal() {
             {pillarRules.map(rule => {
               if (rule.itemType === 'divider') {
                 return (
-                  <div key={rule.id} className="group flex items-center gap-2 py-0.5">
-                    <span className="flex-1 h-px bg-zinc-800" />
+                  <div key={rule.id} className="group flex items-center gap-3 py-1">
+                    <span className="flex-1 h-px bg-zinc-600" />
                     <input
                       type="text"
                       value={rule.dividerLabel || ''}
                       onChange={(e) => handleUpdateDividerLabel(rule.id, e.target.value)}
                       placeholder="Section label"
-                      className="w-24 bg-transparent text-center text-[9px] font-bold uppercase tracking-wider text-zinc-500 placeholder-zinc-700 focus:outline-none focus:text-white"
+                      size={Math.max((rule.dividerLabel || 'Section label').length, 6)}
+                      className="bg-transparent text-center text-[10px] font-bold uppercase tracking-widest text-zinc-400 placeholder-zinc-500 focus:outline-none focus:text-white"
                     />
-                    <span className="flex-1 h-px bg-zinc-800" />
+                    <span className="flex-1 h-px bg-zinc-600" />
                     <button
                       onClick={() => handleDeleteRule(rule.id)}
-                      className="p-0.5 rounded text-zinc-600 hover:text-rose-400 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0"
+                      title="Delete divider"
+                      className="p-1 rounded text-zinc-500 hover:text-rose-400 hover:bg-rose-500/10 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0"
                     >
                       <Trash2 className="w-3 h-3" />
                     </button>
