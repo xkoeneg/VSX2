@@ -722,8 +722,7 @@ export function ManageRulesModal() {
                       value={rule.dividerLabel || ''}
                       onChange={(e) => handleUpdateDividerLabel(rule.id, e.target.value)}
                       placeholder="Section label"
-                      size={Math.max((rule.dividerLabel || 'Section label').length, 6)}
-                      className="bg-transparent text-center text-[10px] font-bold uppercase tracking-widest text-zinc-400 placeholder-zinc-500 focus:outline-none focus:text-white"
+                      className="w-32 flex-shrink-0 bg-transparent text-center text-[10px] font-bold uppercase tracking-widest text-zinc-400 placeholder-zinc-500 focus:outline-none focus:text-white truncate"
                     />
                     <span className="flex-1 h-px bg-zinc-600" />
                     <button
