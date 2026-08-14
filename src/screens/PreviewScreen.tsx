@@ -302,7 +302,7 @@ function TradeAnalyticsCard({ trades, stats, tradeFilter, setTradeFilter }: Trad
             {total > 0 && isFinite(stats.profitFactor) ? stats.profitFactor.toFixed(2) : 'N/A'}
           </p>
           <p className="text-[clamp(0.6rem,3cqw,0.75rem)] font-medium tabular-nums leading-tight whitespace-nowrap">
-            <span className="text-emerald-500">{formatMoney(stats.avgWin)}</span>
+            <span className="text-emerald-500">+{formatMoney(stats.avgWin)}</span>
             <span className="text-zinc-500 mx-0.5">/</span>
             <span className="text-rose-500">{formatMoney(-stats.avgLoss)}</span>
           </p>
@@ -696,9 +696,14 @@ function UnlockedPreview({
     const grossWin = winningTrades.reduce((s, t) => s + t.profitLoss, 0);
     const grossLoss = Math.abs(losingTrades.reduce((s, t) => s + t.profitLoss, 0));
     const winRate = total > 0 ? (wins / total) * 100 : 0;
-    const profitFactor = grossLoss > 0 ? grossWin / grossLoss : grossWin > 0 ? Infinity : 0;
     const avgWin = winningTrades.length > 0 ? grossWin / winningTrades.length : 0;
     const avgLoss = losingTrades.length > 0 ? grossLoss / losingTrades.length : 0;
+    // Matches the main app's card: Profit Factor here is avg win ÷ avg
+    // loss (the same two numbers shown right below it), NOT gross total
+    // win ÷ gross total loss. The two only agree when win count === loss
+    // count — using the gross-total ratio is what produced 1.73 instead of
+    // 0.96 when win/loss counts differ.
+    const profitFactor = avgLoss > 0 ? avgWin / avgLoss : avgWin > 0 ? Infinity : 0;
     return { total, totalTrades: total, winRate, totalPnl, profitFactor, avgWin, avgLoss };
   }, [data.trades]);
 
