@@ -2494,10 +2494,12 @@ export function useAppState() {
     setShowEditAccount(null);
   };
 
-  // Funded CFD accounts only. Bumps the payout counter and stamps
+  // Funded CFD/Futures accounts only. Bumps the payout counter and stamps
   // cycleBaselinePnL with the account's cumulative trade P&L *as of right
-  // now*, which snaps current-cycle balance/progress metrics back to the
-  // starting balance (see getAccountCyclePnL). Trade history is left
+  // now* (snapping current-cycle balance/progress metrics back to the
+  // starting balance — see getAccountCyclePnL) plus cycleStartedAt with the
+  // reset timestamp (scopes the Funded Futures peak-equity/trailing-stop
+  // calc to trades placed since the reset). Trade history is left
   // completely untouched — every past trade still counts toward lifetime
   // analytics, it's just excluded from the new cycle's running total.
   const handleRecordPayoutReset = (accountId: string) => {
@@ -2509,6 +2511,7 @@ export function useAppState() {
       ...account,
       payoutResetsCount: (account.payoutResetsCount || 0) + 1,
       cycleBaselinePnL: totalPnL,
+      cycleStartedAt: new Date().toISOString(),
     };
     setAccounts(accounts.map(a => a.id === accountId ? updatedAccount : a));
     if (userId) {
@@ -2529,6 +2532,7 @@ export function useAppState() {
         ...prev,
         payoutResetsCount: updatedAccount.payoutResetsCount,
         cycleBaselinePnL: updatedAccount.cycleBaselinePnL,
+        cycleStartedAt: updatedAccount.cycleStartedAt,
       }));
     }
   };
