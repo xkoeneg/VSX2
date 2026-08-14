@@ -539,29 +539,26 @@ export function RuleAdherenceReviewModal() {
         onClose={closeRuleReviewModal}
         className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-start justify-center overflow-y-auto p-4 py-8"
       >
-        <div className="relative max-w-5xl w-full" onClick={(e) => e.stopPropagation()}>
-          <button
-            onClick={closeRuleReviewModal}
-            className="absolute top-3 right-3 z-10 p-1.5 rounded-full bg-zinc-800/90 border border-zinc-700 text-zinc-400 hover:text-white hover:bg-zinc-700 transition-colors"
-            aria-label="Close"
-          >
-            <X className="w-4 h-4" />
-          </button>
+        <div className="bg-zinc-900 border border-zinc-800 rounded-xl max-w-5xl w-full max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+          <div className="sticky top-0 bg-zinc-900 border-b border-zinc-800 px-6 py-4 flex items-center justify-between gap-3 z-20">
+            <div className="min-w-0 flex-1">
+              <div className="flex items-center gap-2 min-w-0">
+                {trade.trackingNumber && <TrackingBadge value={trade.trackingNumber} size="sm" />}
+                <h3 className="text-xl font-bold text-white truncate">{trade.symbol}</h3>
+              </div>
+              <p className="text-sm text-zinc-500 truncate">
+                {account?.name} · {formatDate(trade.date)}
+                {trade.session && <span> · {trade.session}</span>}
+              </p>
+            </div>
+            <button onClick={closeRuleReviewModal} className="p-2 text-zinc-400 hover:text-white transition-colors flex-shrink-0">
+              <X className="w-5 h-5" />
+            </button>
+          </div>
 
-          <div className="max-w-5xl w-full grid grid-cols-1 md:grid-cols-2 gap-6 bg-[#121318] p-6 rounded-2xl border border-white/10 max-h-[85vh] overflow-y-auto">
+          <div className="p-6 grid grid-cols-1 md:grid-cols-2 gap-6">
             {/* ================= LEFT COLUMN — Trade Preview (static) ================= */}
             <div className="min-w-0 flex flex-col gap-4">
-              <div className="min-w-0">
-                <div className="flex items-center gap-2 min-w-0">
-                  {trade.trackingNumber && <TrackingBadge value={trade.trackingNumber} size="sm" />}
-                  <h3 className="text-lg font-bold text-white truncate">{trade.symbol}</h3>
-                </div>
-                <p className="text-xs text-zinc-500 truncate mt-0.5">
-                  {account?.name} · {formatDate(trade.date)}
-                  {trade.session && <span> · {trade.session}</span>}
-                </p>
-              </div>
-
               <div className="relative bg-zinc-800/50 rounded-xl overflow-hidden border border-zinc-800 aspect-video flex items-center justify-center flex-shrink-0">
                 {executionImage ? (
                   <img
@@ -622,7 +619,7 @@ export function RuleAdherenceReviewModal() {
             </div>
 
             {/* ================= RIGHT COLUMN — Psychology Review (toggles) ================= */}
-            <div className="min-w-0 flex flex-col gap-4 md:border-l md:border-white/10 md:pl-6">
+            <div className="min-w-0 flex flex-col gap-4 md:border-l md:border-zinc-800 md:pl-6">
               <div className="flex items-center justify-between gap-3 flex-shrink-0">
                 <div className="flex items-center gap-2 min-w-0">
                   <div className="flex-shrink-0 w-8 h-8 rounded-lg bg-violet-500/10 border border-violet-500/20 flex items-center justify-center">
@@ -634,7 +631,7 @@ export function RuleAdherenceReviewModal() {
                   <button
                     type="button"
                     onClick={() => setIsEditingRuleReview(true)}
-                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 text-zinc-200 hover:text-white transition-all text-xs font-medium cursor-pointer flex-shrink-0"
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 text-zinc-200 hover:text-white transition-all text-xs font-medium cursor-pointer flex-shrink-0"
                   >
                     <Edit2 className="w-3.5 h-3.5" strokeWidth={2} /> Edit Review
                   </button>
