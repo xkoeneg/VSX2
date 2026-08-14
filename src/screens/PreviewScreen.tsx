@@ -49,6 +49,17 @@ type PreviewTimeframe = {
 
 type PreviewTrade = {
   id: string;
+  /** Stable, DB-assigned trade number (e.g. the `trade_number` column, or
+   *  whatever ordinal the main app's `getDisplayTradeNumber` renders for
+   *  this row). This is what the #42-style badge shows. It must come
+   *  straight from the RPC — never be recomputed client-side by re-sorting
+   *  the fetched array — or it can drift from the number the main app
+   *  shows for the same trade. */
+  tradeNumber: number;
+  /** Row insert timestamp — used only as the tiebreaker when two trades
+   *  share the same `date`, to match the main app's
+   *  `trade_date DESC, created_at DESC` ordering. */
+  createdAt: string;
   accountId: string | null;
   symbol: string;
   date: string;
@@ -471,6 +482,10 @@ export function PreviewScreen({ userId, onExit }: PreviewScreenProps) {
         setIsVerifying(false);
         return;
       }
+      // NOTE: `get_preview_journal` must return `tradeNumber` and
+      // `createdAt` on every trade row (see sql/001_preview_access.sql) —
+      // the sort order and #-badges above depend on both being present and
+      // matching what the main app's query returns for the same trade.
       setData({
         profile: rpcData.profile,
         accounts: rpcData.accounts || [],
@@ -583,8 +598,20 @@ function UnlockedPreview({
 }) {
   const displayName = data.profile.displayName || 'This Trader';
   const accountsById = useMemo(() => new Map(data.accounts.map(a => [a.id, a])), [data.accounts]);
+  // Matches the main app's ordering exactly: `ORDER BY trade_date DESC,
+  // created_at DESC`. The previous version only compared `date`, so same-day
+  // trades kept whatever order the RPC happened to return them in — which
+  // didn't necessarily match the main app, causing the #42 badge to land on
+  // a different trade (and therefore a different P&L) between the two
+  // screens. `date` comparison alone is also not a safe tiebreaker even if
+  // it were used consistently, since two trades opened on the same calendar
+  // day can carry the exact same `date` string.
   const sortedTrades = useMemo(
-    () => [...data.trades].sort((a, b) => (a.date < b.date ? 1 : -1)),
+    () =>
+      [...data.trades].sort((a, b) => {
+        if (a.date !== b.date) return a.date < b.date ? 1 : -1;
+        return a.createdAt < b.createdAt ? 1 : a.createdAt > b.createdAt ? -1 : 0;
+      }),
     [data.trades]
   );
 
@@ -676,14 +703,6 @@ function UnlockedPreview({
       }
     }
     return map;
-  }, [data.trades]);
-
-  // Chronological trade numbers (oldest = 1) for the gallery card badges —
-  // mirrors TradesScreen's getDisplayTradeNumber, computed locally here since
-  // this screen doesn't have access to that app-context helper.
-  const tradeNumberById = useMemo(() => {
-    const chronological = [...data.trades].sort((a, b) => (a.date < b.date ? -1 : 1));
-    return new Map(chronological.map((t, i) => [t.id, i + 1]));
   }, [data.trades]);
 
   const openTrade = openTradeId ? data.trades.find(t => t.id === openTradeId) || null : null;
@@ -850,7 +869,7 @@ function UnlockedPreview({
                       key={trade.id}
                       trade={trade}
                       account={trade.accountId ? accountsById.get(trade.accountId) : undefined}
-                      displayNumber={tradeNumberById.get(trade.id) ?? 0}
+                      displayNumber={trade.tradeNumber}
                       onOpenDetail={setOpenTradeId}
                     />
                   ))}
@@ -888,7 +907,7 @@ function UnlockedPreview({
                           key={trade.id}
                           trade={trade}
                           account={trade.accountId ? accountsById.get(trade.accountId) : undefined}
-                          displayNumber={tradeNumberById.get(trade.id) ?? 0}
+                          displayNumber={trade.tradeNumber}
                           onOpenDetail={setOpenTradeId}
                         />
                       ))}
