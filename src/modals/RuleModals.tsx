@@ -283,7 +283,7 @@ export function AddRuleModal() {
         onClose={closeRuleModal}
         className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-start justify-center overflow-y-auto p-4 py-8"
       >
-        <div className="bg-zinc-900 border border-zinc-800 rounded-xl max-w-md w-full max-h-[90vh] flex flex-col" onClick={(e) => e.stopPropagation()}>
+        <div className="bg-zinc-900 border border-zinc-800 rounded-xl max-w-lg w-full max-h-[90vh] flex flex-col" onClick={(e) => e.stopPropagation()}>
           <div className="sticky top-0 bg-zinc-900 border-b border-zinc-800 px-6 py-4 flex items-center justify-between flex-shrink-0 z-20">
             <h3 className="text-xl font-bold text-white truncate">{editingRuleId ? 'Edit Trading Rule' : 'Add Trading Rule'}</h3>
             <button onClick={closeRuleModal} className="p-2 text-zinc-400 hover:text-white transition-colors">
@@ -291,222 +291,244 @@ export function AddRuleModal() {
             </button>
           </div>
           <div className="p-6 space-y-4 overflow-y-auto">
-            <div>
-              <label className="block text-sm text-zinc-400 mb-2">Pillar</label>
-              <div className="grid grid-cols-3 gap-2">
-                {getAllPillarIds(customPillars).map(pillar => {
-                  const meta = getPillarMeta(pillar, customPillars);
-                  const active = (newRule.pillar || 'risk') === pillar;
-                  return (
-                    <button
-                      key={pillar}
-                      type="button"
-                      onClick={() => setNewRule(prev => ({ ...prev, pillar }))}
-                      className={cn(
-                        "flex flex-col items-center gap-1 py-2.5 px-2 rounded-lg border text-xs font-medium transition-colors",
-                        active ? 'bg-white text-black border-white' : 'bg-zinc-800 border-zinc-700 text-zinc-400 hover:bg-zinc-700 hover:text-white'
-                      )}
-                    >
-                      <meta.Icon className={cn("w-4 h-4", !active && meta.color)} strokeWidth={2} />
-                      <span className="truncate">{meta.label.replace(' Rules', '')}</span>
-                    </button>
-                  );
-                })}
+            {/* ================= SECTION 1: Classification ================= */}
+            <div className="bg-zinc-800 border border-zinc-700 p-4 rounded-xl space-y-3 shadow-[0_1px_0_0_rgba(255,255,255,0.02)_inset]">
+              <div className="flex items-center gap-2 pb-1">
+                <span className="text-[10px] font-bold text-cyan-400 font-mono tracking-widest">01</span>
+                <h4 className="text-xs font-semibold text-slate-300 uppercase tracking-wider">Classification</h4>
               </div>
-            </div>
-
-            <div>
-              <label className="block text-sm text-zinc-400 mb-2">Severity</label>
-              <div className="grid grid-cols-3 gap-2">
-                {RULE_SEVERITIES.map(severity => {
-                  const meta = RULE_SEVERITY_META[severity];
-                  const active = (newRule.severity || 'warning') === severity;
-                  return (
-                    <button
-                      key={severity}
-                      type="button"
-                      onClick={() => setNewRule(prev => ({ ...prev, severity }))}
-                      className={cn(
-                        "flex items-center justify-center gap-1.5 py-2 px-2 rounded-lg border text-xs font-medium transition-colors",
-                        active ? meta.badge : 'bg-zinc-800 border-zinc-700 text-zinc-400 hover:bg-zinc-700 hover:text-white'
-                      )}
-                    >
-                      <span className={cn("w-1.5 h-1.5 rounded-full flex-shrink-0", meta.dot)} />
-                      {meta.label}
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-
-            {/* Notion-style icon & color picker */}
-            <div className="relative">
-              <label className="block text-sm text-zinc-400 mb-2">Icon &amp; Color</label>
-              {(() => {
-                const accent = getRuleAccent(newRule.color);
-                const RuleIcon = getRuleIconComponent({ iconValue: newRule.iconValue, pillar: (newRule.pillar || 'risk') as RulePillar });
-                return (
-                  <button
-                    type="button"
-                    onClick={() => setShowRuleIconPicker(v => !v)}
-                    className="w-full flex items-center gap-2.5 bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2.5 text-left hover:bg-zinc-750 hover:border-zinc-600 transition-colors"
-                  >
-                    <span className={cn("inline-flex items-center justify-center w-8 h-8 rounded-lg flex-shrink-0", accent.bg)}>
-                      {newRule.iconKind === 'emoji' && newRule.iconValue
-                        ? <span className="text-base leading-none">{newRule.iconValue}</span>
-                        : <RuleIcon className={cn("w-4 h-4", accent.text)} strokeWidth={2.5} />}
-                    </span>
-                    <span className="text-sm text-white flex-1">Customize icon &amp; accent color</span>
-                    <ChevronDown className={cn("w-4 h-4 text-zinc-500 transition-transform flex-shrink-0", showRuleIconPicker && "rotate-180")} />
-                  </button>
-                );
-              })()}
-
-              {showRuleIconPicker && (
-                <div className="relative mt-2 bg-zinc-800 border border-zinc-700 rounded-lg p-3 space-y-3" onClick={(e) => e.stopPropagation()}>
-                  {/* Tabs */}
-                  <div className="flex items-center gap-1 bg-zinc-900/60 rounded-lg p-1">
-                    {([
-                      { id: 'emoji' as const, label: 'Emoji', Icon: Smile },
-                      { id: 'icons' as const, label: 'Icons', Icon: Star },
-                      { id: 'color' as const, label: 'Custom Color', Icon: Palette },
-                    ]).map(tab => (
+              <div>
+                <label className="block text-xs text-zinc-400 mb-1.5">Pillar</label>
+                <div className="grid grid-cols-3 gap-2">
+                  {getAllPillarIds(customPillars).map(pillar => {
+                    const meta = getPillarMeta(pillar, customPillars);
+                    const active = (newRule.pillar || 'risk') === pillar;
+                    return (
                       <button
-                        key={tab.id}
+                        key={pillar}
                         type="button"
-                        onClick={() => setRuleIconPickerTab(tab.id)}
+                        onClick={() => setNewRule(prev => ({ ...prev, pillar }))}
                         className={cn(
-                          "flex-1 flex items-center justify-center gap-1.5 py-1.5 rounded-md text-[11px] font-medium transition-colors",
-                          ruleIconPickerTab === tab.id ? 'bg-zinc-700 text-white' : 'text-zinc-400 hover:text-white'
+                          "flex flex-col items-center gap-1 py-2.5 px-2 rounded-lg border text-xs font-medium transition-colors",
+                          active ? 'bg-white text-black border-white' : 'bg-zinc-900 border-zinc-700 text-zinc-400 hover:bg-zinc-700 hover:text-white'
                         )}
                       >
-                        <tab.Icon className="w-3.5 h-3.5" />
-                        {tab.label}
+                        <meta.Icon className={cn("w-4 h-4", !active && meta.color)} strokeWidth={2} />
+                        <span className="truncate">{meta.label.replace(' Rules', '')}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-xs text-zinc-400 mb-1.5">Severity</label>
+                <div className="grid grid-cols-3 gap-2">
+                  {RULE_SEVERITIES.map(severity => {
+                    const meta = RULE_SEVERITY_META[severity];
+                    const active = (newRule.severity || 'warning') === severity;
+                    return (
+                      <button
+                        key={severity}
+                        type="button"
+                        onClick={() => setNewRule(prev => ({ ...prev, severity }))}
+                        className={cn(
+                          "flex items-center justify-center gap-1.5 py-2 px-2 rounded-lg border text-xs font-medium transition-colors",
+                          active ? meta.badge : 'bg-zinc-900 border-zinc-700 text-zinc-400 hover:bg-zinc-700 hover:text-white'
+                        )}
+                      >
+                        <span className={cn("w-1.5 h-1.5 rounded-full flex-shrink-0", meta.dot)} />
+                        {meta.label}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            </div>
+
+            {/* ================= SECTION 2: Rule Details ================= */}
+            <div className="bg-zinc-800 border border-zinc-700 p-4 rounded-xl space-y-3 shadow-[0_1px_0_0_rgba(255,255,255,0.02)_inset]">
+              <div className="flex items-center gap-2 pb-1">
+                <span className="text-[10px] font-bold text-cyan-400 font-mono tracking-widest">02</span>
+                <h4 className="text-xs font-semibold text-slate-300 uppercase tracking-wider">Rule Details</h4>
+              </div>
+              <div>
+                <label className="block text-xs text-zinc-400 mb-1.5">Rule Title</label>
+                <input type="text" value={newRule.title || ''} onChange={(e) => setNewRule(prev => ({ ...prev, title: e.target.value }))} placeholder="Never Move Stop Loss" className="w-full bg-zinc-900 border border-zinc-700 rounded-lg px-3 py-2.5 text-sm text-white focus:outline-none focus:border-zinc-600" />
+              </div>
+              <div>
+                <label className="block text-xs text-zinc-400 mb-1.5">Lesson Learned <span className="text-zinc-600">(shown as small muted subtext)</span></label>
+                <textarea value={newRule.description || ''} onChange={(e) => setNewRule(prev => ({ ...prev, description: e.target.value }))} placeholder="Moving SL cost me a $450 loss last Friday. Wait for the retest." rows={3} className="w-full bg-zinc-900 border border-zinc-700 rounded-lg px-3 py-2.5 text-sm text-white focus:outline-none focus:border-zinc-600 resize-none" />
+              </div>
+              <div>
+                <label className="block text-xs text-zinc-400 mb-1.5">Category <span className="text-zinc-600">(optional label)</span></label>
+                <input type="text" value={newRule.category || ''} onChange={(e) => setNewRule(prev => ({ ...prev, category: e.target.value }))} placeholder="e.g. Prop Firm Rule" className="w-full bg-zinc-900 border border-zinc-700 rounded-lg px-3 py-2.5 text-sm text-white focus:outline-none focus:border-zinc-600" />
+              </div>
+            </div>
+
+            {/* ================= SECTION 3: Appearance ================= */}
+            <div className="bg-zinc-800 border border-zinc-700 p-4 rounded-xl space-y-3 shadow-[0_1px_0_0_rgba(255,255,255,0.02)_inset]">
+              <div className="flex items-center gap-2 pb-1">
+                <span className="text-[10px] font-bold text-cyan-400 font-mono tracking-widest">03</span>
+                <h4 className="text-xs font-semibold text-slate-300 uppercase tracking-wider">Appearance</h4>
+              </div>
+
+              {/* Notion-style icon & color picker */}
+              <div className="relative">
+                <label className="block text-xs text-zinc-400 mb-1.5">Icon &amp; Color</label>
+                {(() => {
+                  const accent = getRuleAccent(newRule.color);
+                  const RuleIcon = getRuleIconComponent({ iconValue: newRule.iconValue, pillar: (newRule.pillar || 'risk') as RulePillar });
+                  return (
+                    <button
+                      type="button"
+                      onClick={() => setShowRuleIconPicker(v => !v)}
+                      className="w-full flex items-center gap-2.5 bg-zinc-900 border border-zinc-700 rounded-lg px-3 py-2.5 text-left hover:border-zinc-600 transition-colors"
+                    >
+                      <span className={cn("inline-flex items-center justify-center w-8 h-8 rounded-lg flex-shrink-0", accent.bg)}>
+                        {newRule.iconKind === 'emoji' && newRule.iconValue
+                          ? <span className="text-base leading-none">{newRule.iconValue}</span>
+                          : <RuleIcon className={cn("w-4 h-4", accent.text)} strokeWidth={2.5} />}
+                      </span>
+                      <span className="text-sm text-white flex-1">Customize icon &amp; accent color</span>
+                      <ChevronDown className={cn("w-4 h-4 text-zinc-500 transition-transform flex-shrink-0", showRuleIconPicker && "rotate-180")} />
+                    </button>
+                  );
+                })()}
+
+                {showRuleIconPicker && (
+                  <div className="relative mt-2 bg-zinc-900 border border-zinc-700 rounded-lg p-3 space-y-3" onClick={(e) => e.stopPropagation()}>
+                    {/* Tabs */}
+                    <div className="flex items-center gap-1 bg-zinc-950 rounded-lg p-1">
+                      {([
+                        { id: 'emoji' as const, label: 'Emoji', Icon: Smile },
+                        { id: 'icons' as const, label: 'Icons', Icon: Star },
+                        { id: 'color' as const, label: 'Custom Color', Icon: Palette },
+                      ]).map(tab => (
+                        <button
+                          key={tab.id}
+                          type="button"
+                          onClick={() => setRuleIconPickerTab(tab.id)}
+                          className={cn(
+                            "flex-1 flex items-center justify-center gap-1.5 py-1.5 rounded-md text-[11px] font-medium transition-colors",
+                            ruleIconPickerTab === tab.id ? 'bg-zinc-700 text-white' : 'text-zinc-400 hover:text-white'
+                          )}
+                        >
+                          <tab.Icon className="w-3.5 h-3.5" />
+                          {tab.label}
+                        </button>
+                      ))}
+                    </div>
+
+                    {ruleIconPickerTab === 'emoji' && (
+                      <div className="grid grid-cols-8 gap-1.5">
+                        {RULE_EMOJI_OPTIONS.map(emoji => (
+                          <button
+                            key={emoji}
+                            type="button"
+                            onClick={() => setNewRule(prev => ({ ...prev, iconKind: 'emoji', iconValue: emoji }))}
+                            className={cn(
+                              "w-8 h-8 flex items-center justify-center rounded-md text-base transition-colors",
+                              newRule.iconKind === 'emoji' && newRule.iconValue === emoji ? 'bg-zinc-600' : 'hover:bg-zinc-700'
+                            )}
+                          >
+                            {emoji}
+                          </button>
+                        ))}
+                      </div>
+                    )}
+
+                    {ruleIconPickerTab === 'icons' && (
+                      <div className="grid grid-cols-8 gap-1.5">
+                        {RULE_ICON_OPTIONS.map(iconName => {
+                          const IconComp = RULE_ICON_MAP[iconName];
+                          const active = newRule.iconKind !== 'emoji' && newRule.iconValue === iconName;
+                          return (
+                            <button
+                              key={iconName}
+                              type="button"
+                              title={iconName}
+                              onClick={() => setNewRule(prev => ({ ...prev, iconKind: 'icon', iconValue: iconName }))}
+                              className={cn(
+                                "w-8 h-8 flex items-center justify-center rounded-md transition-colors",
+                                active ? 'bg-zinc-600 text-white' : 'text-zinc-400 hover:bg-zinc-700 hover:text-white'
+                              )}
+                            >
+                              <IconComp className="w-4 h-4" strokeWidth={2} />
+                            </button>
+                          );
+                        })}
+                      </div>
+                    )}
+
+                    {ruleIconPickerTab === 'color' && (
+                      <div className="flex flex-wrap gap-2.5">
+                        {RULE_ACCENT_PALETTE.map(c => (
+                          <button
+                            key={c.id}
+                            type="button"
+                            onClick={() => setNewRule(prev => ({ ...prev, color: c.id }))}
+                            title={c.label}
+                            className={cn(
+                              "flex flex-col items-center gap-1.5 transition-transform",
+                              newRule.color === c.id && "scale-105"
+                            )}
+                          >
+                            <span className={cn(
+                              "w-7 h-7 rounded-full",
+                              c.dot,
+                              newRule.color === c.id && cn("ring-2 ring-offset-2 ring-offset-zinc-900", c.ring)
+                            )} />
+                            <span className="text-[10px] text-zinc-400">{c.label}</span>
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+
+              {/* Bullet type + text size customization */}
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs text-zinc-400 mb-1.5">List Style</label>
+                  <div className="flex flex-col gap-1.5">
+                    {RULE_BULLET_STYLES.map(b => (
+                      <button
+                        key={b.id}
+                        type="button"
+                        onClick={() => setNewRule(prev => ({ ...prev, bulletStyle: b.id }))}
+                        className={cn(
+                          "flex items-center gap-2 px-2.5 py-1.5 rounded-lg border text-xs font-medium transition-colors text-left",
+                          (newRule.bulletStyle || 'bullet') === b.id ? 'bg-white text-black border-white' : 'bg-zinc-900 border-zinc-700 text-zinc-400 hover:bg-zinc-700 hover:text-white'
+                        )}
+                      >
+                        {b.id === 'bullet' && '•'}
+                        {b.id === 'number' && '1.'}
+                        {b.id === 'icon' && <Star className="w-3 h-3" />}
+                        {b.label}
                       </button>
                     ))}
                   </div>
-
-                  {ruleIconPickerTab === 'emoji' && (
-                    <div className="grid grid-cols-8 gap-1.5">
-                      {RULE_EMOJI_OPTIONS.map(emoji => (
-                        <button
-                          key={emoji}
-                          type="button"
-                          onClick={() => setNewRule(prev => ({ ...prev, iconKind: 'emoji', iconValue: emoji }))}
-                          className={cn(
-                            "w-8 h-8 flex items-center justify-center rounded-md text-base transition-colors",
-                            newRule.iconKind === 'emoji' && newRule.iconValue === emoji ? 'bg-zinc-600' : 'hover:bg-zinc-700'
-                          )}
-                        >
-                          {emoji}
-                        </button>
-                      ))}
-                    </div>
-                  )}
-
-                  {ruleIconPickerTab === 'icons' && (
-                    <div className="grid grid-cols-8 gap-1.5">
-                      {RULE_ICON_OPTIONS.map(iconName => {
-                        const IconComp = RULE_ICON_MAP[iconName];
-                        const active = newRule.iconKind !== 'emoji' && newRule.iconValue === iconName;
-                        return (
-                          <button
-                            key={iconName}
-                            type="button"
-                            title={iconName}
-                            onClick={() => setNewRule(prev => ({ ...prev, iconKind: 'icon', iconValue: iconName }))}
-                            className={cn(
-                              "w-8 h-8 flex items-center justify-center rounded-md transition-colors",
-                              active ? 'bg-zinc-600 text-white' : 'text-zinc-400 hover:bg-zinc-700 hover:text-white'
-                            )}
-                          >
-                            <IconComp className="w-4 h-4" strokeWidth={2} />
-                          </button>
-                        );
-                      })}
-                    </div>
-                  )}
-
-                  {ruleIconPickerTab === 'color' && (
-                    <div className="flex flex-wrap gap-2.5">
-                      {RULE_ACCENT_PALETTE.map(c => (
-                        <button
-                          key={c.id}
-                          type="button"
-                          onClick={() => setNewRule(prev => ({ ...prev, color: c.id }))}
-                          title={c.label}
-                          className={cn(
-                            "flex flex-col items-center gap-1.5 transition-transform",
-                            newRule.color === c.id && "scale-105"
-                          )}
-                        >
-                          <span className={cn(
-                            "w-7 h-7 rounded-full",
-                            c.dot,
-                            newRule.color === c.id && cn("ring-2 ring-offset-2 ring-offset-zinc-800", c.ring)
-                          )} />
-                          <span className="text-[10px] text-zinc-400">{c.label}</span>
-                        </button>
-                      ))}
-                    </div>
-                  )}
                 </div>
-              )}
-            </div>
-
-            <div>
-              <label className="block text-sm text-zinc-400 mb-2">Rule Title</label>
-              <input type="text" value={newRule.title || ''} onChange={(e) => setNewRule(prev => ({ ...prev, title: e.target.value }))} placeholder="Never Move Stop Loss" className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2.5 text-white focus:outline-none focus:border-zinc-600" />
-            </div>
-            <div>
-              <label className="block text-sm text-zinc-400 mb-2">Lesson Learned <span className="text-zinc-600">(shown as small muted subtext)</span></label>
-              <textarea value={newRule.description || ''} onChange={(e) => setNewRule(prev => ({ ...prev, description: e.target.value }))} placeholder="Moving SL cost me a $450 loss last Friday. Wait for the retest." rows={3} className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2.5 text-white focus:outline-none focus:border-zinc-600 resize-none" />
-            </div>
-            <div>
-              <label className="block text-sm text-zinc-400 mb-2">Category <span className="text-zinc-600">(optional label)</span></label>
-              <input type="text" value={newRule.category || ''} onChange={(e) => setNewRule(prev => ({ ...prev, category: e.target.value }))} placeholder="e.g. Prop Firm Rule" className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2.5 text-white focus:outline-none focus:border-zinc-600" />
-            </div>
-
-            {/* Bullet type + text size customization */}
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <label className="block text-sm text-zinc-400 mb-2">List Style</label>
-                <div className="flex flex-col gap-1.5">
-                  {RULE_BULLET_STYLES.map(b => (
-                    <button
-                      key={b.id}
-                      type="button"
-                      onClick={() => setNewRule(prev => ({ ...prev, bulletStyle: b.id }))}
-                      className={cn(
-                        "flex items-center gap-2 px-2.5 py-1.5 rounded-lg border text-xs font-medium transition-colors text-left",
-                        (newRule.bulletStyle || 'bullet') === b.id ? 'bg-white text-black border-white' : 'bg-zinc-800 border-zinc-700 text-zinc-400 hover:bg-zinc-700 hover:text-white'
-                      )}
-                    >
-                      {b.id === 'bullet' && '•'}
-                      {b.id === 'number' && '1.'}
-                      {b.id === 'icon' && <Star className="w-3 h-3" />}
-                      {b.label}
-                    </button>
-                  ))}
-                </div>
-              </div>
-              <div>
-                <label className="block text-sm text-zinc-400 mb-2">Text Size</label>
-                <div className="flex flex-col gap-1.5">
-                  {RULE_TEXT_SIZES.map(s => (
-                    <button
-                      key={s.id}
-                      type="button"
-                      onClick={() => setNewRule(prev => ({ ...prev, textSize: s.id }))}
-                      className={cn(
-                        "flex items-center gap-2 px-2.5 py-1.5 rounded-lg border font-medium transition-colors text-left",
-                        s.id === 'large' ? 'text-sm' : 'text-xs',
-                        (newRule.textSize || 'normal') === s.id ? 'bg-white text-black border-white' : 'bg-zinc-800 border-zinc-700 text-zinc-400 hover:bg-zinc-700 hover:text-white'
-                      )}
-                    >
-                      {s.label}
-                    </button>
-                  ))}
+                <div>
+                  <label className="block text-xs text-zinc-400 mb-1.5">Text Size</label>
+                  <div className="flex flex-col gap-1.5">
+                    {RULE_TEXT_SIZES.map(s => (
+                      <button
+                        key={s.id}
+                        type="button"
+                        onClick={() => setNewRule(prev => ({ ...prev, textSize: s.id }))}
+                        className={cn(
+                          "flex items-center gap-2 px-2.5 py-1.5 rounded-lg border font-medium transition-colors text-left",
+                          s.id === 'large' ? 'text-sm' : 'text-xs',
+                          (newRule.textSize || 'normal') === s.id ? 'bg-white text-black border-white' : 'bg-zinc-900 border-zinc-700 text-zinc-400 hover:bg-zinc-700 hover:text-white'
+                        )}
+                      >
+                        {s.label}
+                      </button>
+                    ))}
+                  </div>
                 </div>
               </div>
             </div>
