@@ -284,9 +284,9 @@ export function AddRuleModal() {
         className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-start justify-center overflow-y-auto p-4 py-8"
       >
         <div className="bg-zinc-900 border border-zinc-800 rounded-xl max-w-md w-full max-h-[90vh] flex flex-col" onClick={(e) => e.stopPropagation()}>
-          <div className="px-6 py-4 border-b border-zinc-800 flex items-center justify-between flex-shrink-0">
-            <h3 className="text-lg font-bold text-white truncate">{editingRuleId ? 'Edit Trading Rule' : 'Add Trading Rule'}</h3>
-            <button onClick={closeRuleModal} className="p-1 text-zinc-400 hover:text-white">
+          <div className="sticky top-0 bg-zinc-900 border-b border-zinc-800 px-6 py-4 flex items-center justify-between flex-shrink-0 z-20">
+            <h3 className="text-xl font-bold text-white truncate">{editingRuleId ? 'Edit Trading Rule' : 'Add Trading Rule'}</h3>
+            <button onClick={closeRuleModal} className="p-2 text-zinc-400 hover:text-white transition-colors">
               <X className="w-5 h-5" />
             </button>
           </div>
@@ -511,7 +511,23 @@ export function AddRuleModal() {
               </div>
             </div>
 
-            <button type="button" onClick={handleSaveRule} className="w-full py-2.5 bg-white hover:bg-zinc-200 text-black rounded-lg text-sm font-medium transition-colors">{editingRuleId ? 'Save Changes' : 'Add Rule'}</button>
+            <div className="flex justify-end gap-3 pt-4 border-t border-zinc-800">
+              <button
+                type="button"
+                onClick={closeRuleModal}
+                className="px-5 py-2 bg-zinc-800 hover:bg-zinc-700 text-white rounded-lg text-sm transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleSaveRule}
+                className="flex items-center gap-2 px-5 py-2 bg-white hover:bg-zinc-200 text-black rounded-lg text-sm font-medium transition-colors"
+              >
+                <Save className="w-4 h-4" />
+                {editingRuleId ? 'Save Changes' : 'Add Rule'}
+              </button>
+            </div>
           </div>
         </div>
       </ModalBackdrop>
@@ -741,12 +757,12 @@ export function ManageRulesModal() {
         className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-start justify-center overflow-y-auto p-4 py-8"
       >
         <div className="bg-zinc-900 border border-zinc-800 rounded-xl max-w-3xl w-full max-h-[90vh] flex flex-col" onClick={(e) => e.stopPropagation()}>
-          <div className="px-6 py-4 border-b border-zinc-800 flex items-center justify-between flex-shrink-0">
+          <div className="sticky top-0 bg-zinc-900 border-b border-zinc-800 px-6 py-4 flex items-center justify-between flex-shrink-0 z-20">
             <div className="flex items-center gap-2 min-w-0">
               <ShieldCheck className="w-5 h-5 text-emerald-400 flex-shrink-0" strokeWidth={2} />
-              <h3 className="text-lg font-bold text-white truncate">Manage Rules</h3>
+              <h3 className="text-xl font-bold text-white truncate">Manage Rules</h3>
             </div>
-            <button onClick={() => setShowManageRulesModal(false)} className="p-1 text-zinc-400 hover:text-white">
+            <button onClick={() => setShowManageRulesModal(false)} className="p-2 text-zinc-400 hover:text-white transition-colors">
               <X className="w-5 h-5" />
             </button>
           </div>
@@ -913,8 +929,8 @@ export function AddPillarModal() {
       >
         <div className="bg-zinc-900 border border-zinc-800 rounded-xl max-w-sm w-full" onClick={(e) => e.stopPropagation()}>
           <div className="px-6 py-4 border-b border-zinc-800 flex items-center justify-between">
-            <h3 className="text-lg font-bold text-white truncate">Add Pillar</h3>
-            <button onClick={closeAddPillarModal} className="p-1 text-zinc-400 hover:text-white">
+            <h3 className="text-xl font-bold text-white truncate">Add Pillar</h3>
+            <button onClick={closeAddPillarModal} className="p-2 text-zinc-400 hover:text-white transition-colors">
               <X className="w-5 h-5" />
             </button>
           </div>
@@ -975,14 +991,24 @@ export function AddPillarModal() {
               </div>
             </div>
 
-            <button
-              type="button"
-              onClick={handleAddPillar}
-              disabled={!(newPillar.label || '').trim()}
-              className="w-full py-2.5 bg-white hover:bg-zinc-200 disabled:opacity-40 disabled:hover:bg-white text-black rounded-lg text-sm font-medium transition-colors"
-            >
-              Add Pillar
-            </button>
+            <div className="flex justify-end gap-3 pt-4 border-t border-zinc-800">
+              <button
+                type="button"
+                onClick={closeAddPillarModal}
+                className="px-5 py-2 bg-zinc-800 hover:bg-zinc-700 text-white rounded-lg text-sm transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleAddPillar}
+                disabled={!(newPillar.label || '').trim()}
+                className="flex items-center gap-2 px-5 py-2 bg-white hover:bg-zinc-200 disabled:opacity-30 disabled:cursor-not-allowed text-black rounded-lg text-sm font-medium transition-colors"
+              >
+                <Save className="w-4 h-4" />
+                Add Pillar
+              </button>
+            </div>
           </div>
         </div>
       </ModalBackdrop>
