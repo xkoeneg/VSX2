@@ -291,138 +291,152 @@ export function AddStrategyModal() {
         className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-start justify-center overflow-y-auto p-4 py-8"
       >
         <div className="bg-zinc-900 border border-zinc-800 rounded-xl max-w-lg w-full max-h-[90vh] flex flex-col" onClick={(e) => e.stopPropagation()}>
-          <div className="px-6 py-4 border-b border-zinc-800 flex items-center justify-between flex-shrink-0">
-            <h3 className="text-lg font-bold text-white truncate">{editingStrategyId ? 'Edit Strategy Model' : 'Add Strategy Model'}</h3>
-            <button onClick={closeStrategyModal} className="p-1 text-zinc-400 hover:text-white">
+          <div className="sticky top-0 bg-zinc-900 border-b border-zinc-800 px-6 py-4 flex items-center justify-between flex-shrink-0 z-20">
+            <h3 className="text-xl font-bold text-white truncate">{editingStrategyId ? 'Edit Strategy Model' : 'Add Strategy Model'}</h3>
+            <button onClick={closeStrategyModal} className="p-2 text-zinc-400 hover:text-white transition-colors">
               <X className="w-5 h-5" />
             </button>
           </div>
-          <div className="p-6 space-y-5 overflow-y-auto">
-            {/* MAIN COVER / A+ CHART EXAMPLE — supports multiple images, shown as a
-                full-width carousel in Preview Mode; first image doubles as the
-                gallery thumbnail */}
-            <div>
-              <div className="flex items-center justify-between mb-2">
-                <label className="block text-sm text-zinc-400">Main Cover — Ideal A+ Chart Example(s)</label>
-                {newStrategy.images.length > 0 && (
-                  <span className="text-xs text-zinc-600">{newStrategy.images.length} image{newStrategy.images.length === 1 ? '' : 's'}</span>
-                )}
+          <div className="p-6 space-y-4 overflow-y-auto">
+            {/* ================= SECTION 1: Main Cover ================= */}
+            <div className="bg-zinc-800 border border-zinc-700 p-4 rounded-xl space-y-3 shadow-[0_1px_0_0_rgba(255,255,255,0.02)_inset]">
+              <div className="flex items-center gap-2 pb-1">
+                <span className="text-[10px] font-bold text-cyan-400 font-mono tracking-widest">01</span>
+                <h4 className="text-xs font-semibold text-slate-300 uppercase tracking-wider">Main Cover</h4>
               </div>
-              <div className="grid grid-cols-3 gap-2">
-                {newStrategy.images.map((img, imgIdx) => (
-                  <div
-                    key={img.id}
-                    draggable
-                    onDragStart={(e) => {
-                      setDraggingCoverImageId(img.id);
-                      e.dataTransfer.effectAllowed = 'move';
-                      e.dataTransfer.setData('text/plain', img.id);
-                    }}
-                    onDragEnd={() => { setDraggingCoverImageId(null); setDragOverCoverImageId(null); }}
-                    onDragOver={(e) => { e.preventDefault(); e.dataTransfer.dropEffect = 'move'; }}
-                    onDragEnter={() => setDragOverCoverImageId(img.id)}
-                    onDragLeave={() => setDragOverCoverImageId(prev => (prev === img.id ? null : prev))}
-                    onDrop={(e) => {
-                      e.preventDefault();
-                      const draggedId = e.dataTransfer.getData('text/plain');
-                      moveStrategyImage(draggedId, img.id);
-                      setDraggingCoverImageId(null);
-                      setDragOverCoverImageId(null);
-                    }}
-                    onClick={() => setLightboxImage(img.url)}
-                    title="Drag to reorder — click to view larger"
-                    className={cn(
-                      "relative aspect-video rounded-lg overflow-hidden border bg-zinc-950 group cursor-grab active:cursor-grabbing transition-all",
-                      dragOverCoverImageId === img.id ? "border-sky-400 ring-2 ring-sky-400/60" : "border-zinc-700",
-                      draggingCoverImageId === img.id && "opacity-40"
-                    )}
-                  >
-                    <img src={img.url} alt="Cover screenshot" className="w-full h-full object-cover pointer-events-none" />
-                    <div className="absolute top-1 left-1 flex items-center gap-0.5 px-1 py-0.5 rounded bg-black/70 text-white text-[9px] font-semibold pointer-events-none">
-                      <GripVertical className="w-2.5 h-2.5" />
-                      {imgIdx + 1}
-                    </div>
-                    <button
-                      type="button"
-                      onClick={(e) => { e.stopPropagation(); removeStrategyImage(img.id); }}
-                      title="Remove image"
-                      className="absolute top-1 right-1 p-1 rounded-full bg-black/70 text-white opacity-0 group-hover:opacity-100 focus:opacity-100 transition-opacity"
-                    >
-                      <X className="w-3 h-3" />
-                    </button>
-                  </div>
-                ))}
-                <button
-                  type="button"
-                  onClick={() => strategyImageInputRef.current?.click()}
-                  className="aspect-video rounded-lg border border-dashed border-zinc-700 hover:border-zinc-500 flex flex-col items-center justify-center gap-1 text-zinc-500 hover:text-zinc-300 transition-all bg-zinc-950"
-                >
-                  <ImagePlus className="w-4 h-4" />
-                  <span className="text-[10px] text-center leading-tight px-1">{newStrategy.images.length > 0 ? 'Add more' : 'Upload chart example(s)'}</span>
-                </button>
-              </div>
-              <input ref={strategyImageInputRef} type="file" accept="image/*" multiple className="hidden" onChange={handleStrategyImagesPick} />
-              <p className="text-xs text-zinc-600 mt-1.5">
-                {newStrategy.images.length > 1
-                  ? 'Drag a photo to reorder — the first one becomes the gallery thumbnail and opening slide.'
-                  : "This becomes the strategy's thumbnail on the Playbook gallery card."}
-              </p>
-            </div>
-
-            {/* BASIC INFO */}
-            <div>
-              <label className="block text-sm text-zinc-400 mb-2">Strategy Title</label>
-              <input type="text" value={newStrategy.title} onChange={(e) => setNewStrategy(prev => ({ ...prev, title: e.target.value }))} placeholder="NY Open Liquidity Sweep" className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2.5 text-white focus:outline-none focus:border-zinc-600" />
-            </div>
-            <div>
-              <label className="block text-sm text-zinc-400 mb-2">Description <span className="text-zinc-600">(optional)</span></label>
-              <textarea
-                value={newStrategy.description || ''}
-                onChange={(e) => setNewStrategy(prev => ({ ...prev, description: e.target.value }))}
-                placeholder="What is this strategy, and when do you use it?"
-                rows={3}
-                className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2.5 text-white focus:outline-none focus:border-zinc-600 placeholder-zinc-600 resize-none"
-              />
-            </div>
-
-            {marketFieldVisible ? (
+              {/* MAIN COVER / A+ CHART EXAMPLE — supports multiple images, shown as a
+                  full-width carousel in Preview Mode; first image doubles as the
+                  gallery thumbnail */}
               <div>
                 <div className="flex items-center justify-between mb-2">
-                  <label className="block text-sm text-zinc-400">Market / Session <span className="text-zinc-600">(e.g. "NYC / NQ")</span></label>
+                  <label className="block text-xs text-zinc-400">Ideal A+ Chart Example(s)</label>
+                  {newStrategy.images.length > 0 && (
+                    <span className="text-xs text-zinc-600">{newStrategy.images.length} image{newStrategy.images.length === 1 ? '' : 's'}</span>
+                  )}
+                </div>
+                <div className="grid grid-cols-3 gap-2">
+                  {newStrategy.images.map((img, imgIdx) => (
+                    <div
+                      key={img.id}
+                      draggable
+                      onDragStart={(e) => {
+                        setDraggingCoverImageId(img.id);
+                        e.dataTransfer.effectAllowed = 'move';
+                        e.dataTransfer.setData('text/plain', img.id);
+                      }}
+                      onDragEnd={() => { setDraggingCoverImageId(null); setDragOverCoverImageId(null); }}
+                      onDragOver={(e) => { e.preventDefault(); e.dataTransfer.dropEffect = 'move'; }}
+                      onDragEnter={() => setDragOverCoverImageId(img.id)}
+                      onDragLeave={() => setDragOverCoverImageId(prev => (prev === img.id ? null : prev))}
+                      onDrop={(e) => {
+                        e.preventDefault();
+                        const draggedId = e.dataTransfer.getData('text/plain');
+                        moveStrategyImage(draggedId, img.id);
+                        setDraggingCoverImageId(null);
+                        setDragOverCoverImageId(null);
+                      }}
+                      onClick={() => setLightboxImage(img.url)}
+                      title="Drag to reorder — click to view larger"
+                      className={cn(
+                        "relative aspect-video rounded-lg overflow-hidden border bg-zinc-950 group cursor-grab active:cursor-grabbing transition-all",
+                        dragOverCoverImageId === img.id ? "border-sky-400 ring-2 ring-sky-400/60" : "border-zinc-700",
+                        draggingCoverImageId === img.id && "opacity-40"
+                      )}
+                    >
+                      <img src={img.url} alt="Cover screenshot" className="w-full h-full object-cover pointer-events-none" />
+                      <div className="absolute top-1 left-1 flex items-center gap-0.5 px-1 py-0.5 rounded bg-black/70 text-white text-[9px] font-semibold pointer-events-none">
+                        <GripVertical className="w-2.5 h-2.5" />
+                        {imgIdx + 1}
+                      </div>
+                      <button
+                        type="button"
+                        onClick={(e) => { e.stopPropagation(); removeStrategyImage(img.id); }}
+                        title="Remove image"
+                        className="absolute top-1 right-1 p-1 rounded-full bg-black/70 text-white opacity-0 group-hover:opacity-100 focus:opacity-100 transition-opacity"
+                      >
+                        <X className="w-3 h-3" />
+                      </button>
+                    </div>
+                  ))}
                   <button
                     type="button"
-                    onClick={() => { setShowMarketField(false); setNewStrategy(prev => ({ ...prev, market: '' })); }}
-                    className="text-xs text-zinc-500 hover:text-rose-400 transition-colors"
+                    onClick={() => strategyImageInputRef.current?.click()}
+                    className="aspect-video rounded-lg border border-dashed border-zinc-700 hover:border-zinc-500 flex flex-col items-center justify-center gap-1 text-zinc-500 hover:text-zinc-300 transition-all bg-zinc-950"
                   >
-                    Remove
+                    <ImagePlus className="w-4 h-4" />
+                    <span className="text-[10px] text-center leading-tight px-1">{newStrategy.images.length > 0 ? 'Add more' : 'Upload chart example(s)'}</span>
                   </button>
                 </div>
-                <input type="text" value={newStrategy.market} onChange={(e) => setNewStrategy(prev => ({ ...prev, market: e.target.value }))} placeholder="NYC / NQ" className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2.5 text-white focus:outline-none focus:border-zinc-600" />
+                <input ref={strategyImageInputRef} type="file" accept="image/*" multiple className="hidden" onChange={handleStrategyImagesPick} />
+                <p className="text-xs text-zinc-600 mt-1.5">
+                  {newStrategy.images.length > 1
+                    ? 'Drag a photo to reorder — the first one becomes the gallery thumbnail and opening slide.'
+                    : "This becomes the strategy's thumbnail on the Playbook gallery card."}
+                </p>
               </div>
-            ) : (
-              <button
-                type="button"
-                onClick={() => setShowMarketField(true)}
-                className="w-full flex items-center justify-center gap-1.5 py-2 rounded-lg border border-dashed border-zinc-700 hover:border-zinc-500 text-xs text-zinc-500 hover:text-zinc-300 transition-colors"
-              >
-                <Plus className="w-3.5 h-3.5" />
-                Add Market / Session
-              </button>
-            )}
+            </div>
 
-            {/* DYNAMIC STEP-BY-STEP EXECUTION BUILDER */}
-            <div>
-              <div className="flex items-center justify-between mb-2">
-                <label className="block text-sm text-zinc-400">Step-by-Step Execution Builder</label>
+            {/* ================= SECTION 2: Strategy Details ================= */}
+            <div className="bg-zinc-800 border border-zinc-700 p-4 rounded-xl space-y-3 shadow-[0_1px_0_0_rgba(255,255,255,0.02)_inset]">
+              <div className="flex items-center gap-2 pb-1">
+                <span className="text-[10px] font-bold text-cyan-400 font-mono tracking-widest">02</span>
+                <h4 className="text-xs font-semibold text-slate-300 uppercase tracking-wider">Strategy Details</h4>
+              </div>
+              <div>
+                <label className="block text-xs text-zinc-400 mb-1.5">Strategy Title</label>
+                <input type="text" value={newStrategy.title} onChange={(e) => setNewStrategy(prev => ({ ...prev, title: e.target.value }))} placeholder="NY Open Liquidity Sweep" className="w-full bg-zinc-900 border border-zinc-700 rounded-lg px-3 py-2.5 text-sm text-white focus:outline-none focus:border-zinc-600" />
+              </div>
+              <div>
+                <label className="block text-xs text-zinc-400 mb-1.5">Description <span className="text-zinc-600">(optional)</span></label>
+                <textarea
+                  value={newStrategy.description || ''}
+                  onChange={(e) => setNewStrategy(prev => ({ ...prev, description: e.target.value }))}
+                  placeholder="What is this strategy, and when do you use it?"
+                  rows={3}
+                  className="w-full bg-zinc-900 border border-zinc-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-zinc-600 placeholder-zinc-600 resize-none"
+                />
+              </div>
+
+              {marketFieldVisible ? (
+                <div>
+                  <div className="flex items-center justify-between mb-1.5">
+                    <label className="block text-xs text-zinc-400">Market / Session <span className="text-zinc-600">(e.g. "NYC / NQ")</span></label>
+                    <button
+                      type="button"
+                      onClick={() => { setShowMarketField(false); setNewStrategy(prev => ({ ...prev, market: '' })); }}
+                      className="text-xs text-zinc-500 hover:text-rose-400 transition-colors"
+                    >
+                      Remove
+                    </button>
+                  </div>
+                  <input type="text" value={newStrategy.market} onChange={(e) => setNewStrategy(prev => ({ ...prev, market: e.target.value }))} placeholder="NYC / NQ" className="w-full bg-zinc-900 border border-zinc-700 rounded-lg px-3 py-2.5 text-sm text-white focus:outline-none focus:border-zinc-600" />
+                </div>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => setShowMarketField(true)}
+                  className="w-full flex items-center justify-center gap-1.5 py-2 rounded-lg border border-dashed border-zinc-700 hover:border-zinc-500 text-xs text-zinc-500 hover:text-zinc-300 transition-colors"
+                >
+                  <Plus className="w-3.5 h-3.5" />
+                  Add Market / Session
+                </button>
+              )}
+            </div>
+
+            {/* ================= SECTION 3: Step-by-Step Execution Builder ================= */}
+            <div className="bg-zinc-800 border border-zinc-700 p-4 rounded-xl space-y-3 shadow-[0_1px_0_0_rgba(255,255,255,0.02)_inset]">
+              <div className="flex items-center gap-2 pb-1">
+                <span className="text-[10px] font-bold text-cyan-400 font-mono tracking-widest">03</span>
+                <h4 className="text-xs font-semibold text-slate-300 uppercase tracking-wider">Step-by-Step Execution Builder</h4>
                 {newStrategy.steps.length > 0 && (
-                  <span className="text-xs text-zinc-600">{newStrategy.steps.length} step{newStrategy.steps.length === 1 ? '' : 's'}</span>
+                  <span className="text-xs text-zinc-600 ml-auto">{newStrategy.steps.length} step{newStrategy.steps.length === 1 ? '' : 's'}</span>
                 )}
               </div>
 
               {newStrategy.steps.length > 0 && (
-                <div className="space-y-3 mb-3">
+                <div className="space-y-3">
                   {newStrategy.steps.map((step, idx) => (
-                    <div key={step.id} className="rounded-lg border border-zinc-700 bg-zinc-800/40 p-3 space-y-2.5">
+                    <div key={step.id} className="rounded-lg border border-zinc-700 bg-zinc-900/60 p-3 space-y-2.5">
                       <div className="flex items-center justify-between">
                         <span className="text-xs font-bold uppercase tracking-wider text-zinc-400">Step {idx + 1}</span>
                         <button
@@ -439,7 +453,7 @@ export function AddStrategyModal() {
                         value={step.title}
                         onChange={(e) => updateStrategyStep(step.id, 'title', e.target.value)}
                         placeholder={`Step ${idx + 1}: Asian High Sweep & MSS`}
-                        className="w-full bg-zinc-900 border border-zinc-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-zinc-600"
+                        className="w-full bg-zinc-950 border border-zinc-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-zinc-600"
                       />
                       <textarea
                         ref={(el) => { if (el) { el.style.height = 'auto'; el.style.height = `${el.scrollHeight}px`; } }}
@@ -452,7 +466,7 @@ export function AddStrategyModal() {
                         }}
                         placeholder="Notes / checklist rule for this step..."
                         rows={2}
-                        className="w-full bg-zinc-900 border border-zinc-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-zinc-600 resize-none overflow-hidden"
+                        className="w-full bg-zinc-950 border border-zinc-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-zinc-600 resize-none overflow-hidden"
                       />
                       <div>
                         <div className="grid grid-cols-3 gap-2">
@@ -535,7 +549,24 @@ export function AddStrategyModal() {
               </button>
             </div>
 
-            <button type="button" onClick={handleSaveStrategy} disabled={!newStrategy.title.trim()} className="w-full py-2.5 bg-white hover:bg-zinc-200 disabled:opacity-30 disabled:cursor-not-allowed text-black rounded-lg text-sm font-medium transition-colors">{editingStrategyId ? 'Save Changes' : 'Add Strategy Model'}</button>
+            <div className="flex justify-end gap-3 pt-4 border-t border-zinc-800">
+              <button
+                type="button"
+                onClick={closeStrategyModal}
+                className="px-5 py-2 bg-zinc-800 hover:bg-zinc-700 text-white rounded-lg text-sm transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleSaveStrategy}
+                disabled={!newStrategy.title.trim()}
+                className="flex items-center gap-2 px-5 py-2 bg-white hover:bg-zinc-200 disabled:opacity-30 disabled:cursor-not-allowed text-black rounded-lg text-sm font-medium transition-colors"
+              >
+                <Save className="w-4 h-4" />
+                {editingStrategyId ? 'Save Changes' : 'Add Strategy Model'}
+              </button>
+            </div>
           </div>
         </div>
       </ModalBackdrop>
