@@ -16,11 +16,12 @@ import {
   BarChart3,
   Check,
   Image as ImageIcon,
+  Search,
 } from 'lucide-react';
 import { supabase } from '../lib/supabaseClient';
 import { cn } from '../utils/format';
 import { SessionBadge } from '../components/shared/SessionBadge';
-import { SESSION_SHORT_LABEL } from '../constants/trading';
+import { SESSION_OPTIONS, SESSION_SHORT_LABEL } from '../constants/trading';
 
 // ============================================================================
 // PreviewScreen — the `/preview/[user_id]` destination.
@@ -613,12 +614,45 @@ function UnlockedPreview({
 
   const [tradeFilter, setTradeFilter] = useState<PreviewTradeFilter>('all');
 
+  // Extra filter bar — mirrors TradesScreen.tsx's Database view filters
+  // (dbSearch / dbAccountFilter / dbSessionFilter / dbRulesFilter). The
+  // outcome filter reuses the existing `tradeFilter` state above (same
+  // three options the analytics card's W/L/BE chips already control) rather
+  // than duplicating it as a separate dbOutcomeFilter.
+  const [dbSearch, setDbSearch] = useState('');
+  const [dbAccountFilter, setDbAccountFilter] = useState('all');
+  const [dbSessionFilter, setDbSessionFilter] = useState('all');
+  const [dbRulesFilter, setDbRulesFilter] = useState<'all' | 'followed' | 'broken'>('all');
+
+  const activeDbFilterCount =
+    (dbSearch.trim() ? 1 : 0) +
+    (dbAccountFilter !== 'all' ? 1 : 0) +
+    (dbSessionFilter !== 'all' ? 1 : 0) +
+    (dbRulesFilter !== 'all' ? 1 : 0);
+
+  const resetDbFilters = () => {
+    setDbSearch('');
+    setDbAccountFilter('all');
+    setDbSessionFilter('all');
+    setDbRulesFilter('all');
+  };
+
   const filteredSortedTrades = useMemo(() => {
-    if (tradeFilter === 'all') return sortedTrades;
-    if (tradeFilter === 'profit') return sortedTrades.filter(t => t.profitLoss >= 10);
-    if (tradeFilter === 'loss') return sortedTrades.filter(t => t.profitLoss <= -10);
-    return sortedTrades.filter(t => t.profitLoss > -10 && t.profitLoss < 10);
-  }, [sortedTrades, tradeFilter]);
+    const q = dbSearch.trim().toLowerCase();
+    return sortedTrades.filter(t => {
+      if (tradeFilter === 'profit' && !(t.profitLoss >= 10)) return false;
+      if (tradeFilter === 'loss' && !(t.profitLoss <= -10)) return false;
+      if (tradeFilter === 'breakeven' && !(t.profitLoss > -10 && t.profitLoss < 10)) return false;
+      if (dbAccountFilter !== 'all' && t.accountId !== dbAccountFilter) return false;
+      if (dbSessionFilter !== 'all' && t.session !== dbSessionFilter) return false;
+      if (dbRulesFilter !== 'all' && t.rulesFollowed !== dbRulesFilter) return false;
+      if (q) {
+        const haystack = [t.symbol, ...t.setupTypes, ...t.confluences].join(' ').toLowerCase();
+        if (!haystack.includes(q)) return false;
+      }
+      return true;
+    });
+  }, [sortedTrades, tradeFilter, dbAccountFilter, dbSessionFilter, dbRulesFilter, dbSearch]);
 
   // Table pagination — mirrors TradesScreen.tsx's Database view (dbPage /
   // dbPageCount / dbPagedTrades against DB_PAGE_SIZE), a fixed page of rows
@@ -634,7 +668,7 @@ function UnlockedPreview({
   // etc.) so we never get stuck on a now-out-of-range page.
   useEffect(() => {
     setTablePage(0);
-  }, [tradeFilter]);
+  }, [tradeFilter, dbAccountFilter, dbSessionFilter, dbRulesFilter, dbSearch]);
 
   const dailyStats = useMemo(() => {
     const map = new Map<string, { pnl: number; trades: number }>();
@@ -743,6 +777,70 @@ function UnlockedPreview({
             port of TradeFeaturedCard) instead of TradeFeaturedCard. */}
         <div>
           <h2 className="text-sm font-medium text-zinc-400 mb-3">Trade History</h2>
+
+          {/* Filter bar — ported 1:1 from TradesScreen.tsx's Database view
+              filter bar: same input/select styling and Clear pill. Account
+              filter uses a plain <select> here (vs. the main app's
+              multi-select dropdown) since this screen only ever needs a
+              single account at a time. Outcome isn't duplicated here — the
+              analytics card's W/L/BE chips above already drive `tradeFilter`,
+              which this bar's results already respect. */}
+          <div className="flex items-center gap-2 flex-wrap p-3 bg-zinc-900/40 border border-zinc-800/80 rounded-xl mb-4">
+            <div className="relative flex-1 min-w-[180px]">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-500 pointer-events-none" />
+              <input
+                type="text"
+                value={dbSearch}
+                onChange={(e) => setDbSearch(e.target.value)}
+                placeholder="Search trades..."
+                className="w-full pl-9 pr-3 py-2 bg-zinc-900 border border-white/10 rounded-lg text-sm text-white placeholder-zinc-500 focus:outline-none focus:border-indigo-500/50 transition-colors"
+              />
+            </div>
+            <select
+              value={dbAccountFilter}
+              onChange={(e) => setDbAccountFilter(e.target.value)}
+              className="px-3 py-2 bg-zinc-900 border border-white/10 rounded-lg text-sm text-zinc-300 focus:outline-none focus:border-indigo-500/50 transition-colors cursor-pointer"
+            >
+              <option value="all">All Accounts</option>
+              {data.accounts.map(a => (
+                <option key={a.id} value={a.id}>{a.name}</option>
+              ))}
+            </select>
+            <select
+              value={dbSessionFilter}
+              onChange={(e) => setDbSessionFilter(e.target.value)}
+              className="px-3 py-2 bg-zinc-900 border border-white/10 rounded-lg text-sm text-zinc-300 focus:outline-none focus:border-indigo-500/50 transition-colors cursor-pointer"
+            >
+              <option value="all">All Sessions</option>
+              {SESSION_OPTIONS.map(s => (
+                <option key={s} value={s}>{s}</option>
+              ))}
+            </select>
+            <select
+              value={dbRulesFilter}
+              onChange={(e) => setDbRulesFilter(e.target.value as 'all' | 'followed' | 'broken')}
+              className="px-3 py-2 bg-zinc-900 border border-white/10 rounded-lg text-sm text-zinc-300 focus:outline-none focus:border-indigo-500/50 transition-colors cursor-pointer"
+            >
+              <option value="all">All Rules</option>
+              <option value="followed">Rules Followed</option>
+              <option value="broken">Rules Broken</option>
+            </select>
+            {activeDbFilterCount > 0 && (
+              <button
+                type="button"
+                onClick={resetDbFilters}
+                className="flex items-center gap-1.5 px-3 py-2 text-xs text-zinc-400 hover:text-white transition-colors flex-shrink-0"
+              >
+                <X className="w-3.5 h-3.5" />
+                Clear ({activeDbFilterCount})
+              </button>
+            )}
+          </div>
+
+          <p className="text-sm text-zinc-500 mb-3">
+            {filteredSortedTrades.length} {filteredSortedTrades.length === 1 ? 'trade' : 'trades'}
+          </p>
+
           {filteredSortedTrades.length === 0 ? (
             <p className="text-sm text-zinc-600 py-8 text-center">
               {sortedTrades.length === 0 ? 'No trades to show yet.' : 'No trades match this filter.'}
