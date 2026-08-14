@@ -665,7 +665,10 @@ function UnlockedPreview({
               {sortedTrades.length === 0 ? 'No trades to show yet.' : 'No trades match this filter.'}
             </p>
           ) : (
-            <div className="bg-zinc-900/40 border border-zinc-800/80 rounded-2xl max-h-[520px] overflow-y-auto overscroll-contain scroll-smooth p-5 shadow-[0_20px_45px_rgba(0,0,0,0.5),inset_0_2px_12px_rgba(0,0,0,0.25)] scrollbar-thin scrollbar-thumb-zinc-700 scrollbar-track-transparent">
+            <div
+              className="preview-gallery-scroll bg-zinc-900/40 border border-zinc-800/80 rounded-2xl max-h-[520px] overflow-y-auto overscroll-contain scroll-smooth p-5 shadow-[0_20px_45px_rgba(0,0,0,0.5),inset_0_2px_12px_rgba(0,0,0,0.25)]"
+              style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
+            >
               <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
                 {filteredSortedTrades.map(trade => (
                   <PreviewFeaturedCard
@@ -689,6 +692,12 @@ function UnlockedPreview({
           onClose={() => setOpenTradeId(null)}
         />
       )}
+
+      {/* Hides the gallery frame's scrollbar in Chrome/Safari — `scrollbarWidth`
+          on the frame itself already handles Firefox. */}
+      <style>{`
+        .preview-gallery-scroll::-webkit-scrollbar { display: none; }
+      `}</style>
     </div>
   );
 }
