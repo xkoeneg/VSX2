@@ -678,8 +678,8 @@ export function ManageRulesModal() {
       <div className="min-w-0">
         <div className="flex items-center justify-between gap-2 mb-3">
           <div className="flex items-center gap-1.5 min-w-0">
-            <meta.Icon className={cn("w-4 h-4 flex-shrink-0", meta.color)} strokeWidth={2} />
-            <h4 className="text-xs font-bold uppercase tracking-wider text-zinc-400 break-words leading-snug">{getPillarShortLabel(pillar, customPillars)}</h4>
+            <meta.Icon className={cn("w-5 h-5 flex-shrink-0", meta.color)} strokeWidth={2} />
+            <h4 className="text-base font-bold uppercase tracking-wide text-white break-words leading-snug">{getPillarShortLabel(pillar, customPillars)}</h4>
           </div>
           <div className="flex items-center gap-0.5 flex-shrink-0">
             <button
