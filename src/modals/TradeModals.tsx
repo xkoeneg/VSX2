@@ -862,7 +862,7 @@ export function AccountModal() {
     cleanChallengeConfigDraft, saveChallengeConfigUpdate, resetChallengeProgress, saveChallengeConfig,
     tradeNumberAccountRef, accountFilteredTrades, filteredTrades, dbFilteredTrades, dbPageCount,
     dbPagedTrades, getDisplayTradeNumber, stats, equityData, ruleViolationCounts, calendarDays,
-    handleAddAccount, handleUpdateAccount, handleDeleteAccount, confirmDeleteAccount, handleImportTradesFile,
+    handleAddAccount, handleUpdateAccount, handleRecordPayoutReset, handleDeleteAccount, confirmDeleteAccount, handleImportTradesFile,
     handleAddTrade, openEditTrade, handleSaveEditedTrade, handleDeleteTrade, confirmDeleteTrade,
     handleSaveDetailNotes, handleSaveDisciplineReview, handleCancelRuleReviewEdit, closeRuleReviewModal,
     toggleTradeSelectMode, toggleTradeSelected, toggleSelectAllTrades, handleDeleteSelectedTrades,
@@ -885,6 +885,7 @@ export function AccountModal() {
 
     const isEditing = showEditAccount !== null;
     const currentAccount = isEditing ? editingAccount : newAccount;
+    const isFundedCFD = isEditing && currentAccount.tradingAccountType === 'CFD' && currentAccount.type === 'Funded';
 
     return (
       (showAddAccount || showEditAccount !== null) && (
@@ -1111,6 +1112,35 @@ export function AccountModal() {
                   </div>
                 )}
               </div>
+
+              {isFundedCFD && (
+                <div className="border-t border-zinc-800 pt-4">
+                  <div className="flex items-center justify-between gap-3 mb-1">
+                    <div>
+                      <p className="text-sm text-zinc-300">Payout / Reset Cycle</p>
+                      <p className="text-xs text-zinc-500 mt-0.5">
+                        {(currentAccount.payoutResetsCount || 0) > 0
+                          ? `${currentAccount.payoutResetsCount} payout${currentAccount.payoutResetsCount === 1 ? '' : 's'} recorded`
+                          : 'No payouts recorded yet'}
+                      </p>
+                    </div>
+                    <DollarSign className="w-5 h-5 text-amber-400 flex-shrink-0" />
+                  </div>
+                  <button
+                    onClick={() => {
+                      if (!editingAccount.id) return;
+                      const confirmed = window.confirm(
+                        'Record a payout and reset this account\'s balance back to its starting balance? Your trade history stays intact for lifetime analytics — only the live P&L / progress metrics reset.'
+                      );
+                      if (confirmed) handleRecordPayoutReset(editingAccount.id);
+                    }}
+                    className="w-full mt-2 py-2 border border-amber-500/30 bg-amber-500/10 hover:bg-amber-500/20 text-amber-400 rounded-lg text-sm font-medium transition-colors flex items-center justify-center gap-2"
+                  >
+                    <RefreshCw className="w-4 h-4" />
+                    Record Payout / Reset Cycle
+                  </button>
+                </div>
+              )}
 
               <button
                 onClick={isEditing ? handleUpdateAccount : handleAddAccount}
