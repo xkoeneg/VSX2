@@ -14,7 +14,6 @@ import {
   Target,
   Scale,
   BarChart3,
-  Check,
   Image as ImageIcon,
   Search,
 } from 'lucide-react';
@@ -338,14 +337,6 @@ function PreviewFeaturedCard({ trade, account, displayNumber, onOpenDetail }: Pr
             <span className="text-[10px]">No image</span>
           </div>
         )}
-        {/* Badge row at the bottom of the thumbnail — hidden entirely for unreviewed trades */}
-        {trade.rulesFollowed === 'followed' || trade.rulesFollowed === 'broken' ? (
-          <div className="absolute bottom-0 left-0 right-0 z-10 flex items-center justify-end gap-1.5 px-2.5 py-1.5 bg-gradient-to-t from-black/80 to-transparent">
-            <span className={cn('flex items-center justify-center w-4 h-4 rounded text-[9px] font-bold', trade.rulesFollowed === 'followed' ? 'bg-emerald-500 text-emerald-950' : 'bg-rose-500 text-rose-950')}>
-              {trade.rulesFollowed === 'followed' ? <Check className="w-2.5 h-2.5" /> : <X className="w-2.5 h-2.5" />}
-            </span>
-          </div>
-        ) : null}
       </div>
       <div className={cn('p-3.5 min-w-0 flex-1 flex flex-col transition-colors duration-200', outcomeCardClass)}>
         <div className="flex items-start justify-between gap-2">
@@ -615,29 +606,28 @@ function UnlockedPreview({
   const [tradeFilter, setTradeFilter] = useState<PreviewTradeFilter>('all');
 
   // Extra filter bar — mirrors TradesScreen.tsx's Database view filters
-  // (dbSearch / dbAccountFilter / dbSessionFilter / dbOutcomeFilter /
-  // dbRulesFilter). Outcome is rendered as its own "All Outcomes" dropdown
-  // here (matching TradesScreen 1:1) but bound to the same `tradeFilter`
-  // state the analytics card's W/L/BE chips already control, so both stay
-  // in sync instead of fighting over two separate variables.
+  // (dbSearch / dbAccountFilter / dbSessionFilter / dbOutcomeFilter).
+  // Outcome is rendered as its own "All Outcomes" dropdown here (matching
+  // TradesScreen 1:1) but bound to the same `tradeFilter` state the
+  // analytics card's W/L/BE chips already control, so both stay in sync
+  // instead of fighting over two separate variables. No Rules filter here —
+  // rules-followed/broken is intentionally never surfaced on this read-only
+  // screen (see PreviewTrade type note and PreviewTradeDetail below).
   const [dbSearch, setDbSearch] = useState('');
   const [dbAccountFilter, setDbAccountFilter] = useState('all');
   const [dbSessionFilter, setDbSessionFilter] = useState('all');
-  const [dbRulesFilter, setDbRulesFilter] = useState<'all' | 'followed' | 'broken'>('all');
 
   const activeDbFilterCount =
     (dbSearch.trim() ? 1 : 0) +
     (dbAccountFilter !== 'all' ? 1 : 0) +
     (dbSessionFilter !== 'all' ? 1 : 0) +
-    (tradeFilter !== 'all' ? 1 : 0) +
-    (dbRulesFilter !== 'all' ? 1 : 0);
+    (tradeFilter !== 'all' ? 1 : 0);
 
   const resetDbFilters = () => {
     setDbSearch('');
     setDbAccountFilter('all');
     setDbSessionFilter('all');
     setTradeFilter('all');
-    setDbRulesFilter('all');
   };
 
   const filteredSortedTrades = useMemo(() => {
@@ -648,14 +638,13 @@ function UnlockedPreview({
       if (tradeFilter === 'breakeven' && !(t.profitLoss > -10 && t.profitLoss < 10)) return false;
       if (dbAccountFilter !== 'all' && t.accountId !== dbAccountFilter) return false;
       if (dbSessionFilter !== 'all' && t.session !== dbSessionFilter) return false;
-      if (dbRulesFilter !== 'all' && t.rulesFollowed !== dbRulesFilter) return false;
       if (q) {
         const haystack = [t.symbol, ...t.setupTypes, ...t.confluences].join(' ').toLowerCase();
         if (!haystack.includes(q)) return false;
       }
       return true;
     });
-  }, [sortedTrades, tradeFilter, dbAccountFilter, dbSessionFilter, dbRulesFilter, dbSearch]);
+  }, [sortedTrades, tradeFilter, dbAccountFilter, dbSessionFilter, dbSearch]);
 
   // Table pagination — mirrors TradesScreen.tsx's Database view (dbPage /
   // dbPageCount / dbPagedTrades against DB_PAGE_SIZE), a fixed page of rows
@@ -671,7 +660,7 @@ function UnlockedPreview({
   // etc.) so we never get stuck on a now-out-of-range page.
   useEffect(() => {
     setTablePage(0);
-  }, [tradeFilter, dbAccountFilter, dbSessionFilter, dbRulesFilter, dbSearch]);
+  }, [tradeFilter, dbAccountFilter, dbSessionFilter, dbSearch]);
 
   const dailyStats = useMemo(() => {
     const map = new Map<string, { pnl: number; trades: number }>();
@@ -828,15 +817,6 @@ function UnlockedPreview({
               <option value="profit">Profit</option>
               <option value="loss">Loss</option>
               <option value="breakeven">Breakeven</option>
-            </select>
-            <select
-              value={dbRulesFilter}
-              onChange={(e) => setDbRulesFilter(e.target.value as 'all' | 'followed' | 'broken')}
-              className="px-3 py-2 bg-zinc-900 border border-white/10 rounded-lg text-sm text-zinc-300 focus:outline-none focus:border-indigo-500/50 transition-colors cursor-pointer"
-            >
-              <option value="all">All Rules</option>
-              <option value="followed">Rules Followed</option>
-              <option value="broken">Rules Broken</option>
             </select>
             {activeDbFilterCount > 0 && (
               <button
@@ -1269,14 +1249,9 @@ function PreviewTradeDetail({
             {trade.confluences.map(c => (
               <span key={c} className="px-3 py-1.5 bg-zinc-700 rounded-lg text-sm text-zinc-300">{c}</span>
             ))}
-            {trade.rulesFollowed && (
-              <span className={cn(
-                'px-3 py-1.5 rounded-lg text-sm',
-                trade.rulesFollowed === 'followed' ? 'bg-emerald-500/20 text-emerald-400' : 'bg-rose-500/20 text-rose-400'
-              )}>
-                Rules {trade.rulesFollowed}
-              </span>
-            )}
+            {/* Rules Followed/Broken intentionally not rendered — kept
+                private on this read-only screen, same treatment as the
+                gallery card badge above and the filter bar's Rules dropdown. */}
           </div>
 
           {trade.mistakes.length > 0 && (
