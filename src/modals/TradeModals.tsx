@@ -885,7 +885,9 @@ export function AccountModal() {
 
     const isEditing = showEditAccount !== null;
     const currentAccount = isEditing ? editingAccount : newAccount;
-    const isFundedCFD = isEditing && currentAccount.tradingAccountType === 'CFD' && currentAccount.type === 'Funded';
+    const isFundedCycleAccount = isEditing &&
+      (currentAccount.tradingAccountType === 'CFD' || currentAccount.tradingAccountType === 'FUTURES') &&
+      currentAccount.type === 'Funded';
 
     return (
       (showAddAccount || showEditAccount !== null) && (
@@ -1054,21 +1056,44 @@ export function AccountModal() {
                       />
                     </div>
                   ) : currentAccount.tradingAccountType === 'FUTURES' && (
-                    <div>
-                      <label className="block text-sm text-zinc-400 mb-2">Max Loss Limit ($)</label>
-                      <NumericInput
-                        value={formatPriceInput(currentAccount.maxDrawdownAllowance || 0)}
-                        onChange={(sanitized, numericValue) => {
-                          if (isEditing) {
-                            setEditingAccount(prev => ({ ...prev, maxDrawdownAllowance: numericValue }));
-                          } else {
-                            setNewAccount(prev => ({ ...prev, maxDrawdownAllowance: numericValue }));
-                          }
-                        }}
-                        onFocus={(e) => handleNumberInputFocus(e, isEditing ? 'editaccount-maxDrawdownAllowance' : 'account-maxDrawdownAllowance', formatPriceInput(currentAccount.maxDrawdownAllowance || 0), false)}
-                        placeholder="2,000"
-                        allowNegative={false}
-                      />
+                    <div className={cn('grid gap-3', currentAccount.type === 'Funded' ? 'grid-cols-2' : 'grid-cols-1')}>
+                      <div>
+                        <label className="block text-sm text-zinc-400 mb-2">Max Trailing Drawdown ($)</label>
+                        <NumericInput
+                          value={formatPriceInput(currentAccount.maxDrawdownAllowance || 0)}
+                          onChange={(sanitized, numericValue) => {
+                            if (isEditing) {
+                              setEditingAccount(prev => ({ ...prev, maxDrawdownAllowance: numericValue }));
+                            } else {
+                              setNewAccount(prev => ({ ...prev, maxDrawdownAllowance: numericValue }));
+                            }
+                          }}
+                          onFocus={(e) => handleNumberInputFocus(e, isEditing ? 'editaccount-maxDrawdownAllowance' : 'account-maxDrawdownAllowance', formatPriceInput(currentAccount.maxDrawdownAllowance || 0), false)}
+                          placeholder="2,000"
+                          allowNegative={false}
+                        />
+                      </div>
+                      {currentAccount.type === 'Funded' && (
+                        <div>
+                          <label className="block text-sm text-zinc-400 mb-2">Threshold Lock Amount ($)</label>
+                          <NumericInput
+                            value={formatPriceInput(currentAccount.thresholdLockAmount ?? currentAccount.startingBalance ?? 0)}
+                            onChange={(sanitized, numericValue) => {
+                              if (isEditing) {
+                                setEditingAccount(prev => ({ ...prev, thresholdLockAmount: numericValue }));
+                              } else {
+                                setNewAccount(prev => ({ ...prev, thresholdLockAmount: numericValue }));
+                              }
+                            }}
+                            onFocus={(e) => handleNumberInputFocus(e, isEditing ? 'editaccount-thresholdLockAmount' : 'account-thresholdLockAmount', formatPriceInput(currentAccount.thresholdLockAmount ?? currentAccount.startingBalance ?? 0), false)}
+                            placeholder="50,000"
+                            allowNegative={false}
+                          />
+                          <p className="text-xs text-zinc-500 mt-1.5">
+                            The trailing stop rises with peak equity until it clears this level, then locks here for good. Defaults to your starting balance (breakeven lock) if left as-is.
+                          </p>
+                        </div>
+                      )}
                     </div>
                   )}
                 </div>
@@ -1113,7 +1138,7 @@ export function AccountModal() {
                 )}
               </div>
 
-              {isFundedCFD && (
+              {isFundedCycleAccount && (
                 <div className="border-t border-zinc-800 pt-4">
                   <div className="flex items-center justify-between gap-3 mb-1">
                     <div>
