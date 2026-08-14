@@ -692,9 +692,9 @@ export function ManageRulesModal() {
             <button
               onClick={() => openAddRuleModal(pillar)}
               title={`Add ${meta.label}`}
-              className="p-0.5 rounded text-zinc-500 hover:text-white hover:bg-white/10 transition-colors"
+              className="p-1.5 rounded-lg border border-zinc-700 text-zinc-400 hover:text-white hover:border-zinc-500 hover:bg-white/10 transition-colors"
             >
-              <Plus className="w-3.5 h-3.5" />
+              <Plus className="w-4 h-4" />
             </button>
             {isCustom && (
               <button
