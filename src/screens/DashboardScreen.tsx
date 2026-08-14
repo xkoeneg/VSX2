@@ -94,7 +94,7 @@ import {
   Heart,
   type LucideIcon,
 } from 'lucide-react';
-import { calculateAccountMetrics } from '../utils/accountMetrics';
+import { calculateAccountMetrics, getAccountCyclePnL } from '../utils/accountMetrics';
 import { formatCurrency, formatCurrencyAbsolute, formatDate } from '../utils/format';
 import { PageHeader } from '../components/shared/PageHeader';
 import { NotificationBell } from '../components/shared/NotificationBell';
@@ -723,9 +723,18 @@ export function DashboardScreen() {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {accounts.map(account => {
             const accountTrades = trades.filter(t => t.accountId === account.id);
-            const accountPnL = accountTrades.reduce((s, t) => s + t.profitLoss, 0);
+            const accountPnL = getAccountCyclePnL(account, accountTrades);
             const isPositive = accountPnL >= 0;
             const metrics = calculateAccountMetrics(account, accountTrades);
+            const isCFD = account.tradingAccountType === 'CFD';
+            const hasProfitTargetSet = account.hasProfitTarget && account.profitTarget && account.profitTarget > 0;
+            // "Passed" per the spec: progress hit 100% (metrics.profitProgress
+            // is already capped at 100) OR current-cycle P&L caught up to/passed
+            // the target outright. Only shown pre-Funded — once an account is
+            // Funded the top-right badge switches to the payout counter instead.
+            const hasPassedTarget = isCFD && account.type !== 'Funded' && !!hasProfitTargetSet &&
+              (metrics.profitProgress >= 100 || accountPnL >= account.profitTarget!);
+            const showPayoutBadge = isCFD && account.type === 'Funded' && (account.payoutResetsCount || 0) > 0;
 
             return (
               <div key={account.id} className={cn(
@@ -762,7 +771,23 @@ export function DashboardScreen() {
                       >
                         <Trash2 className="w-4 h-4" />
                       </button>
-                      {renderAccountTypeBadge(account)}
+                      {isCFD ? (
+                        <div className="flex items-center gap-1.5">
+                          {hasPassedTarget && (
+                            <span className="text-xs px-2 py-0.5 rounded truncate inline-flex items-center gap-1 bg-emerald-500/20 text-emerald-400 whitespace-nowrap">
+                              ✅ Passed
+                            </span>
+                          )}
+                          {showPayoutBadge && (
+                            <span className="text-xs px-2 py-0.5 rounded truncate inline-flex items-center gap-1 bg-amber-500/20 text-amber-400 whitespace-nowrap">
+                              💰 Payout #{account.payoutResetsCount}
+                            </span>
+                          )}
+                          {renderAccountTypeBadge(account)}
+                        </div>
+                      ) : (
+                        renderAccountTypeBadge(account)
+                      )}
                     </div>
                   </div>
 
