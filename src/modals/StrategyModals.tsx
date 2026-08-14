@@ -384,7 +384,7 @@ export function AddStrategyModal() {
               </div>
               <div>
                 <label className="block text-xs text-zinc-400 mb-1.5">Strategy Title</label>
-                <input type="text" value={newStrategy.title} onChange={(e) => setNewStrategy(prev => ({ ...prev, title: e.target.value }))} placeholder="NY Open Liquidity Sweep" className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2.5 text-sm text-white focus:outline-none focus:border-zinc-600" />
+                <input type="text" value={newStrategy.title} onChange={(e) => setNewStrategy(prev => ({ ...prev, title: e.target.value }))} placeholder="NY Open Liquidity Sweep" className="w-full bg-zinc-900 border border-zinc-700 rounded-lg px-3 py-2.5 text-sm text-white focus:outline-none focus:border-zinc-600" />
               </div>
               <div>
                 <label className="block text-xs text-zinc-400 mb-1.5">Description <span className="text-zinc-600">(optional)</span></label>
@@ -393,7 +393,7 @@ export function AddStrategyModal() {
                   onChange={(e) => setNewStrategy(prev => ({ ...prev, description: e.target.value }))}
                   placeholder="What is this strategy, and when do you use it?"
                   rows={3}
-                  className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-zinc-600 placeholder-zinc-600 resize-none"
+                  className="w-full bg-zinc-900 border border-zinc-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-zinc-600 placeholder-zinc-600 resize-none"
                 />
               </div>
 
@@ -409,7 +409,7 @@ export function AddStrategyModal() {
                       Remove
                     </button>
                   </div>
-                  <input type="text" value={newStrategy.market} onChange={(e) => setNewStrategy(prev => ({ ...prev, market: e.target.value }))} placeholder="NYC / NQ" className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2.5 text-sm text-white focus:outline-none focus:border-zinc-600" />
+                  <input type="text" value={newStrategy.market} onChange={(e) => setNewStrategy(prev => ({ ...prev, market: e.target.value }))} placeholder="NYC / NQ" className="w-full bg-zinc-900 border border-zinc-700 rounded-lg px-3 py-2.5 text-sm text-white focus:outline-none focus:border-zinc-600" />
                 </div>
               ) : (
                 <button
@@ -453,7 +453,7 @@ export function AddStrategyModal() {
                         value={step.title}
                         onChange={(e) => updateStrategyStep(step.id, 'title', e.target.value)}
                         placeholder={`Step ${idx + 1}: Asian High Sweep & MSS`}
-                        className="w-full bg-zinc-900/70 border border-zinc-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-zinc-600"
+                        className="w-full bg-zinc-900 border border-zinc-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-zinc-600"
                       />
                       <textarea
                         ref={(el) => { if (el) { el.style.height = 'auto'; el.style.height = `${el.scrollHeight}px`; } }}
@@ -466,7 +466,7 @@ export function AddStrategyModal() {
                         }}
                         placeholder="Notes / checklist rule for this step..."
                         rows={2}
-                        className="w-full bg-zinc-900/70 border border-zinc-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-zinc-600 resize-none overflow-hidden"
+                        className="w-full bg-zinc-900 border border-zinc-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-zinc-600 resize-none overflow-hidden"
                       />
                       <div>
                         <div className="grid grid-cols-3 gap-2">
@@ -516,7 +516,7 @@ export function AddStrategyModal() {
                           <button
                             type="button"
                             onClick={() => strategyStepImageInputRefs.current[step.id]?.click()}
-                            className="aspect-video rounded-lg border border-dashed border-zinc-700 hover:border-zinc-500 flex flex-col items-center justify-center gap-1 text-zinc-500 hover:text-zinc-300 transition-all bg-zinc-900/70"
+                            className="aspect-video rounded-lg border border-dashed border-zinc-700 hover:border-zinc-500 flex flex-col items-center justify-center gap-1 text-zinc-500 hover:text-zinc-300 transition-all bg-zinc-900"
                           >
                             <ImagePlus className="w-4 h-4" />
                             <span className="text-[10px] text-center leading-tight px-1">{step.images.length > 0 ? 'Add more' : 'Upload screenshot(s)'}</span>
