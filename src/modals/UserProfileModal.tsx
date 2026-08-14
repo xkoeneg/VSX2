@@ -10,6 +10,7 @@ import {
   LogOut,
   Link as LinkIcon,
   RefreshCw,
+  AlertTriangle,
   User as UserIcon,
   Loader2,
 } from 'lucide-react';
@@ -185,6 +186,10 @@ export function UserProfileModal({ isOpen, onClose, authUser, onAuthUserChange, 
   const [saveError, setSaveError] = useState<string | null>(null);
   const [avatarError, setAvatarError] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
+  // Gates the regenerate ⟳ button behind an explicit confirmation — once
+  // saved, a new passcode immediately locks out anyone still using the old
+  // one, so this shouldn't be a single accidental click.
+  const [confirmingRegenerate, setConfirmingRegenerate] = useState(false);
 
   // Reset local editing state from the source of truth whenever the modal opens
   useEffect(() => {
@@ -209,6 +214,7 @@ export function UserProfileModal({ isOpen, onClose, authUser, onAuthUserChange, 
     setSaveError(null);
     setAvatarError(null);
     setCopied(false);
+    setConfirmingRegenerate(false);
   }, [isOpen, authUser?.email, authUser?.name, authUser?.hideEmail, authUser?.viewerPasscode, authUser?.avatarPresetColor, authUser?.publicPreviewEnabled]);
 
   if (!isOpen) return null;
@@ -490,13 +496,41 @@ export function UserProfileModal({ isOpen, onClose, authUser, onAuthUserChange, 
                 />
                 <button
                   type="button"
-                  onClick={() => setViewerPasscode(generatePasscode())}
+                  onClick={() => setConfirmingRegenerate(true)}
                   title="Generate new passcode"
                   className="flex-shrink-0 p-2 rounded-lg bg-zinc-800 text-zinc-300 hover:bg-zinc-700 hover:text-white transition-colors"
                 >
                   <RefreshCw className="w-4 h-4" />
                 </button>
               </div>
+
+              {confirmingRegenerate && (
+                <div className="flex flex-col gap-2 px-3 py-2.5 rounded-lg bg-amber-500/10 border border-amber-500/30">
+                  <div className="flex items-start gap-2 text-xs text-amber-200">
+                    <AlertTriangle className="w-3.5 h-3.5 mt-0.5 flex-shrink-0" />
+                    <span>Generating a new code replaces this one. Anyone using the current passcode will lose access as soon as you save.</span>
+                  </div>
+                  <div className="flex items-center gap-2 justify-end">
+                    <button
+                      type="button"
+                      onClick={() => setConfirmingRegenerate(false)}
+                      className="px-2.5 py-1 rounded text-xs font-medium text-zinc-300 hover:text-white transition-colors"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setViewerPasscode(generatePasscode());
+                        setConfirmingRegenerate(false);
+                      }}
+                      className="px-2.5 py-1 rounded text-xs font-medium bg-amber-500 text-amber-950 hover:bg-amber-400 transition-colors"
+                    >
+                      Generate new code
+                    </button>
+                  </div>
+                </div>
+              )}
 
               <button
                 type="button"
