@@ -905,281 +905,315 @@ export function AccountModal() {
           className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-start justify-center overflow-y-auto p-4 py-8"
         >
           <div className="bg-zinc-900 border border-zinc-800 rounded-xl max-w-md w-full max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
-            <div className="sticky top-0 bg-zinc-900 border-b border-zinc-800 px-6 py-4 flex items-center justify-between z-10">
-              <h3 className="text-lg font-bold text-white truncate">{isEditing ? 'Edit Account' : 'Add Trading Account'}</h3>
-              <button onClick={() => { isEditing ? setShowEditAccount(null) : setShowAddAccount(false); resetCalculator(); }} className="p-1 text-zinc-400 hover:text-white">
+            <div className="sticky top-0 bg-zinc-900 border-b border-zinc-800 px-6 py-4 flex items-center justify-between z-20">
+              <h3 className="text-xl font-bold text-white truncate">{isEditing ? 'Edit Account' : 'Add Trading Account'}</h3>
+              <button onClick={() => { isEditing ? setShowEditAccount(null) : setShowAddAccount(false); resetCalculator(); }} className="p-2 text-zinc-400 hover:text-white transition-colors">
                 <X className="w-5 h-5" />
               </button>
             </div>
-            <div className="p-6 space-y-4">
-              <div>
-                <label className="block text-sm text-zinc-400 mb-2">Account Name</label>
-                <input
-                  type="text"
-                  value={currentAccount.name || ''}
-                  onChange={(e) => isEditing ? setEditingAccount(prev => ({ ...prev, name: e.target.value })) : setNewAccount(prev => ({ ...prev, name: e.target.value }))}
-                  placeholder="My Funded Account"
-                  className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2.5 text-white focus:outline-none focus:border-zinc-600"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm text-zinc-400 mb-2">Starting Balance</label>
-                <NumericInput
-                  value={formatPriceInput(currentAccount.startingBalance || 0)}
-                  onChange={(sanitized, numericValue) => {
-                    if (isEditing) {
-                      setEditingAccount(prev => ({ ...prev, startingBalance: numericValue, highestBalance: numericValue }));
-                    } else {
-                      setNewAccount(prev => ({ ...prev, startingBalance: numericValue, highestBalance: numericValue }));
-                    }
-                  }}
-                  onFocus={(e) => handleNumberInputFocus(e, isEditing ? 'editaccount-startingBalance' : 'account-startingBalance', formatPriceInput(currentAccount.startingBalance || 0), false)}
-                  placeholder="10,000"
-                  allowNegative={false}
-                />
-              </div>
-
-              <div className={cn('grid gap-3', currentAccount.tradingAccountType === 'LIVE' ? 'grid-cols-1' : 'grid-cols-2')}>
+            <form className="p-6 space-y-4">
+              {/* ================= SECTION 1: Account Details ================= */}
+              <div className="bg-zinc-800 border border-zinc-700 p-4 rounded-xl space-y-3 shadow-[0_1px_0_0_rgba(255,255,255,0.02)_inset]">
+                <div className="flex items-center gap-2 pb-1">
+                  <span className="text-[10px] font-bold text-cyan-400 font-mono tracking-widest">01</span>
+                  <h4 className="text-xs font-semibold text-slate-300 uppercase tracking-wider">Account Details</h4>
+                </div>
                 <div>
-                  <label className="block text-sm text-zinc-400 mb-2">Type</label>
-                  <div className="relative" ref={tradingAccountTypeDropdownRef}>
-                    <button
-                      onClick={() => setShowTradingAccountTypeDropdown(!showTradingAccountTypeDropdown)}
-                      className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2.5 text-white focus:outline-none focus:border-zinc-600 flex items-center justify-between"
-                    >
-                      <span className="truncate flex items-center gap-2">
-                        {renderTradingAccountTypeBadge({ tradingAccountType: currentAccount.tradingAccountType || 'LIVE' } as Account)}
-                      </span>
-                      <ChevronDown className="w-4 h-4 flex-shrink-0" />
-                    </button>
-                    {showTradingAccountTypeDropdown && (
-                      <div className="absolute top-full left-0 right-0 mt-1 bg-zinc-800 border border-zinc-700 rounded-lg shadow-xl z-10">
-                        {TRADING_ACCOUNT_TYPES.map(type => (
-                          <button
-                            key={type}
-                            onClick={() => {
-                              if (isEditing) {
-                                setEditingAccount(prev => ({ ...prev, tradingAccountType: type }));
-                              } else {
-                                setNewAccount(prev => ({ ...prev, tradingAccountType: type }));
-                              }
-                              setShowTradingAccountTypeDropdown(false);
-                            }}
-                            className={cn(
-                              'w-full text-left px-3 py-2.5 text-sm hover:bg-zinc-700 transition-colors flex items-center gap-2',
-                              currentAccount.tradingAccountType === type ? 'text-white bg-zinc-700' : 'text-zinc-400'
-                            )}
-                          >
-                            {renderTradingAccountTypeBadge({ tradingAccountType: type } as Account)}
-                          </button>
-                        ))}
-                      </div>
-                    )}
-                  </div>
+                  <label className="block text-xs text-zinc-400 mb-1.5">Account Name</label>
+                  <input
+                    type="text"
+                    value={currentAccount.name || ''}
+                    onChange={(e) => isEditing ? setEditingAccount(prev => ({ ...prev, name: e.target.value })) : setNewAccount(prev => ({ ...prev, name: e.target.value }))}
+                    placeholder="My Funded Account"
+                    className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-3 text-sm text-white focus:outline-none focus:border-zinc-600"
+                  />
                 </div>
 
-                {currentAccount.tradingAccountType !== 'LIVE' && (
+                <div>
+                  <label className="block text-xs text-zinc-400 mb-1.5">Starting Balance</label>
+                  <NumericInput
+                    value={formatPriceInput(currentAccount.startingBalance || 0)}
+                    onChange={(sanitized, numericValue) => {
+                      if (isEditing) {
+                        setEditingAccount(prev => ({ ...prev, startingBalance: numericValue, highestBalance: numericValue }));
+                      } else {
+                        setNewAccount(prev => ({ ...prev, startingBalance: numericValue, highestBalance: numericValue }));
+                      }
+                    }}
+                    onFocus={(e) => handleNumberInputFocus(e, isEditing ? 'editaccount-startingBalance' : 'account-startingBalance', formatPriceInput(currentAccount.startingBalance || 0), false)}
+                    placeholder="10,000"
+                    allowNegative={false}
+                  />
+                </div>
+              </div>
+
+              {/* ================= SECTION 2: Type & Firm ================= */}
+              <div className="bg-zinc-800 border border-zinc-700 p-4 rounded-xl space-y-3 shadow-[0_1px_0_0_rgba(255,255,255,0.02)_inset]">
+                <div className="flex items-center gap-2 pb-1">
+                  <span className="text-[10px] font-bold text-cyan-400 font-mono tracking-widest">02</span>
+                  <h4 className="text-xs font-semibold text-slate-300 uppercase tracking-wider">Type &amp; Firm</h4>
+                </div>
+                <div className={cn('grid gap-3', currentAccount.tradingAccountType === 'LIVE' ? 'grid-cols-1' : 'grid-cols-2')}>
                   <div>
-                    <label className="block text-sm text-zinc-400 mb-2">Status</label>
-                    <div className="relative" ref={accountTypeDropdownRef}>
+                    <label className="block text-xs text-zinc-400 mb-1.5">Type</label>
+                    <div className="relative" ref={tradingAccountTypeDropdownRef}>
                       <button
-                        onClick={() => setShowAccountTypeDropdown(!showAccountTypeDropdown)}
-                        className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2.5 text-white focus:outline-none focus:border-zinc-600 flex items-center justify-between"
+                        onClick={() => setShowTradingAccountTypeDropdown(!showTradingAccountTypeDropdown)}
+                        className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-3 text-sm text-white focus:outline-none focus:border-zinc-600 flex items-center justify-between"
                       >
-                        <span className="truncate">
-                          {currentAccount.type === 'Custom Challenge' ? (currentAccount.customTypeName || 'Custom Challenge') : currentAccount.type}
+                        <span className="truncate flex items-center gap-2">
+                          {renderTradingAccountTypeBadge({ tradingAccountType: currentAccount.tradingAccountType || 'LIVE' } as Account)}
                         </span>
                         <ChevronDown className="w-4 h-4 flex-shrink-0" />
                       </button>
-                      {showAccountTypeDropdown && (
-                        <div className="absolute top-full left-0 right-0 mt-1 bg-zinc-800 border border-zinc-700 rounded-lg shadow-xl z-10 max-h-48 overflow-y-auto">
-                          {ACCOUNT_TYPES.map(type => (
+                      {showTradingAccountTypeDropdown && (
+                        <div className="absolute top-full left-0 right-0 mt-1 bg-zinc-800 border border-zinc-700 rounded-lg shadow-xl z-10">
+                          {TRADING_ACCOUNT_TYPES.map(type => (
                             <button
                               key={type}
                               onClick={() => {
                                 if (isEditing) {
-                                  setEditingAccount(prev => ({ ...prev, type }));
+                                  setEditingAccount(prev => ({ ...prev, tradingAccountType: type }));
                                 } else {
-                                  setNewAccount(prev => ({ ...prev, type }));
+                                  setNewAccount(prev => ({ ...prev, tradingAccountType: type }));
                                 }
-                                if (type !== 'Custom Challenge') {
-                                  setShowAccountTypeDropdown(false);
-                                }
+                                setShowTradingAccountTypeDropdown(false);
                               }}
                               className={cn(
-                                'w-full text-left px-3 py-2 text-sm hover:bg-zinc-700 transition-colors',
-                                currentAccount.type === type ? 'text-white bg-zinc-700' : 'text-zinc-400'
+                                'w-full text-left px-3 py-2.5 text-sm hover:bg-zinc-700 transition-colors flex items-center gap-2',
+                                currentAccount.tradingAccountType === type ? 'text-white bg-zinc-700' : 'text-zinc-400'
                               )}
                             >
-                              {type}
+                              {renderTradingAccountTypeBadge({ tradingAccountType: type } as Account)}
                             </button>
                           ))}
                         </div>
                       )}
                     </div>
-                    {currentAccount.type === 'Custom Challenge' && (
-                      <input
-                        type="text"
-                        value={currentAccount.customTypeName || ''}
-                        onChange={(e) => isEditing ? setEditingAccount(prev => ({ ...prev, customTypeName: e.target.value })) : setNewAccount(prev => ({ ...prev, customTypeName: e.target.value }))}
-                        placeholder="Custom type name"
-                        className="w-full mt-2 bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-zinc-600"
-                      />
+                  </div>
+
+                  {currentAccount.tradingAccountType !== 'LIVE' && (
+                    <div>
+                      <label className="block text-xs text-zinc-400 mb-1.5">Status</label>
+                      <div className="relative" ref={accountTypeDropdownRef}>
+                        <button
+                          onClick={() => setShowAccountTypeDropdown(!showAccountTypeDropdown)}
+                          className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-3 text-sm text-white focus:outline-none focus:border-zinc-600 flex items-center justify-between"
+                        >
+                          <span className="truncate">
+                            {currentAccount.type === 'Custom Challenge' ? (currentAccount.customTypeName || 'Custom Challenge') : currentAccount.type}
+                          </span>
+                          <ChevronDown className="w-4 h-4 flex-shrink-0" />
+                        </button>
+                        {showAccountTypeDropdown && (
+                          <div className="absolute top-full left-0 right-0 mt-1 bg-zinc-800 border border-zinc-700 rounded-lg shadow-xl z-10 max-h-48 overflow-y-auto">
+                            {ACCOUNT_TYPES.map(type => (
+                              <button
+                                key={type}
+                                onClick={() => {
+                                  if (isEditing) {
+                                    setEditingAccount(prev => ({ ...prev, type }));
+                                  } else {
+                                    setNewAccount(prev => ({ ...prev, type }));
+                                  }
+                                  if (type !== 'Custom Challenge') {
+                                    setShowAccountTypeDropdown(false);
+                                  }
+                                }}
+                                className={cn(
+                                  'w-full text-left px-3 py-2 text-sm hover:bg-zinc-700 transition-colors',
+                                  currentAccount.type === type ? 'text-white bg-zinc-700' : 'text-zinc-400'
+                                )}
+                              >
+                                {type}
+                              </button>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                      {currentAccount.type === 'Custom Challenge' && (
+                        <input
+                          type="text"
+                          value={currentAccount.customTypeName || ''}
+                          onChange={(e) => isEditing ? setEditingAccount(prev => ({ ...prev, customTypeName: e.target.value })) : setNewAccount(prev => ({ ...prev, customTypeName: e.target.value }))}
+                          placeholder="Custom type name"
+                          className="w-full mt-2 bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-zinc-600"
+                        />
+                      )}
+                    </div>
+                  )}
+                </div>
+
+                <div>
+                  <label className="block text-xs text-zinc-400 mb-1.5">Prop Firm Name</label>
+                  <input
+                    type="text"
+                    value={currentAccount.propFirm || ''}
+                    onChange={(e) => isEditing ? setEditingAccount(prev => ({ ...prev, propFirm: e.target.value })) : setNewAccount(prev => ({ ...prev, propFirm: e.target.value }))}
+                    placeholder="FTMO, FundedNext, etc."
+                    className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-3 text-sm text-white focus:outline-none focus:border-zinc-600"
+                  />
+                </div>
+
+                {currentAccount.tradingAccountType !== 'LIVE' && (
+                  <div className="border-t border-zinc-700 pt-3">
+                    {currentAccount.tradingAccountType === 'CFD' ? (
+                      <div>
+                        <label className="block text-xs text-zinc-400 mb-1.5">Minimum Balance Threshold ($)</label>
+                        <NumericInput
+                          value={formatPriceInput(currentAccount.fixedMinBalance || 0)}
+                          onChange={(sanitized, numericValue) => {
+                            if (isEditing) {
+                              setEditingAccount(prev => ({ ...prev, fixedMinBalance: numericValue }));
+                            } else {
+                              setNewAccount(prev => ({ ...prev, fixedMinBalance: numericValue }));
+                            }
+                          }}
+                          onFocus={(e) => handleNumberInputFocus(e, isEditing ? 'editaccount-fixedMinBalance' : 'account-fixedMinBalance', formatPriceInput(currentAccount.fixedMinBalance || 0), false)}
+                          placeholder="4,500"
+                          allowNegative={false}
+                        />
+                      </div>
+                    ) : currentAccount.tradingAccountType === 'FUTURES' && (
+                      <div className={cn('grid gap-3', currentAccount.type === 'Funded' ? 'grid-cols-2' : 'grid-cols-1')}>
+                        <div>
+                          <label className="block text-xs text-zinc-400 mb-1.5">Max Trailing Drawdown ($)</label>
+                          <NumericInput
+                            value={formatPriceInput(currentAccount.maxDrawdownAllowance || 0)}
+                            onChange={(sanitized, numericValue) => {
+                              if (isEditing) {
+                                setEditingAccount(prev => ({ ...prev, maxDrawdownAllowance: numericValue }));
+                              } else {
+                                setNewAccount(prev => ({ ...prev, maxDrawdownAllowance: numericValue }));
+                              }
+                            }}
+                            onFocus={(e) => handleNumberInputFocus(e, isEditing ? 'editaccount-maxDrawdownAllowance' : 'account-maxDrawdownAllowance', formatPriceInput(currentAccount.maxDrawdownAllowance || 0), false)}
+                            placeholder="2,000"
+                            allowNegative={false}
+                          />
+                        </div>
+                        {currentAccount.type === 'Funded' && (
+                          <div>
+                            <label className="block text-xs text-zinc-400 mb-1.5">Threshold Lock Amount ($)</label>
+                            <NumericInput
+                              value={formatPriceInput(currentAccount.thresholdLockAmount ?? currentAccount.startingBalance ?? 0)}
+                              onChange={(sanitized, numericValue) => {
+                                if (isEditing) {
+                                  setEditingAccount(prev => ({ ...prev, thresholdLockAmount: numericValue }));
+                                } else {
+                                  setNewAccount(prev => ({ ...prev, thresholdLockAmount: numericValue }));
+                                }
+                              }}
+                              onFocus={(e) => handleNumberInputFocus(e, isEditing ? 'editaccount-thresholdLockAmount' : 'account-thresholdLockAmount', formatPriceInput(currentAccount.thresholdLockAmount ?? currentAccount.startingBalance ?? 0), false)}
+                              placeholder="50,000"
+                              allowNegative={false}
+                            />
+                            <p className="text-xs text-zinc-500 mt-1.5">
+                              The trailing stop rises with peak equity until it clears this level, then locks here for good. Defaults to your starting balance (breakeven lock) if left as-is.
+                            </p>
+                          </div>
+                        )}
+                      </div>
                     )}
                   </div>
                 )}
               </div>
 
-              <div>
-                <label className="block text-sm text-zinc-400 mb-2">Prop Firm Name</label>
-                <input
-                  type="text"
-                  value={currentAccount.propFirm || ''}
-                  onChange={(e) => isEditing ? setEditingAccount(prev => ({ ...prev, propFirm: e.target.value })) : setNewAccount(prev => ({ ...prev, propFirm: e.target.value }))}
-                  placeholder="FTMO, FundedNext, etc."
-                  className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2.5 text-white focus:outline-none focus:border-zinc-600"
-                />
-              </div>
+              {/* ================= SECTION 3: Goals & Cycle ================= */}
+              <div className="bg-zinc-800 border border-zinc-700 p-4 rounded-xl space-y-3 shadow-[0_1px_0_0_rgba(255,255,255,0.02)_inset]">
+                <div className="flex items-center gap-2 pb-1">
+                  <span className="text-[10px] font-bold text-cyan-400 font-mono tracking-widest">03</span>
+                  <h4 className="text-xs font-semibold text-slate-300 uppercase tracking-wider">Goals &amp; Cycle</h4>
+                </div>
+                <div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (isEditing) {
+                        setEditingAccount(prev => ({ ...prev, hasProfitTarget: !prev.hasProfitTarget }));
+                      } else {
+                        setNewAccount(prev => ({ ...prev, hasProfitTarget: !prev.hasProfitTarget }));
+                      }
+                    }}
+                    className="flex items-center gap-3 text-sm text-zinc-300 hover:text-white transition-colors"
+                  >
+                    {currentAccount.hasProfitTarget ? (
+                      <ToggleRight className="w-8 h-8 text-emerald-400" />
+                    ) : (
+                      <ToggleLeft className="w-8 h-8 text-zinc-500" />
+                    )}
+                    <span>Set Profit Target Goal</span>
+                  </button>
 
-              {currentAccount.tradingAccountType !== 'LIVE' && (
-                <div className="border-t border-zinc-800 pt-4">
-                  {currentAccount.tradingAccountType === 'CFD' ? (
-                    <div>
-                      <label className="block text-sm text-zinc-400 mb-2">Minimum Balance Threshold ($)</label>
+                  {currentAccount.hasProfitTarget && (
+                    <div className="mt-3">
+                      <label className="block text-xs text-zinc-400 mb-1.5">Profit Target Amount ($)</label>
                       <NumericInput
-                        value={formatPriceInput(currentAccount.fixedMinBalance || 0)}
+                        value={formatPriceInput(currentAccount.profitTarget || 0)}
                         onChange={(sanitized, numericValue) => {
                           if (isEditing) {
-                            setEditingAccount(prev => ({ ...prev, fixedMinBalance: numericValue }));
+                            setEditingAccount(prev => ({ ...prev, profitTarget: numericValue }));
                           } else {
-                            setNewAccount(prev => ({ ...prev, fixedMinBalance: numericValue }));
+                            setNewAccount(prev => ({ ...prev, profitTarget: numericValue }));
                           }
                         }}
-                        onFocus={(e) => handleNumberInputFocus(e, isEditing ? 'editaccount-fixedMinBalance' : 'account-fixedMinBalance', formatPriceInput(currentAccount.fixedMinBalance || 0), false)}
-                        placeholder="4,500"
+                        onFocus={(e) => handleNumberInputFocus(e, isEditing ? 'editaccount-profitTarget' : 'account-profitTarget', formatPriceInput(currentAccount.profitTarget || 0), false)}
+                        placeholder="5,000"
                         allowNegative={false}
                       />
                     </div>
-                  ) : currentAccount.tradingAccountType === 'FUTURES' && (
-                    <div className={cn('grid gap-3', currentAccount.type === 'Funded' ? 'grid-cols-2' : 'grid-cols-1')}>
-                      <div>
-                        <label className="block text-sm text-zinc-400 mb-2">Max Trailing Drawdown ($)</label>
-                        <NumericInput
-                          value={formatPriceInput(currentAccount.maxDrawdownAllowance || 0)}
-                          onChange={(sanitized, numericValue) => {
-                            if (isEditing) {
-                              setEditingAccount(prev => ({ ...prev, maxDrawdownAllowance: numericValue }));
-                            } else {
-                              setNewAccount(prev => ({ ...prev, maxDrawdownAllowance: numericValue }));
-                            }
-                          }}
-                          onFocus={(e) => handleNumberInputFocus(e, isEditing ? 'editaccount-maxDrawdownAllowance' : 'account-maxDrawdownAllowance', formatPriceInput(currentAccount.maxDrawdownAllowance || 0), false)}
-                          placeholder="2,000"
-                          allowNegative={false}
-                        />
-                      </div>
-                      {currentAccount.type === 'Funded' && (
-                        <div>
-                          <label className="block text-sm text-zinc-400 mb-2">Threshold Lock Amount ($)</label>
-                          <NumericInput
-                            value={formatPriceInput(currentAccount.thresholdLockAmount ?? currentAccount.startingBalance ?? 0)}
-                            onChange={(sanitized, numericValue) => {
-                              if (isEditing) {
-                                setEditingAccount(prev => ({ ...prev, thresholdLockAmount: numericValue }));
-                              } else {
-                                setNewAccount(prev => ({ ...prev, thresholdLockAmount: numericValue }));
-                              }
-                            }}
-                            onFocus={(e) => handleNumberInputFocus(e, isEditing ? 'editaccount-thresholdLockAmount' : 'account-thresholdLockAmount', formatPriceInput(currentAccount.thresholdLockAmount ?? currentAccount.startingBalance ?? 0), false)}
-                            placeholder="50,000"
-                            allowNegative={false}
-                          />
-                          <p className="text-xs text-zinc-500 mt-1.5">
-                            The trailing stop rises with peak equity until it clears this level, then locks here for good. Defaults to your starting balance (breakeven lock) if left as-is.
-                          </p>
-                        </div>
-                      )}
-                    </div>
                   )}
                 </div>
-              )}
 
-              <div className="border-t border-zinc-800 pt-4">
-                <button
-                  onClick={() => {
-                    if (isEditing) {
-                      setEditingAccount(prev => ({ ...prev, hasProfitTarget: !prev.hasProfitTarget }));
-                    } else {
-                      setNewAccount(prev => ({ ...prev, hasProfitTarget: !prev.hasProfitTarget }));
-                    }
-                  }}
-                  className="flex items-center gap-3 text-sm text-zinc-300 hover:text-white transition-colors"
-                >
-                  {currentAccount.hasProfitTarget ? (
-                    <ToggleRight className="w-8 h-8 text-emerald-400" />
-                  ) : (
-                    <ToggleLeft className="w-8 h-8 text-zinc-500" />
-                  )}
-                  <span>Set Profit Target Goal</span>
-                </button>
-
-                {currentAccount.hasProfitTarget && (
-                  <div className="mt-3">
-                    <label className="block text-sm text-zinc-400 mb-2">Profit Target Amount ($)</label>
-                    <NumericInput
-                      value={formatPriceInput(currentAccount.profitTarget || 0)}
-                      onChange={(sanitized, numericValue) => {
-                        if (isEditing) {
-                          setEditingAccount(prev => ({ ...prev, profitTarget: numericValue }));
-                        } else {
-                          setNewAccount(prev => ({ ...prev, profitTarget: numericValue }));
-                        }
+                {isFundedCycleAccount && (
+                  <div className="border-t border-zinc-700 pt-3">
+                    <div className="flex items-center justify-between gap-3 mb-1">
+                      <div>
+                        <p className="text-sm text-zinc-300">Payout / Reset Cycle</p>
+                        <p className="text-xs text-zinc-500 mt-0.5">
+                          {(currentAccount.payoutResetsCount || 0) > 0
+                            ? `${currentAccount.payoutResetsCount} payout${currentAccount.payoutResetsCount === 1 ? '' : 's'} recorded`
+                            : 'No payouts recorded yet'}
+                        </p>
+                      </div>
+                      <DollarSign className="w-5 h-5 text-amber-400 flex-shrink-0" />
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (!editingAccount.id) return;
+                        const confirmed = window.confirm(
+                          'Record a payout and reset this account\'s balance back to its starting balance? Your trade history stays intact for lifetime analytics — only the live P&L / progress metrics reset.'
+                        );
+                        if (confirmed) handleRecordPayoutReset(editingAccount.id);
                       }}
-                      onFocus={(e) => handleNumberInputFocus(e, isEditing ? 'editaccount-profitTarget' : 'account-profitTarget', formatPriceInput(currentAccount.profitTarget || 0), false)}
-                      placeholder="5,000"
-                      allowNegative={false}
-                    />
+                      className="w-full mt-2 py-2 border border-amber-500/30 bg-amber-500/10 hover:bg-amber-500/20 text-amber-400 rounded-lg text-sm font-medium transition-colors flex items-center justify-center gap-2"
+                    >
+                      <RefreshCw className="w-4 h-4" />
+                      Record Payout / Reset Cycle
+                    </button>
                   </div>
                 )}
               </div>
 
-              {isFundedCycleAccount && (
-                <div className="border-t border-zinc-800 pt-4">
-                  <div className="flex items-center justify-between gap-3 mb-1">
-                    <div>
-                      <p className="text-sm text-zinc-300">Payout / Reset Cycle</p>
-                      <p className="text-xs text-zinc-500 mt-0.5">
-                        {(currentAccount.payoutResetsCount || 0) > 0
-                          ? `${currentAccount.payoutResetsCount} payout${currentAccount.payoutResetsCount === 1 ? '' : 's'} recorded`
-                          : 'No payouts recorded yet'}
-                      </p>
-                    </div>
-                    <DollarSign className="w-5 h-5 text-amber-400 flex-shrink-0" />
-                  </div>
-                  <button
-                    onClick={() => {
-                      if (!editingAccount.id) return;
-                      const confirmed = window.confirm(
-                        'Record a payout and reset this account\'s balance back to its starting balance? Your trade history stays intact for lifetime analytics — only the live P&L / progress metrics reset.'
-                      );
-                      if (confirmed) handleRecordPayoutReset(editingAccount.id);
-                    }}
-                    className="w-full mt-2 py-2 border border-amber-500/30 bg-amber-500/10 hover:bg-amber-500/20 text-amber-400 rounded-lg text-sm font-medium transition-colors flex items-center justify-center gap-2"
-                  >
-                    <RefreshCw className="w-4 h-4" />
-                    Record Payout / Reset Cycle
-                  </button>
-                </div>
-              )}
-
-              <button
-                onClick={isEditing ? handleUpdateAccount : handleAddAccount}
-                className="w-full py-2.5 bg-white hover:bg-zinc-200 text-black rounded-lg text-sm font-medium transition-colors"
-              >
-                {isEditing ? 'Update Account' : 'Add Account'}
-              </button>
-            </div>
+              <div className="flex justify-end gap-3 pt-4 border-t border-zinc-800">
+                <button
+                  type="button"
+                  onClick={() => { isEditing ? setShowEditAccount(null) : setShowAddAccount(false); resetCalculator(); }}
+                  className="px-5 py-2 bg-zinc-800 hover:bg-zinc-700 text-white rounded-lg text-sm transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={isEditing ? handleUpdateAccount : handleAddAccount}
+                  className="flex items-center gap-2 px-5 py-2 bg-white hover:bg-zinc-200 text-black rounded-lg text-sm font-medium transition-colors"
+                >
+                  <Save className="w-4 h-4" />
+                  {isEditing ? 'Update Account' : 'Add Account'}
+                </button>
+              </div>
+            </form>
           </div>
 
           {calculatorState.show && (
