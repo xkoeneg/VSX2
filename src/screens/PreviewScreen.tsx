@@ -420,7 +420,7 @@ function PreviewTradeRow({ trade, account, displayNumber, onOpenDetail }: Previe
         </div>
       </td>
       <td className="px-3 py-2.5 text-sm text-zinc-400">
-        {trade.session ? (SESSION_SHORT_LABEL[trade.session] || trade.session.toLowerCase()) : '-'}
+        {trade.session ? (SESSION_SHORT_LABEL[trade.session as keyof typeof SESSION_SHORT_LABEL] || trade.session.toLowerCase()) : '-'}
       </td>
       <td className="px-3 py-2.5 text-sm text-zinc-400">{position}</td>
       <td className="px-3 py-2.5 text-sm font-mono text-right font-bold whitespace-nowrap">
