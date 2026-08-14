@@ -1,5 +1,5 @@
 import type React from 'react';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import {
   Eye,
   Lock,
@@ -620,6 +620,22 @@ function UnlockedPreview({
     return sortedTrades.filter(t => t.profitLoss > -10 && t.profitLoss < 10);
   }, [sortedTrades, tradeFilter]);
 
+  // Table pagination — mirrors TradesScreen.tsx's Database view (dbPage /
+  // dbPageCount / dbPagedTrades against DB_PAGE_SIZE), a fixed page of rows
+  // with Prev/Next controls instead of an internally-scrolling table.
+  const TABLE_PAGE_SIZE = 20;
+  const [tablePage, setTablePage] = useState(0);
+  const tablePageCount = Math.max(1, Math.ceil(filteredSortedTrades.length / TABLE_PAGE_SIZE));
+  const pagedTableTrades = useMemo(
+    () => filteredSortedTrades.slice(tablePage * TABLE_PAGE_SIZE, (tablePage + 1) * TABLE_PAGE_SIZE),
+    [filteredSortedTrades, tablePage]
+  );
+  // Snap back to page 1 whenever the filtered set changes (filter toggle,
+  // etc.) so we never get stuck on a now-out-of-range page.
+  useEffect(() => {
+    setTablePage(0);
+  }, [tradeFilter]);
+
   const dailyStats = useMemo(() => {
     const map = new Map<string, { pnl: number; trades: number }>();
     for (const t of data.trades) {
@@ -752,22 +768,16 @@ function UnlockedPreview({
 
               {/* Table view — ported 1:1 from TradesScreen.tsx's
                   "Full-page table" (dbViewMode === 'table') branch: same
-                  column set/order and cell styling, rendering
-                  PreviewTradeRow (the read-only PreviewTrade port of
-                  TradeRow) instead of TradeRow. No pagination — this screen
-                  doesn't have TradesScreen's page-size state.
-                  Fixed-height frame like the gallery above: the header row
-                  is sticky (stays put) while only the trade rows scroll
-                  underneath it, and the scrollbar itself is hidden the same
-                  way as the gallery frame. */}
+                  column set/order, cell styling, and Prev/Next pagination
+                  footer, rendering PreviewTradeRow (the read-only
+                  PreviewTrade port of TradeRow) instead of TradeRow.
+                  TABLE_PAGE_SIZE stands in for TradesScreen's DB_PAGE_SIZE
+                  constant (defined in useAppState, not available here). */}
               <div className="bg-zinc-900/40 border border-zinc-800/80 rounded-xl overflow-hidden">
-                <div
-                  className="preview-gallery-scroll overflow-auto max-h-[420px]"
-                  style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
-                >
+                <div className="overflow-x-auto">
                   <table className="w-full min-w-[1100px]">
-                    <thead className="sticky top-0 z-10">
-                      <tr className="border-b border-zinc-800/70 text-left bg-zinc-900">
+                    <thead>
+                      <tr className="border-b border-zinc-800/70 text-left bg-white/[0.02]">
                         <th className="px-3 py-2.5 text-[11px] text-zinc-500 uppercase tracking-wider font-medium">Outcome</th>
                         <th className="px-3 py-2.5 text-[11px] text-zinc-500 uppercase tracking-wider font-medium">Date</th>
                         <th className="px-3 py-2.5 text-[11px] text-zinc-500 uppercase tracking-wider font-medium">Trade #</th>
@@ -782,7 +792,7 @@ function UnlockedPreview({
                       </tr>
                     </thead>
                     <tbody>
-                      {filteredSortedTrades.map(trade => (
+                      {pagedTableTrades.map(trade => (
                         <PreviewTradeRow
                           key={trade.id}
                           trade={trade}
@@ -794,6 +804,36 @@ function UnlockedPreview({
                     </tbody>
                   </table>
                 </div>
+
+                {/* Pagination */}
+                {tablePageCount > 1 && (
+                  <div className="flex items-center justify-between px-4 py-3 border-t border-white/10 flex-wrap gap-2">
+                    <p className="text-xs text-zinc-500">
+                      Page {tablePage + 1} of {tablePageCount} · {filteredSortedTrades.length} total
+                    </p>
+                    <div className="flex items-center gap-1.5">
+                      <button
+                        type="button"
+                        onClick={() => setTablePage(p => Math.max(0, p - 1))}
+                        disabled={tablePage === 0}
+                        className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs text-zinc-300 hover:bg-white/5 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                      >
+                        <ChevronLeft className="w-3.5 h-3.5" />
+                        Prev
+                      </button>
+                      <span className="text-xs text-zinc-500 px-2">{tablePage + 1} / {tablePageCount}</span>
+                      <button
+                        type="button"
+                        onClick={() => setTablePage(p => Math.min(tablePageCount - 1, p + 1))}
+                        disabled={tablePage >= tablePageCount - 1}
+                        className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs text-zinc-300 hover:bg-white/5 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                      >
+                        Next
+                        <ChevronRight className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
           )}
