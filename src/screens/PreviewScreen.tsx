@@ -653,11 +653,11 @@ function UnlockedPreview({
         )}
 
         {/* Section 3: Trade History (bottom) — gallery view, ported 1:1 from
-            TradesScreen.tsx's "Full-page table / gallery" (dbViewMode ===
-            'gallery') wrapper: same frame chrome and grid breakpoints,
-            rendering PreviewFeaturedCard (the read-only PreviewTrade port of
-            TradeFeaturedCard) instead of TradeFeaturedCard. No pagination —
-            this screen doesn't have TradesScreen's page-size state. */}
+            TradesScreen.tsx's "TOP SECTION — Featured Gallery Grid" scrollable
+            frame (Trade History overview): fixed-height frame, scrolls
+            internally instead of growing the page, same shadow/scrollbar
+            treatment. Renders PreviewFeaturedCard (the read-only PreviewTrade
+            port of TradeFeaturedCard) instead of TradeFeaturedCard. */}
         <div>
           <h2 className="text-sm font-medium text-zinc-400 mb-3">Trade History</h2>
           {filteredSortedTrades.length === 0 ? (
@@ -665,8 +665,8 @@ function UnlockedPreview({
               {sortedTrades.length === 0 ? 'No trades to show yet.' : 'No trades match this filter.'}
             </p>
           ) : (
-            <div className="bg-zinc-900/40 border border-zinc-800/80 rounded-xl p-4">
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+            <div className="bg-zinc-900/40 border border-zinc-800/80 rounded-2xl max-h-[520px] overflow-y-auto overscroll-contain scroll-smooth p-5 shadow-[0_20px_45px_rgba(0,0,0,0.5),inset_0_2px_12px_rgba(0,0,0,0.25)] scrollbar-thin scrollbar-thumb-zinc-700 scrollbar-track-transparent">
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
                 {filteredSortedTrades.map(trade => (
                   <PreviewFeaturedCard
                     key={trade.id}
