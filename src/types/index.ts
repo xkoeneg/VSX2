@@ -158,6 +158,7 @@ export interface Strategy {
   id: string;
   title: string;
   market: string; // e.g. "NYC / NQ" — market/session tag
+  description?: string; // optional freeform notes — what the strategy is / when to use it
   steps: StrategyStep[]; // ordered, dynamic step-by-step execution builder
   images: TradeImage[]; // main cover / ideal A+ chart example(s) — supports multiple, first one used as gallery thumbnail
 }
