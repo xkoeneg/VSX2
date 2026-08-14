@@ -14,9 +14,12 @@ import {
   Target,
   Scale,
   BarChart3,
+  Check,
+  Image as ImageIcon,
 } from 'lucide-react';
 import { supabase } from '../lib/supabaseClient';
 import { cn } from '../utils/format';
+import { SessionBadge } from '../components/shared/SessionBadge';
 
 // ============================================================================
 // PreviewScreen — the `/preview/[user_id]` destination.
@@ -272,6 +275,107 @@ function TradeAnalyticsCard({ trades, stats, tradeFilter, setTradeFilter }: Trad
   );
 }
 
+// ============================================================================
+// PreviewFeaturedCard — ported 1:1 from TradesScreen.tsx's `TradeFeaturedCard`
+// (the "gallery" trade card). Same markup/classNames as the original.
+// Trimmed for this read-only screen:
+//   - no tradeSelectMode / isSelected / checkbox overlay (nothing to select)
+//   - no privacyMode (numbers always shown as-is, per this screen's convention)
+//   - no trackingNumber badge (PreviewTrade has no trackingNumber field)
+//   - uses PreviewTrade/PreviewAccount types, local formatMoney(), and
+//     formatDateLabel() instead of formatCurrency()/formatDate()
+// ============================================================================
+
+interface PreviewFeaturedCardProps {
+  trade: PreviewTrade;
+  account: PreviewAccount | undefined;
+  displayNumber: number;
+  onOpenDetail: (id: string) => void;
+}
+
+function PreviewFeaturedCard({ trade, account, displayNumber, onOpenDetail }: PreviewFeaturedCardProps) {
+  const coverImage =
+    trade.timeframes.find(tf => tf.name === 'Execution/Result')?.images[0]?.url ||
+    trade.timeframes.flatMap(tf => tf.images)[0]?.url;
+  const isWin = trade.profitLoss >= 0;
+  const isBreakeven = Math.abs(trade.profitLoss) < 10;
+  const outcomeCardClass = isBreakeven
+    ? 'bg-zinc-800/50 group-hover:bg-zinc-800/70'
+    : isWin
+      ? 'bg-emerald-900 border-t-0 shadow-none group-hover:bg-emerald-800'
+      : 'bg-rose-900 border-t-0 shadow-none group-hover:bg-rose-800';
+  const outcomeBorderClass = isBreakeven
+    ? 'border-zinc-700 hover:border-zinc-500'
+    : isWin
+      ? 'border-emerald-800 hover:border-emerald-600'
+      : 'border-rose-800 hover:border-rose-600';
+
+  const handleCardClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    onOpenDetail(trade.id);
+  };
+
+  return (
+    <div
+      onClick={handleCardClick}
+      className={cn(
+        "group h-full flex flex-col border rounded-xl overflow-hidden cursor-pointer bg-[#16181e] transition-transform transition-colors duration-200 ease-out min-w-0 shadow-[0_10px_30px_rgba(0,0,0,0.8)] transform-gpu backface-hidden will-change-transform",
+        outcomeBorderClass,
+        'hover:-translate-y-0.5 hover:shadow-[0_16px_40px_rgba(0,0,0,0.9)]'
+      )}
+    >
+      <div className="aspect-video bg-zinc-800 flex items-center justify-center relative overflow-hidden flex-shrink-0">
+        <span className="absolute top-2 left-2 z-10 flex items-center justify-center w-5 h-5 rounded bg-black/60 text-[10px] font-mono font-bold text-zinc-300 border border-white/10 backdrop-blur-md shadow-[0_1px_4px_rgba(0,0,0,0.6)]">
+          {displayNumber}
+        </span>
+        {coverImage ? (
+          <img src={coverImage} alt="" loading="lazy" decoding="async" className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105 transform-gpu" />
+        ) : (
+          <div className="flex flex-col items-center gap-1.5 text-zinc-600">
+            <ImageIcon className="w-7 h-7" />
+            <span className="text-[10px]">No image</span>
+          </div>
+        )}
+        {/* Badge row at the bottom of the thumbnail — hidden entirely for unreviewed trades */}
+        {trade.rulesFollowed === 'followed' || trade.rulesFollowed === 'broken' ? (
+          <div className="absolute bottom-0 left-0 right-0 z-10 flex items-center justify-end gap-1.5 px-2.5 py-1.5 bg-gradient-to-t from-black/80 to-transparent">
+            <span className={cn('flex items-center justify-center w-4 h-4 rounded text-[9px] font-bold', trade.rulesFollowed === 'followed' ? 'bg-emerald-500 text-emerald-950' : 'bg-rose-500 text-rose-950')}>
+              {trade.rulesFollowed === 'followed' ? <Check className="w-2.5 h-2.5" /> : <X className="w-2.5 h-2.5" />}
+            </span>
+          </div>
+        ) : null}
+      </div>
+      <div className={cn('p-3.5 min-w-0 flex-1 flex flex-col transition-colors duration-200', outcomeCardClass)}>
+        <div className="flex items-start justify-between gap-2">
+          <h4 className="font-semibold truncate tracking-tight text-sm min-w-0 text-white">{trade.symbol}</h4>
+          <div className="flex items-center gap-1.5 flex-shrink-0">
+            <span className={cn('text-sm font-mono font-bold tracking-tight whitespace-nowrap', isBreakeven ? 'text-zinc-300' : isWin ? 'text-green-300' : 'text-red-300')}>
+              {formatMoney(trade.profitLoss)}
+            </span>
+          </div>
+        </div>
+        <p className="text-xs text-zinc-300 truncate mt-0.5">{account?.name}</p>
+        {/* Fixed-height row so cards without a session still take up the same
+            vertical space as cards that have one — keeps every card (and every
+            grid row) the exact same height. */}
+        <div className="flex items-center mt-2 min-h-[20px]">
+          {trade.session && <SessionBadge value={trade.session} size="sm" />}
+        </div>
+        {/* Fixed-height footer row so cards without setup badges still match
+            the height of cards that have them. */}
+        <div className="flex items-center justify-between gap-2 mt-auto pt-2 min-h-[26px] min-w-0">
+          <div className="flex items-center gap-1.5 min-w-0 flex-wrap">
+            {trade.setupTypes.slice(0, 1).map(s => (
+              <span key={s} className="px-1.5 py-0.5 bg-zinc-800/80 border border-zinc-700/50 rounded text-[10px] text-zinc-300 whitespace-nowrap">{s}</span>
+            ))}
+          </div>
+          <span className="text-[11px] text-zinc-400 font-medium whitespace-nowrap flex-shrink-0">{formatDateLabel(trade.date)}</span>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 interface PreviewScreenProps {
   userId: string;
   /** Called when the viewer clicks "Exit Preview" — App.tsx wires this to strip the /preview path. */
@@ -465,6 +569,14 @@ function UnlockedPreview({
     return map;
   }, [data.trades]);
 
+  // Chronological trade numbers (oldest = 1) for the gallery card badges —
+  // mirrors TradesScreen's getDisplayTradeNumber, computed locally here since
+  // this screen doesn't have access to that app-context helper.
+  const tradeNumberById = useMemo(() => {
+    const chronological = [...data.trades].sort((a, b) => (a.date < b.date ? -1 : 1));
+    return new Map(chronological.map((t, i) => [t.id, i + 1]));
+  }, [data.trades]);
+
   const openTrade = openTradeId ? data.trades.find(t => t.id === openTradeId) || null : null;
 
   return (
@@ -540,46 +652,33 @@ function UnlockedPreview({
           </div>
         )}
 
-        {/* Section 3: Trade History (bottom) */}
+        {/* Section 3: Trade History (bottom) — gallery view, ported 1:1 from
+            TradesScreen.tsx's "Full-page table / gallery" (dbViewMode ===
+            'gallery') wrapper: same frame chrome and grid breakpoints,
+            rendering PreviewFeaturedCard (the read-only PreviewTrade port of
+            TradeFeaturedCard) instead of TradeFeaturedCard. No pagination —
+            this screen doesn't have TradesScreen's page-size state. */}
         <div>
           <h2 className="text-sm font-medium text-zinc-400 mb-3">Trade History</h2>
-          <div className="space-y-2">
-            {filteredSortedTrades.length === 0 && (
-              <p className="text-sm text-zinc-600 py-8 text-center">
-                {sortedTrades.length === 0 ? 'No trades to show yet.' : 'No trades match this filter.'}
-              </p>
-            )}
-            {filteredSortedTrades.map(trade => {
-              const account = trade.accountId ? accountsById.get(trade.accountId) : undefined;
-              return (
-                <button
-                  key={trade.id}
-                  type="button"
-                  onClick={() => setOpenTradeId(trade.id)}
-                  className="w-full flex items-center justify-between gap-3 bg-zinc-900/60 hover:bg-zinc-900 border border-zinc-800 rounded-lg px-4 py-3 text-left transition-colors"
-                >
-                  <div className="min-w-0 flex items-center gap-3">
-                    <div className={cn(
-                      'w-1.5 h-8 rounded-full flex-shrink-0',
-                      trade.profitLoss >= 0 ? 'bg-emerald-500' : 'bg-rose-500'
-                    )} />
-                    <div className="min-w-0">
-                      <p className="text-sm font-medium text-white truncate">{trade.symbol}</p>
-                      <p className="text-xs text-zinc-500 truncate">
-                        {account?.name || 'Account'} · {formatDateLabel(trade.date)}
-                      </p>
-                    </div>
-                  </div>
-                  <span className={cn(
-                    'text-sm font-semibold flex-shrink-0',
-                    trade.profitLoss >= 0 ? 'text-emerald-400' : 'text-rose-400'
-                  )}>
-                    {formatMoney(trade.profitLoss)}
-                  </span>
-                </button>
-              );
-            })}
-          </div>
+          {filteredSortedTrades.length === 0 ? (
+            <p className="text-sm text-zinc-600 py-8 text-center">
+              {sortedTrades.length === 0 ? 'No trades to show yet.' : 'No trades match this filter.'}
+            </p>
+          ) : (
+            <div className="bg-zinc-900/40 border border-zinc-800/80 rounded-xl p-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                {filteredSortedTrades.map(trade => (
+                  <PreviewFeaturedCard
+                    key={trade.id}
+                    trade={trade}
+                    account={trade.accountId ? accountsById.get(trade.accountId) : undefined}
+                    displayNumber={tradeNumberById.get(trade.id) ?? 0}
+                    onOpenDetail={setOpenTradeId}
+                  />
+                ))}
+              </div>
+            </div>
+          )}
         </div>
       </div>
 
