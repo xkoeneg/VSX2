@@ -65,6 +65,31 @@ export const classifyMTHeaders = (headers: string[]): Partial<Record<MTColumnRol
 
 export const MT_TICKET_HEADER_RE = /^(ticket|order|position|deal)(\s*#|\s*id)?$/i;
 
+// Brokers append arbitrary account-type/liquidity suffixes to a symbol
+// (e.g. "NAS100.X", "NAS100.a", "NAS100_ecn") that are meaningless to us —
+// strip a trailing ".suffix" or "_suffix" of common broker-tag shapes so
+// "NAS100.X" and "NAS100" normalize to the same base symbol before alias
+// lookup below.
+const MT_SYMBOL_SUFFIX_RE = /[._-](X|A|M|I|C|RAW|RAWECN|PRO|ECN|RAW|SB|CASH)$/i;
+
+// Different brokers label the same underlying instrument differently.
+// Map the common MT4/MT5 spellings to this app's canonical symbol names.
+// Add more entries here as other broker variants show up.
+export const MT_SYMBOL_ALIASES: Record<string, string> = {
+  'NAS100': 'NQ',
+  'US100': 'NQ',
+  'USTEC': 'NQ',
+  'USTECH': 'NQ',
+  'NDX100': 'NQ',
+};
+
+export const normalizeMTSymbol = (raw: string): string => {
+  let s = raw.trim().toUpperCase();
+  if (!s) return s;
+  s = s.replace(MT_SYMBOL_SUFFIX_RE, '');
+  return MT_SYMBOL_ALIASES[s] || s;
+};
+
 // Turns classified column roles + one data row into a ParsedMTTrade, or null
 // if the row doesn't look like a real closed buy/sell trade (e.g. balance,
 // credit, deposit, or cancelled-order rows that MT4/MT5 reports also list).
@@ -91,7 +116,7 @@ export const rowToMTTrade = (cells: string[], roles: Partial<Record<MTColumnRole
 
   return {
     ticketId: ticketRaw.trim(),
-    symbol: (get('symbol') || '').trim().toUpperCase(),
+    symbol: normalizeMTSymbol(get('symbol') || ''),
     orderType: typeRaw as 'buy' | 'sell',
     lotSize: parseMTNumber(get('size')),
     openTime,
