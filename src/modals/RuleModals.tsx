@@ -816,7 +816,7 @@ export function ManageRulesModal() {
           </div>
 
           <div className="p-6 overflow-y-auto">
-            <div className="grid gap-8" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))' }}>
+            <div className="grid grid-cols-1 gap-8">
               {getAllPillarIds(customPillars).map(pillar => (
                 <div className="min-w-0" key={pillar}>
                   {renderManageRulePillarSection(pillar)}
