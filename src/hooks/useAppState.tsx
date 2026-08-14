@@ -2494,6 +2494,45 @@ export function useAppState() {
     setShowEditAccount(null);
   };
 
+  // Funded CFD accounts only. Bumps the payout counter and stamps
+  // cycleBaselinePnL with the account's cumulative trade P&L *as of right
+  // now*, which snaps current-cycle balance/progress metrics back to the
+  // starting balance (see getAccountCyclePnL). Trade history is left
+  // completely untouched — every past trade still counts toward lifetime
+  // analytics, it's just excluded from the new cycle's running total.
+  const handleRecordPayoutReset = (accountId: string) => {
+    const account = accounts.find(a => a.id === accountId);
+    if (!account) return;
+    const accountTrades = trades.filter(t => t.accountId === accountId);
+    const totalPnL = accountTrades.reduce((s, t) => s + t.profitLoss, 0);
+    const updatedAccount: Account = {
+      ...account,
+      payoutResetsCount: (account.payoutResetsCount || 0) + 1,
+      cycleBaselinePnL: totalPnL,
+    };
+    setAccounts(accounts.map(a => a.id === accountId ? updatedAccount : a));
+    if (userId) {
+      supabase.from('accounts').update({ data: updatedAccount }).eq('id', updatedAccount.id).eq('user_id', userId).then(({ error }) => {
+        if (error) {
+          console.error('Failed to record payout/reset in Supabase:', error);
+          showTradeImportToast('error', 'Failed to save the payout reset — it may not sync to other devices.');
+        }
+      });
+    } else {
+      console.error('Cannot update account in Supabase: no authenticated user id.');
+      showTradeImportToast('error', 'Not signed in — this payout reset was NOT saved and will be lost on refresh.');
+    }
+    // Keep the modal's local editing draft in sync so the payout badge and
+    // baseline balance reflect the reset immediately without closing the modal.
+    if (editingAccount.id === accountId) {
+      setEditingAccount(prev => ({
+        ...prev,
+        payoutResetsCount: updatedAccount.payoutResetsCount,
+        cycleBaselinePnL: updatedAccount.cycleBaselinePnL,
+      }));
+    }
+  };
+
   const handleDeleteAccount = (id: string) => {
     setAccountPendingDelete(id);
   };
@@ -4468,6 +4507,7 @@ export function useAppState() {
     calendarDays,
     handleAddAccount,
     handleUpdateAccount,
+    handleRecordPayoutReset,
     handleDeleteAccount,
     confirmDeleteAccount,
     handleImportTradesFile,
