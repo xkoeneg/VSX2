@@ -393,19 +393,24 @@ export function DashboardScreen() {
   const renderProgressBar = (account: Account) => {
     const hasProfitTarget = account.hasProfitTarget && account.profitTarget && account.profitTarget > 0;
     const tradingType = account.tradingAccountType || 'LIVE';
+    const isFundedFuturesAcct = tradingType === 'FUTURES' && account.type === 'Funded';
 
     const hasDrawdown = tradingType === 'LIVE' ||
       (account.maxDrawdownAllowance && account.maxDrawdownAllowance > 0) ||
       (tradingType === 'CFD' && account.fixedMinBalance && account.fixedMinBalance > 0);
 
-    if (!hasProfitTarget && !hasDrawdown) return null;
+    if (!hasProfitTarget && !hasDrawdown && !isFundedFuturesAcct) return null;
 
     const accountTrades = trades.filter(t => t.accountId === account.id);
     const metrics = calculateAccountMetrics(account, accountTrades);
     const netProfit = metrics.currentBalance - account.startingBalance;
 
     const showProfitBar = netProfit >= 0 && hasProfitTarget;
-    const showDrawdownBar = netProfit < 0 && hasDrawdown;
+    // Funded Futures gets its own always-on threshold/buffer block below
+    // (traders need to see trailing-stop distance regardless of whether
+    // they're currently up or down), so it opts out of the generic
+    // "only show drawdown info while underwater" bar.
+    const showDrawdownBar = netProfit < 0 && hasDrawdown && !isFundedFuturesAcct;
 
     return (
       <div className="mt-3">
@@ -483,7 +488,43 @@ export function DashboardScreen() {
           </div>
         )}
 
-        {!showProfitBar && !showDrawdownBar && hasProfitTarget && hasDrawdown && (
+        {isFundedFuturesAcct && (
+          <div className={cn(showProfitBar && 'mt-3 pt-3 border-t border-zinc-800/60')}>
+            {metrics.isLocked && (
+              <div className="flex items-center gap-2 mb-2">
+                <span className="text-[10px] px-2 py-0.5 bg-cyan-500/20 text-cyan-400 rounded">Threshold Locked</span>
+                {metrics.isBreached && (
+                  <span className="text-[10px] px-2 py-0.5 bg-rose-500/20 text-rose-400 rounded flex items-center gap-1">
+                    <AlertCircle className="w-3 h-3" />
+                    Breached
+                  </span>
+                )}
+              </div>
+            )}
+            <div className="flex items-center justify-between mb-1.5">
+              <span className="text-xs text-zinc-500 flex items-center gap-1.5">
+                <Shield className="w-3 h-3 text-cyan-400" />
+                {metrics.isLocked ? 'Locked Threshold' : 'Trailing Threshold'}
+              </span>
+              <span className={cn('text-xs font-medium', metrics.isLocked ? 'text-cyan-400' : 'text-zinc-400')}>
+                {privacyMode ? '****' : formatCurrencyAbsolute(metrics.threshold)}
+              </span>
+            </div>
+            <div className="flex justify-between mt-1.5">
+              <span className="text-[10px] text-zinc-600">
+                Current Balance: {privacyMode ? '****' : formatCurrencyAbsolute(metrics.currentBalance)}
+              </span>
+              <span className={cn(
+                'text-[10px] font-medium flex items-center gap-1',
+                metrics.bufferAvailable > 0 ? 'text-emerald-400' : 'text-rose-500'
+              )}>
+                🛡️ Buffer: {privacyMode ? '****' : formatCurrencyAbsolute(metrics.bufferAvailable)}
+              </span>
+            </div>
+          </div>
+        )}
+
+        {!showProfitBar && !showDrawdownBar && !isFundedFuturesAcct && hasProfitTarget && hasDrawdown && (
           <div className="text-xs text-zinc-500 italic">
             Add trades to see progress
           </div>
@@ -727,14 +768,19 @@ export function DashboardScreen() {
             const isPositive = accountPnL >= 0;
             const metrics = calculateAccountMetrics(account, accountTrades);
             const isCFD = account.tradingAccountType === 'CFD';
+            const isFutures = account.tradingAccountType === 'FUTURES';
+            // Cycle badges (Passed/Payout) apply to CFD and Futures prop-firm
+            // accounts alike — the mechanics differ under the hood, but the
+            // top-right presentation is identical for both.
+            const showsCycleBadges = isCFD || isFutures;
             const hasProfitTargetSet = account.hasProfitTarget && account.profitTarget && account.profitTarget > 0;
             // "Passed" per the spec: progress hit 100% (metrics.profitProgress
             // is already capped at 100) OR current-cycle P&L caught up to/passed
             // the target outright. Only shown pre-Funded — once an account is
             // Funded the top-right badge switches to the payout counter instead.
-            const hasPassedTarget = isCFD && account.type !== 'Funded' && !!hasProfitTargetSet &&
+            const hasPassedTarget = showsCycleBadges && account.type !== 'Funded' && !!hasProfitTargetSet &&
               (metrics.profitProgress >= 100 || accountPnL >= account.profitTarget!);
-            const showPayoutBadge = isCFD && account.type === 'Funded' && (account.payoutResetsCount || 0) > 0;
+            const showPayoutBadge = showsCycleBadges && account.type === 'Funded' && (account.payoutResetsCount || 0) > 0;
 
             return (
               <div key={account.id} className={cn(
@@ -771,7 +817,7 @@ export function DashboardScreen() {
                       >
                         <Trash2 className="w-4 h-4" />
                       </button>
-                      {isCFD ? (
+                      {showsCycleBadges ? (
                         <div className="flex items-center gap-1.5">
                           {hasPassedTarget && (
                             <span className="text-xs px-2 py-0.5 rounded truncate inline-flex items-center gap-1 bg-emerald-500/20 text-emerald-400 whitespace-nowrap">
