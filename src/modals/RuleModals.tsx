@@ -715,7 +715,7 @@ export function ManageRulesModal() {
             {pillarRules.map(rule => {
               if (rule.itemType === 'divider') {
                 return (
-                  <div key={rule.id} className="group flex items-center gap-3 py-1">
+                  <div key={rule.id} className="group relative flex items-center gap-3 py-1">
                     <span className="flex-1 h-px bg-zinc-600" />
                     <input
                       type="text"
@@ -728,7 +728,7 @@ export function ManageRulesModal() {
                     <button
                       onClick={() => handleDeleteRule(rule.id)}
                       title="Delete divider"
-                      className="p-1 rounded text-zinc-500 hover:text-rose-400 hover:bg-rose-500/10 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0"
+                      className="absolute right-0 top-1/2 -translate-y-1/2 p-1 rounded bg-zinc-800 text-zinc-500 hover:text-rose-400 hover:bg-rose-500/10 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0"
                     >
                       <Trash2 className="w-3 h-3" />
                     </button>
