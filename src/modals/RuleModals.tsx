@@ -816,9 +816,12 @@ export function ManageRulesModal() {
           </div>
 
           <div className="p-6 overflow-y-auto">
-            <div className="grid grid-cols-1 gap-8">
+            <div className="grid grid-cols-1 gap-4">
               {getAllPillarIds(customPillars).map(pillar => (
-                <div className="min-w-0" key={pillar}>
+                <div
+                  className="min-w-0 bg-zinc-900/60 border border-zinc-800 rounded-xl p-5"
+                  key={pillar}
+                >
                   {renderManageRulePillarSection(pillar)}
                 </div>
               ))}
