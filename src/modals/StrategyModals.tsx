@@ -436,7 +436,7 @@ export function AddStrategyModal() {
               {newStrategy.steps.length > 0 && (
                 <div className="space-y-3">
                   {newStrategy.steps.map((step, idx) => (
-                    <div key={step.id} className="rounded-lg border border-zinc-700 bg-zinc-900/60 p-3 space-y-2.5">
+                    <div key={step.id} className="rounded-lg border border-zinc-700 bg-zinc-900 p-3 space-y-2.5">
                       <div className="flex items-center justify-between">
                         <span className="text-xs font-bold uppercase tracking-wider text-zinc-400">Step {idx + 1}</span>
                         <button
