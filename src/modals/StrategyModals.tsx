@@ -1,4 +1,5 @@
 import type React from 'react';
+import { useState } from 'react';
 import {
   LayoutDashboard,
   BookOpen,
@@ -276,6 +277,13 @@ export function AddStrategyModal() {
     exportBackup, importBackup,
   } = useAppContext();
 
+  // Market/Session is optional and shown on-demand — most strategies just need
+  // a plain description, so that's the default field. Toggled open here, but
+  // also forced open below if newStrategy.market already has a value (editing
+  // an existing strategy that was tagged with one).
+  const [showMarketField, setShowMarketField] = useState(false);
+  const marketFieldVisible = showMarketField || !!newStrategy.market;
+
   return (
     showAddStrategy && (
       <ModalBackdrop
@@ -367,9 +375,40 @@ export function AddStrategyModal() {
               <input type="text" value={newStrategy.title} onChange={(e) => setNewStrategy(prev => ({ ...prev, title: e.target.value }))} placeholder="NY Open Liquidity Sweep" className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2.5 text-white focus:outline-none focus:border-zinc-600" />
             </div>
             <div>
-              <label className="block text-sm text-zinc-400 mb-2">Market / Session <span className="text-zinc-600">(e.g. "NYC / NQ")</span></label>
-              <input type="text" value={newStrategy.market} onChange={(e) => setNewStrategy(prev => ({ ...prev, market: e.target.value }))} placeholder="NYC / NQ" className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2.5 text-white focus:outline-none focus:border-zinc-600" />
+              <label className="block text-sm text-zinc-400 mb-2">Description <span className="text-zinc-600">(optional)</span></label>
+              <textarea
+                value={newStrategy.description || ''}
+                onChange={(e) => setNewStrategy(prev => ({ ...prev, description: e.target.value }))}
+                placeholder="What is this strategy, and when do you use it?"
+                rows={3}
+                className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2.5 text-white focus:outline-none focus:border-zinc-600 placeholder-zinc-600 resize-none"
+              />
             </div>
+
+            {marketFieldVisible ? (
+              <div>
+                <div className="flex items-center justify-between mb-2">
+                  <label className="block text-sm text-zinc-400">Market / Session <span className="text-zinc-600">(e.g. "NYC / NQ")</span></label>
+                  <button
+                    type="button"
+                    onClick={() => { setShowMarketField(false); setNewStrategy(prev => ({ ...prev, market: '' })); }}
+                    className="text-xs text-zinc-500 hover:text-rose-400 transition-colors"
+                  >
+                    Remove
+                  </button>
+                </div>
+                <input type="text" value={newStrategy.market} onChange={(e) => setNewStrategy(prev => ({ ...prev, market: e.target.value }))} placeholder="NYC / NQ" className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2.5 text-white focus:outline-none focus:border-zinc-600" />
+              </div>
+            ) : (
+              <button
+                type="button"
+                onClick={() => setShowMarketField(true)}
+                className="w-full flex items-center justify-center gap-1.5 py-2 rounded-lg border border-dashed border-zinc-700 hover:border-zinc-500 text-xs text-zinc-500 hover:text-zinc-300 transition-colors"
+              >
+                <Plus className="w-3.5 h-3.5" />
+                Add Market / Session
+              </button>
+            )}
 
             {/* DYNAMIC STEP-BY-STEP EXECUTION BUILDER */}
             <div>
@@ -855,6 +894,9 @@ export function StrategyDetailModal() {
 
           {/* SCROLLABLE BODY — VERTICAL TIMELINE / STEP GALLERY */}
           <div className="p-6 space-y-6 overflow-y-auto">
+            {strategy.description && (
+              <p className="text-sm text-zinc-400 whitespace-pre-wrap">{strategy.description}</p>
+            )}
             <div>
               <p className="text-xs uppercase tracking-wider text-zinc-500 font-semibold mb-4">Execution Playbook</p>
               {steps.length > 0 ? (
