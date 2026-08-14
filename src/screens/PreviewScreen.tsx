@@ -615,10 +615,11 @@ function UnlockedPreview({
   const [tradeFilter, setTradeFilter] = useState<PreviewTradeFilter>('all');
 
   // Extra filter bar — mirrors TradesScreen.tsx's Database view filters
-  // (dbSearch / dbAccountFilter / dbSessionFilter / dbRulesFilter). The
-  // outcome filter reuses the existing `tradeFilter` state above (same
-  // three options the analytics card's W/L/BE chips already control) rather
-  // than duplicating it as a separate dbOutcomeFilter.
+  // (dbSearch / dbAccountFilter / dbSessionFilter / dbOutcomeFilter /
+  // dbRulesFilter). Outcome is rendered as its own "All Outcomes" dropdown
+  // here (matching TradesScreen 1:1) but bound to the same `tradeFilter`
+  // state the analytics card's W/L/BE chips already control, so both stay
+  // in sync instead of fighting over two separate variables.
   const [dbSearch, setDbSearch] = useState('');
   const [dbAccountFilter, setDbAccountFilter] = useState('all');
   const [dbSessionFilter, setDbSessionFilter] = useState('all');
@@ -628,12 +629,14 @@ function UnlockedPreview({
     (dbSearch.trim() ? 1 : 0) +
     (dbAccountFilter !== 'all' ? 1 : 0) +
     (dbSessionFilter !== 'all' ? 1 : 0) +
+    (tradeFilter !== 'all' ? 1 : 0) +
     (dbRulesFilter !== 'all' ? 1 : 0);
 
   const resetDbFilters = () => {
     setDbSearch('');
     setDbAccountFilter('all');
     setDbSessionFilter('all');
+    setTradeFilter('all');
     setDbRulesFilter('all');
   };
 
@@ -815,6 +818,16 @@ function UnlockedPreview({
               {SESSION_OPTIONS.map(s => (
                 <option key={s} value={s}>{s}</option>
               ))}
+            </select>
+            <select
+              value={tradeFilter}
+              onChange={(e) => setTradeFilter(e.target.value as PreviewTradeFilter)}
+              className="px-3 py-2 bg-zinc-900 border border-white/10 rounded-lg text-sm text-zinc-300 focus:outline-none focus:border-indigo-500/50 transition-colors cursor-pointer"
+            >
+              <option value="all">All Outcomes</option>
+              <option value="profit">Profit</option>
+              <option value="loss">Loss</option>
+              <option value="breakeven">Breakeven</option>
             </select>
             <select
               value={dbRulesFilter}
