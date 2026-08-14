@@ -24,6 +24,14 @@ export interface Account {
   highestBalance?: number;
   maxDrawdownAllowance?: number;
   fixedMinBalance?: number;
+  // CFD Funded-account "Record Payout / Reset Cycle" tracking. A reset never
+  // touches trade history — it only bumps payoutResetsCount and stamps
+  // cycleBaselinePnL with the account's cumulative trade P&L at that moment,
+  // so current-cycle P&L (total P&L minus this baseline) snaps back to $0 /
+  // the starting balance while every past trade stays intact for lifetime
+  // analytics. Optional + defaults to 0 so existing accounts are unaffected.
+  payoutResetsCount?: number;
+  cycleBaselinePnL?: number;
 }
 
 export interface TradeImage {
