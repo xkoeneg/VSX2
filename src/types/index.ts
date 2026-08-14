@@ -24,14 +24,25 @@ export interface Account {
   highestBalance?: number;
   maxDrawdownAllowance?: number;
   fixedMinBalance?: number;
-  // CFD Funded-account "Record Payout / Reset Cycle" tracking. A reset never
-  // touches trade history — it only bumps payoutResetsCount and stamps
-  // cycleBaselinePnL with the account's cumulative trade P&L at that moment,
-  // so current-cycle P&L (total P&L minus this baseline) snaps back to $0 /
-  // the starting balance while every past trade stays intact for lifetime
-  // analytics. Optional + defaults to 0 so existing accounts are unaffected.
+  // CFD/Futures Funded-account "Record Payout / Reset Cycle" tracking. A
+  // reset never touches trade history — it only bumps payoutResetsCount and
+  // stamps cycleBaselinePnL with the account's cumulative trade P&L at that
+  // moment (so current-cycle P&L = total P&L minus this baseline, snapping
+  // back to $0 / the starting balance) plus cycleStartedAt with the reset
+  // timestamp, used to scope the Funded Futures peak-equity/trailing-stop
+  // calculation to only trades placed since the reset. Every past trade
+  // stays intact for lifetime analytics. All optional + default to
+  // 0/undefined so existing accounts are unaffected.
   payoutResetsCount?: number;
   cycleBaselinePnL?: number;
+  cycleStartedAt?: string;
+  // Funded Futures trailing-stop config. maxDrawdownAllowance (already used
+  // by the Eval-stage day-by-day trailing DD calc) doubles as
+  // max_trailing_drawdown here. thresholdLockAmount is the balance the
+  // trailing minimum locks at and stops rising past — see
+  // getFundedFuturesTrailingMetrics in accountMetrics.ts for the formula.
+  // Defaults to startingBalance (breakeven lock) when unset.
+  thresholdLockAmount?: number;
 }
 
 export interface TradeImage {
@@ -456,6 +467,10 @@ export interface AccountMetrics {
   isBreached: boolean;
   isLocked: boolean;
   lockThreshold?: number;
+  // Distance left before breach: currentBalance - threshold. Generic across
+  // account types (for Funded Futures this is the 🛡️ Buffer Available
+  // figure — how far current balance sits above the trailing minimum).
+  bufferAvailable: number;
 }
 
 export interface NumericInputProps {
