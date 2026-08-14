@@ -516,7 +516,7 @@ export function AddStrategyModal() {
                           <button
                             type="button"
                             onClick={() => strategyStepImageInputRefs.current[step.id]?.click()}
-                            className="aspect-video rounded-lg border border-dashed border-zinc-700 hover:border-zinc-500 flex flex-col items-center justify-center gap-1 text-zinc-500 hover:text-zinc-300 transition-all bg-zinc-950"
+                            className="aspect-video rounded-lg border border-dashed border-zinc-700 hover:border-zinc-500 flex flex-col items-center justify-center gap-1 text-zinc-500 hover:text-zinc-300 transition-all bg-zinc-900/70"
                           >
                             <ImagePlus className="w-4 h-4" />
                             <span className="text-[10px] text-center leading-tight px-1">{step.images.length > 0 ? 'Add more' : 'Upload screenshot(s)'}</span>
