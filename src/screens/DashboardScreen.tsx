@@ -391,7 +391,7 @@ export function DashboardScreen() {
   };
 
   const renderProgressBar = (account: Account) => {
-    const hasProfitTarget = account.hasProfitTarget && account.profitTarget && account.profitTarget > 0;
+    const hasProfitTarget = !!(account.hasProfitTarget && account.profitTarget && account.profitTarget > 0);
     const tradingType = account.tradingAccountType || 'LIVE';
     const isFundedFuturesAcct = tradingType === 'FUTURES' && account.type === 'Funded';
 
