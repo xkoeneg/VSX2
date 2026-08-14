@@ -451,12 +451,18 @@ export function TradeDetailModal() {
             )}
 
             <div className="flex flex-wrap gap-2">
-              {trade.setupTypes.map(s => (
-                <span key={s} className="px-3 py-1.5 bg-zinc-800 rounded-lg text-sm text-zinc-300 truncate max-w-[150px]">{s}</span>
-              ))}
-              {trade.confluences.map(c => (
-                <span key={c} className="px-3 py-1.5 bg-zinc-700 rounded-lg text-sm text-zinc-300 truncate max-w-[150px]">{c}</span>
-              ))}
+              {trade.setupTypes.map(s => {
+                const tagColor = setupTypes.find(st => st.name === s)?.color || 'gray';
+                return (
+                  <span key={s} className={cn('px-3 py-1.5 rounded-lg text-sm truncate max-w-[150px]', getTagColorStyle(tagColor).chip)}>{s}</span>
+                );
+              })}
+              {trade.confluences.map(c => {
+                const tagColor = confluences.find(cf => cf.name === c)?.color || 'gray';
+                return (
+                  <span key={c} className={cn('px-3 py-1.5 rounded-lg text-sm truncate max-w-[150px]', getTagColorStyle(tagColor).chip)}>{c}</span>
+                );
+              })}
               <button
                 type="button"
                 onClick={() => setDetailRulesFollowedDraft(prev => prev === 'followed' ? 'broken' : 'followed')}
