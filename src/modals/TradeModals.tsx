@@ -1020,9 +1020,7 @@ export function AccountModal() {
                                   } else {
                                     setNewAccount(prev => ({ ...prev, type }));
                                   }
-                                  if (type !== 'Custom Challenge') {
-                                    setShowAccountTypeDropdown(false);
-                                  }
+                                  setShowAccountTypeDropdown(false);
                                 }}
                                 className={cn(
                                   'w-full text-left px-3 py-2 text-sm hover:bg-zinc-700 transition-colors',
