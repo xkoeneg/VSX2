@@ -117,6 +117,39 @@ function formatDateLabel(iso: string): string {
   return d.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
 }
 
+// Converts a trade's `startTime` into minutes-since-midnight so same-day
+// trades can be ordered by when they were actually entered — this is the
+// real tiebreaker the trade-entry modal already captures (e.g. "9:35 PM"),
+// so we don't need a DB `created_at` column after all. Handles both
+// 24-hour ("21:35") and 12-hour ("9:35 PM" / "9:35pm") strings defensively,
+// since the exact stored format wasn't confirmed. Returns null if the
+// string can't be parsed, so callers can fall back gracefully instead of
+// silently mis-sorting.
+function parseTimeToMinutes(time: string | null): number | null {
+  if (!time) return null;
+  const trimmed = time.trim();
+  // 12-hour: "9:35 PM", "9:35pm", "09:35 AM"
+  const twelveHour = trimmed.match(/^(\d{1,2}):(\d{2})\s*([AaPp][Mm])$/);
+  if (twelveHour) {
+    let hours = parseInt(twelveHour[1], 10);
+    const minutes = parseInt(twelveHour[2], 10);
+    const isPM = twelveHour[3].toLowerCase() === 'pm';
+    if (hours === 12) hours = 0;
+    if (isPM) hours += 12;
+    if (Number.isNaN(hours) || Number.isNaN(minutes)) return null;
+    return hours * 60 + minutes;
+  }
+  // 24-hour: "21:35", "09:35", optionally with seconds "21:35:00"
+  const twentyFourHour = trimmed.match(/^(\d{1,2}):(\d{2})(?::\d{2})?$/);
+  if (twentyFourHour) {
+    const hours = parseInt(twentyFourHour[1], 10);
+    const minutes = parseInt(twentyFourHour[2], 10);
+    if (Number.isNaN(hours) || Number.isNaN(minutes)) return null;
+    return hours * 60 + minutes;
+  }
+  return null;
+}
+
 function getInitials(name: string): string {
   const parts = name.trim().split(/\s+/).filter(Boolean);
   if (parts.length === 0) return '?';
@@ -485,12 +518,12 @@ export function PreviewScreen({ userId, onExit }: PreviewScreenProps) {
         setIsVerifying(false);
         return;
       }
-      // TODO(backend): `get_preview_journal` needs to select and return
-      // `tradeNumber` (the same ordinal the main app's getDisplayTradeNumber
-      // shows) and `createdAt` on every trade row — see
-      // sql/001_preview_access.sql. Until then this screen uses a
-      // best-effort fallback (see fallbackNumberById below) that can
-      // disagree with the main app for same-day trades.
+      // Same-day trade ordering now uses `startTime` (already returned by
+      // this RPC) as the tiebreaker — see sortedTrades below. `tradeNumber`
+      // and `createdAt` are still optional/best-effort on top of that; if
+      // `get_preview_journal` is ever updated to also select a real
+      // `trade_number` or `created_at` column, badges will prefer those
+      // automatically (see getDisplayNumber below).
       setData({
         profile: rpcData.profile,
         accounts: rpcData.accounts || [],
@@ -603,29 +636,36 @@ function UnlockedPreview({
 }) {
   const displayName = data.profile.displayName || 'This Trader';
   const accountsById = useMemo(() => new Map(data.accounts.map(a => [a.id, a])), [data.accounts]);
-  // Matches the main app's ordering: `ORDER BY trade_date DESC, created_at
-  // DESC`. The previous version compared `a.date < b.date ? 1 : -1`, which
-  // returns -1 for EVERY tied pair instead of 0 — an invalid comparator
-  // that scrambles same-day trades into an unpredictable order (this is
-  // what put -$51.77 ahead of +$111.08 despite both being Aug 13). Fixed to
-  // return 0 on a genuine tie, and to use `createdAt` as the real
-  // tiebreaker when it's present.
+  // Matches the main app's ordering. The previous version compared
+  // `a.date < b.date ? 1 : -1`, which returns -1 for EVERY tied pair
+  // instead of 0 — an invalid comparator that scrambled same-day trades
+  // into an unpredictable order (this is what put -$51.77 ahead of
+  // +$111.08 despite both being Aug 13).
   //
-  // IMPORTANT CAVEAT: `createdAt` isn't returned by `get_preview_journal`
-  // yet (see the TODO in handleUnlock below), so it's `undefined` on every
-  // trade right now. When both sides are `undefined` the comparator falls
-  // through to `0`, which just preserves whatever order the RPC's `trades`
-  // array happened to arrive in — there is no client-side way to recover
-  // the *correct* same-day order without an actual field from the DB, since
-  // `date` alone doesn't disambiguate same-day trades. This is why the
-  // reordering can still look wrong until the RPC change lands.
+  // Tiebreak priority for same-day trades:
+  //   1. `startTime` — the actual time entered in the trade modal (e.g.
+  //      "9:35 PM"). This is real per-trade data already coming back from
+  //      the RPC, so it doesn't require any backend change.
+  //   2. `createdAt` — DB insert timestamp, if the RPC is ever updated to
+  //      return it (currently undefined on every trade).
+  //   3. Stable fallback — preserves the RPC's original array order if
+  //      neither of the above can disambiguate (e.g. `startTime` wasn't
+  //      logged for one of the trades).
   const sortedTrades = useMemo(
     () =>
       [...data.trades].sort((a, b) => {
         if (a.date !== b.date) return a.date < b.date ? 1 : -1;
+
+        const aMinutes = parseTimeToMinutes(a.startTime);
+        const bMinutes = parseTimeToMinutes(b.startTime);
+        if (aMinutes !== null && bMinutes !== null && aMinutes !== bMinutes) {
+          return aMinutes < bMinutes ? 1 : -1;
+        }
+
         if (a.createdAt && b.createdAt && a.createdAt !== b.createdAt) {
           return a.createdAt < b.createdAt ? 1 : -1;
         }
+
         return 0;
       }),
     [data.trades]
