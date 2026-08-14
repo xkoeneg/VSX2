@@ -755,12 +755,19 @@ function UnlockedPreview({
                   column set/order and cell styling, rendering
                   PreviewTradeRow (the read-only PreviewTrade port of
                   TradeRow) instead of TradeRow. No pagination — this screen
-                  doesn't have TradesScreen's page-size state. */}
+                  doesn't have TradesScreen's page-size state.
+                  Fixed-height frame like the gallery above: the header row
+                  is sticky (stays put) while only the trade rows scroll
+                  underneath it, and the scrollbar itself is hidden the same
+                  way as the gallery frame. */}
               <div className="bg-zinc-900/40 border border-zinc-800/80 rounded-xl overflow-hidden">
-                <div className="overflow-x-auto">
+                <div
+                  className="preview-gallery-scroll overflow-auto max-h-[420px]"
+                  style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
+                >
                   <table className="w-full min-w-[1100px]">
-                    <thead>
-                      <tr className="border-b border-zinc-800/70 text-left bg-white/[0.02]">
+                    <thead className="sticky top-0 z-10">
+                      <tr className="border-b border-zinc-800/70 text-left bg-zinc-900">
                         <th className="px-3 py-2.5 text-[11px] text-zinc-500 uppercase tracking-wider font-medium">Outcome</th>
                         <th className="px-3 py-2.5 text-[11px] text-zinc-500 uppercase tracking-wider font-medium">Date</th>
                         <th className="px-3 py-2.5 text-[11px] text-zinc-500 uppercase tracking-wider font-medium">Trade #</th>
