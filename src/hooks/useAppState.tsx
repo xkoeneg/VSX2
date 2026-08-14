@@ -737,7 +737,7 @@ export function useAppState() {
   const [showManageRulesModal, setShowManageRulesModal] = useState(false);
   const [showAddStrategy, setShowAddStrategy] = useState(false);
   const [viewStrategyId, setViewStrategyId] = useState<string | null>(null);
-  const [newStrategy, setNewStrategy] = useState<{ title: string; market: string; steps: StrategyStep[]; images: TradeImage[] }>({ title: '', market: '', steps: [], images: [] });
+  const [newStrategy, setNewStrategy] = useState<{ title: string; market: string; description: string; steps: StrategyStep[]; images: TradeImage[] }>({ title: '', market: '', description: '', steps: [], images: [] });
   const [editingStrategyId, setEditingStrategyId] = useState<string | null>(null);
   const [strategyPendingDelete, setStrategyPendingDelete] = useState<string | null>(null);
   const [stepPendingDeleteId, setStepPendingDeleteId] = useState<string | null>(null);
@@ -3264,7 +3264,7 @@ export function useAppState() {
 
   const openAddStrategyModal = () => {
     setEditingStrategyId(null);
-    setNewStrategy({ title: '', market: '', steps: [], images: [] });
+    setNewStrategy({ title: '', market: '', description: '', steps: [], images: [] });
     strategyStepImageInputRefs.current = {};
     setStepPendingDeleteId(null);
     setDraggingStepImageId(null);
@@ -3276,7 +3276,7 @@ export function useAppState() {
 
   const openEditStrategyModal = (strategy: Strategy) => {
     setEditingStrategyId(strategy.id);
-    setNewStrategy({ title: strategy.title, market: strategy.market, steps: strategy.steps.map(s => ({ ...s, images: s.images.map(img => ({ ...img })) })), images: strategy.images.map(img => ({ ...img })) });
+    setNewStrategy({ title: strategy.title, market: strategy.market, description: strategy.description || '', steps: strategy.steps.map(s => ({ ...s, images: s.images.map(img => ({ ...img })) })), images: strategy.images.map(img => ({ ...img })) });
     strategyStepImageInputRefs.current = {};
     setStepPendingDeleteId(null);
     setDraggingStepImageId(null);
@@ -3289,7 +3289,7 @@ export function useAppState() {
   const closeStrategyModal = () => {
     setShowAddStrategy(false);
     setEditingStrategyId(null);
-    setNewStrategy({ title: '', market: '', steps: [], images: [] });
+    setNewStrategy({ title: '', market: '', description: '', steps: [], images: [] });
     setStepPendingDeleteId(null);
     setDraggingStepImageId(null);
     setDragOverStepImageId(null);
@@ -3377,11 +3377,11 @@ export function useAppState() {
       .filter(s => s.title || s.notes || s.images.length > 0);
     if (editingStrategyId) {
       setStrategies(prev => prev.map(s => s.id === editingStrategyId
-        ? { ...s, title: newStrategy.title.trim(), market: newStrategy.market.trim(), steps: cleanedSteps, images: newStrategy.images }
+        ? { ...s, title: newStrategy.title.trim(), market: newStrategy.market.trim(), description: newStrategy.description.trim(), steps: cleanedSteps, images: newStrategy.images }
         : s
       ));
     } else {
-      setStrategies(prev => [...prev, { id: generateId(), title: newStrategy.title.trim(), market: newStrategy.market.trim(), steps: cleanedSteps, images: newStrategy.images }]);
+      setStrategies(prev => [...prev, { id: generateId(), title: newStrategy.title.trim(), market: newStrategy.market.trim(), description: newStrategy.description.trim(), steps: cleanedSteps, images: newStrategy.images }]);
     }
     closeStrategyModal();
   };
