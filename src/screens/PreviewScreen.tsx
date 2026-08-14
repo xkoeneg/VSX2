@@ -300,11 +300,11 @@ function TradeAnalyticsCard({ trades, stats, tradeFilter, setTradeFilter }: Trad
           <p className="text-[10px] text-zinc-500 font-semibold tracking-wider uppercase">Profit Factor</p>
           <p className="text-[clamp(0.85rem,7cqw,1.25rem)] font-bold tabular-nums leading-tight text-white whitespace-nowrap">
             {total > 0 && isFinite(stats.profitFactor) ? stats.profitFactor.toFixed(2) : 'N/A'}
-          </p>
-          <p className="text-[clamp(0.6rem,3cqw,0.75rem)] font-medium tabular-nums leading-tight whitespace-nowrap">
-            <span className="text-emerald-500">+{formatMoney(stats.avgWin)}</span>
-            <span className="text-zinc-500 mx-0.5">/</span>
-            <span className="text-rose-500">{formatMoney(-stats.avgLoss)}</span>
+            <span className="text-[clamp(0.6rem,3cqw,0.75rem)] font-medium tabular-nums text-zinc-500 ml-1.5">
+              <span className="text-emerald-500">+{formatMoney(stats.avgWin)}</span>
+              <span className="mx-0.5">/</span>
+              <span className="text-rose-500">{formatMoney(-stats.avgLoss)}</span>
+            </span>
           </p>
         </div>
       </div>
