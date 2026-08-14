@@ -958,6 +958,7 @@ export function AccountModal() {
                     <label className="block text-xs text-zinc-400 mb-1.5">Type</label>
                     <div className="relative" ref={tradingAccountTypeDropdownRef}>
                       <button
+                        type="button"
                         onClick={() => setShowTradingAccountTypeDropdown(!showTradingAccountTypeDropdown)}
                         className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-3 text-sm text-white focus:outline-none focus:border-zinc-600 flex items-center justify-between"
                       >
@@ -971,6 +972,7 @@ export function AccountModal() {
                           {TRADING_ACCOUNT_TYPES.map(type => (
                             <button
                               key={type}
+                              type="button"
                               onClick={() => {
                                 if (isEditing) {
                                   setEditingAccount(prev => ({ ...prev, tradingAccountType: type }));
@@ -997,6 +999,7 @@ export function AccountModal() {
                       <label className="block text-xs text-zinc-400 mb-1.5">Status</label>
                       <div className="relative" ref={accountTypeDropdownRef}>
                         <button
+                          type="button"
                           onClick={() => setShowAccountTypeDropdown(!showAccountTypeDropdown)}
                           className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-3 text-sm text-white focus:outline-none focus:border-zinc-600 flex items-center justify-between"
                         >
@@ -1010,6 +1013,7 @@ export function AccountModal() {
                             {ACCOUNT_TYPES.map(type => (
                               <button
                                 key={type}
+                                type="button"
                                 onClick={() => {
                                   if (isEditing) {
                                     setEditingAccount(prev => ({ ...prev, type }));
