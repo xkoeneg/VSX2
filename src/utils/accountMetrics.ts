@@ -1,12 +1,25 @@
 import type { AccountMetrics, Account, Trade } from '../types';
 
 
+// Cumulative trade P&L for the account's CURRENT cycle only. Every past
+// trade still counts toward the raw sum (nothing is deleted on a payout
+// reset), but cycleBaselinePnL — stamped at the moment of the last "Record
+// Payout / Reset Cycle" action — is subtracted back out so current-cycle
+// metrics (balance, progress bars, the P&L stat) read as if the account
+// just restarted at its starting balance. Defaults to 0 for every account
+// that has never been reset, so behavior is unchanged for LIVE/FUTURES/
+// non-Funded CFD accounts.
+export const getAccountCyclePnL = (account: Account, accountTrades: Trade[]): number => {
+  const totalPnL = accountTrades.reduce((s, t) => s + t.profitLoss, 0);
+  return totalPnL - (account.cycleBaselinePnL || 0);
+};
+
 export const calculateAccountMetrics = (
   account: Account,
   accountTrades: Trade[]
 ): AccountMetrics => {
   const startingBalance = account.startingBalance;
-  const accountPnL = accountTrades.reduce((s, t) => s + t.profitLoss, 0);
+  const accountPnL = getAccountCyclePnL(account, accountTrades);
   const currentBalance = startingBalance + accountPnL;
 
   const tradingType = account.tradingAccountType || 'LIVE';
