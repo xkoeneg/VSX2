@@ -298,7 +298,7 @@ function TradeAnalyticsCard({ trades, stats, tradeFilter, setTradeFilter }: Trad
         </div>
         <div className="min-w-0">
           <p className="text-[10px] text-zinc-500 font-semibold tracking-wider uppercase">Profit Factor</p>
-          <p className="text-[clamp(0.85rem,7cqw,1.25rem)] font-bold tabular-nums leading-tight text-white whitespace-nowrap">
+          <p className="text-[clamp(1rem,8cqw,1.25rem)] font-bold tabular-nums leading-tight text-white whitespace-nowrap">
             {total > 0 && isFinite(stats.profitFactor) ? stats.profitFactor.toFixed(2) : 'N/A'}
             <span className="text-[clamp(0.6rem,3cqw,0.75rem)] font-medium tabular-nums text-zinc-500 ml-1.5">
               <span className="text-emerald-500">+{formatMoney(stats.avgWin)}</span>
