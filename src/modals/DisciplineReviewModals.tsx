@@ -304,7 +304,7 @@ export function DisciplinePsychologyReviewModal() {
                 </p>
               </div>
             </div>
-            <button onClick={() => setShowDisciplineReview(null)} className="p-1 text-zinc-400 hover:text-white flex-shrink-0">
+            <button onClick={() => setShowDisciplineReview(null)} className="p-2 text-zinc-400 hover:text-white transition-colors flex-shrink-0">
               <X className="w-5 h-5" />
             </button>
           </div>
