@@ -304,69 +304,87 @@ export function DisciplinePsychologyReviewModal() {
             </button>
           </div>
 
-          <div className="p-6 space-y-5">
-            <div className="flex items-center gap-2">
-              {trade.rulesFollowed === 'followed' ? (
-                <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs font-medium">
-                  <CheckCircle2 className="w-3.5 h-3.5" /> Rule Followed
+          <div className="p-6 space-y-4">
+            <div className="bg-zinc-800 border border-zinc-700 p-4 rounded-xl space-y-3 shadow-[0_1px_0_0_rgba(255,255,255,0.02)_inset]">
+              <div className="flex items-center gap-2 pb-1">
+                <span className="text-[10px] font-bold text-cyan-400 font-mono tracking-widest">01</span>
+                <h4 className="text-xs font-semibold text-slate-300 uppercase tracking-wider">Rule Adherence</h4>
+              </div>
+              <div className="flex items-center gap-2">
+                {trade.rulesFollowed === 'followed' ? (
+                  <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs font-medium">
+                    <CheckCircle2 className="w-3.5 h-3.5" /> Rule Followed
+                  </span>
+                ) : trade.rulesFollowed === 'broken' ? (
+                  <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-rose-500/10 border border-rose-500/20 text-rose-400 text-xs font-medium">
+                    <XCircle className="w-3.5 h-3.5" /> Rule Broken
+                  </span>
+                ) : (
+                  // rulesFollowed is only ever set from the separate Trade
+                  // Detail modal, not from this review flow — an imported or
+                  // otherwise not-yet-categorized trade has neither value, and
+                  // silently defaulting that to "Rule Broken" here was
+                  // misleading (it hadn't been judged as broken; it just
+                  // hadn't been judged at all).
+                  <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-amber-500/10 border border-amber-500/20 text-amber-400 text-xs font-medium">
+                    <AlertCircle className="w-3.5 h-3.5" /> Not Yet Set
+                  </span>
+                )}
+                <span className={cn('font-mono text-sm font-medium', trade.profitLoss >= 0 ? 'text-emerald-400' : 'text-rose-400')}>
+                  {formatCurrency(trade.profitLoss, privacyMode)}
                 </span>
-              ) : trade.rulesFollowed === 'broken' ? (
-                <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-rose-500/10 border border-rose-500/20 text-rose-400 text-xs font-medium">
-                  <XCircle className="w-3.5 h-3.5" /> Rule Broken
-                </span>
-              ) : (
-                // rulesFollowed is only ever set from the separate Trade
-                // Detail modal, not from this review flow — an imported or
-                // otherwise not-yet-categorized trade has neither value, and
-                // silently defaulting that to "Rule Broken" here was
-                // misleading (it hadn't been judged as broken; it just
-                // hadn't been judged at all).
-                <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-amber-500/10 border border-amber-500/20 text-amber-400 text-xs font-medium">
-                  <AlertCircle className="w-3.5 h-3.5" /> Not Yet Set
-                </span>
-              )}
-              <span className={cn('font-mono text-sm font-medium', trade.profitLoss >= 0 ? 'text-emerald-400' : 'text-rose-400')}>
-                {formatCurrency(trade.profitLoss, privacyMode)}
-              </span>
+              </div>
             </div>
 
-            <div>
-              <TagSelectDropdown
-                label="Emotions Tracker"
-                options={emotionsList}
-                selected={disciplineReviewDraft.emotions}
-                onChange={(selected) => setDisciplineReviewDraft(prev => ({ ...prev, emotions: selected }))}
-                onAddNew={(name) => setEmotionsList(prev => [...prev, { id: generateId(), name, color: 'purple' }])}
-                onDeleteOption={handleDeleteEmotion}
-                onColorChange={handleChangeEmotionColor}
-                placeholder="Select Emotions..."
-                colorScheme="rose"
-              />
+            <div className="bg-zinc-800 border border-zinc-700 p-4 rounded-xl space-y-3 shadow-[0_1px_0_0_rgba(255,255,255,0.02)_inset]">
+              <div className="flex items-center gap-2 pb-1">
+                <span className="text-[10px] font-bold text-cyan-400 font-mono tracking-widest">02</span>
+                <h4 className="text-xs font-semibold text-slate-300 uppercase tracking-wider">Emotions &amp; Mistakes</h4>
+              </div>
+              <div>
+                <TagSelectDropdown
+                  label="Emotions Tracker"
+                  options={emotionsList}
+                  selected={disciplineReviewDraft.emotions}
+                  onChange={(selected) => setDisciplineReviewDraft(prev => ({ ...prev, emotions: selected }))}
+                  onAddNew={(name) => setEmotionsList(prev => [...prev, { id: generateId(), name, color: 'purple' }])}
+                  onDeleteOption={handleDeleteEmotion}
+                  onColorChange={handleChangeEmotionColor}
+                  placeholder="Select Emotions..."
+                  colorScheme="rose"
+                />
+              </div>
+
+              <div>
+                <TagSelectDropdown
+                  label="Mistakes Analysis"
+                  options={mistakesList}
+                  selected={disciplineReviewDraft.mistakes}
+                  onChange={(selected) => setDisciplineReviewDraft(prev => ({ ...prev, mistakes: selected }))}
+                  onAddNew={(name) => setMistakesList(prev => [...prev, { id: generateId(), name, color: 'red' }])}
+                  onDeleteOption={handleDeleteMistakeType}
+                  onColorChange={handleChangeMistakeColor}
+                  placeholder="Select Mistakes..."
+                  colorScheme="rose"
+                />
+              </div>
             </div>
 
-            <div>
-              <TagSelectDropdown
-                label="Mistakes Analysis"
-                options={mistakesList}
-                selected={disciplineReviewDraft.mistakes}
-                onChange={(selected) => setDisciplineReviewDraft(prev => ({ ...prev, mistakes: selected }))}
-                onAddNew={(name) => setMistakesList(prev => [...prev, { id: generateId(), name, color: 'red' }])}
-                onDeleteOption={handleDeleteMistakeType}
-                onColorChange={handleChangeMistakeColor}
-                placeholder="Select Mistakes..."
-                colorScheme="rose"
-              />
-            </div>
-
-            <div>
-              <label className="block text-xs text-zinc-400 mb-2">Performance Evaluation Summary</label>
-              <textarea
-                value={disciplineReviewDraft.notes}
-                onChange={(e) => setDisciplineReviewDraft(prev => ({ ...prev, notes: e.target.value }))}
-                placeholder="What was going through your mind? Any psychological patterns or session observations worth remembering..."
-                rows={5}
-                className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2.5 text-sm text-white focus:outline-none focus:border-violet-600 placeholder-zinc-600 resize-none"
-              />
+            <div className="bg-zinc-800 border border-zinc-700 p-4 rounded-xl space-y-3 shadow-[0_1px_0_0_rgba(255,255,255,0.02)_inset]">
+              <div className="flex items-center gap-2 pb-1">
+                <span className="text-[10px] font-bold text-cyan-400 font-mono tracking-widest">03</span>
+                <h4 className="text-xs font-semibold text-slate-300 uppercase tracking-wider">Performance Evaluation</h4>
+              </div>
+              <div>
+                <label className="block text-xs text-zinc-400 mb-1.5">Performance Evaluation Summary</label>
+                <textarea
+                  value={disciplineReviewDraft.notes}
+                  onChange={(e) => setDisciplineReviewDraft(prev => ({ ...prev, notes: e.target.value }))}
+                  placeholder="What was going through your mind? Any psychological patterns or session observations worth remembering..."
+                  rows={5}
+                  className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-zinc-600 placeholder-zinc-600 resize-none"
+                />
+              </div>
             </div>
 
             <div className="flex justify-end gap-3 pt-4 border-t border-zinc-800">
@@ -380,7 +398,7 @@ export function DisciplinePsychologyReviewModal() {
               <button
                 type="button"
                 onClick={handleSaveDisciplineReview}
-                className="flex items-center gap-2 px-5 py-2 bg-white hover:bg-zinc-200 text-black rounded-lg text-sm font-medium transition-colors"
+                className="flex items-center gap-2 px-5 py-2 bg-violet-500 hover:bg-violet-400 text-white rounded-lg text-sm font-medium transition-colors"
               >
                 <Save className="w-4 h-4" />
                 Save Review
