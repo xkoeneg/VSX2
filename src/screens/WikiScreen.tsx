@@ -391,16 +391,17 @@ export function WikiScreen() {
           className={cn(
             'relative w-full text-left rounded-lg pl-3.5 pr-3 py-2.5 border transition-all',
             isActive
-              ? (theme !== 'light'
-                  ? 'bg-white/[0.06] border-zinc-700/80 shadow-[0_0_16px_-3px_rgba(56,189,248,0.45)]'
-                  : 'bg-sky-50 border-sky-200 shadow-[0_0_16px_-6px_rgba(56,189,248,0.35)]')
+              ? cn(
+                  theme !== 'light' ? 'bg-white/[0.06] border-zinc-700/80' : 'bg-sky-50/60 border-zinc-200',
+                  style.glow
+                )
               : (theme !== 'light'
                   ? 'bg-transparent border-transparent hover:bg-white/[0.03] hover:border-zinc-800'
                   : 'bg-transparent border-transparent hover:bg-zinc-50 hover:border-zinc-200')
           )}
         >
           {isActive && (
-            <span className="absolute left-0 top-1.5 bottom-1.5 w-[3px] rounded-full bg-sky-400 shadow-[0_0_8px_1px_rgba(56,189,248,0.65)]" />
+            <span className={cn('absolute left-0 top-1.5 bottom-1.5 w-[3px] rounded-full', style.dot, style.glow)} />
           )}
           <div className="flex items-start justify-between gap-2">
             <h4 className={cn(
@@ -857,7 +858,7 @@ export function WikiScreen() {
                         'flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-medium border transition-all',
                         isActive
                           ? (style
-                              ? cn(style.active, 'shadow-[0_0_12px_-2px_rgba(56,189,248,0.5)]')
+                              ? cn(style.active, style.glow)
                               : (theme !== 'light'
                                   ? 'bg-sky-500/15 text-sky-300 border-sky-500/40 shadow-[0_0_12px_-2px_rgba(56,189,248,0.5)]'
                                   : 'bg-sky-50 text-sky-700 border-sky-300 shadow-[0_0_12px_-4px_rgba(56,189,248,0.4)]'))
