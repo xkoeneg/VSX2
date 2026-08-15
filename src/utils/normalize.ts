@@ -206,6 +206,17 @@ export const normalizeChatMessage = (m: any): ChatMessage => ({
   timestamp: typeof m?.timestamp === 'string' ? m.timestamp : new Date().toISOString(),
 });
 
+// Notices saved before multi-image screenshot support existed stored a
+// single `imageUrl` string instead of an `images` array — migrate that
+// legacy shape into a one-item array so old backups still render correctly.
+export const normalizeNoticeImages = (n: any): TradeImage[] => {
+  if (Array.isArray(n?.images)) return n.images.map(normalizeTradeImage);
+  if (typeof n?.imageUrl === 'string' && n.imageUrl) {
+    return [{ id: generateId(), url: n.imageUrl, type: n.imageUrl.startsWith('data:') ? 'base64' : 'url' }];
+  }
+  return [];
+};
+
 export const normalizeNotice = (n: any): MarketNotice => {
   const timestamp = typeof n?.timestamp === 'string' ? n.timestamp : new Date().toISOString();
   const messages = Array.isArray(n?.messages) ? n.messages.map(normalizeChatMessage) : [];
@@ -221,7 +232,7 @@ export const normalizeNotice = (n: any): MarketNotice => {
     title: normalizeStringField(n?.title),
     session: SESSION_OPTIONS.includes(n?.session) ? n.session : '',
     tag: normalizeStringField(n?.tag),
-    imageUrl: normalizeStringField(n?.imageUrl),
+    images: normalizeNoticeImages(n),
     description: legacyDescription || legacyMessagesText,
     whatHappenedTitle: normalizeStringField(n?.whatHappenedTitle),
     keyTakeawayTitle: normalizeStringField(n?.keyTakeawayTitle),
