@@ -965,15 +965,10 @@ export function useAppState() {
   const [ruleIconPickerTab, setRuleIconPickerTab] = useState<'emoji' | 'icons' | 'color'>('emoji');
   const emptyNoticeDraft = { type: 'mistake' as NoticeType, title: '', session: '' as SessionOption | '', tag: '', images: [] as TradeImage[], steps: [] as StrategyStep[], description: '', whatHappenedTitle: '', keyTakeawayTitle: '', consequence: '', prevention: '', preventionTitle: '' };
   const [newNotice, setNewNotice] = useState<{ type: NoticeType; title: string; session: SessionOption | ''; tag: string; images: TradeImage[]; steps: StrategyStep[]; description: string; whatHappenedTitle: string; keyTakeawayTitle: string; consequence: string; prevention: string; preventionTitle: string }>(emptyNoticeDraft);
-  const [newWiki, setNewWiki] = useState<Partial<WikiEntry>>({ title: '', content: '', category: WIKI_CATEGORIES[0], imageUrl: '', keyRules: [], bestSession: '', timeframe: '', contextNotes: '' });
+  const [newWiki, setNewWiki] = useState<Partial<WikiEntry> & { images: TradeImage[] }>({ title: '', content: '', category: WIKI_CATEGORIES[0], images: [], keyRules: [], bestSession: '', timeframe: '', contextNotes: '' });
   const [editingWikiId, setEditingWikiId] = useState<string | null>(null);
   // Which entry's full-detail modal is open, if any.
   const [viewWikiId, setViewWikiId] = useState<string | null>(null);
-  // Entry pending a delete confirmation — set by handleDeleteWiki, cleared
-  // (and actually removed) by confirmDeleteWiki. Mirrors the
-  // tradePendingDelete / accountPendingDelete "are you sure?" pattern so an
-  // accidental click on the trash icon can't nuke a concept outright.
-  const [wikiPendingDelete, setWikiPendingDelete] = useState<string | null>(null);
   const wikiImageInputRef = useRef<HTMLInputElement>(null);
   // Points at the "Upload diagram image" dropzone inside the Add/Edit Wiki
   // modal. When set, the modal scrolls it into view and focuses it on open —
@@ -985,6 +980,13 @@ export function useAppState() {
   // True while a file is being dragged over the modal's image dropzone, so it
   // can render an active drop-target state.
   const [isWikiImageDragActive, setIsWikiImageDragActive] = useState(false);
+  // Drag-to-reorder state for the multi-image grid in the Add/Edit Wiki
+  // modal — mirrors draggingCoverImageId/dragOverCoverImageId for strategies.
+  const [draggingWikiImageId, setDraggingWikiImageId] = useState<string | null>(null);
+  const [dragOverWikiImageId, setDragOverWikiImageId] = useState<string | null>(null);
+  // Which slide of a multi-image wiki entry is currently shown, in both the
+  // Knowledge Wiki workbench panel and the full-detail preview modal.
+  const [wikiCoverIndex, setWikiCoverIndex] = useState(0);
   // Option B: "AI Auto-Fill" — true while a request to the auto-fill
   // endpoint is in flight, drives the button's loading/pulse state.
   const [isWikiAutoFilling, setIsWikiAutoFilling] = useState(false);
@@ -2226,6 +2228,12 @@ export function useAppState() {
   useEffect(() => {
     if (viewStrategyId) setStrategyCoverIndex(0);
   }, [viewStrategyId]);
+
+  // Same idea for the Knowledge Wiki — reset to the first slide whenever a
+  // (different) entry is opened in the full-detail preview modal.
+  useEffect(() => {
+    if (viewWikiId) setWikiCoverIndex(0);
+  }, [viewWikiId]);
 
   // Populate Discipline & Psychology Review draft when opened
   useEffect(() => {
@@ -3637,11 +3645,22 @@ export function useAppState() {
     if (editingNoticeId === id) { setEditingNoticeId(null); setShowAddNotice(false); }
   };
 
-  const WIKI_FORM_DEFAULT: Partial<WikiEntry> = { title: '', content: '', category: WIKI_CATEGORIES[0], imageUrl: '', keyRules: [], bestSession: '', timeframe: '', contextNotes: '' };
+  const WIKI_FORM_DEFAULT: Partial<WikiEntry> & { images: TradeImage[] } = { title: '', content: '', category: WIKI_CATEGORIES[0], images: [], keyRules: [], bestSession: '', timeframe: '', contextNotes: '' };
+
+  // Normalizes a wiki entry's chart image(s) regardless of whether it's
+  // legacy single-`imageUrl` data (pre-multi-image) or the newer `images`
+  // array, so every place that renders a wiki entry's chart(s) reads one
+  // consistent shape. Mirrors the back-compat fold-in used for notices.
+  const getWikiImages = (entry: WikiEntry): TradeImage[] => {
+    if (entry.images && entry.images.length > 0) return entry.images;
+    const legacy = (entry as unknown as { imageUrl?: string }).imageUrl;
+    return legacy ? [{ id: `${entry.id}-legacy`, url: legacy, type: legacy.startsWith('data:') ? 'base64' as const : 'url' as const }] : [];
+  };
 
   const handleAddWiki = () => {
     if (!newWiki.title?.trim()) return;
     const cleanedRules = (newWiki.keyRules || []).map(r => r.trim()).filter(Boolean);
+    const images = newWiki.images || [];
     if (editingWikiId) {
       setWikiEntries(prev => prev.map(w => w.id === editingWikiId
         ? {
@@ -3649,7 +3668,8 @@ export function useAppState() {
             title: newWiki.title!.trim(),
             content: newWiki.content || '',
             category: newWiki.category || WIKI_CATEGORIES[0],
-            imageUrl: newWiki.imageUrl || '',
+            images,
+            imageUrl: images[0]?.url || '',
             keyRules: cleanedRules,
             bestSession: newWiki.bestSession || '',
             timeframe: newWiki.timeframe || '',
@@ -3662,7 +3682,8 @@ export function useAppState() {
         title: newWiki.title!.trim(),
         content: newWiki.content || '',
         category: newWiki.category || WIKI_CATEGORIES[0],
-        imageUrl: newWiki.imageUrl || '',
+        images,
+        imageUrl: images[0]?.url || '',
         keyRules: cleanedRules,
         bestSession: newWiki.bestSession || '',
         timeframe: newWiki.timeframe || '',
@@ -3677,6 +3698,8 @@ export function useAppState() {
   const handleOpenAddWiki = () => {
     setEditingWikiId(null);
     setNewWiki(WIKI_FORM_DEFAULT);
+    setDraggingWikiImageId(null);
+    setDragOverWikiImageId(null);
     setShowAddWiki(true);
   };
 
@@ -3690,7 +3713,7 @@ export function useAppState() {
       title: entry.title,
       content: entry.content,
       category: entry.category || WIKI_CATEGORIES[0],
-      imageUrl: entry.imageUrl,
+      images: getWikiImages(entry),
       keyRules: entry.keyRules,
       bestSession: entry.bestSession,
       timeframe: entry.timeframe,
@@ -3699,40 +3722,54 @@ export function useAppState() {
     setViewWikiId(null);
     setShowAddWiki(true);
     setWikiImageFocusRequested(focusImage);
+    setDraggingWikiImageId(null);
+    setDragOverWikiImageId(null);
   };
 
-  // Just opens the "are you sure?" prompt — the actual removal happens in
-  // confirmDeleteWiki once the person confirms, so an accidental click on
-  // the trash icon in the list or detail panel can't delete a concept
-  // outright.
   const handleDeleteWiki = (id: string) => {
-    setWikiPendingDelete(id);
-  };
-
-  const confirmDeleteWiki = () => {
-    if (!wikiPendingDelete) return;
-    const id = wikiPendingDelete;
-    setWikiEntries(prev => prev.filter(w => w.id !== id));
+    setWikiEntries(wikiEntries.filter(w => w.id !== id));
     if (viewWikiId === id) setViewWikiId(null);
     if (editingWikiId === id) { setEditingWikiId(null); setShowAddWiki(false); }
-    setWikiPendingDelete(null);
   };
 
-  // Shared by the file picker, drag-and-drop, and clipboard paste inputs —
-  // all three ultimately just need to turn a File into a data URL and drop
-  // it into the draft entry's imageUrl.
-  const loadWikiImageFile = (file: File) => {
+  // The diagram/chart field now supports multiple images — every file
+  // picked (file input allows multi-select), dropped, or pasted gets
+  // appended as its own entry rather than replacing whatever's already
+  // there. Mirrors handleStrategyImagesPick.
+  const appendWikiImageFile = (file: File) => {
     if (!file.type.startsWith('image/')) return;
     const reader = new FileReader();
-    reader.onload = (ev) => setNewWiki(prev => ({ ...prev, imageUrl: ev.target?.result as string }));
+    reader.onload = (ev) => {
+      const url = ev.target?.result as string;
+      setNewWiki(prev => ({ ...prev, images: [...(prev.images || []), { id: generateId(), url, type: 'base64' as const }] }));
+    };
     reader.readAsDataURL(file);
   };
 
-  const handleWikiImagePick = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    loadWikiImageFile(file);
-    e.target.value = '';
+  const handleWikiImagesPick = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
+    Array.from(files).forEach(appendWikiImageFile);
+    e.target.value = ''; // allow re-selecting the same file(s) again later
+  };
+
+  const removeWikiImage = (imageId: string) => {
+    setNewWiki(prev => ({ ...prev, images: (prev.images || []).filter(img => img.id !== imageId) }));
+  };
+
+  // Drag-and-drop reordering of the image grid — the first slide becomes
+  // both the gallery thumbnail and the preview modal's opening slide.
+  const moveWikiImage = (fromImageId: string, toImageId: string) => {
+    if (fromImageId === toImageId) return;
+    setNewWiki(prev => {
+      const images = [...(prev.images || [])];
+      const fromIdx = images.findIndex(img => img.id === fromImageId);
+      const toIdx = images.findIndex(img => img.id === toImageId);
+      if (fromIdx === -1 || toIdx === -1) return prev;
+      const [moved] = images.splice(fromIdx, 1);
+      images.splice(toIdx, 0, moved);
+      return { ...prev, images };
+    });
   };
 
   // Drag-and-drop onto the "Upload diagram image" dropzone in the Add/Edit
@@ -3753,8 +3790,8 @@ export function useAppState() {
     e.preventDefault();
     e.stopPropagation();
     setIsWikiImageDragActive(false);
-    const file = e.dataTransfer?.files?.[0];
-    if (file) loadWikiImageFile(file);
+    const files = e.dataTransfer?.files;
+    if (files && files.length > 0) Array.from(files).forEach(appendWikiImageFile);
   };
 
   // Ctrl+V / Cmd+V while the Add/Edit Wiki modal is open — attach to the
@@ -3769,7 +3806,7 @@ export function useAppState() {
         const file = item.getAsFile();
         if (file) {
           e.preventDefault();
-          loadWikiImageFile(file);
+          appendWikiImageFile(file);
         }
         break;
       }
@@ -3777,9 +3814,9 @@ export function useAppState() {
   };
 
   // Ctrl+V / Cmd+V directly on the main Knowledge Wiki page (no modal open)
-  // — updates whichever concept is currently active in the detail workbench.
-  // Wired up as a window-level listener below (see useEffect) so it works
-  // regardless of what happens to have focus on the page.
+  // — appends to whichever concept is currently active in the detail
+  // workbench. Wired up as a window-level listener below (see useEffect) so
+  // it works regardless of what happens to have focus on the page.
   const handleWikiPageImagePaste = (e: ClipboardEvent) => {
     if (!viewWikiId || showAddWiki) return;
     const items = e.clipboardData?.items;
@@ -3793,7 +3830,9 @@ export function useAppState() {
         const reader = new FileReader();
         reader.onload = (ev) => {
           const dataUrl = ev.target?.result as string;
-          setWikiEntries(prev => prev.map(w => (w.id === viewWikiId ? { ...w, imageUrl: dataUrl } : w)));
+          setWikiEntries(prev => prev.map(w => (w.id === viewWikiId
+            ? { ...w, images: [...getWikiImages(w), { id: generateId(), url: dataUrl, type: 'base64' as const }], imageUrl: w.imageUrl || dataUrl }
+            : w)));
         };
         reader.readAsDataURL(file);
         break;
@@ -3961,17 +4000,6 @@ Return ONLY a JSON object — no markdown, no code fences, no commentary — wit
   });
   const removeWikiKeyRule = (idx: number) => setNewWiki(prev => ({ ...prev, keyRules: (prev.keyRules || []).filter((_, i) => i !== idx) }));
 
-  // Guards the X button on each rule row with a confirmation, same
-  // request/confirm split used for strategy steps — requestRemoveWikiKeyRule
-  // just opens the prompt, confirmRemoveWikiKeyRule does the actual removal.
-  const [wikiRulePendingDeleteIndex, setWikiRulePendingDeleteIndex] = useState<number | null>(null);
-  const requestRemoveWikiKeyRule = (idx: number) => setWikiRulePendingDeleteIndex(idx);
-  const confirmRemoveWikiKeyRule = () => {
-    if (wikiRulePendingDeleteIndex === null) return;
-    removeWikiKeyRule(wikiRulePendingDeleteIndex);
-    setWikiRulePendingDeleteIndex(null);
-  };
-
   // ---- Standard Trading Concepts import (Option A) ----------------------
   // One-click populate of the pre-written ICT / Price Action library. Dedupes
   // by title (case-insensitive) so re-clicking after a partial import, or
@@ -3991,6 +4019,7 @@ Return ONLY a JSON object — no markdown, no code fences, no commentary — wit
       title: c.title,
       content: c.overview,
       category: c.category,
+      images: [],
       imageUrl: '',
       keyRules: c.checklist,
       bestSession: c.sessionConfluence.session,
@@ -4844,6 +4873,12 @@ Return ONLY a JSON object — no markdown, no code fences, no commentary — wit
     wikiImageDropzoneRef,
     wikiImageFocusRequested,
     isWikiImageDragActive,
+    draggingWikiImageId,
+    setDraggingWikiImageId,
+    dragOverWikiImageId,
+    setDragOverWikiImageId,
+    wikiCoverIndex,
+    setWikiCoverIndex,
     isWikiAutoFilling,
     selectedTimeframeTab,
     setSelectedTimeframeTab,
@@ -5066,14 +5101,14 @@ Return ONLY a JSON object — no markdown, no code fences, no commentary — wit
     handleEditNotice,
     handleDeleteNotice,
     WIKI_FORM_DEFAULT,
+    getWikiImages,
     handleAddWiki,
     handleOpenAddWiki,
     handleOpenEditWiki,
     handleDeleteWiki,
-    confirmDeleteWiki,
-    wikiPendingDelete,
-    setWikiPendingDelete,
-    handleWikiImagePick,
+    handleWikiImagesPick,
+    removeWikiImage,
+    moveWikiImage,
     handleWikiImageDragOver,
     handleWikiImageDragLeave,
     handleWikiImageDrop,
@@ -5082,10 +5117,6 @@ Return ONLY a JSON object — no markdown, no code fences, no commentary — wit
     addWikiKeyRule,
     updateWikiKeyRule,
     removeWikiKeyRule,
-    wikiRulePendingDeleteIndex,
-    setWikiRulePendingDeleteIndex,
-    requestRemoveWikiKeyRule,
-    confirmRemoveWikiKeyRule,
     STANDARD_TRADING_CONCEPTS,
     missingStandardConcepts,
     allStandardConceptsImported,
