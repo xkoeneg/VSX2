@@ -223,8 +223,10 @@ export const normalizeNotice = (n: any): MarketNotice => {
     tag: normalizeStringField(n?.tag),
     imageUrl: normalizeStringField(n?.imageUrl),
     description: legacyDescription || legacyMessagesText,
+    whatHappenedTitle: normalizeStringField(n?.whatHappenedTitle),
     consequence: normalizeStringField(n?.consequence),
     prevention: normalizeStringField(n?.prevention),
+    preventionTitle: normalizeStringField(n?.preventionTitle),
     timestamp,
     messages,
   };
