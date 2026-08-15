@@ -472,7 +472,7 @@ export function WikiScreen() {
             </p>
             <div className="flex items-center justify-center gap-2 flex-wrap mt-4">
               <button onClick={handleOpenAddWiki} className={cn(
-                'inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium transition-colors',
+                'inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm transition-colors',
                 theme !== 'light' ? 'bg-zinc-800 hover:bg-zinc-700 text-white' : 'bg-zinc-900 hover:bg-zinc-800 text-white'
               )}>
                 <Plus className="w-4 h-4" />
@@ -481,16 +481,15 @@ export function WikiScreen() {
               {!allStandardConceptsImported && (
                 <button
                   onClick={handleClickImportStandardConcepts}
-                  title="Import Standard Concepts"
                   className={cn(
-                    'inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium transition-colors border',
+                    'inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm transition-colors border',
                     theme !== 'light'
                       ? 'bg-sky-500/10 hover:bg-sky-500/20 text-sky-400 border-sky-500/30'
                       : 'bg-sky-50 hover:bg-sky-100 text-sky-600 border-sky-200'
                   )}
                 >
                   <Download className="w-4 h-4" />
-                  Import Standard Concepts
+                  📥 Import Standard Concepts
                 </button>
               )}
             </div>
@@ -718,99 +717,96 @@ export function WikiScreen() {
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
           {/* Card 1 — Total Concepts */}
           <div className={cn(
-            'rounded-xl border p-4 min-h-[88px] flex flex-col justify-between',
+            'rounded-xl border p-4 flex items-center gap-3',
             theme !== 'light' ? 'bg-[#111113] border-zinc-800/80' : 'bg-white border-zinc-200'
           )}>
-            <div className="flex items-center justify-between">
-              <p className="text-[10px] uppercase tracking-wide text-zinc-500 font-semibold">Total Concepts</p>
-              <div className={cn(
-                'w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0',
-                theme !== 'light' ? 'bg-sky-500/10 text-sky-400' : 'bg-sky-50 text-sky-600'
-              )}>
-                <BookOpen className="w-4 h-4" />
-              </div>
+            <div className={cn(
+              'w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0',
+              theme !== 'light' ? 'bg-sky-500/10 text-sky-400' : 'bg-sky-50 text-sky-600'
+            )}>
+              <BookOpen className="w-5 h-5" />
             </div>
-            <p className={cn('text-xl font-bold leading-tight', theme !== 'light' ? 'text-white' : 'text-zinc-900')}>
-              {wikiEntries.length}
-            </p>
+            <div className="min-w-0">
+              <p className="text-[10px] uppercase tracking-wide text-zinc-500 font-semibold">Total Concepts</p>
+              <p className={cn('text-xl font-bold leading-tight', theme !== 'light' ? 'text-white' : 'text-zinc-900')}>
+                {wikiEntries.length}
+              </p>
+            </div>
           </div>
 
           {/* Card 2 — Categories */}
           <div className={cn(
-            'rounded-xl border p-4 min-h-[88px] flex flex-col justify-between',
+            'rounded-xl border p-4 flex items-center gap-3',
             theme !== 'light' ? 'bg-[#111113] border-zinc-800/80' : 'bg-white border-zinc-200'
           )}>
-            <div className="flex items-center justify-between">
-              <p className="text-[10px] uppercase tracking-wide text-zinc-500 font-semibold">Categories</p>
-              <div className={cn(
-                'w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0',
-                theme !== 'light' ? 'bg-violet-500/10 text-violet-400' : 'bg-violet-50 text-violet-600'
-              )}>
-                <Grid className="w-4 h-4" />
-              </div>
+            <div className={cn(
+              'w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0',
+              theme !== 'light' ? 'bg-violet-500/10 text-violet-400' : 'bg-violet-50 text-violet-600'
+            )}>
+              <Grid className="w-5 h-5" />
             </div>
-            <p className={cn('text-xl font-bold leading-tight', theme !== 'light' ? 'text-white' : 'text-zinc-900')}>
-              {presentCategoryNames.length}
-            </p>
+            <div className="min-w-0">
+              <p className="text-[10px] uppercase tracking-wide text-zinc-500 font-semibold">Categories</p>
+              <p className={cn('text-xl font-bold leading-tight', theme !== 'light' ? 'text-white' : 'text-zinc-900')}>
+                {presentCategoryNames.length}
+              </p>
+            </div>
           </div>
 
           {/* Card 3 — Active Filter / Coverage */}
           <div className={cn(
-            'rounded-xl border p-4 min-h-[88px] flex flex-col justify-between',
+            'rounded-xl border p-4 flex items-center gap-3',
             theme !== 'light' ? 'bg-[#111113] border-zinc-800/80' : 'bg-white border-zinc-200'
           )}>
-            <div className="flex items-center justify-between">
-              <p className="text-[10px] uppercase tracking-wide text-zinc-500 font-semibold">Active Filter</p>
-              <div className={cn(
-                'w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0',
-                theme !== 'light' ? 'bg-amber-500/10 text-amber-400' : 'bg-amber-50 text-amber-600'
-              )}>
-                <Filter className="w-4 h-4" />
-              </div>
+            <div className={cn(
+              'w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0',
+              theme !== 'light' ? 'bg-amber-500/10 text-amber-400' : 'bg-amber-50 text-amber-600'
+            )}>
+              <Filter className="w-5 h-5" />
             </div>
-            <p className={cn('text-xl font-bold leading-tight truncate', theme !== 'light' ? 'text-white' : 'text-zinc-900')}>
-              {activeCategory}
-            </p>
+            <div className="min-w-0">
+              <p className="text-[10px] uppercase tracking-wide text-zinc-500 font-semibold">Active Filter</p>
+              <p className={cn('text-xl font-bold leading-tight truncate', theme !== 'light' ? 'text-white' : 'text-zinc-900')}>
+                {activeCategory}
+              </p>
+            </div>
           </div>
 
           {/* Card 4 — Quick Actions & Import */}
           <div className={cn(
-            'rounded-xl border p-4 min-h-[88px] flex flex-col justify-between gap-2',
+            'rounded-xl border p-4 flex items-center justify-between gap-2',
             theme !== 'light' ? 'bg-[#111113] border-zinc-800/80' : 'bg-white border-zinc-200'
           )}>
-            <p className="text-[10px] uppercase tracking-wide text-zinc-500 font-semibold">Quick Actions</p>
-            <div className="flex items-center gap-2">
-              <button
-                onClick={handleOpenAddWiki}
-                className={cn(
-                  'flex items-center justify-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-colors flex-1 min-w-0',
-                  theme !== 'light' ? 'bg-zinc-800 hover:bg-zinc-700 text-white' : 'bg-zinc-900 hover:bg-zinc-800 text-white'
-                )}
-              >
-                <Plus className="w-4 h-4 flex-shrink-0" />
-                <span className="truncate">Add Entry</span>
-              </button>
-              {!allStandardConceptsImported && (
-                <button
-                  onClick={handleClickImportStandardConcepts}
-                  title="Import Standard Concepts"
-                  className={cn(
-                    'relative flex items-center justify-center w-9 h-9 rounded-lg transition-colors flex-shrink-0 border',
-                    theme !== 'light'
-                      ? 'bg-sky-500/10 hover:bg-sky-500/20 text-sky-400 border-sky-500/30'
-                      : 'bg-sky-50 hover:bg-sky-100 text-sky-600 border-sky-200'
-                  )}
-                >
-                  <Download className="w-4 h-4" />
-                  <span className={cn(
-                    'absolute -top-1.5 -right-1.5 text-[9px] font-semibold w-4 h-4 flex items-center justify-center rounded-full',
-                    theme !== 'light' ? 'bg-sky-500 text-white' : 'bg-sky-600 text-white'
-                  )}>
-                    {missingStandardConcepts.length}
-                  </span>
-                </button>
+            <button
+              onClick={handleOpenAddWiki}
+              className={cn(
+                'flex items-center justify-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-colors flex-1 min-w-0',
+                theme !== 'light' ? 'bg-zinc-800 hover:bg-zinc-700 text-white' : 'bg-zinc-900 hover:bg-zinc-800 text-white'
               )}
-            </div>
+            >
+              <Plus className="w-4 h-4 flex-shrink-0" />
+              <span className="truncate">Add Entry</span>
+            </button>
+            {!allStandardConceptsImported && (
+              <button
+                onClick={handleClickImportStandardConcepts}
+                className={cn(
+                  'relative flex items-center justify-center w-9 h-9 rounded-lg transition-colors flex-shrink-0 border',
+                  theme !== 'light'
+                    ? 'bg-sky-500/10 hover:bg-sky-500/20 text-sky-400 border-sky-500/30'
+                    : 'bg-sky-50 hover:bg-sky-100 text-sky-600 border-sky-200'
+                )}
+                title={`Import Standard Concepts (${missingStandardConcepts.length} available)`}
+              >
+                <Download className="w-4 h-4" />
+                <span className={cn(
+                  'absolute -top-1.5 -right-1.5 text-[9px] font-semibold w-4 h-4 flex items-center justify-center rounded-full',
+                  theme !== 'light' ? 'bg-sky-500 text-white' : 'bg-sky-600 text-white'
+                )}>
+                  {missingStandardConcepts.length}
+                </span>
+              </button>
+            )}
           </div>
         </div>
 
