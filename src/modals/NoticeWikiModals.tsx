@@ -443,7 +443,7 @@ export function AddNoticeModal() {
                   value={newNotice.title}
                   onChange={(e) => setNewNotice(prev => ({ ...prev, title: e.target.value }))}
                   placeholder={isMistake ? 'e.g. Chasing 9:30 AM Open Spikes' : 'e.g. London Open Liquidity Sweep'}
-                  className="w-full bg-zinc-900 border border-zinc-700 rounded-lg px-3 py-2.5 text-sm text-white focus:outline-none focus:border-zinc-600"
+                  className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2.5 text-sm text-white focus:outline-none focus:border-zinc-600"
                 />
               </div>
 
@@ -464,7 +464,7 @@ export function AddNoticeModal() {
                               'px-2.5 py-1 rounded-full text-[11px] font-medium border transition-colors',
                               active
                                 ? 'bg-rose-500/15 border-rose-500/50 text-rose-300'
-                                : 'bg-zinc-900 border-zinc-700 text-zinc-500 hover:text-zinc-300 hover:border-zinc-600'
+                                : 'bg-zinc-800 border-zinc-700 text-zinc-500 hover:text-zinc-300 hover:border-zinc-600'
                             )}
                           >
                             {option}
@@ -481,7 +481,7 @@ export function AddNoticeModal() {
                       value={newNotice.whatHappenedTitle}
                       onChange={(e) => setNewNotice(prev => ({ ...prev, whatHappenedTitle: e.target.value }))}
                       placeholder="Short summary shown on the card, e.g. Chased the 9:30 spike"
-                      className="w-full bg-zinc-900 border border-zinc-700 rounded-lg px-3 py-2.5 text-sm text-white focus:outline-none focus:border-zinc-600"
+                      className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2.5 text-sm text-white focus:outline-none focus:border-zinc-600"
                     />
                     <label className="block text-xs text-zinc-500 mt-2.5 mb-1.5">Full Details <span className="text-zinc-600">(shown when opened)</span></label>
                     <textarea
@@ -489,7 +489,7 @@ export function AddNoticeModal() {
                       onChange={(e) => setNewNotice(prev => ({ ...prev, description: e.target.value }))}
                       placeholder="Describe the setup and behavior in detail..."
                       rows={3}
-                      className="w-full bg-zinc-900 border border-zinc-700 rounded-lg px-3 py-2.5 text-sm text-white focus:outline-none focus:border-zinc-600 resize-none"
+                      className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2.5 text-sm text-white focus:outline-none focus:border-zinc-600 resize-none"
                     />
                   </div>
 
@@ -500,7 +500,7 @@ export function AddNoticeModal() {
                       value={newNotice.consequence}
                       onChange={(e) => setNewNotice(prev => ({ ...prev, consequence: e.target.value }))}
                       placeholder="e.g. Full Stop Loss + Revenge Trade trigger"
-                      className="w-full bg-zinc-900 border border-zinc-700 rounded-lg px-3 py-2.5 text-sm text-white focus:outline-none focus:border-zinc-600"
+                      className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2.5 text-sm text-white focus:outline-none focus:border-zinc-600"
                     />
                   </div>
 
@@ -511,7 +511,7 @@ export function AddNoticeModal() {
                       value={newNotice.preventionTitle}
                       onChange={(e) => setNewNotice(prev => ({ ...prev, preventionTitle: e.target.value }))}
                       placeholder="Short rule shown on the card, e.g. Wait for the retest"
-                      className="w-full bg-zinc-900 border border-emerald-500/30 rounded-lg px-3 py-2.5 text-sm text-white focus:outline-none focus:border-emerald-500/60"
+                      className="w-full bg-zinc-800 border border-emerald-500/30 rounded-lg px-3 py-2.5 text-sm text-white focus:outline-none focus:border-emerald-500/60"
                     />
                     <label className="block text-xs text-zinc-500 mt-2.5 mb-1.5">Full Details <span className="text-zinc-600">(shown when opened)</span></label>
                     <textarea
@@ -519,7 +519,7 @@ export function AddNoticeModal() {
                       onChange={(e) => setNewNotice(prev => ({ ...prev, prevention: e.target.value }))}
                       placeholder="The bold, actionable fix..."
                       rows={2}
-                      className="w-full bg-zinc-900 border border-emerald-500/30 rounded-lg px-3 py-2.5 text-sm text-white focus:outline-none focus:border-emerald-500/60 resize-none"
+                      className="w-full bg-zinc-800 border border-emerald-500/30 rounded-lg px-3 py-2.5 text-sm text-white focus:outline-none focus:border-emerald-500/60 resize-none"
                     />
                   </div>
                 </>
@@ -532,7 +532,7 @@ export function AddNoticeModal() {
                       <select
                         value={newNotice.session}
                         onChange={(e) => setNewNotice(prev => ({ ...prev, session: e.target.value as SessionOption | '' }))}
-                        className="w-full bg-zinc-900 border border-zinc-700 rounded-lg px-3 py-2.5 text-sm text-white focus:outline-none focus:border-zinc-600"
+                        className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2.5 text-sm text-white focus:outline-none focus:border-zinc-600"
                       >
                         <option value="">None</option>
                         {SESSION_OPTIONS.map(s => (
@@ -547,7 +547,7 @@ export function AddNoticeModal() {
                         value={newNotice.tag}
                         onChange={(e) => setNewNotice(prev => ({ ...prev, tag: e.target.value }))}
                         placeholder="e.g. NQ Futures"
-                        className="w-full bg-zinc-900 border border-zinc-700 rounded-lg px-3 py-2.5 text-sm text-white focus:outline-none focus:border-zinc-600"
+                        className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2.5 text-sm text-white focus:outline-none focus:border-zinc-600"
                       />
                     </div>
                   </div>
@@ -559,7 +559,7 @@ export function AddNoticeModal() {
                       value={newNotice.keyTakeawayTitle}
                       onChange={(e) => setNewNotice(prev => ({ ...prev, keyTakeawayTitle: e.target.value }))}
                       placeholder="Short summary shown on the card, e.g. Fades hold at the range high"
-                      className="w-full bg-zinc-900 border border-cyan-500/30 rounded-lg px-3 py-2.5 text-sm text-white focus:outline-none focus:border-cyan-500/60"
+                      className="w-full bg-zinc-800 border border-cyan-500/30 rounded-lg px-3 py-2.5 text-sm text-white focus:outline-none focus:border-cyan-500/60"
                     />
                     <label className="block text-xs text-zinc-500 mt-2.5 mb-1.5">Full Note <span className="text-zinc-600">(shown when opened)</span></label>
                     <textarea
@@ -567,7 +567,7 @@ export function AddNoticeModal() {
                       onChange={(e) => setNewNotice(prev => ({ ...prev, description: e.target.value }))}
                       placeholder="What you noticed and how to use it next time..."
                       rows={3}
-                      className="w-full bg-zinc-900 border border-cyan-500/30 rounded-lg px-3 py-2.5 text-sm text-white focus:outline-none focus:border-cyan-500/60 resize-none"
+                      className="w-full bg-zinc-800 border border-cyan-500/30 rounded-lg px-3 py-2.5 text-sm text-white focus:outline-none focus:border-cyan-500/60 resize-none"
                     />
                   </div>
                 </>
