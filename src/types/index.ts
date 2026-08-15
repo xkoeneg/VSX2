@@ -198,7 +198,8 @@ export interface WikiEntry {
   title: string;
   content: string; // short gallery-card description / core definition
   category: string;
-  imageUrl: string; // preview + full-res diagram (url or base64 data URI)
+  imageUrl?: string; // legacy single diagram field — kept for back-compat with entries saved before multi-image support; new entries use `images` instead
+  images?: TradeImage[]; // diagram/chart image(s) — supports multiple, first one used as thumbnail
   keyRules: string[]; // Key Rules / Conditions — rendered as bullet points
   bestSession: string; // Trading Context — e.g. "NY Open", "London"
   timeframe: string; // Trading Context — e.g. "5m / 15m HTF"
