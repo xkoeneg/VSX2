@@ -473,18 +473,18 @@ export function NoticesScreen() {
           )}
         >
           {/* Edit / Delete */}
-          <div className="absolute top-2 right-2 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity z-10">
+          <div className="absolute top-1.5 right-1.5 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity z-10">
             <button
               onClick={(e) => { e.stopPropagation(); handleEditNotice(notice); }}
-              className="p-1.5 rounded-md backdrop-blur-sm bg-black/60 text-zinc-300 hover:text-white transition-colors"
+              className="p-1 rounded-md backdrop-blur-sm bg-black/60 text-zinc-300 hover:text-white transition-colors"
             >
-              <Edit2 className="w-3 h-3" />
+              <Edit2 className="w-2.5 h-2.5" />
             </button>
             <button
               onClick={(e) => { e.stopPropagation(); handleDeleteNotice(notice.id); }}
-              className="p-1.5 rounded-md backdrop-blur-sm bg-black/60 text-zinc-400 hover:text-rose-400 transition-colors"
+              className="p-1 rounded-md backdrop-blur-sm bg-black/60 text-zinc-400 hover:text-rose-400 transition-colors"
             >
-              <Trash2 className="w-3 h-3" />
+              <Trash2 className="w-2.5 h-2.5" />
             </button>
           </div>
 
@@ -493,17 +493,17 @@ export function NoticesScreen() {
             {notice.imageUrl ? (
               <img src={notice.imageUrl} alt={notice.title} className="w-full h-full object-cover" />
             ) : (
-              <ImageIcon className={cn('w-6 h-6', theme !== 'light' ? 'text-zinc-700' : 'text-zinc-400')} />
+              <ImageIcon className={cn('w-5 h-5', theme !== 'light' ? 'text-zinc-700' : 'text-zinc-400')} />
             )}
           </div>
 
-          <div className="p-3 flex-1 flex flex-col gap-2.5">
+          <div className="p-2 flex-1 flex flex-col gap-1">
             {/* Header: title + mistake tag pills — pill row height reserved even when empty */}
-            <div className="space-y-1.5 pr-8">
-              <h3 className={cn('text-sm font-bold leading-snug line-clamp-2', theme !== 'light' ? 'text-white' : 'text-zinc-900')}>{notice.title}</h3>
-              <div className="flex flex-wrap gap-1 min-h-[19px]">
+            <div className="space-y-1 pr-6">
+              <h3 className={cn('text-xs font-bold leading-snug line-clamp-2 min-h-[2.2em]', theme !== 'light' ? 'text-white' : 'text-zinc-900')}>{notice.title}</h3>
+              <div className="flex flex-wrap gap-1 min-h-[17px]">
                 {tags.length > 0 && tags.map(tag => (
-                  <span key={tag} className="px-2 py-0.5 rounded-full text-[10px] font-semibold border bg-rose-500/10 text-rose-400 border-rose-500/30">
+                  <span key={tag} className="px-1.5 py-0.5 rounded-full text-[9px] font-semibold border bg-rose-500/10 text-rose-400 border-rose-500/30">
                     {tag}
                   </span>
                 ))}
@@ -511,17 +511,17 @@ export function NoticesScreen() {
             </div>
 
             {/* What Happened */}
-            <div className={cn('rounded-md px-2.5 py-2', theme !== 'light' ? 'bg-zinc-800/60' : 'bg-zinc-100')}>
-              <p className={cn('text-[10px] font-semibold uppercase tracking-wide mb-0.5', theme !== 'light' ? 'text-zinc-500' : 'text-zinc-500')}>❌ What Happened</p>
-              <p className={cn('text-xs leading-snug line-clamp-2', notice.description ? (theme !== 'light' ? 'text-zinc-400' : 'text-zinc-600') : 'text-zinc-600 italic')}>
+            <div className={cn('rounded-md px-1.5 py-1', theme !== 'light' ? 'bg-zinc-800/60' : 'bg-zinc-100')}>
+              <p className={cn('text-[8px] font-semibold uppercase tracking-wide mb-0.5', theme !== 'light' ? 'text-zinc-500' : 'text-zinc-500')}>❌ What Happened</p>
+              <p className={cn('text-[10px] leading-snug line-clamp-2', notice.description ? (theme !== 'light' ? 'text-zinc-400' : 'text-zinc-600') : 'text-zinc-600 italic')}>
                 {notice.description || 'No details added yet.'}
               </p>
             </div>
 
             {/* Prevention / Rule — accented so the lesson stands out */}
-            <div className="rounded-md border-l-2 border-emerald-500 bg-emerald-500/5 px-2.5 py-2 mt-auto">
-              <p className="text-[10px] font-semibold uppercase tracking-wide mb-0.5 text-emerald-400">💡 Rule / Prevention</p>
-              <p className={cn('text-xs font-semibold leading-snug line-clamp-2', notice.prevention ? 'text-emerald-200' : 'text-emerald-200/50 italic')}>
+            <div className="rounded-md border-l-2 border-emerald-500 bg-emerald-500/5 px-1.5 py-1 mt-auto">
+              <p className="text-[8px] font-semibold uppercase tracking-wide mb-0.5 text-emerald-400">💡 Rule / Prevention</p>
+              <p className={cn('text-[10px] font-semibold leading-snug line-clamp-2', notice.prevention ? 'text-emerald-200' : 'text-emerald-200/50 italic')}>
                 {notice.prevention || 'No rule added yet.'}
               </p>
             </div>
@@ -590,7 +590,7 @@ export function NoticesScreen() {
                 and layout inside still read normally left-to-right. */}
             <div className={type === 'mistake' ? '[direction:ltr]' : undefined}>
             {list.length > 0 ? (
-              <div className={cn('grid gap-2.5 items-start', type === 'mistake' ? 'grid-cols-1 sm:grid-cols-2' : 'grid-cols-2 sm:grid-cols-3')}>
+              <div className="grid gap-2.5 items-start grid-cols-2 sm:grid-cols-3">
                 {list.map(type === 'mistake' ? renderMistakeCard : renderInsightCard)}
               </div>
             ) : (
