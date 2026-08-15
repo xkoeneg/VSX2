@@ -95,6 +95,7 @@ import {
   type LucideIcon,
 } from 'lucide-react';
 import { ModalBackdrop } from '../components/shared/ModalBackdrop';
+import { TagSelectDropdown } from '../components/shared/TagSelectDropdown';
 import { NOTICE_TYPE_META } from '../constants/notices';
 import { SESSION_OPTIONS } from '../constants/trading';
 import { WIKI_CATEGORIES } from '../types/index';
@@ -164,6 +165,7 @@ WikiCategory,
 WikiEntry
 } from '../types';
 import { cn } from '../utils/format';
+import { generateId } from '../utils/id';
 import { useAppContext } from '../context/AppContext';
 import { renderStatCard, renderAccountFilter, renderAccountTypeBadge, renderTradingAccountTypeBadge } from '../components/shared/RenderHelpers';
 
@@ -287,16 +289,9 @@ export function AddNoticeModal() {
 
   // Mistake tags are stored as a comma-separated string in the existing
   // `tag` field (the same field used as "Asset / Tag" for insights) so no
-  // data-model changes are required — just a nicer multi-select UI on top.
-  const MISTAKE_TAG_OPTIONS = ['FOMO', 'Overtrade', 'Chased Entry', 'Early Close', 'Revenge Trade', 'No Stop Loss', 'Moved SL', 'Oversized'];
+  // data-model changes are required — the TagSelectDropdown below just
+  // joins/splits its selected array against that string.
   const selectedMistakeTags = newNotice.tag ? newNotice.tag.split(',').map(t => t.trim()).filter(Boolean) : [];
-  const toggleMistakeTag = (option: string) => {
-    setNewNotice(prev => {
-      const current = prev.tag ? prev.tag.split(',').map(t => t.trim()).filter(Boolean) : [];
-      const next = current.includes(option) ? current.filter(t => t !== option) : [...current, option];
-      return { ...prev, tag: next.join(', ') };
-    });
-  };
   const isMistake = newNotice.type === 'mistake';
 
   return (
@@ -449,30 +444,21 @@ export function AddNoticeModal() {
 
               {isMistake ? (
                 <>
-                  {/* Mistake Tags — multi-select pill picker */}
-                  <div>
-                    <label className="block text-xs text-zinc-400 mb-1.5">Mistake Tags</label>
-                    <div className="flex flex-wrap gap-1.5">
-                      {MISTAKE_TAG_OPTIONS.map(option => {
-                        const active = selectedMistakeTags.includes(option);
-                        return (
-                          <button
-                            key={option}
-                            type="button"
-                            onClick={() => toggleMistakeTag(option)}
-                            className={cn(
-                              'px-2.5 py-1 rounded-full text-[11px] font-medium border transition-colors',
-                              active
-                                ? 'bg-rose-500/15 border-rose-500/50 text-rose-300'
-                                : 'bg-zinc-800 border-zinc-700 text-zinc-500 hover:text-zinc-300 hover:border-zinc-600'
-                            )}
-                          >
-                            {option}
-                          </button>
-                        );
-                      })}
-                    </div>
-                  </div>
+                  {/* Mistake Tags — same reusable dropdown used for "Mistakes
+                      Made" on the Add Trade modal, backed by the shared
+                      mistakesList so tags, colors, and additions/removals
+                      stay consistent across the whole app. */}
+                  <TagSelectDropdown
+                    label="Mistake Tags"
+                    options={mistakesList}
+                    selected={selectedMistakeTags}
+                    onChange={(selected) => setNewNotice(prev => ({ ...prev, tag: selected.join(', ') }))}
+                    onAddNew={(name) => setMistakesList(prev => [...prev, { id: generateId(), name, color: 'red' }])}
+                    onDeleteOption={handleDeleteMistakeType}
+                    onColorChange={handleChangeMistakeColor}
+                    placeholder="Select Mistake Tags..."
+                    colorScheme="rose"
+                  />
 
                   <div>
                     <label className="block text-xs text-zinc-400 mb-1.5">What Happened — Card Title</label>
