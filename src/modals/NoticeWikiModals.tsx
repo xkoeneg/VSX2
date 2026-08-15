@@ -92,6 +92,8 @@ import {
   Dumbbell,
   Coffee,
   Heart,
+  Sparkles,
+  Loader2,
   type LucideIcon,
 } from 'lucide-react';
 import { ModalBackdrop } from '../components/shared/ModalBackdrop';
@@ -876,6 +878,7 @@ export function AddWikiModal() {
     WIKI_FORM_DEFAULT, handleAddWiki, handleOpenAddWiki, handleOpenEditWiki, handleDeleteWiki,
     handleWikiImagePick, handleWikiImageDragOver, handleWikiImageDragLeave, handleWikiImageDrop,
     handleWikiImagePaste, wikiImageDropzoneRef, isWikiImageDragActive,
+    isWikiAutoFilling, handleWikiAutoFill,
     addWikiKeyRule, updateWikiKeyRule, removeWikiKeyRule, handleDeleteSetupType,
     handleDeleteConfluence, handleDeleteMistakeType, handleChangeSetupTypeColor, handleChangeConfluenceColor,
     handleChangeMistakeColor, handleDeleteEmotion, handleChangeEmotionColor, colorForEmotion, colorForMistake,
@@ -942,7 +945,30 @@ export function AddWikiModal() {
             </div>
 
             <div>
-              <label className="block text-sm text-zinc-400 mb-2">Title</label>
+              <div className="flex items-center justify-between mb-2 gap-2">
+                <label className="block text-sm text-zinc-400">Title</label>
+                <button
+                  type="button"
+                  onClick={handleWikiAutoFill}
+                  disabled={!newWiki.title?.trim() || isWikiAutoFilling}
+                  title={!newWiki.title?.trim() ? 'Type a concept name first' : 'Auto-fill this entry with AI'}
+                  className={cn(
+                    'flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-medium border transition-all flex-shrink-0',
+                    isWikiAutoFilling
+                      ? 'bg-purple-500/10 border-purple-500/30 text-purple-300 animate-pulse cursor-wait'
+                      : !newWiki.title?.trim()
+                        ? 'bg-zinc-800 border-zinc-700 text-zinc-600 cursor-not-allowed'
+                        : 'bg-purple-500/10 hover:bg-purple-500/20 border-purple-500/30 text-purple-400 hover:text-purple-300'
+                  )}
+                >
+                  {isWikiAutoFilling ? (
+                    <Loader2 className="w-3 h-3 animate-spin" />
+                  ) : (
+                    <Sparkles className="w-3 h-3" />
+                  )}
+                  <span>{isWikiAutoFilling ? 'Generating…' : 'Auto-Fill with AI'}</span>
+                </button>
+              </div>
               <input type="text" value={newWiki.title || ''} onChange={(e) => setNewWiki(prev => ({ ...prev, title: e.target.value }))} placeholder="Order Block" className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2.5 text-white focus:outline-none focus:border-zinc-600" />
             </div>
 
