@@ -929,8 +929,8 @@ export function useAppState() {
   const [editingRuleId, setEditingRuleId] = useState<string | null>(null);
   const [showRuleIconPicker, setShowRuleIconPicker] = useState(false);
   const [ruleIconPickerTab, setRuleIconPickerTab] = useState<'emoji' | 'icons' | 'color'>('emoji');
-  const emptyNoticeDraft = { type: 'mistake' as NoticeType, title: '', session: '' as SessionOption | '', tag: '', imageUrl: '', description: '', consequence: '', prevention: '' };
-  const [newNotice, setNewNotice] = useState<{ type: NoticeType; title: string; session: SessionOption | ''; tag: string; imageUrl: string; description: string; consequence: string; prevention: string }>(emptyNoticeDraft);
+  const emptyNoticeDraft = { type: 'mistake' as NoticeType, title: '', session: '' as SessionOption | '', tag: '', imageUrl: '', description: '', whatHappenedTitle: '', consequence: '', prevention: '', preventionTitle: '' };
+  const [newNotice, setNewNotice] = useState<{ type: NoticeType; title: string; session: SessionOption | ''; tag: string; imageUrl: string; description: string; whatHappenedTitle: string; consequence: string; prevention: string; preventionTitle: string }>(emptyNoticeDraft);
   const [newWiki, setNewWiki] = useState<Partial<WikiEntry>>({ title: '', content: '', category: WIKI_CATEGORIES[0], imageUrl: '', keyRules: [], bestSession: '', timeframe: '', contextNotes: '' });
   const [editingWikiId, setEditingWikiId] = useState<string | null>(null);
   // Which entry's full-detail modal is open, if any.
@@ -3443,8 +3443,10 @@ export function useAppState() {
       tag: notice.tag,
       imageUrl: notice.imageUrl,
       description: notice.description,
+      whatHappenedTitle: notice.whatHappenedTitle,
       consequence: notice.consequence,
       prevention: notice.prevention,
+      preventionTitle: notice.preventionTitle,
     });
     setShowAddNotice(true);
   };
