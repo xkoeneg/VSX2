@@ -354,15 +354,15 @@ export function AddRuleModal() {
               </div>
               <div>
                 <label className="block text-xs text-zinc-400 mb-1.5">Rule Title</label>
-                <input type="text" value={newRule.title || ''} onChange={(e) => setNewRule(prev => ({ ...prev, title: e.target.value }))} placeholder="Never Move Stop Loss" className="w-full bg-zinc-900 border border-zinc-700 rounded-lg px-3 py-2.5 text-sm text-white focus:outline-none focus:border-zinc-600" />
+                <input type="text" value={newRule.title || ''} onChange={(e) => setNewRule(prev => ({ ...prev, title: e.target.value }))} placeholder="Never Move Stop Loss" className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2.5 text-sm text-white focus:outline-none focus:border-zinc-600" />
               </div>
               <div>
                 <label className="block text-xs text-zinc-400 mb-1.5">Lesson Learned <span className="text-zinc-600">(shown as small muted subtext)</span></label>
-                <textarea value={newRule.description || ''} onChange={(e) => setNewRule(prev => ({ ...prev, description: e.target.value }))} placeholder="Moving SL cost me a $450 loss last Friday. Wait for the retest." rows={3} className="w-full bg-zinc-900 border border-zinc-700 rounded-lg px-3 py-2.5 text-sm text-white focus:outline-none focus:border-zinc-600 resize-none" />
+                <textarea value={newRule.description || ''} onChange={(e) => setNewRule(prev => ({ ...prev, description: e.target.value }))} placeholder="Moving SL cost me a $450 loss last Friday. Wait for the retest." rows={3} className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2.5 text-sm text-white focus:outline-none focus:border-zinc-600 resize-none" />
               </div>
               <div>
                 <label className="block text-xs text-zinc-400 mb-1.5">Category <span className="text-zinc-600">(optional label)</span></label>
-                <input type="text" value={newRule.category || ''} onChange={(e) => setNewRule(prev => ({ ...prev, category: e.target.value }))} placeholder="e.g. Prop Firm Rule" className="w-full bg-zinc-900 border border-zinc-700 rounded-lg px-3 py-2.5 text-sm text-white focus:outline-none focus:border-zinc-600" />
+                <input type="text" value={newRule.category || ''} onChange={(e) => setNewRule(prev => ({ ...prev, category: e.target.value }))} placeholder="e.g. Prop Firm Rule" className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2.5 text-sm text-white focus:outline-none focus:border-zinc-600" />
               </div>
             </div>
 
@@ -383,7 +383,7 @@ export function AddRuleModal() {
                     <button
                       type="button"
                       onClick={() => setShowRuleIconPicker(v => !v)}
-                      className="w-full flex items-center gap-2.5 bg-zinc-900 border border-zinc-700 rounded-lg px-3 py-2.5 text-left hover:border-zinc-600 transition-colors"
+                      className="w-full flex items-center gap-2.5 bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2.5 text-left hover:border-zinc-600 transition-colors"
                     >
                       <span className={cn("inline-flex items-center justify-center w-8 h-8 rounded-lg flex-shrink-0", accent.bg)}>
                         {newRule.iconKind === 'emoji' && newRule.iconValue
@@ -397,7 +397,7 @@ export function AddRuleModal() {
                 })()}
 
                 {showRuleIconPicker && (
-                  <div className="relative mt-2 bg-zinc-900 border border-zinc-700 rounded-lg p-3 space-y-3" onClick={(e) => e.stopPropagation()}>
+                  <div className="relative mt-2 bg-zinc-800 border border-zinc-700 rounded-lg p-3 space-y-3" onClick={(e) => e.stopPropagation()}>
                     {/* Tabs */}
                     <div className="flex items-center gap-1 bg-zinc-950 rounded-lg p-1">
                       {([
