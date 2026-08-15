@@ -973,7 +973,7 @@ export function useAppState() {
   // Points at the "Upload diagram image" dropzone inside the Add/Edit Wiki
   // modal. When set, the modal scrolls it into view and focuses it on open —
   // used by the "quick image edit" click from the main preview placeholder.
-  const wikiImageDropzoneRef = useRef<HTMLDivElement>(null);
+  const wikiImageDropzoneRef = useRef<HTMLButtonElement>(null);
   // True for one render after the modal opens when it should immediately
   // draw attention to the image dropzone (see handleOpenEditWiki's focusImage arg).
   const [wikiImageFocusRequested, setWikiImageFocusRequested] = useState(false);
