@@ -840,11 +840,11 @@ export function WikiScreen() {
               </div>
             </div>
 
-            {/* Category pill filters — single row, horizontally scrollable so
-                it never wraps or pushes a stray count line underneath (the
-                stats already live in the top cards). */}
+            {/* Category pill filters — flexible wrap so every pill stays
+                visible within the sidebar width, no horizontal scrolling
+                needed (mouse-friendly). Counts shown inline as "(n)". */}
             <div className={cn('p-3 border-b flex-shrink-0', theme !== 'light' ? 'border-zinc-800/80' : 'border-zinc-200')}>
-              <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar py-1 whitespace-nowrap">
+              <div className="flex flex-wrap items-center gap-1.5 w-full">
                 {FILTER_CATEGORIES.map(cat => {
                   const isActive = activeCategory === cat;
                   const count = cat === 'All' ? wikiEntries.length : wikiEntries.filter(e => e.category === cat).length;
@@ -854,7 +854,7 @@ export function WikiScreen() {
                       key={cat}
                       onClick={() => setActiveCategory(cat)}
                       className={cn(
-                        'flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-medium border transition-all flex-shrink-0',
+                        'flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-medium border transition-all',
                         isActive
                           ? (style
                               ? cn(style.active, 'shadow-[0_0_12px_-2px_rgba(56,189,248,0.5)]')
@@ -867,8 +867,7 @@ export function WikiScreen() {
                       )}
                     >
                       {style && <span className={cn('w-1.5 h-1.5 rounded-full flex-shrink-0', style.dot)} />}
-                      <span>{cat}</span>
-                      <span className={isActive ? 'opacity-70' : 'text-zinc-500'}>{count}</span>
+                      <span>{cat} ({count})</span>
                     </button>
                   );
                 })}
