@@ -711,36 +711,13 @@ export function WikiScreen() {
           title="Knowledge Wiki"
           description="Visual reference for PD Arrays & trading concepts"
           actions={
-            <>
-              {!allStandardConceptsImported && (
-                <button
-                  onClick={handleClickImportStandardConcepts}
-                  className={cn(
-                    'flex items-center gap-2 px-4 py-2 rounded-lg text-sm transition-colors flex-shrink-0 border',
-                    theme !== 'light'
-                      ? 'bg-sky-500/10 hover:bg-sky-500/20 text-sky-400 border-sky-500/30'
-                      : 'bg-sky-50 hover:bg-sky-100 text-sky-600 border-sky-200'
-                  )}
-                  title="Add the pre-loaded ICT & Price Action concept library"
-                >
-                  <Download className="w-4 h-4" />
-                  <span>📥 Import Standard Concepts</span>
-                  <span className={cn(
-                    'text-[10px] font-semibold px-1.5 py-0.5 rounded-full',
-                    theme !== 'light' ? 'bg-sky-500/20' : 'bg-sky-200/70'
-                  )}>
-                    {missingStandardConcepts.length}
-                  </span>
-                </button>
-              )}
-              <button onClick={handleOpenAddWiki} className={cn(
-                'flex items-center gap-2 px-4 py-2 rounded-lg text-sm transition-colors flex-shrink-0',
-                theme !== 'light' ? 'bg-zinc-800 hover:bg-zinc-700 text-white' : 'bg-zinc-900 hover:bg-zinc-800 text-white'
-              )}>
-                <Plus className="w-4 h-4" />
-                <span>Add Entry</span>
-              </button>
-            </>
+            <button onClick={handleOpenAddWiki} className={cn(
+              'flex items-center gap-2 px-4 py-2 rounded-lg text-sm transition-colors flex-shrink-0',
+              theme !== 'light' ? 'bg-zinc-800 hover:bg-zinc-700 text-white' : 'bg-zinc-900 hover:bg-zinc-800 text-white'
+            )}>
+              <Plus className="w-4 h-4" />
+              <span>Add Entry</span>
+            </button>
           }
         />
 
@@ -833,6 +810,43 @@ export function WikiScreen() {
             'flex-1 min-w-0 flex flex-col border rounded-xl overflow-hidden lg:h-full',
             theme !== 'light' ? 'bg-[#111113] border-zinc-800/80' : 'bg-white border-zinc-200'
           )}>
+            {/* Preview frame header — stat badges + Import action, anchored
+                top-right of the right panel, above the concept title / chart. */}
+            <div className={cn(
+              'flex items-center justify-end gap-2 px-4 py-2.5 border-b flex-shrink-0',
+              theme !== 'light' ? 'border-zinc-800/80 bg-black/10' : 'border-zinc-200 bg-zinc-50/60'
+            )}>
+              <div className={cn(
+                'inline-flex items-center gap-1.5 text-[11px] font-medium px-2.5 py-1 rounded-full border whitespace-nowrap',
+                theme !== 'light' ? 'bg-zinc-900 border-zinc-800 text-zinc-400' : 'bg-white border-zinc-200 text-zinc-500'
+              )}>
+                <span>{wikiEntries.length} concept{wikiEntries.length === 1 ? '' : 's'}</span>
+                <span className="text-zinc-600">•</span>
+                <span>{presentCategoryNames.length} categor{presentCategoryNames.length === 1 ? 'y' : 'ies'}</span>
+              </div>
+              {!allStandardConceptsImported && (
+                <button
+                  onClick={handleClickImportStandardConcepts}
+                  className={cn(
+                    'flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs transition-colors flex-shrink-0 border',
+                    theme !== 'light'
+                      ? 'bg-sky-500/10 hover:bg-sky-500/20 text-sky-400 border-sky-500/30'
+                      : 'bg-sky-50 hover:bg-sky-100 text-sky-600 border-sky-200'
+                  )}
+                  title="Add the pre-loaded ICT & Price Action concept library"
+                >
+                  <Download className="w-3.5 h-3.5" />
+                  <span>Import Standard Concepts</span>
+                  <span className={cn(
+                    'text-[10px] font-semibold px-1.5 py-0.5 rounded-full',
+                    theme !== 'light' ? 'bg-sky-500/20' : 'bg-sky-200/70'
+                  )}>
+                    {missingStandardConcepts.length}
+                  </span>
+                </button>
+              )}
+            </div>
+
             {renderWikiDetailPanel()}
           </div>
         </div>
