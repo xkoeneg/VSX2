@@ -272,7 +272,9 @@ export function WikiScreen() {
     moveStrategyStepImage, handleSaveStrategy, handleDeleteStrategy, confirmDeleteStrategy,
     handleNoticeImagePick, handleAddNotice, handleOpenAddNotice, handleEditNotice, handleDeleteNotice,
     WIKI_FORM_DEFAULT, handleAddWiki, handleOpenAddWiki, handleOpenEditWiki, handleDeleteWiki,
-    handleWikiImagePick, addWikiKeyRule, updateWikiKeyRule, removeWikiKeyRule, handleDeleteSetupType,
+    handleWikiImagePick, addWikiKeyRule, updateWikiKeyRule, removeWikiKeyRule,
+    missingStandardConcepts, allStandardConceptsImported, handleImportStandardConcepts,
+    handleDeleteSetupType,
     handleDeleteConfluence, handleDeleteMistakeType, handleChangeSetupTypeColor, handleChangeConfluenceColor,
     handleChangeMistakeColor, handleDeleteEmotion, handleChangeEmotionColor, colorForEmotion, colorForMistake,
     handleFileUpload, handleAddImageUrl, handleRemoveImage, handleReorderImages, updateTimeframeNotes,
@@ -358,6 +360,21 @@ export function WikiScreen() {
     }, [categoryFilteredEntries, selectedWikiId]);
 
     const selectedEntry = categoryFilteredEntries.find(e => e.id === selectedWikiId) || null;
+
+    // ---- Standard Trading Concepts import ---------------------------------
+    // Populates the library with the pre-written ICT / Price Action seed set
+    // (FVG, Order Block, MSS, killzones, etc.). Deduped in useAppState by
+    // title, so this is safe to click repeatedly — it only ever adds what's
+    // still missing, then jumps the workbench to the first newly-added entry.
+    const handleClickImportStandardConcepts = () => {
+      const added = handleImportStandardConcepts();
+      if (added && added.length > 0) {
+        setActiveCategory('All');
+        setWikiSearch('');
+        setSelectedWikiId(added[0].id);
+        setActiveDetailTab('overview');
+      }
+    };
 
     const handleSelectWikiEntry = (id: string) => {
       setSelectedWikiId(id);
@@ -658,6 +675,27 @@ export function WikiScreen() {
                   <span className={cn('font-semibold', theme !== 'light' ? 'text-white' : 'text-zinc-900')}>{presentCategoryNames.length}</span> categories
                 </span>
               </div>
+              {!allStandardConceptsImported && (
+                <button
+                  onClick={handleClickImportStandardConcepts}
+                  className={cn(
+                    'flex items-center gap-2 px-4 py-2 rounded-lg text-sm transition-colors flex-shrink-0 border',
+                    theme !== 'light'
+                      ? 'bg-sky-500/10 hover:bg-sky-500/20 text-sky-400 border-sky-500/30'
+                      : 'bg-sky-50 hover:bg-sky-100 text-sky-600 border-sky-200'
+                  )}
+                  title="Add the pre-loaded ICT & Price Action concept library"
+                >
+                  <Download className="w-4 h-4" />
+                  <span>📥 Import Standard Concepts</span>
+                  <span className={cn(
+                    'text-[10px] font-semibold px-1.5 py-0.5 rounded-full',
+                    theme !== 'light' ? 'bg-sky-500/20' : 'bg-sky-200/70'
+                  )}>
+                    {missingStandardConcepts.length}
+                  </span>
+                </button>
+              )}
               <button onClick={handleOpenAddWiki} className={cn(
                 'flex items-center gap-2 px-4 py-2 rounded-lg text-sm transition-colors flex-shrink-0',
                 theme !== 'light' ? 'bg-zinc-800 hover:bg-zinc-700 text-white' : 'bg-zinc-900 hover:bg-zinc-800 text-white'
@@ -679,13 +717,29 @@ export function WikiScreen() {
             </div>
             <h3 className={cn('text-lg font-medium mb-2', theme !== 'light' ? 'text-white' : 'text-zinc-900')}>No wiki entries yet</h3>
             <p className="text-zinc-500 mb-4">Build your personal trading knowledge base</p>
-            <button onClick={handleOpenAddWiki} className={cn(
-              'inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm transition-colors',
-              theme !== 'light' ? 'bg-zinc-800 hover:bg-zinc-700 text-white' : 'bg-zinc-900 hover:bg-zinc-800 text-white'
-            )}>
-              <Plus className="w-4 h-4" />
-              Add Entry
-            </button>
+            <div className="flex items-center justify-center gap-2 flex-wrap">
+              {!allStandardConceptsImported && (
+                <button
+                  onClick={handleClickImportStandardConcepts}
+                  className={cn(
+                    'inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm transition-colors border',
+                    theme !== 'light'
+                      ? 'bg-sky-500/10 hover:bg-sky-500/20 text-sky-400 border-sky-500/30'
+                      : 'bg-sky-50 hover:bg-sky-100 text-sky-600 border-sky-200'
+                  )}
+                >
+                  <Download className="w-4 h-4" />
+                  📥 Import Standard Concepts
+                </button>
+              )}
+              <button onClick={handleOpenAddWiki} className={cn(
+                'inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm transition-colors',
+                theme !== 'light' ? 'bg-zinc-800 hover:bg-zinc-700 text-white' : 'bg-zinc-900 hover:bg-zinc-800 text-white'
+              )}>
+                <Plus className="w-4 h-4" />
+                Add Entry
+              </button>
+            </div>
           </div>
         ) : (
           /* Split-pane workbench — category list on the left, full
