@@ -293,11 +293,13 @@ export function WikiScreen() {
     // redirected to horizontal scroll on this element only.
     const categoryStripRef = useRef<HTMLDivElement>(null);
     const handleCategoryStripWheel = (e: React.WheelEvent<HTMLDivElement>) => {
+      // Always contained: hovering this strip should never bubble up into
+      // page scroll, whether or not the strip itself has room to scroll.
+      e.preventDefault();
+      e.stopPropagation();
       const el = categoryStripRef.current;
       if (!el || el.scrollWidth <= el.clientWidth) return;
-      if (Math.abs(e.deltaY) <= Math.abs(e.deltaX)) return; // already horizontal (trackpad) — let it pass through
-      e.preventDefault();
-      el.scrollLeft += e.deltaY;
+      el.scrollLeft += Math.abs(e.deltaY) > Math.abs(e.deltaX) ? e.deltaY : e.deltaX;
     };
 
     // ---- Master-detail selection (split-pane) ---------------------------
