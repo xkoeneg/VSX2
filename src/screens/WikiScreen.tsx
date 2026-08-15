@@ -600,32 +600,61 @@ export function WikiScreen() {
           <div className="flex-1 overflow-y-auto min-h-0">
             {/* Chart viewport */}
             <div className="p-5 pb-0">
-              <div className="group relative w-full max-h-[380px] flex items-center justify-center bg-slate-950/60 rounded-xl border border-slate-800/80 p-4 overflow-hidden shadow-inner">
+              <div className="group relative w-full h-[450px] flex items-center justify-center bg-slate-950/80 rounded-xl border border-slate-800/80 p-6 overflow-hidden">
                 {entry.imageUrl ? (
-                  <img
-                    src={entry.imageUrl}
-                    alt={entry.title}
-                    className="max-h-[340px] w-auto h-auto object-contain rounded-lg transition-all duration-200"
-                  />
+                  <>
+                    <button
+                      type="button"
+                      onClick={() => setLightboxImage(entry.imageUrl)}
+                      title="Click to view full size"
+                      className="relative w-full h-full flex items-center justify-center cursor-zoom-in"
+                    >
+                      <img
+                        src={entry.imageUrl}
+                        alt={entry.title}
+                        className="max-h-full max-w-full w-auto h-auto object-contain rounded-lg shadow-2xl transition-transform duration-200 group-hover:scale-[1.01]"
+                      />
+                      {/* Floating "click to view full size" hint */}
+                      <span className="absolute bottom-3 left-1/2 -translate-x-1/2 flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-black/70 backdrop-blur-sm text-white text-xs font-medium border border-white/10 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <ZoomIn className="w-3.5 h-3.5" />
+                        Click to view full size
+                      </span>
+                    </button>
+                    {/* Overlay control actions — zoom / edit / delete */}
+                    <div className="absolute top-3 right-3 flex items-center gap-2 bg-slate-900/80 backdrop-blur-md p-1.5 rounded-lg border border-slate-700/50 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <button
+                        onClick={() => setLightboxImage(entry.imageUrl)}
+                        className="p-1.5 rounded-md text-zinc-400 hover:text-white hover:bg-white/10 transition-colors"
+                        title="Zoom / full-screen preview"
+                      >
+                        <ZoomIn className="w-3.5 h-3.5" />
+                      </button>
+                      <button
+                        onClick={() => handleOpenEditWiki(entry, true)}
+                        className="p-1.5 rounded-md text-zinc-400 hover:text-white hover:bg-white/10 transition-colors"
+                        title="Change image"
+                      >
+                        <Edit2 className="w-3.5 h-3.5" />
+                      </button>
+                      <button
+                        onClick={() => handleRemoveImage(entry.id)}
+                        className="p-1.5 rounded-md text-zinc-400 hover:text-rose-400 hover:bg-rose-500/10 transition-colors"
+                        title="Remove image"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  </>
                 ) : (
                   <button
                     type="button"
                     onClick={() => handleOpenEditWiki(entry, true)}
                     title="Add a diagram image (click to upload, or paste/drop one right here)"
-                    className="w-full min-h-[200px] flex flex-col items-center justify-center gap-2 text-zinc-700 hover:text-zinc-500 transition-colors cursor-pointer"
+                    className="w-full h-full flex flex-col items-center justify-center gap-2 text-zinc-700 hover:text-zinc-500 transition-colors cursor-pointer"
                   >
                     <ImageIcon className="w-8 h-8" />
                     <span className="text-xs">No chart diagram uploaded</span>
                     <span className="text-[10px] text-zinc-600">Click to add — or paste (Ctrl+V) an image here</span>
-                  </button>
-                )}
-                {entry.imageUrl && (
-                  <button
-                    onClick={() => setLightboxImage(entry.imageUrl)}
-                    className="absolute top-3 right-3 flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-black/70 backdrop-blur-sm text-white text-xs font-medium border border-white/10 opacity-0 group-hover:opacity-100 transition-opacity"
-                  >
-                    <ZoomIn className="w-3.5 h-3.5" />
-                    Full-screen preview
                   </button>
                 )}
               </div>
