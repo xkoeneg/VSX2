@@ -874,7 +874,9 @@ export function AddWikiModal() {
     handleNoticeImagesPick, removeNoticeImage, moveNoticeImage, draggingNoticeImageId, setDraggingNoticeImageId,
     dragOverNoticeImageId, setDragOverNoticeImageId, handleAddNotice, handleOpenAddNotice, handleEditNotice, handleDeleteNotice,
     WIKI_FORM_DEFAULT, handleAddWiki, handleOpenAddWiki, handleOpenEditWiki, handleDeleteWiki,
-    handleWikiImagePick, addWikiKeyRule, updateWikiKeyRule, removeWikiKeyRule, handleDeleteSetupType,
+    handleWikiImagePick, handleWikiImageDragOver, handleWikiImageDragLeave, handleWikiImageDrop,
+    handleWikiImagePaste, wikiImageDropzoneRef, isWikiImageDragActive,
+    addWikiKeyRule, updateWikiKeyRule, removeWikiKeyRule, handleDeleteSetupType,
     handleDeleteConfluence, handleDeleteMistakeType, handleChangeSetupTypeColor, handleChangeConfluenceColor,
     handleChangeMistakeColor, handleDeleteEmotion, handleChangeEmotionColor, colorForEmotion, colorForMistake,
     handleFileUpload, handleAddImageUrl, handleRemoveImage, handleReorderImages, updateTimeframeNotes,
@@ -887,7 +889,11 @@ export function AddWikiModal() {
         onClose={() => setShowAddWiki(false)}
         className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-start justify-center overflow-y-auto p-4 py-8"
       >
-        <div className="bg-zinc-900 border border-zinc-800 rounded-xl max-w-lg w-full max-h-[90vh] flex flex-col overflow-hidden" onClick={(e) => e.stopPropagation()}>
+        <div
+          className="bg-zinc-900 border border-zinc-800 rounded-xl max-w-lg w-full max-h-[90vh] flex flex-col overflow-hidden"
+          onClick={(e) => e.stopPropagation()}
+          onPaste={handleWikiImagePaste}
+        >
           <div className="px-6 py-4 border-b border-zinc-800 flex items-center justify-between flex-shrink-0">
             <h3 className="text-lg font-bold text-white truncate">{editingWikiId ? 'Edit Knowledge Entry' : 'Add Knowledge Entry'}</h3>
             <button onClick={() => setShowAddWiki(false)} className="p-1 text-zinc-400 hover:text-white">
@@ -900,15 +906,28 @@ export function AddWikiModal() {
               <label className="block text-sm text-zinc-400 mb-2">Diagram / Chart Image</label>
               <button
                 type="button"
+                ref={wikiImageDropzoneRef}
                 onClick={() => wikiImageInputRef.current?.click()}
-                className="w-full aspect-video rounded-lg border border-dashed border-zinc-700 hover:border-zinc-500 flex flex-col items-center justify-center gap-2 text-zinc-500 hover:text-zinc-300 transition-all overflow-hidden bg-zinc-950"
+                onDragOver={handleWikiImageDragOver}
+                onDragLeave={handleWikiImageDragLeave}
+                onDrop={handleWikiImageDrop}
+                onPaste={handleWikiImagePaste}
+                className={cn(
+                  'w-full aspect-video rounded-lg border border-dashed flex flex-col items-center justify-center gap-2 transition-all overflow-hidden bg-zinc-950 outline-none',
+                  isWikiImageDragActive
+                    ? 'border-sky-500 bg-sky-500/10 text-sky-400'
+                    : 'border-zinc-700 hover:border-zinc-500 text-zinc-500 hover:text-zinc-300 focus-visible:border-sky-500/70'
+                )}
               >
                 {newWiki.imageUrl ? (
                   <img src={newWiki.imageUrl} alt="Preview" className="w-full h-full object-cover" />
                 ) : (
                   <>
                     <ImagePlus className="w-5 h-5" />
-                    <span className="text-xs">Upload diagram image</span>
+                    <span className="text-xs">
+                      {isWikiImageDragActive ? 'Drop image to upload' : 'Upload diagram image'}
+                    </span>
+                    <span className="text-[10px] text-zinc-600">Click, drag & drop, or paste (Ctrl+V)</span>
                   </>
                 )}
               </button>
