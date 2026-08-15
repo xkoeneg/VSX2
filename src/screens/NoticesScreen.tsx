@@ -354,12 +354,17 @@ export function NoticesScreen() {
                 <h2 className={cn('text-lg font-bold leading-snug', theme !== 'light' ? 'text-white' : 'text-zinc-900')}>{previewNotice.title}</h2>
               </div>
 
-              {previewNotice.description && (
+              {(previewNotice.description || previewNotice.whatHappenedTitle) && (
                 <div className={cn('rounded-lg border p-3', theme !== 'light' ? 'bg-zinc-800/50 border-zinc-800' : 'bg-zinc-50 border-zinc-200')}>
                   <p className={cn('text-[11px] font-semibold uppercase tracking-wider mb-1.5 flex items-center gap-1.5', theme !== 'light' ? 'text-zinc-400' : 'text-zinc-500')}>
                     {previewNotice.type === 'mistake' ? <>❌ What Happened</> : 'What You Noticed'}
                   </p>
-                  <p className={cn('text-sm leading-relaxed whitespace-pre-wrap', theme !== 'light' ? 'text-zinc-300' : 'text-zinc-700')}>{previewNotice.description}</p>
+                  {previewNotice.type === 'mistake' && previewNotice.whatHappenedTitle && (
+                    <p className={cn('text-sm font-semibold mb-1', theme !== 'light' ? 'text-white' : 'text-zinc-900')}>{previewNotice.whatHappenedTitle}</p>
+                  )}
+                  {previewNotice.description && (
+                    <p className={cn('text-sm leading-relaxed whitespace-pre-wrap', theme !== 'light' ? 'text-zinc-300' : 'text-zinc-700')}>{previewNotice.description}</p>
+                  )}
                 </div>
               )}
 
@@ -370,12 +375,17 @@ export function NoticesScreen() {
                 </div>
               )}
 
-              {previewNotice.prevention && (
+              {(previewNotice.prevention || previewNotice.preventionTitle) && (
                 <div className="rounded-lg border border-emerald-500/30 bg-emerald-500/5 p-3">
                   <p className="text-[11px] font-semibold uppercase tracking-wider mb-1.5 text-emerald-400 flex items-center gap-1.5">
                     {previewNotice.type === 'mistake' ? <>💡 Rule / Prevention</> : 'How To Use This'}
                   </p>
-                  <p className="text-sm leading-relaxed text-emerald-100 font-medium">{previewNotice.prevention}</p>
+                  {previewNotice.type === 'mistake' && previewNotice.preventionTitle && (
+                    <p className="text-sm font-semibold mb-1 text-emerald-300">{previewNotice.preventionTitle}</p>
+                  )}
+                  {previewNotice.prevention && (
+                    <p className="text-sm leading-relaxed text-emerald-100 font-medium">{previewNotice.prevention}</p>
+                  )}
                 </div>
               )}
 
@@ -510,19 +520,21 @@ export function NoticesScreen() {
               </div>
             </div>
 
-            {/* What Happened */}
+            {/* What Happened — shows the short card title only; the full
+                description text lives behind the click-to-preview modal. */}
             <div className={cn('rounded-md px-1.5 py-1', theme !== 'light' ? 'bg-zinc-800/60' : 'bg-zinc-100')}>
               <p className={cn('text-[8px] font-semibold uppercase tracking-wide mb-0.5', theme !== 'light' ? 'text-zinc-500' : 'text-zinc-500')}>❌ What Happened</p>
-              <p className={cn('text-[10px] leading-snug line-clamp-2', notice.description ? (theme !== 'light' ? 'text-zinc-400' : 'text-zinc-600') : 'text-zinc-600 italic')}>
-                {notice.description || 'No details added yet.'}
+              <p className={cn('text-[10px] leading-snug line-clamp-2', notice.whatHappenedTitle ? (theme !== 'light' ? 'text-zinc-400' : 'text-zinc-600') : 'text-zinc-600 italic')}>
+                {notice.whatHappenedTitle || 'No title added yet.'}
               </p>
             </div>
 
-            {/* Prevention / Rule — accented so the lesson stands out */}
+            {/* Prevention / Rule — accented so the lesson stands out.
+                Same idea: short title on the card, full text in preview. */}
             <div className="rounded-md border-l-2 border-emerald-500 bg-emerald-500/5 px-1.5 py-1 mt-auto">
               <p className="text-[8px] font-semibold uppercase tracking-wide mb-0.5 text-emerald-400">💡 Rule / Prevention</p>
-              <p className={cn('text-[10px] font-semibold leading-snug line-clamp-2', notice.prevention ? 'text-emerald-200' : 'text-emerald-200/50 italic')}>
-                {notice.prevention || 'No rule added yet.'}
+              <p className={cn('text-[10px] font-semibold leading-snug line-clamp-2', notice.preventionTitle ? 'text-emerald-200' : 'text-emerald-200/50 italic')}>
+                {notice.preventionTitle || 'No title added yet.'}
               </p>
             </div>
           </div>
