@@ -446,7 +446,7 @@ export function WikiScreen() {
           )}
           <div className="flex items-start justify-between gap-2">
             <h4 className={cn(
-              'text-[13px] font-semibold leading-snug line-clamp-1 min-w-0',
+              'text-[15px] font-semibold leading-snug line-clamp-1 min-w-0',
               isActive
                 ? (theme !== 'light' ? 'text-white' : 'text-zinc-900')
                 : (theme !== 'light' ? 'text-zinc-300' : 'text-zinc-600')
@@ -460,15 +460,6 @@ export function WikiScreen() {
               <span className={cn('inline-flex items-center gap-1 text-[9px] px-1.5 py-0.5 rounded-full font-semibold whitespace-nowrap', style.badge)}>
                 <span className={cn('w-1 h-1 rounded-full', style.dot)} />
                 {entry.category}
-              </span>
-            )}
-            {entry.timeframe && (
-              <span className={cn(
-                'inline-flex items-center gap-1 text-[9px] px-1.5 py-0.5 rounded-md border font-mono whitespace-nowrap',
-                theme !== 'light' ? 'bg-zinc-950 border-zinc-800 text-zinc-500' : 'bg-zinc-100 border-zinc-200 text-zinc-500'
-              )}>
-                <Clock className="w-2.5 h-2.5" />
-                {entry.timeframe}
               </span>
             )}
           </div>
