@@ -126,6 +126,7 @@ import {
 import { NOTICE_TYPE_META } from '../constants/notices';
 import { getTagColorStyle, DEFAULT_TAG_COLOR } from '../constants/tagColors';
 import { generateId } from '../utils/id';
+import standardTradingConceptsSeed from '../data/standardTradingConcepts.json';
 import {
   formatCurrency, formatCurrencyAbsolute, formatCurrencyCompact, sanitizeNumericInput,
   parseFormattedPrice, formatPriceInput, formatDate, cn, buildLiveTimestamp,
@@ -193,6 +194,26 @@ function useDebouncedSupabaseWriter(delay: number = 500) {
 
   return { write };
 }
+
+// ----------------------------------------------------------------------------
+// Standard Trading Concepts — a read-only, pre-written seed library of core
+// ICT / Price Action terms (FVG, Order Block, MSS, killzones, etc.) that the
+// Knowledge Wiki can one-click import into the user's own wikiEntries. Kept
+// as a typed module-level constant (parsed once, not per-render) so the
+// import handler and the "already imported?" check both read from the same
+// source of truth.
+// ----------------------------------------------------------------------------
+type StandardConceptSeed = {
+  id: string;
+  title: string;
+  category: WikiCategory;
+  overview: string;
+  checklist: string[];
+  sessionConfluence: { session: string; timeframe: string; notes?: string };
+  tags: string[];
+};
+
+const STANDARD_TRADING_CONCEPTS = standardTradingConceptsSeed as StandardConceptSeed[];
 
 // ============================================================================
 // useAppState — the entire journal's state + business logic.
@@ -3684,6 +3705,37 @@ export function useAppState() {
   });
   const removeWikiKeyRule = (idx: number) => setNewWiki(prev => ({ ...prev, keyRules: (prev.keyRules || []).filter((_, i) => i !== idx) }));
 
+  // ---- Standard Trading Concepts import (Option A) ----------------------
+  // One-click populate of the pre-written ICT / Price Action library. Dedupes
+  // by title (case-insensitive) so re-clicking after a partial import, or
+  // after the user has already hand-written an entry with the same name,
+  // never creates duplicates — only concepts genuinely missing get added.
+  const missingStandardConcepts = useMemo(() => {
+    const existingTitles = new Set(wikiEntries.map(w => w.title.trim().toLowerCase()));
+    return STANDARD_TRADING_CONCEPTS.filter(c => !existingTitles.has(c.title.trim().toLowerCase()));
+  }, [wikiEntries]);
+
+  const allStandardConceptsImported = missingStandardConcepts.length === 0;
+
+  const handleImportStandardConcepts = () => {
+    if (missingStandardConcepts.length === 0) return;
+    const newEntries: WikiEntry[] = missingStandardConcepts.map(c => ({
+      id: generateId(),
+      title: c.title,
+      content: c.overview,
+      category: c.category,
+      imageUrl: '',
+      keyRules: c.checklist,
+      bestSession: c.sessionConfluence.session,
+      timeframe: c.sessionConfluence.timeframe,
+      contextNotes: [c.sessionConfluence.notes, c.tags.length ? `Tags: ${c.tags.join(', ')}` : '']
+        .filter(Boolean)
+        .join('\n\n'),
+    }));
+    setWikiEntries(prev => [...prev, ...newEntries]);
+    return newEntries;
+  };
+
   const handleDeleteSetupType = (id: string, name: string) => {
     setSetupTypes(prev => prev.filter(s => s.id !== id));
     setNewTrade(prev => ({ ...prev, setupTypes: (prev.setupTypes || []).filter(s => s !== name) }));
@@ -4751,6 +4803,10 @@ export function useAppState() {
     addWikiKeyRule,
     updateWikiKeyRule,
     removeWikiKeyRule,
+    STANDARD_TRADING_CONCEPTS,
+    missingStandardConcepts,
+    allStandardConceptsImported,
+    handleImportStandardConcepts,
     handleDeleteSetupType,
     handleDeleteConfluence,
     handleDeleteMistakeType,
