@@ -282,7 +282,7 @@ export function AddNoticeModal() {
     requestRemoveNoticeStep, removeNoticeStep, confirmRemoveNoticeStep, handleNoticeStepImagesPick, removeNoticeStepImage,
     moveNoticeStepImage,
     WIKI_FORM_DEFAULT, handleAddWiki, handleOpenAddWiki, handleOpenEditWiki, handleDeleteWiki,
-    handleWikiImagePick, addWikiKeyRule, updateWikiKeyRule, removeWikiKeyRule, handleDeleteSetupType,
+    handleWikiImagesPick, addWikiKeyRule, updateWikiKeyRule, removeWikiKeyRule, handleDeleteSetupType,
     handleDeleteConfluence, handleDeleteMistakeType, handleChangeSetupTypeColor, handleChangeConfluenceColor,
     handleChangeMistakeColor, handleDeleteEmotion, handleChangeEmotionColor, colorForEmotion, colorForMistake,
     handleFileUpload, handleAddImageUrl, handleRemoveImage, handleReorderImages, updateTimeframeNotes,
@@ -876,7 +876,8 @@ export function AddWikiModal() {
     handleNoticeImagesPick, removeNoticeImage, moveNoticeImage, draggingNoticeImageId, setDraggingNoticeImageId,
     dragOverNoticeImageId, setDragOverNoticeImageId, handleAddNotice, handleOpenAddNotice, handleEditNotice, handleDeleteNotice,
     WIKI_FORM_DEFAULT, handleAddWiki, handleOpenAddWiki, handleOpenEditWiki, handleDeleteWiki,
-    handleWikiImagePick, handleWikiImageDragOver, handleWikiImageDragLeave, handleWikiImageDrop,
+    handleWikiImagesPick, removeWikiImage, moveWikiImage, draggingWikiImageId, setDraggingWikiImageId,
+    dragOverWikiImageId, setDragOverWikiImageId, handleWikiImageDragOver, handleWikiImageDragLeave, handleWikiImageDrop,
     handleWikiImagePaste, wikiImageDropzoneRef, isWikiImageDragActive,
     isWikiAutoFilling, handleWikiAutoFill,
     addWikiKeyRule, updateWikiKeyRule, removeWikiKeyRule, requestRemoveWikiKeyRule, handleDeleteSetupType,
@@ -905,47 +906,97 @@ export function AddWikiModal() {
           </div>
 
           <form className="p-6 space-y-4">
-            {/* ================= SECTION 1: Diagram / Chart Image ================= */}
+            {/* ================= SECTION 1: Diagram / Chart Image(s) =================
+                Supports multiple images, reorderable via drag, shown as a
+                carousel in Preview Mode — mirrors the Strategy Model cover
+                image manager exactly. */}
             <div className="bg-zinc-800 border border-zinc-700 p-4 rounded-xl space-y-3 shadow-[0_1px_0_0_rgba(255,255,255,0.02)_inset]">
               <div className="flex items-center gap-2 pb-1">
                 <span className="text-[10px] font-bold text-cyan-400 font-mono tracking-widest">01</span>
-                <h4 className="text-xs font-semibold text-slate-300 uppercase tracking-wider">Diagram / Chart Image</h4>
+                <h4 className="text-xs font-semibold text-slate-300 uppercase tracking-wider">Diagram / Chart Image(s)</h4>
               </div>
-              <button
-                type="button"
-                ref={wikiImageDropzoneRef}
-                onClick={() => wikiImageInputRef.current?.click()}
-                onDragOver={handleWikiImageDragOver}
-                onDragLeave={handleWikiImageDragLeave}
-                onDrop={handleWikiImageDrop}
-                onPaste={handleWikiImagePaste}
-                className={cn(
-                  'w-full aspect-video rounded-lg border border-dashed flex flex-col items-center justify-center gap-2 transition-all overflow-hidden bg-zinc-950 outline-none',
-                  isWikiImageDragActive
-                    ? 'border-sky-500 bg-sky-500/10 text-sky-400'
-                    : 'border-zinc-700 hover:border-zinc-500 text-zinc-500 hover:text-zinc-300 focus-visible:border-sky-500/70'
-                )}
-              >
-                {newWiki.imageUrl ? (
-                  <img src={newWiki.imageUrl} alt="Preview" className="w-full h-full object-cover" />
-                ) : (
-                  <>
-                    <ImagePlus className="w-5 h-5" />
-                    <span className="text-xs">
-                      {isWikiImageDragActive ? 'Drop image to upload' : 'Upload diagram image'}
-                    </span>
-                    <span className="text-[10px] text-zinc-600">Click, drag & drop, or paste (Ctrl+V)</span>
-                  </>
-                )}
-              </button>
-              <input ref={wikiImageInputRef} type="file" accept="image/*" className="hidden" onChange={handleWikiImagePick} />
-              <input
-                type="text"
-                value={(newWiki.imageUrl || '').startsWith('data:') ? '' : (newWiki.imageUrl || '')}
-                onChange={(e) => setNewWiki(prev => ({ ...prev, imageUrl: e.target.value }))}
-                placeholder="...or paste an image URL"
-                className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-zinc-600"
-              />
+              <div>
+                <div className="flex items-center justify-between mb-2">
+                  <label className="block text-xs text-zinc-400">Ideal Diagram Example(s)</label>
+                  {newWiki.images.length > 0 && (
+                    <span className="text-xs text-zinc-600">{newWiki.images.length} image{newWiki.images.length === 1 ? '' : 's'}</span>
+                  )}
+                </div>
+                <div
+                  ref={wikiImageDropzoneRef}
+                  onDragOver={handleWikiImageDragOver}
+                  onDragLeave={handleWikiImageDragLeave}
+                  onDrop={handleWikiImageDrop}
+                  onPaste={handleWikiImagePaste}
+                  tabIndex={-1}
+                  className={cn(
+                    'grid grid-cols-3 gap-2 rounded-lg outline-none transition-colors',
+                    isWikiImageDragActive && 'ring-2 ring-sky-500/60'
+                  )}
+                >
+                  {newWiki.images.map((img, imgIdx) => (
+                    <div
+                      key={img.id}
+                      draggable
+                      onDragStart={(e) => {
+                        setDraggingWikiImageId(img.id);
+                        e.dataTransfer.effectAllowed = 'move';
+                        e.dataTransfer.setData('text/plain', img.id);
+                      }}
+                      onDragEnd={() => { setDraggingWikiImageId(null); setDragOverWikiImageId(null); }}
+                      onDragOver={(e) => { e.preventDefault(); e.dataTransfer.dropEffect = 'move'; }}
+                      onDragEnter={() => setDragOverWikiImageId(img.id)}
+                      onDragLeave={() => setDragOverWikiImageId(prev => (prev === img.id ? null : prev))}
+                      onDrop={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        const draggedId = e.dataTransfer.getData('text/plain');
+                        moveWikiImage(draggedId, img.id);
+                        setDraggingWikiImageId(null);
+                        setDragOverWikiImageId(null);
+                      }}
+                      onClick={() => setLightboxImage(img.url)}
+                      title="Drag to reorder — click to view larger"
+                      className={cn(
+                        "relative aspect-video rounded-lg overflow-hidden border bg-zinc-950 group cursor-grab active:cursor-grabbing transition-all",
+                        dragOverWikiImageId === img.id ? "border-sky-400 ring-2 ring-sky-400/60" : "border-zinc-700",
+                        draggingWikiImageId === img.id && "opacity-40"
+                      )}
+                    >
+                      <img src={img.url} alt="Diagram preview" className="w-full h-full object-cover pointer-events-none" />
+                      <div className="absolute top-1 left-1 flex items-center gap-0.5 px-1 py-0.5 rounded bg-black/70 text-white text-[9px] font-semibold pointer-events-none">
+                        <GripVertical className="w-2.5 h-2.5" />
+                        {imgIdx + 1}
+                      </div>
+                      <button
+                        type="button"
+                        onClick={(e) => { e.stopPropagation(); removeWikiImage(img.id); }}
+                        title="Remove image"
+                        className="absolute top-1 right-1 p-1 rounded-full bg-black/70 text-white opacity-0 group-hover:opacity-100 focus:opacity-100 transition-opacity"
+                      >
+                        <X className="w-3 h-3" />
+                      </button>
+                    </div>
+                  ))}
+                  <button
+                    type="button"
+                    onClick={() => wikiImageInputRef.current?.click()}
+                    className={cn(
+                      'aspect-video rounded-lg border border-dashed flex flex-col items-center justify-center gap-1 text-zinc-500 hover:text-zinc-300 transition-all bg-zinc-950',
+                      isWikiImageDragActive ? 'border-sky-500 bg-sky-500/10 text-sky-400' : 'border-zinc-700 hover:border-zinc-500'
+                    )}
+                  >
+                    <ImagePlus className="w-4 h-4" />
+                    <span className="text-[10px] text-center leading-tight px-1">{newWiki.images.length > 0 ? 'Add more' : 'Upload diagram image(s)'}</span>
+                  </button>
+                </div>
+                <input ref={wikiImageInputRef} type="file" accept="image/*" multiple className="hidden" onChange={handleWikiImagesPick} />
+                <p className="text-xs text-zinc-600 mt-1.5">
+                  {newWiki.images.length > 1
+                    ? 'Drag a photo to reorder — the first one becomes the entry thumbnail.'
+                    : 'Click, drag & drop, or paste (Ctrl+V) to add a diagram image.'}
+                </p>
+              </div>
             </div>
 
             {/* ================= SECTION 2: Concept Details ================= */}
@@ -1236,8 +1287,8 @@ export function WikiDetailModal() {
     moveStrategyStepImage, handleSaveStrategy, handleDeleteStrategy, confirmDeleteStrategy,
     handleNoticeImagesPick, removeNoticeImage, moveNoticeImage, draggingNoticeImageId, setDraggingNoticeImageId,
     dragOverNoticeImageId, setDragOverNoticeImageId, handleAddNotice, handleOpenAddNotice, handleEditNotice, handleDeleteNotice,
-    WIKI_FORM_DEFAULT, handleAddWiki, handleOpenAddWiki, handleOpenEditWiki, handleDeleteWiki,
-    handleWikiImagePick, addWikiKeyRule, updateWikiKeyRule, removeWikiKeyRule, handleDeleteSetupType,
+    WIKI_FORM_DEFAULT, getWikiImages, wikiCoverIndex, setWikiCoverIndex, handleAddWiki, handleOpenAddWiki, handleOpenEditWiki, handleDeleteWiki,
+    handleWikiImagesPick, addWikiKeyRule, updateWikiKeyRule, removeWikiKeyRule, handleDeleteSetupType,
     handleDeleteConfluence, handleDeleteMistakeType, handleChangeSetupTypeColor, handleChangeConfluenceColor,
     handleChangeMistakeColor, handleDeleteEmotion, handleChangeEmotionColor, colorForEmotion, colorForMistake,
     handleFileUpload, handleAddImageUrl, handleRemoveImage, handleReorderImages, updateTimeframeNotes,
@@ -1248,26 +1299,66 @@ export function WikiDetailModal() {
     if (!entry) return null;
     const style = getWikiCategoryStyle(entry.category);
     const hasContext = entry.bestSession || entry.timeframe || entry.contextNotes;
+    const images = getWikiImages(entry);
+    const hasMultipleImages = images.length > 1;
+    const activeImageIdx = hasMultipleImages ? Math.min(wikiCoverIndex, images.length - 1) : 0;
+    const activeImage = images[activeImageIdx];
     return (
       <ModalBackdrop
         onClose={() => setViewWikiId(null)}
         className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-start justify-center overflow-y-auto p-4 py-8"
       >
         <div className="bg-zinc-900 border border-zinc-800 rounded-xl max-w-2xl w-full max-h-[90vh] flex flex-col overflow-hidden" onClick={(e) => e.stopPropagation()}>
-          {/* Full high-res diagram */}
-          <div className="relative aspect-video w-full bg-zinc-950 border-b border-zinc-800 flex items-center justify-center overflow-hidden flex-shrink-0">
-            {entry.imageUrl ? (
+          {/* Full high-res diagram — carousel when there's more than one image */}
+          <div className="group relative aspect-video w-full bg-zinc-950 border-b border-zinc-800 flex items-center justify-center overflow-hidden flex-shrink-0">
+            {activeImage ? (
               <img
-                src={entry.imageUrl}
+                src={activeImage.url}
                 alt={entry.title}
                 className="w-full h-full object-contain bg-black cursor-zoom-in"
-                onClick={() => setLightboxImage(entry.imageUrl)}
+                onClick={() => setLightboxImage(activeImage.url)}
               />
             ) : (
               <div className="flex flex-col items-center gap-1.5 text-zinc-700">
                 <ImageIcon className="w-6 h-6" />
                 <span className="text-xs">No diagram yet</span>
               </div>
+            )}
+            {hasMultipleImages && (
+              <>
+                <button
+                  type="button"
+                  onClick={() => setWikiCoverIndex(prev => (prev === 0 ? images.length - 1 : prev - 1))}
+                  title="Previous image"
+                  className="absolute left-3 top-1/2 -translate-y-1/2 p-2.5 bg-black/50 hover:bg-black/75 backdrop-blur-sm rounded-full text-white opacity-0 group-hover:opacity-100 transition-opacity duration-200"
+                >
+                  <ChevronLeft className="w-5 h-5" />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setWikiCoverIndex(prev => (prev === images.length - 1 ? 0 : prev + 1))}
+                  title="Next image"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 p-2.5 bg-black/50 hover:bg-black/75 backdrop-blur-sm rounded-full text-white opacity-0 group-hover:opacity-100 transition-opacity duration-200"
+                >
+                  <ChevronRight className="w-5 h-5" />
+                </button>
+                <div className="absolute top-2.5 right-2.5 px-1.5 py-0.5 rounded-md bg-black/60 backdrop-blur-md text-white text-[10px] font-bold border border-white/10 shadow-sm pointer-events-none">
+                  {activeImageIdx + 1} / {images.length}
+                </div>
+                <div className="absolute bottom-3 left-1/2 -translate-x-1/2 flex gap-1.5">
+                  {images.map((_, idx) => (
+                    <button
+                      key={idx}
+                      type="button"
+                      onClick={() => setWikiCoverIndex(idx)}
+                      className={cn(
+                        'h-1.5 rounded-full transition-all duration-200',
+                        idx === activeImageIdx ? 'w-4 bg-white' : 'w-1.5 bg-white/40 hover:bg-white/60'
+                      )}
+                    />
+                  ))}
+                </div>
+              </>
             )}
           </div>
 
