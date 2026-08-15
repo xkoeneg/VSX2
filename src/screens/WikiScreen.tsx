@@ -843,7 +843,9 @@ export function WikiScreen() {
 
             {/* Category pill filters — flexible wrap so every pill stays
                 visible within the sidebar width, no horizontal scrolling
-                needed (mouse-friendly). Counts shown inline as "(n)". */}
+                needed (mouse-friendly). Flat chip style (no glow/shadow) so
+                pills stay crisp and consistent at this size; only fill +
+                border color shifts to match the active category. */}
             <div className={cn('p-3 border-b flex-shrink-0', theme !== 'light' ? 'border-zinc-800/80' : 'border-zinc-200')}>
               <div className="flex flex-wrap items-center gap-1.5 w-full">
                 {FILTER_CATEGORIES.map(cat => {
@@ -855,20 +857,21 @@ export function WikiScreen() {
                       key={cat}
                       onClick={() => setActiveCategory(cat)}
                       className={cn(
-                        'flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-medium border transition-all',
+                        'inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-medium border transition-colors',
                         isActive
                           ? (style
-                              ? cn(style.active, style.glow)
+                              ? style.active
                               : (theme !== 'light'
-                                  ? 'bg-sky-500/15 text-sky-300 border-sky-500/40 shadow-[0_0_12px_-2px_rgba(56,189,248,0.5)]'
-                                  : 'bg-sky-50 text-sky-700 border-sky-300 shadow-[0_0_12px_-4px_rgba(56,189,248,0.4)]'))
+                                  ? 'bg-sky-500/15 text-sky-300 border-sky-500/40'
+                                  : 'bg-sky-100 text-sky-700 border-sky-300'))
                           : (theme !== 'light'
-                              ? 'bg-slate-800/50 border-transparent text-slate-400 hover:bg-slate-800 hover:text-zinc-300'
-                              : 'bg-zinc-50 border-zinc-200 text-zinc-500 hover:text-zinc-800 hover:border-zinc-300')
+                              ? 'bg-white/[0.04] border-white/[0.06] text-zinc-400 hover:bg-white/[0.07] hover:text-zinc-200'
+                              : 'bg-zinc-100 border-zinc-200 text-zinc-500 hover:bg-zinc-200/70 hover:text-zinc-700')
                       )}
                     >
                       {style && <span className={cn('w-1.5 h-1.5 rounded-full flex-shrink-0', style.dot)} />}
-                      <span>{cat} ({count})</span>
+                      <span>{cat}</span>
+                      <span className={isActive ? 'opacity-70' : 'opacity-50'}>{count}</span>
                     </button>
                   );
                 })}
