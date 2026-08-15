@@ -437,8 +437,8 @@ export function WikiScreen() {
                   style.glow
                 )
               : (theme !== 'light'
-                  ? 'bg-transparent border-transparent hover:bg-white/[0.03] hover:border-zinc-800'
-                  : 'bg-transparent border-transparent hover:bg-zinc-50 hover:border-zinc-200')
+                  ? 'bg-white/[0.02] border-zinc-800/70 hover:bg-white/[0.05] hover:border-zinc-700'
+                  : 'bg-white border-zinc-200 hover:bg-zinc-50 hover:border-zinc-300')
           )}
         >
           {isActive && (
@@ -923,7 +923,7 @@ export function WikiScreen() {
             </div>
 
             {/* Scrollable concept list */}
-            <div className="flex-1 overflow-y-auto p-2 space-y-1 min-h-[240px]">
+            <div className="flex-1 overflow-y-auto p-2 space-y-2 min-h-[240px]">
               {categoryFilteredEntries.length > 0 ? (
                 categoryFilteredEntries.map(renderWikiListItem)
               ) : (
