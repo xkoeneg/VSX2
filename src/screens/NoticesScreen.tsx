@@ -282,6 +282,13 @@ export function NoticesScreen() {
 
     // Which notice (if any) is open in the full-detail preview modal.
     const [previewNotice, setPreviewNotice] = useState<MarketNotice | null>(null);
+    // Tracks which screenshot is showing in the preview modal's carousel —
+    // reset to the first image whenever a different notice is opened.
+    const [previewImageIndex, setPreviewImageIndex] = useState(0);
+    const openPreviewNotice = (notice: MarketNotice) => {
+      setPreviewImageIndex(0);
+      setPreviewNotice(notice);
+    };
 
     // Full-detail preview modal — opened by clicking any card. Shows the
     // high-res chart image on top and every note/lesson field underneath.
@@ -305,10 +312,44 @@ export function NoticesScreen() {
             )}
             onClick={(e) => e.stopPropagation()}
           >
-            {/* High-res chart image */}
-            {previewNotice.imageUrl ? (
-              <div className="relative w-full aspect-video bg-zinc-950">
-                <img src={previewNotice.imageUrl} alt={previewNotice.title} className="w-full h-full object-contain" />
+            {/* High-res chart image(s) — carousel when the notice has more
+                than one screenshot, single static image otherwise. Mirrors
+                the Strategy Model cover carousel. */}
+            {previewNotice.images && previewNotice.images.length > 0 ? (
+              <div className="relative w-full aspect-video bg-zinc-950 group">
+                <img
+                  src={previewNotice.images[Math.min(previewImageIndex, previewNotice.images.length - 1)].url}
+                  alt={previewNotice.title}
+                  className="w-full h-full object-contain"
+                />
+                {previewNotice.images.length > 1 && (
+                  <>
+                    <button
+                      onClick={(e) => { e.stopPropagation(); setPreviewImageIndex(prev => prev === 0 ? previewNotice.images.length - 1 : prev - 1); }}
+                      className="absolute left-2 top-1/2 -translate-y-1/2 p-1.5 rounded-lg bg-black/60 text-zinc-300 hover:text-white hover:bg-black/80 opacity-0 group-hover:opacity-100 transition-opacity"
+                    >
+                      <ChevronLeft className="w-4 h-4" />
+                    </button>
+                    <button
+                      onClick={(e) => { e.stopPropagation(); setPreviewImageIndex(prev => prev === previewNotice.images.length - 1 ? 0 : prev + 1); }}
+                      className="absolute right-2 top-1/2 -translate-y-1/2 p-1.5 rounded-lg bg-black/60 text-zinc-300 hover:text-white hover:bg-black/80 opacity-0 group-hover:opacity-100 transition-opacity"
+                    >
+                      <ChevronRight className="w-4 h-4" />
+                    </button>
+                    <div className="absolute bottom-2 left-1/2 -translate-x-1/2 flex items-center gap-1">
+                      {previewNotice.images.map((_, idx) => (
+                        <button
+                          key={idx}
+                          onClick={(e) => { e.stopPropagation(); setPreviewImageIndex(idx); }}
+                          className={cn('w-1.5 h-1.5 rounded-full transition-colors', idx === previewImageIndex ? 'bg-white' : 'bg-white/40 hover:bg-white/60')}
+                        />
+                      ))}
+                    </div>
+                    <span className="absolute bottom-2 right-2 px-1.5 py-0.5 rounded bg-black/70 text-white text-[10px] font-medium">
+                      {previewImageIndex + 1} / {previewNotice.images.length}
+                    </span>
+                  </>
+                )}
                 <button
                   onClick={() => setPreviewNotice(null)}
                   className="absolute top-3 right-3 p-1.5 rounded-lg bg-black/60 text-zinc-300 hover:text-white hover:bg-black/80 transition-colors"
@@ -419,7 +460,7 @@ export function NoticesScreen() {
     const renderInsightCard = (notice: MarketNotice) => (
       <div
         key={notice.id}
-        onClick={() => setPreviewNotice(notice)}
+        onClick={() => openPreviewNotice(notice)}
         className={cn(
           'group relative rounded-xl border overflow-hidden cursor-pointer transition-all hover:-translate-y-0.5 flex flex-col h-full',
           theme !== 'light' ? 'bg-zinc-900/50 border-cyan-900/40 hover:border-cyan-500/60' : 'bg-white border-cyan-200 hover:border-cyan-400/70 hover:shadow-md'
@@ -430,8 +471,8 @@ export function NoticesScreen() {
 
         {/* Chart preview */}
         <div className={cn('relative w-full aspect-[16/10] flex items-center justify-center overflow-hidden', theme !== 'light' ? 'bg-zinc-950' : 'bg-zinc-100')}>
-          {notice.imageUrl ? (
-            <img src={notice.imageUrl} alt={notice.title} className="w-full h-full object-cover" />
+          {notice.images?.[0] ? (
+            <img src={notice.images[0].url} alt={notice.title} className="w-full h-full object-cover" />
           ) : (
             <ImageIcon className={cn('w-5 h-5', theme !== 'light' ? 'text-zinc-700' : 'text-zinc-400')} />
           )}
@@ -491,7 +532,7 @@ export function NoticesScreen() {
       return (
         <div
           key={notice.id}
-          onClick={() => setPreviewNotice(notice)}
+          onClick={() => openPreviewNotice(notice)}
           className={cn(
             'group relative rounded-xl border overflow-hidden cursor-pointer transition-all hover:-translate-y-0.5 flex flex-col h-full',
             theme !== 'light' ? 'bg-zinc-900/50 border-rose-900/40 hover:border-rose-500/60' : 'bg-white border-rose-200 hover:border-rose-400/70 hover:shadow-md'
@@ -522,8 +563,8 @@ export function NoticesScreen() {
               the image (not stacked below it) so the card's total height
               stays identical to the insight cards regardless of content. */}
           <div className={cn('relative w-full aspect-[16/10] flex-shrink-0 flex items-center justify-center overflow-hidden', theme !== 'light' ? 'bg-zinc-950' : 'bg-zinc-100')}>
-            {notice.imageUrl ? (
-              <img src={notice.imageUrl} alt={notice.title} className="w-full h-full object-cover" />
+            {notice.images?.[0] ? (
+              <img src={notice.images[0].url} alt={notice.title} className="w-full h-full object-cover" />
             ) : (
               <ImageIcon className={cn('w-5 h-5', theme !== 'light' ? 'text-zinc-700' : 'text-zinc-400')} />
             )}
