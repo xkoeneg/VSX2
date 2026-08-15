@@ -4611,6 +4611,11 @@ export function useAppState() {
     handleDeleteStrategy,
     confirmDeleteStrategy,
     handleNoticeImagesPick,
+    // Back-compat alias — several screens still destructure the old
+    // single-image handler name from context even though it's unused now
+    // that the notice screenshot picker supports multiple images. Keeping
+    // this avoids touching every one of those call sites just to compile.
+    handleNoticeImagePick: handleNoticeImagesPick,
     removeNoticeImage,
     moveNoticeImage,
     handleAddNotice,
