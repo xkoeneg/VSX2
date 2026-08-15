@@ -1,4 +1,5 @@
 import type React from 'react';
+import { useState } from 'react';
 import {
   LayoutDashboard,
   BookOpen,
@@ -279,88 +280,249 @@ export function NoticesScreen() {
     exportBackup, importBackup,
   } = useAppContext();
 
-    // Compact horizontal card — small thumbnail + condensed text — used by
-    // both columns so the whole gallery reads as a dense, scannable list
-    // instead of large tiles.
-    const renderCompactCard = (notice: MarketNotice) => {
-      const meta = NOTICE_TYPE_META[notice.type];
-      const CalloutIcon = meta.calloutIcon;
+    // Which notice (if any) is open in the full-detail preview modal.
+    const [previewNotice, setPreviewNotice] = useState<MarketNotice | null>(null);
+
+    // Full-detail preview modal — opened by clicking any card. Shows the
+    // high-res chart image on top and every note/lesson field underneath.
+    // Kept as local state (not global context) since it's purely a
+    // read-only viewer scoped to this screen.
+    const previewMeta = previewNotice ? NOTICE_TYPE_META[previewNotice.type] : null;
+    const previewTags = previewNotice?.type === 'mistake' && previewNotice.tag
+      ? previewNotice.tag.split(',').map(t => t.trim()).filter(Boolean)
+      : [];
+
+    const renderPreviewModal = () => (
+      previewNotice && previewMeta && (
+        <div
+          className="fixed inset-0 bg-black/80 backdrop-blur-sm z-[60] flex items-start justify-center overflow-y-auto p-4 py-8"
+          onClick={() => setPreviewNotice(null)}
+        >
+          <div
+            className={cn(
+              'rounded-xl max-w-xl w-full border overflow-hidden',
+              theme !== 'light' ? 'bg-zinc-900 border-zinc-800' : 'bg-white border-zinc-200'
+            )}
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* High-res chart image */}
+            {previewNotice.imageUrl ? (
+              <div className="relative w-full aspect-video bg-zinc-950">
+                <img src={previewNotice.imageUrl} alt={previewNotice.title} className="w-full h-full object-contain" />
+                <button
+                  onClick={() => setPreviewNotice(null)}
+                  className="absolute top-3 right-3 p-1.5 rounded-lg bg-black/60 text-zinc-300 hover:text-white hover:bg-black/80 transition-colors"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+            ) : (
+              <div className={cn('flex items-center justify-between px-5 py-4 border-b', theme !== 'light' ? 'border-zinc-800' : 'border-zinc-200')}>
+                <span className={cn('text-xs font-semibold uppercase tracking-wider', previewNotice.type === 'mistake' ? 'text-rose-400' : 'text-cyan-400')}>
+                  {previewMeta.tabLabel}
+                </span>
+                <button onClick={() => setPreviewNotice(null)} className="p-1 text-zinc-400 hover:text-white transition-colors">
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+            )}
+
+            <div className="p-5 space-y-4">
+              <div>
+                <div className="flex flex-wrap items-center gap-1.5 mb-1.5">
+                  {previewNotice.type === 'mistake' ? (
+                    previewTags.map(tag => (
+                      <span key={tag} className="px-2 py-0.5 rounded-full text-[10px] font-semibold border bg-rose-500/10 text-rose-400 border-rose-500/30">
+                        {tag}
+                      </span>
+                    ))
+                  ) : (
+                    <>
+                      {previewNotice.session && (
+                        <span className="px-2 py-0.5 rounded-full text-[10px] font-medium border bg-cyan-500/10 text-cyan-400 border-cyan-500/30">
+                          {previewNotice.session}
+                        </span>
+                      )}
+                      {previewNotice.tag && (
+                        <span className={cn('px-2 py-0.5 rounded-full text-[10px] font-medium border', theme !== 'light' ? 'border-zinc-700 text-zinc-400 bg-zinc-800/60' : 'border-zinc-200 text-zinc-500 bg-zinc-100')}>
+                          {previewNotice.tag}
+                        </span>
+                      )}
+                    </>
+                  )}
+                </div>
+                <h2 className={cn('text-lg font-bold leading-snug', theme !== 'light' ? 'text-white' : 'text-zinc-900')}>{previewNotice.title}</h2>
+              </div>
+
+              {previewNotice.description && (
+                <div className={cn('rounded-lg border p-3', theme !== 'light' ? 'bg-zinc-800/50 border-zinc-800' : 'bg-zinc-50 border-zinc-200')}>
+                  <p className={cn('text-[11px] font-semibold uppercase tracking-wider mb-1.5 flex items-center gap-1.5', theme !== 'light' ? 'text-zinc-400' : 'text-zinc-500')}>
+                    {previewNotice.type === 'mistake' ? <>❌ What Happened</> : 'What You Noticed'}
+                  </p>
+                  <p className={cn('text-sm leading-relaxed whitespace-pre-wrap', theme !== 'light' ? 'text-zinc-300' : 'text-zinc-700')}>{previewNotice.description}</p>
+                </div>
+              )}
+
+              {previewNotice.consequence && (
+                <div className={cn('rounded-lg border p-3', theme !== 'light' ? 'bg-zinc-800/50 border-zinc-800' : 'bg-zinc-50 border-zinc-200')}>
+                  <p className={cn('text-[11px] font-semibold uppercase tracking-wider mb-1.5', theme !== 'light' ? 'text-zinc-400' : 'text-zinc-500')}>Consequence / Risk</p>
+                  <p className={cn('text-sm leading-relaxed', theme !== 'light' ? 'text-zinc-300' : 'text-zinc-700')}>{previewNotice.consequence}</p>
+                </div>
+              )}
+
+              {previewNotice.prevention && (
+                <div className="rounded-lg border border-emerald-500/30 bg-emerald-500/5 p-3">
+                  <p className="text-[11px] font-semibold uppercase tracking-wider mb-1.5 text-emerald-400 flex items-center gap-1.5">
+                    {previewNotice.type === 'mistake' ? <>💡 Rule / Prevention</> : 'How To Use This'}
+                  </p>
+                  <p className="text-sm leading-relaxed text-emerald-100 font-medium">{previewNotice.prevention}</p>
+                </div>
+              )}
+
+              <div className="flex justify-end gap-2 pt-1">
+                <button
+                  onClick={() => { handleEditNotice(previewNotice); setPreviewNotice(null); }}
+                  className={cn('flex items-center gap-1.5 px-3.5 py-2 rounded-lg text-xs font-medium transition-colors', theme !== 'light' ? 'bg-zinc-800 hover:bg-zinc-700 text-white' : 'bg-zinc-100 hover:bg-zinc-200 text-zinc-800')}
+                >
+                  <Edit2 className="w-3.5 h-3.5" />
+                  Edit
+                </button>
+                <button
+                  onClick={() => { handleDeleteNotice(previewNotice.id); setPreviewNotice(null); }}
+                  className="flex items-center gap-1.5 px-3.5 py-2 rounded-lg text-xs font-medium bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 transition-colors"
+                >
+                  <Trash2 className="w-3.5 h-3.5" />
+                  Delete
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )
+    );
+
+    // Price Action Insight card — Notion gallery style: large aspect-ratio
+    // chart image on top, bold title + session/asset pills below.
+    const renderInsightCard = (notice: MarketNotice) => (
+      <div
+        key={notice.id}
+        onClick={() => setPreviewNotice(notice)}
+        className={cn(
+          'group relative rounded-xl border overflow-hidden cursor-pointer transition-all hover:-translate-y-0.5',
+          theme !== 'light' ? 'bg-zinc-900/50 border-zinc-800 hover:border-cyan-500/40' : 'bg-white border-zinc-200 hover:border-cyan-400/50 hover:shadow-md'
+        )}
+      >
+        {/* Chart preview */}
+        <div className={cn('w-full aspect-video flex items-center justify-center overflow-hidden', theme !== 'light' ? 'bg-zinc-950' : 'bg-zinc-100')}>
+          {notice.imageUrl ? (
+            <img src={notice.imageUrl} alt={notice.title} className="w-full h-full object-cover" />
+          ) : (
+            <ImageIcon className={cn('w-6 h-6', theme !== 'light' ? 'text-zinc-700' : 'text-zinc-400')} />
+          )}
+        </div>
+
+        {/* Edit / Delete */}
+        <div className="absolute top-2 right-2 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+          <button
+            onClick={(e) => { e.stopPropagation(); handleEditNotice(notice); }}
+            className="p-1.5 rounded-md backdrop-blur-sm bg-black/60 text-zinc-300 hover:text-white transition-colors"
+          >
+            <Edit2 className="w-3 h-3" />
+          </button>
+          <button
+            onClick={(e) => { e.stopPropagation(); handleDeleteNotice(notice.id); }}
+            className="p-1.5 rounded-md backdrop-blur-sm bg-black/60 text-zinc-400 hover:text-rose-400 transition-colors"
+          >
+            <Trash2 className="w-3 h-3" />
+          </button>
+        </div>
+
+        {/* Content */}
+        <div className="p-3 space-y-1.5">
+          <h3 className={cn('text-sm font-bold leading-snug line-clamp-2', theme !== 'light' ? 'text-white' : 'text-zinc-900')}>{notice.title}</h3>
+          <div className="flex flex-wrap items-center gap-1.5">
+            {notice.session && (
+              <span className="px-2 py-0.5 rounded-full text-[10px] font-medium border bg-cyan-500/10 text-cyan-400 border-cyan-500/30">
+                {notice.session}
+              </span>
+            )}
+            {notice.tag && (
+              <span className={cn('px-2 py-0.5 rounded-full text-[10px] font-medium border', theme !== 'light' ? 'border-zinc-700 text-zinc-400 bg-zinc-800/60' : 'border-zinc-200 text-zinc-500 bg-zinc-100')}>
+                {notice.tag}
+              </span>
+            )}
+          </div>
+        </div>
+      </div>
+    );
+
+    // Anti-Mistake / Trap card — structured problem vs. solution format:
+    // header with mistake tag pills, optional thumbnail banner, a dark
+    // "what happened" block, then a green-accented "prevention" block.
+    const renderMistakeCard = (notice: MarketNotice) => {
+      const tags = notice.tag ? notice.tag.split(',').map(t => t.trim()).filter(Boolean) : [];
       return (
         <div
           key={notice.id}
+          onClick={() => setPreviewNotice(notice)}
           className={cn(
-            'group relative rounded-lg border transition-all p-2.5 flex gap-3 min-w-0',
-            theme !== 'light' ? 'bg-zinc-900/50' : 'bg-white',
-            meta.cardRing
+            'group relative rounded-xl border overflow-hidden cursor-pointer transition-all hover:-translate-y-0.5',
+            theme !== 'light' ? 'bg-zinc-900/50 border-zinc-800 hover:border-rose-500/40' : 'bg-white border-zinc-200 hover:border-rose-400/50 hover:shadow-md'
           )}
         >
-          {/* Thumbnail */}
-          <div
-            className={cn(
-              'w-20 h-14 flex-shrink-0 rounded-md overflow-hidden flex items-center justify-center cursor-pointer',
-              theme !== 'light' ? 'bg-zinc-950' : 'bg-zinc-100'
-            )}
-            onClick={() => notice.imageUrl && setLightboxImage(notice.imageUrl)}
-          >
-            {notice.imageUrl ? (
-              <img src={notice.imageUrl} alt={notice.title} className="w-full h-full object-cover" />
-            ) : (
-              <ImageIcon className={cn('w-4 h-4', theme !== 'light' ? 'text-zinc-700' : 'text-zinc-400')} />
-            )}
-          </div>
-
-          {/* Content */}
-          <div className="min-w-0 flex-1 space-y-1">
-            <div className="flex flex-wrap items-center gap-1">
-              {notice.session && (
-                <span className={cn(
-                  'px-1.5 py-0.5 rounded-full text-[10px] border',
-                  theme !== 'light' ? 'border-zinc-700 text-zinc-500 bg-zinc-800/60' : 'border-zinc-200 text-zinc-500 bg-zinc-100'
-                )}>
-                  {notice.session}
-                </span>
-              )}
-              {notice.tag && (
-                <span className={cn(
-                  'px-1.5 py-0.5 rounded-full text-[10px] border',
-                  theme !== 'light' ? 'border-zinc-700 text-zinc-500 bg-zinc-800/60' : 'border-zinc-200 text-zinc-500 bg-zinc-100'
-                )}>
-                  {notice.tag}
-                </span>
-              )}
-            </div>
-            <h3 className={cn('text-xs font-semibold leading-snug truncate', theme !== 'light' ? 'text-white' : 'text-zinc-900')}>{notice.title}</h3>
-            {notice.description && (
-              <p className="text-[11px] text-zinc-500 leading-snug line-clamp-2">{notice.description}</p>
-            )}
-            {notice.prevention && (
-              <div className={cn('rounded-md border px-2 py-1 flex items-start gap-1.5', meta.callout)}>
-                <CalloutIcon className="w-3 h-3 flex-shrink-0 mt-0.5" />
-                <p className="text-[11px] font-bold leading-snug line-clamp-2">{notice.prevention}</p>
-              </div>
-            )}
-          </div>
-
           {/* Edit / Delete */}
-          <div className="absolute top-1.5 right-1.5 flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
+          <div className="absolute top-2 right-2 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity z-10">
             <button
               onClick={(e) => { e.stopPropagation(); handleEditNotice(notice); }}
-              className={cn(
-                'p-1 rounded-md backdrop-blur-sm transition-colors',
-                theme !== 'light' ? 'bg-black/60 text-zinc-300 hover:text-white' : 'bg-white/80 text-zinc-500 hover:text-zinc-900 shadow-sm'
-              )}
+              className="p-1.5 rounded-md backdrop-blur-sm bg-black/60 text-zinc-300 hover:text-white transition-colors"
             >
               <Edit2 className="w-3 h-3" />
             </button>
             <button
               onClick={(e) => { e.stopPropagation(); handleDeleteNotice(notice.id); }}
-              className={cn(
-                'p-1 rounded-md backdrop-blur-sm transition-colors',
-                theme !== 'light' ? 'bg-black/60 text-zinc-400 hover:text-rose-400' : 'bg-white/80 text-zinc-500 hover:text-rose-500 shadow-sm'
-              )}
+              className="p-1.5 rounded-md backdrop-blur-sm bg-black/60 text-zinc-400 hover:text-rose-400 transition-colors"
             >
               <Trash2 className="w-3 h-3" />
             </button>
+          </div>
+
+          {/* Optional thumbnail banner */}
+          {notice.imageUrl && (
+            <div className={cn('w-full h-24 overflow-hidden', theme !== 'light' ? 'bg-zinc-950' : 'bg-zinc-100')}>
+              <img src={notice.imageUrl} alt={notice.title} className="w-full h-full object-cover" />
+            </div>
+          )}
+
+          <div className="p-3 space-y-2.5">
+            {/* Header: title + mistake tag pills */}
+            <div className="space-y-1.5 pr-8">
+              <h3 className={cn('text-sm font-bold leading-snug line-clamp-2', theme !== 'light' ? 'text-white' : 'text-zinc-900')}>{notice.title}</h3>
+              {tags.length > 0 && (
+                <div className="flex flex-wrap gap-1">
+                  {tags.map(tag => (
+                    <span key={tag} className="px-2 py-0.5 rounded-full text-[10px] font-semibold border bg-rose-500/10 text-rose-400 border-rose-500/30">
+                      {tag}
+                    </span>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* What Happened */}
+            {notice.description && (
+              <div className={cn('rounded-md px-2.5 py-2', theme !== 'light' ? 'bg-zinc-800/60' : 'bg-zinc-100')}>
+                <p className={cn('text-[10px] font-semibold uppercase tracking-wide mb-0.5', theme !== 'light' ? 'text-zinc-500' : 'text-zinc-500')}>❌ What Happened</p>
+                <p className={cn('text-xs leading-snug line-clamp-2', theme !== 'light' ? 'text-zinc-400' : 'text-zinc-600')}>{notice.description}</p>
+              </div>
+            )}
+
+            {/* Prevention / Rule — accented so the lesson stands out */}
+            {notice.prevention && (
+              <div className="rounded-md border-l-2 border-emerald-500 bg-emerald-500/5 px-2.5 py-2">
+                <p className="text-[10px] font-semibold uppercase tracking-wide mb-0.5 text-emerald-400">💡 Rule / Prevention</p>
+                <p className="text-xs font-semibold leading-snug line-clamp-2 text-emerald-200">{notice.prevention}</p>
+              </div>
+            )}
           </div>
         </div>
       );
@@ -426,8 +588,8 @@ export function NoticesScreen() {
                 and layout inside still read normally left-to-right. */}
             <div className={type === 'mistake' ? '[direction:ltr]' : undefined}>
             {list.length > 0 ? (
-              <div className="space-y-2">
-                {list.map(renderCompactCard)}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                {list.map(type === 'mistake' ? renderMistakeCard : renderInsightCard)}
               </div>
             ) : (
               <div className={cn(
@@ -492,6 +654,8 @@ export function NoticesScreen() {
             Fetches live from /api/calendar (Vercel serverless proxy for
             the Myfxbook RSS feed) and filters to USD high-impact events. */}
         <EconomicCalendarCard />
+
+        {renderPreviewModal()}
 
       </div>
     );
