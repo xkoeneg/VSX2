@@ -298,16 +298,29 @@ export function WikiScreen() {
     // Keeps the row clean and straight (no wrap) while still being easy to
     // navigate with a plain mouse wheel — vertical wheel motion is
     // redirected to horizontal scroll on this element only.
+    //
+    // NOTE: this must be a *native* event listener, not React's onWheel.
+    // React attaches wheel handlers to the root as passive by default, so
+    // calling preventDefault() from a synthetic onWheel handler is silently
+    // ignored by the browser and the page scrolls anyway. Registering the
+    // listener manually with { passive: false } is the only way to
+    // actually stop that page-level scroll.
     const categoryStripRef = useRef<HTMLDivElement>(null);
-    const handleCategoryStripWheel = (e: React.WheelEvent<HTMLDivElement>) => {
-      // Always contained: hovering this strip should never bubble up into
-      // page scroll, whether or not the strip itself has room to scroll.
-      e.preventDefault();
-      e.stopPropagation();
+    useEffect(() => {
       const el = categoryStripRef.current;
-      if (!el || el.scrollWidth <= el.clientWidth) return;
-      el.scrollLeft += Math.abs(e.deltaY) > Math.abs(e.deltaX) ? e.deltaY : e.deltaX;
-    };
+      if (!el) return;
+      const onWheel = (e: WheelEvent) => {
+        // Always contained: hovering this strip should never bubble up
+        // into page scroll, whether or not the strip itself has room to
+        // scroll.
+        e.preventDefault();
+        e.stopPropagation();
+        if (el.scrollWidth <= el.clientWidth) return;
+        el.scrollLeft += Math.abs(e.deltaY) > Math.abs(e.deltaX) ? e.deltaY : e.deltaX;
+      };
+      el.addEventListener('wheel', onWheel, { passive: false });
+      return () => el.removeEventListener('wheel', onWheel);
+    }, []);
 
     // ---- Master-detail selection (split-pane) ---------------------------
     // Which concept is open in the right-hand workbench, and which sub-tab
@@ -879,7 +892,6 @@ export function WikiScreen() {
             <div className={cn('p-3 border-b flex-shrink-0', theme !== 'light' ? 'border-zinc-800/80' : 'border-zinc-200')}>
               <div
                 ref={categoryStripRef}
-                onWheel={handleCategoryStripWheel}
                 className="flex items-center gap-1.5 w-full overflow-x-auto no-scrollbar"
               >
                 {FILTER_CATEGORIES.map(cat => {
