@@ -893,20 +893,24 @@ export function AddWikiModal() {
         className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-start justify-center overflow-y-auto p-4 py-8"
       >
         <div
-          className="bg-zinc-900 border border-zinc-800 rounded-xl max-w-lg w-full max-h-[90vh] flex flex-col overflow-hidden"
+          className="bg-zinc-900 border border-zinc-800 rounded-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto"
           onClick={(e) => e.stopPropagation()}
           onPaste={handleWikiImagePaste}
         >
-          <div className="px-6 py-4 border-b border-zinc-800 flex items-center justify-between flex-shrink-0">
-            <h3 className="text-lg font-bold text-white truncate">{editingWikiId ? 'Edit Knowledge Entry' : 'Add Knowledge Entry'}</h3>
-            <button onClick={() => setShowAddWiki(false)} className="p-1 text-zinc-400 hover:text-white">
+          <div className="sticky top-0 bg-zinc-900 border-b border-zinc-800 px-6 py-4 flex items-center justify-between z-20">
+            <h3 className="text-xl font-bold text-white truncate">{editingWikiId ? 'Edit Knowledge Entry' : 'Add Knowledge Entry'}</h3>
+            <button onClick={() => setShowAddWiki(false)} className="p-2 text-zinc-400 hover:text-white transition-colors">
               <X className="w-5 h-5" />
             </button>
           </div>
-          <div className="p-6 space-y-4 overflow-y-auto">
-            {/* Diagram image — upload or paste a link */}
-            <div>
-              <label className="block text-sm text-zinc-400 mb-2">Diagram / Chart Image</label>
+
+          <form className="p-6 space-y-4">
+            {/* ================= SECTION 1: Diagram / Chart Image ================= */}
+            <div className="bg-zinc-800 border border-zinc-700 p-4 rounded-xl space-y-3 shadow-[0_1px_0_0_rgba(255,255,255,0.02)_inset]">
+              <div className="flex items-center gap-2 pb-1">
+                <span className="text-[10px] font-bold text-cyan-400 font-mono tracking-widest">01</span>
+                <h4 className="text-xs font-semibold text-slate-300 uppercase tracking-wider">Diagram / Chart Image</h4>
+              </div>
               <button
                 type="button"
                 ref={wikiImageDropzoneRef}
@@ -940,13 +944,17 @@ export function AddWikiModal() {
                 value={(newWiki.imageUrl || '').startsWith('data:') ? '' : (newWiki.imageUrl || '')}
                 onChange={(e) => setNewWiki(prev => ({ ...prev, imageUrl: e.target.value }))}
                 placeholder="...or paste an image URL"
-                className="w-full mt-2 bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-zinc-600"
+                className="w-full bg-zinc-900/60 border border-zinc-700 rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-zinc-600"
               />
             </div>
 
-            <div>
-              <div className="flex items-center justify-between mb-2 gap-2">
-                <label className="block text-sm text-zinc-400">Title</label>
+            {/* ================= SECTION 2: Concept Details ================= */}
+            <div className="bg-zinc-800 border border-zinc-700 p-4 rounded-xl space-y-3 shadow-[0_1px_0_0_rgba(255,255,255,0.02)_inset]">
+              <div className="flex items-center justify-between gap-2 pb-1">
+                <div className="flex items-center gap-2">
+                  <span className="text-[10px] font-bold text-cyan-400 font-mono tracking-widest">02</span>
+                  <h4 className="text-xs font-semibold text-slate-300 uppercase tracking-wider">Concept Details</h4>
+                </div>
                 <button
                   type="button"
                   onClick={handleWikiAutoFill}
@@ -957,7 +965,7 @@ export function AddWikiModal() {
                     isWikiAutoFilling
                       ? 'bg-purple-500/10 border-purple-500/30 text-purple-300 animate-pulse cursor-wait'
                       : !newWiki.title?.trim()
-                        ? 'bg-zinc-800 border-zinc-700 text-zinc-600 cursor-not-allowed'
+                        ? 'bg-zinc-900 border-zinc-700 text-zinc-600 cursor-not-allowed'
                         : 'bg-purple-500/10 hover:bg-purple-500/20 border-purple-500/30 text-purple-400 hover:text-purple-300'
                   )}
                 >
@@ -969,84 +977,153 @@ export function AddWikiModal() {
                   <span>{isWikiAutoFilling ? 'Generating…' : 'Auto-Fill with AI'}</span>
                 </button>
               </div>
-              <input type="text" value={newWiki.title || ''} onChange={(e) => setNewWiki(prev => ({ ...prev, title: e.target.value }))} placeholder="Order Block" className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2.5 text-white focus:outline-none focus:border-zinc-600" />
-            </div>
 
-            {/* Category picker — fixed set so it always maps to a filter tab */}
-            <div>
-              <label className="block text-sm text-zinc-400 mb-2">Category</label>
-              <div className="grid grid-cols-2 gap-2">
-                {WIKI_CATEGORIES.map(cat => {
-                  const active = newWiki.category === cat;
-                  const style = getWikiCategoryStyle(cat);
-                  return (
-                    <button
-                      key={cat}
-                      type="button"
-                      onClick={() => setNewWiki(prev => ({ ...prev, category: cat }))}
-                      className={cn(
-                        'flex items-center gap-1.5 px-3 py-2 rounded-lg border text-xs font-medium transition-all',
-                        active ? style.active : 'bg-zinc-800 border-zinc-700 text-zinc-400 hover:text-zinc-200'
-                      )}
-                    >
-                      <span className={cn('w-1.5 h-1.5 rounded-full flex-shrink-0', style.dot)} />
-                      <span className="truncate">{cat}</span>
-                    </button>
-                  );
-                })}
+              <div>
+                <label className="block text-xs text-zinc-400 mb-1.5">Title</label>
+                <input
+                  type="text"
+                  value={newWiki.title || ''}
+                  onChange={(e) => setNewWiki(prev => ({ ...prev, title: e.target.value }))}
+                  placeholder="Order Block"
+                  className="w-full bg-zinc-900/60 border border-zinc-700 rounded-lg px-3 py-2.5 text-sm text-white focus:outline-none focus:border-zinc-600"
+                />
+              </div>
+
+              {/* Category picker — fixed set so it always maps to a filter tab */}
+              <div>
+                <label className="block text-xs text-zinc-400 mb-1.5">Category</label>
+                <div className="grid grid-cols-2 gap-2">
+                  {WIKI_CATEGORIES.map(cat => {
+                    const active = newWiki.category === cat;
+                    const style = getWikiCategoryStyle(cat);
+                    return (
+                      <button
+                        key={cat}
+                        type="button"
+                        onClick={() => setNewWiki(prev => ({ ...prev, category: cat }))}
+                        className={cn(
+                          'flex items-center gap-1.5 px-3 py-2 rounded-lg border text-xs font-medium transition-all',
+                          active ? style.active : 'bg-zinc-900/60 border-zinc-700 text-zinc-400 hover:text-zinc-200'
+                        )}
+                      >
+                        <span className={cn('w-1.5 h-1.5 rounded-full flex-shrink-0', style.dot)} />
+                        <span className="truncate">{cat}</span>
+                      </button>
+                    );
+                  })}
+                </div>
               </div>
             </div>
 
-            <div>
-              <label className="block text-sm text-zinc-400 mb-2">Core Definition</label>
-              <textarea value={newWiki.content || ''} onChange={(e) => setNewWiki(prev => ({ ...prev, content: e.target.value }))} placeholder="Short description of the concept..." rows={3} className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2.5 text-white focus:outline-none focus:border-zinc-600 resize-none" />
+            {/* ================= SECTION 3: Definition & Key Rules ================= */}
+            <div className="bg-zinc-800 border border-zinc-700 p-4 rounded-xl space-y-3 shadow-[0_1px_0_0_rgba(255,255,255,0.02)_inset]">
+              <div className="flex items-center gap-2 pb-1">
+                <span className="text-[10px] font-bold text-cyan-400 font-mono tracking-widest">03</span>
+                <h4 className="text-xs font-semibold text-slate-300 uppercase tracking-wider">Definition &amp; Key Rules</h4>
+              </div>
+
+              <div>
+                <label className="block text-xs text-zinc-400 mb-1.5">Core Definition</label>
+                <textarea
+                  value={newWiki.content || ''}
+                  onChange={(e) => setNewWiki(prev => ({ ...prev, content: e.target.value }))}
+                  placeholder="Short description of the concept..."
+                  rows={3}
+                  className="w-full bg-zinc-900/60 border border-zinc-700 rounded-lg px-3 py-2.5 text-sm text-white focus:outline-none focus:border-zinc-600 resize-none"
+                />
+              </div>
+
+              {/* Key Rules / Conditions — one bullet per line */}
+              <div>
+                <div className="flex items-center justify-between mb-1.5">
+                  <label className="block text-xs text-zinc-400">Key Rules / Conditions</label>
+                  {(newWiki.keyRules || []).length > 0 && (
+                    <span className="text-xs text-zinc-600">{(newWiki.keyRules || []).length} rule{(newWiki.keyRules || []).length === 1 ? '' : 's'}</span>
+                  )}
+                </div>
+                <div className="space-y-2">
+                  {(newWiki.keyRules || []).map((rule, idx) => (
+                    <div key={idx} className="flex items-center gap-2">
+                      <span className="w-1.5 h-1.5 rounded-full bg-zinc-600 flex-shrink-0" />
+                      <input
+                        type="text"
+                        value={rule}
+                        onChange={(e) => updateWikiKeyRule(idx, e.target.value)}
+                        placeholder="e.g. Must be formed by a displacement candle"
+                        className="flex-1 min-w-0 bg-zinc-900/60 border border-zinc-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-zinc-600"
+                      />
+                      <button type="button" onClick={() => removeWikiKeyRule(idx)} className="p-1 text-zinc-600 hover:text-rose-400 flex-shrink-0">
+                        <X className="w-4 h-4" />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+                <button type="button" onClick={addWikiKeyRule} className="mt-2 flex items-center gap-1.5 text-xs text-zinc-400 hover:text-white transition-colors">
+                  <Plus className="w-3.5 h-3.5" />
+                  Add rule
+                </button>
+              </div>
             </div>
 
-            {/* Key Rules / Conditions — one bullet per line */}
-            <div>
-              <div className="flex items-center justify-between mb-2">
-                <label className="block text-sm text-zinc-400">Key Rules / Conditions</label>
-                {(newWiki.keyRules || []).length > 0 && (
-                  <span className="text-xs text-zinc-600">{(newWiki.keyRules || []).length} rule{(newWiki.keyRules || []).length === 1 ? '' : 's'}</span>
-                )}
+            {/* ================= SECTION 4: Trading Context ================= */}
+            <div className="bg-zinc-800 border border-zinc-700 p-4 rounded-xl space-y-3 shadow-[0_1px_0_0_rgba(255,255,255,0.02)_inset]">
+              <div className="flex items-center gap-2 pb-1">
+                <span className="text-[10px] font-bold text-cyan-400 font-mono tracking-widest">04</span>
+                <h4 className="text-xs font-semibold text-slate-300 uppercase tracking-wider">Trading Context</h4>
               </div>
-              <div className="space-y-2">
-                {(newWiki.keyRules || []).map((rule, idx) => (
-                  <div key={idx} className="flex items-center gap-2">
-                    <span className="w-1.5 h-1.5 rounded-full bg-zinc-600 flex-shrink-0" />
-                    <input
-                      type="text"
-                      value={rule}
-                      onChange={(e) => updateWikiKeyRule(idx, e.target.value)}
-                      placeholder="e.g. Must be formed by a displacement candle"
-                      className="flex-1 min-w-0 bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-zinc-600"
-                    />
-                    <button type="button" onClick={() => removeWikiKeyRule(idx)} className="p-1 text-zinc-600 hover:text-rose-400 flex-shrink-0">
-                      <X className="w-4 h-4" />
-                    </button>
-                  </div>
-                ))}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs text-zinc-400 mb-1.5">Best Session</label>
+                  <input
+                    type="text"
+                    value={newWiki.bestSession || ''}
+                    onChange={(e) => setNewWiki(prev => ({ ...prev, bestSession: e.target.value }))}
+                    placeholder="e.g. NY Open"
+                    className="w-full bg-zinc-900/60 border border-zinc-700 rounded-lg px-3 py-2.5 text-sm text-white focus:outline-none focus:border-zinc-600"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs text-zinc-400 mb-1.5">Timeframe</label>
+                  <input
+                    type="text"
+                    value={newWiki.timeframe || ''}
+                    onChange={(e) => setNewWiki(prev => ({ ...prev, timeframe: e.target.value }))}
+                    placeholder="e.g. 5m / 15m HTF"
+                    className="w-full bg-zinc-900/60 border border-zinc-700 rounded-lg px-3 py-2.5 text-sm text-white focus:outline-none focus:border-zinc-600"
+                  />
+                </div>
               </div>
-              <button type="button" onClick={addWikiKeyRule} className="mt-2 flex items-center gap-1.5 text-xs text-zinc-400 hover:text-white transition-colors">
-                <Plus className="w-3.5 h-3.5" />
-                Add rule
+              <div>
+                <label className="block text-xs text-zinc-400 mb-1.5">Additional Notes</label>
+                <textarea
+                  value={newWiki.contextNotes || ''}
+                  onChange={(e) => setNewWiki(prev => ({ ...prev, contextNotes: e.target.value }))}
+                  placeholder="Additional notes..."
+                  rows={2}
+                  className="w-full bg-zinc-900/60 border border-zinc-700 rounded-lg px-3 py-2.5 text-sm text-white focus:outline-none focus:border-zinc-600 resize-none"
+                />
+              </div>
+            </div>
+
+            <div className="flex justify-end gap-3 pt-4 border-t border-zinc-800">
+              <button
+                type="button"
+                onClick={() => setShowAddWiki(false)}
+                className="px-5 py-2 bg-zinc-800 hover:bg-zinc-700 text-white rounded-lg text-sm transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleAddWiki}
+                disabled={!newWiki.title?.trim()}
+                className="flex items-center gap-2 px-5 py-2 bg-white hover:bg-zinc-200 disabled:opacity-30 disabled:cursor-not-allowed text-black rounded-lg text-sm font-medium transition-colors"
+              >
+                <Save className="w-4 h-4" />
+                {editingWikiId ? 'Save Changes' : 'Add Entry'}
               </button>
             </div>
-
-            {/* Trading Context */}
-            <div>
-              <label className="block text-sm text-zinc-400 mb-2">Trading Context</label>
-              <div className="grid grid-cols-2 gap-3">
-                <input type="text" value={newWiki.bestSession || ''} onChange={(e) => setNewWiki(prev => ({ ...prev, bestSession: e.target.value }))} placeholder="Best Session (e.g. NY Open)" className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2.5 text-sm text-white focus:outline-none focus:border-zinc-600" />
-                <input type="text" value={newWiki.timeframe || ''} onChange={(e) => setNewWiki(prev => ({ ...prev, timeframe: e.target.value }))} placeholder="Timeframe (e.g. 5m / 15m HTF)" className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2.5 text-sm text-white focus:outline-none focus:border-zinc-600" />
-              </div>
-              <textarea value={newWiki.contextNotes || ''} onChange={(e) => setNewWiki(prev => ({ ...prev, contextNotes: e.target.value }))} placeholder="Additional notes..." rows={2} className="w-full mt-3 bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2.5 text-sm text-white focus:outline-none focus:border-zinc-600 resize-none" />
-            </div>
-
-            <button type="button" onClick={handleAddWiki} disabled={!newWiki.title?.trim()} className="w-full py-2.5 bg-white hover:bg-zinc-200 disabled:opacity-30 disabled:cursor-not-allowed text-black rounded-lg text-sm font-medium transition-colors">
-              {editingWikiId ? 'Save Changes' : 'Add Entry'}
-            </button>
-          </div>
+          </form>
         </div>
       </ModalBackdrop>
     )
