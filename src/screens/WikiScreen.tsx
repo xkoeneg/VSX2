@@ -376,8 +376,11 @@ export function WikiScreen() {
     }, [wikiEntries, wikiSearch]);
 
     const categoryFilteredEntries = useMemo(() => {
-      if (activeCategory === 'All') return searchedEntries;
-      return searchedEntries.filter(e => e.category === activeCategory);
+      const filtered = activeCategory === 'All'
+        ? searchedEntries
+        : searchedEntries.filter(e => e.category === activeCategory);
+      // Alphabetical by title, independent of category or insertion order.
+      return [...filtered].sort((a, b) => a.title.localeCompare(b.title));
     }, [searchedEntries, activeCategory]);
 
     const isFiltering = activeCategory !== 'All' || wikiSearch.trim().length > 0;
