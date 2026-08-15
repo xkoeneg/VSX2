@@ -419,9 +419,12 @@ export function NoticesScreen() {
         onClick={() => setPreviewNotice(notice)}
         className={cn(
           'group relative rounded-xl border overflow-hidden cursor-pointer transition-all hover:-translate-y-0.5 flex flex-col h-full',
-          theme !== 'light' ? 'bg-zinc-900/50 border-zinc-800 hover:border-cyan-500/40' : 'bg-white border-zinc-200 hover:border-cyan-400/50 hover:shadow-md'
+          theme !== 'light' ? 'bg-zinc-900/50 border-cyan-900/40 hover:border-cyan-500/60' : 'bg-white border-cyan-200 hover:border-cyan-400/70 hover:shadow-md'
         )}
       >
+        {/* Cyan accent strip — echoes the column's insight color */}
+        <div className="absolute top-0 inset-x-0 h-0.5 bg-cyan-500/70 z-10" />
+
         {/* Chart preview */}
         <div className={cn('w-full aspect-[16/10] flex items-center justify-center overflow-hidden', theme !== 'light' ? 'bg-zinc-950' : 'bg-zinc-100')}>
           {notice.imageUrl ? (
@@ -479,9 +482,13 @@ export function NoticesScreen() {
           onClick={() => setPreviewNotice(notice)}
           className={cn(
             'group relative rounded-xl border overflow-hidden cursor-pointer transition-all hover:-translate-y-0.5 flex flex-col h-full',
-            theme !== 'light' ? 'bg-zinc-900/50 border-zinc-800 hover:border-rose-500/40' : 'bg-white border-zinc-200 hover:border-rose-400/50 hover:shadow-md'
+            theme !== 'light' ? 'bg-zinc-900/50 border-rose-900/40 hover:border-rose-500/60' : 'bg-white border-rose-200 hover:border-rose-400/70 hover:shadow-md'
           )}
         >
+          {/* Rose accent strip — echoes the column's danger color so each
+              card reads as a "mistake" card at a glance, not just on hover */}
+          <div className="absolute top-0 inset-x-0 h-0.5 bg-rose-500/70 z-10" />
+
           {/* Edit / Delete */}
           <div className="absolute top-1.5 right-1.5 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity z-10">
             <button
