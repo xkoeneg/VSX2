@@ -574,22 +574,22 @@ export function AddNoticeModal() {
               )}
             </div>
 
-            {/* ================= SECTION 3: Step-by-Step Breakdown ================= */}
+            {/* ================= SECTION 3: Additional Breakdown ================= */}
             {/* Optional — for setups where one screenshot + one paragraph isn't
-                enough. Each step gets its own title, notes, and screenshot(s),
-                so a multi-part insight or trap can be walked through stage by
-                stage, exactly like the Strategy Model execution builder. */}
+                enough. Each part gets its own title, notes, and screenshot(s),
+                so a multi-part insight or trap can be explained across
+                several image+note blocks, journal-style. */}
             <div className="bg-zinc-800 border border-zinc-700 p-4 rounded-xl space-y-3 shadow-[0_1px_0_0_rgba(255,255,255,0.02)_inset]">
               <div className="flex items-center gap-2 pb-1">
                 <span className="text-[10px] font-bold text-cyan-400 font-mono tracking-widest">03</span>
-                <h4 className="text-xs font-semibold text-slate-300 uppercase tracking-wider">Step-by-Step Breakdown</h4>
+                <h4 className="text-xs font-semibold text-slate-300 uppercase tracking-wider">Additional Breakdown</h4>
                 <span className="text-[10px] text-zinc-600">(optional)</span>
                 {newNotice.steps.length > 0 && (
-                  <span className="text-xs text-zinc-600 ml-auto">{newNotice.steps.length} step{newNotice.steps.length === 1 ? '' : 's'}</span>
+                  <span className="text-xs text-zinc-600 ml-auto">{newNotice.steps.length} part{newNotice.steps.length === 1 ? '' : 's'}</span>
                 )}
               </div>
               <p className="text-[11px] text-zinc-500 -mt-1.5">
-                Need more than one image to explain this? Break it into steps — each with its own note and screenshot(s).
+                Need more than one image to explain this? Add more parts — each with its own note and screenshot(s).
               </p>
 
               {newNotice.steps.length > 0 && (
@@ -597,11 +597,11 @@ export function AddNoticeModal() {
                   {newNotice.steps.map((step, idx) => (
                     <div key={step.id} className="rounded-lg border border-zinc-700 bg-zinc-800/60 p-3 space-y-2.5">
                       <div className="flex items-center justify-between">
-                        <span className="text-xs font-bold uppercase tracking-wider text-zinc-400">Step {idx + 1}</span>
+                        <span className="text-xs font-bold uppercase tracking-wider text-zinc-400">Part {idx + 1}</span>
                         <button
                           type="button"
                           onClick={() => requestRemoveNoticeStep(step.id)}
-                          title="Remove step"
+                          title="Remove part"
                           className="p-1 text-zinc-500 hover:text-rose-400 hover:bg-rose-500/10 rounded transition-colors"
                         >
                           <Trash2 className="w-3.5 h-3.5" />
@@ -611,7 +611,7 @@ export function AddNoticeModal() {
                         type="text"
                         value={step.title}
                         onChange={(e) => updateNoticeStep(step.id, 'title', e.target.value)}
-                        placeholder={isMistake ? `Step ${idx + 1}: What led into the trap` : `Step ${idx + 1}: London Open Sweep & Reaction`}
+                        placeholder={isMistake ? `Part ${idx + 1}: What led into the trap` : `Part ${idx + 1}: London Open Sweep & Reaction`}
                         className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-zinc-600"
                       />
                       <textarea
@@ -623,7 +623,7 @@ export function AddNoticeModal() {
                           el.style.height = 'auto';
                           el.style.height = `${el.scrollHeight}px`;
                         }}
-                        placeholder="Explain what's happening in this stage..."
+                        placeholder="Explain what's happening here..."
                         rows={2}
                         className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-zinc-600 resize-none overflow-hidden"
                       />
@@ -659,7 +659,7 @@ export function AddNoticeModal() {
                                 draggingNoticeStepImageId === img.id && "opacity-40"
                               )}
                             >
-                              <img src={img.url} alt="Step screenshot" className="w-full h-full object-cover pointer-events-none" />
+                              <img src={img.url} alt="Part screenshot" className="w-full h-full object-cover pointer-events-none" />
                               <div className="absolute top-1 left-1 flex items-center gap-0.5 px-1 py-0.5 rounded bg-black/70 text-white text-[9px] font-semibold pointer-events-none">
                                 <GripVertical className="w-2.5 h-2.5" />
                                 {imgIdx + 1}
@@ -709,7 +709,7 @@ export function AddNoticeModal() {
                 className="w-full flex items-center justify-center gap-1.5 py-2.5 border border-dashed border-zinc-700 hover:border-zinc-500 text-zinc-400 hover:text-white rounded-lg text-xs font-medium transition-colors"
               >
                 <Plus className="w-3.5 h-3.5" />
-                Add Step
+                Add Part
               </button>
             </div>
 
@@ -755,10 +755,10 @@ export function DeleteNoticeStepConfirm() {
           <div className="w-10 h-10 rounded-full bg-rose-500/15 flex items-center justify-center flex-shrink-0">
             <Trash2 className="w-5 h-5 text-rose-400" />
           </div>
-          <h3 className="text-lg font-bold text-white">Remove "{step?.title || `Step ${idx + 1}`}"?</h3>
+          <h3 className="text-lg font-bold text-white">Remove "{step?.title || `Part ${idx + 1}`}"?</h3>
         </div>
         <p className="text-sm text-zinc-400 mb-6">
-          This removes this step{step && step.images.length > 0 ? ` and its ${step.images.length} screenshot${step.images.length > 1 ? 's' : ''}` : ''} from the breakdown. This cannot be undone.
+          This removes this part{step && step.images.length > 0 ? ` and its ${step.images.length} screenshot${step.images.length > 1 ? 's' : ''}` : ''} from the breakdown. This cannot be undone.
         </p>
         <div className="flex justify-end gap-3">
           <button
