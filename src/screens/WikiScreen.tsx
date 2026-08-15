@@ -526,10 +526,16 @@ export function WikiScreen() {
                   {entry.imageUrl ? (
                     <img src={entry.imageUrl} alt={entry.title} className="w-full h-full object-cover" />
                   ) : (
-                    <div className="w-full h-full flex flex-col items-center justify-center gap-2 text-zinc-700">
+                    <button
+                      type="button"
+                      onClick={() => handleOpenEditWiki(entry, true)}
+                      title="Add a diagram image (click to upload, or paste/drop one right here)"
+                      className="w-full h-full flex flex-col items-center justify-center gap-2 text-zinc-700 hover:text-zinc-500 transition-colors cursor-pointer"
+                    >
                       <ImageIcon className="w-8 h-8" />
                       <span className="text-xs">No chart diagram uploaded</span>
-                    </div>
+                      <span className="text-[10px] text-zinc-600">Click to add — or paste (Ctrl+V) an image here</span>
+                    </button>
                   )}
                   {entry.imageUrl && (
                     <button
