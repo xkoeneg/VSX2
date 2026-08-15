@@ -710,16 +710,106 @@ export function WikiScreen() {
         <PageHeader
           title="Knowledge Wiki"
           description="Visual reference for PD Arrays & trading concepts"
-          actions={
-            <button onClick={handleOpenAddWiki} className={cn(
-              'flex items-center gap-2 px-4 py-2 rounded-lg text-sm transition-colors flex-shrink-0',
-              theme !== 'light' ? 'bg-zinc-800 hover:bg-zinc-700 text-white' : 'bg-zinc-900 hover:bg-zinc-800 text-white'
-            )}>
-              <Plus className="w-4 h-4" />
-              <span>Add Entry</span>
-            </button>
-          }
         />
+
+        {/* Top stats bar — 4 mini cards, Discipline Tracker-style. Replaces
+            the loose header buttons/badges: counts, active filter, and
+            actions (Add Entry + compact Import trigger) all live here now. */}
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+          {/* Card 1 — Total Concepts */}
+          <div className={cn(
+            'rounded-xl border p-4 flex items-center gap-3',
+            theme !== 'light' ? 'bg-[#111113] border-zinc-800/80' : 'bg-white border-zinc-200'
+          )}>
+            <div className={cn(
+              'w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0',
+              theme !== 'light' ? 'bg-sky-500/10 text-sky-400' : 'bg-sky-50 text-sky-600'
+            )}>
+              <BookOpen className="w-5 h-5" />
+            </div>
+            <div className="min-w-0">
+              <p className="text-[10px] uppercase tracking-wide text-zinc-500 font-semibold">Total Concepts</p>
+              <p className={cn('text-xl font-bold leading-tight', theme !== 'light' ? 'text-white' : 'text-zinc-900')}>
+                {wikiEntries.length}
+              </p>
+            </div>
+          </div>
+
+          {/* Card 2 — Categories */}
+          <div className={cn(
+            'rounded-xl border p-4 flex items-center gap-3',
+            theme !== 'light' ? 'bg-[#111113] border-zinc-800/80' : 'bg-white border-zinc-200'
+          )}>
+            <div className={cn(
+              'w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0',
+              theme !== 'light' ? 'bg-violet-500/10 text-violet-400' : 'bg-violet-50 text-violet-600'
+            )}>
+              <Grid className="w-5 h-5" />
+            </div>
+            <div className="min-w-0">
+              <p className="text-[10px] uppercase tracking-wide text-zinc-500 font-semibold">Categories</p>
+              <p className={cn('text-xl font-bold leading-tight', theme !== 'light' ? 'text-white' : 'text-zinc-900')}>
+                {presentCategoryNames.length}
+              </p>
+            </div>
+          </div>
+
+          {/* Card 3 — Active Filter / Coverage */}
+          <div className={cn(
+            'rounded-xl border p-4 flex items-center gap-3',
+            theme !== 'light' ? 'bg-[#111113] border-zinc-800/80' : 'bg-white border-zinc-200'
+          )}>
+            <div className={cn(
+              'w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0',
+              theme !== 'light' ? 'bg-amber-500/10 text-amber-400' : 'bg-amber-50 text-amber-600'
+            )}>
+              <Filter className="w-5 h-5" />
+            </div>
+            <div className="min-w-0">
+              <p className="text-[10px] uppercase tracking-wide text-zinc-500 font-semibold">Active Filter</p>
+              <p className={cn('text-xl font-bold leading-tight truncate', theme !== 'light' ? 'text-white' : 'text-zinc-900')}>
+                {activeCategory}
+              </p>
+            </div>
+          </div>
+
+          {/* Card 4 — Quick Actions & Import */}
+          <div className={cn(
+            'rounded-xl border p-4 flex items-center justify-between gap-2',
+            theme !== 'light' ? 'bg-[#111113] border-zinc-800/80' : 'bg-white border-zinc-200'
+          )}>
+            <button
+              onClick={handleOpenAddWiki}
+              className={cn(
+                'flex items-center justify-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-colors flex-1 min-w-0',
+                theme !== 'light' ? 'bg-zinc-800 hover:bg-zinc-700 text-white' : 'bg-zinc-900 hover:bg-zinc-800 text-white'
+              )}
+            >
+              <Plus className="w-4 h-4 flex-shrink-0" />
+              <span className="truncate">Add Entry</span>
+            </button>
+            {!allStandardConceptsImported && (
+              <button
+                onClick={handleClickImportStandardConcepts}
+                className={cn(
+                  'relative flex items-center justify-center w-9 h-9 rounded-lg transition-colors flex-shrink-0 border',
+                  theme !== 'light'
+                    ? 'bg-sky-500/10 hover:bg-sky-500/20 text-sky-400 border-sky-500/30'
+                    : 'bg-sky-50 hover:bg-sky-100 text-sky-600 border-sky-200'
+                )}
+                title={`Import Standard Concepts (${missingStandardConcepts.length} available)`}
+              >
+                <Download className="w-4 h-4" />
+                <span className={cn(
+                  'absolute -top-1.5 -right-1.5 text-[9px] font-semibold w-4 h-4 flex items-center justify-center rounded-full',
+                  theme !== 'light' ? 'bg-sky-500 text-white' : 'bg-sky-600 text-white'
+                )}>
+                  {missingStandardConcepts.length}
+                </span>
+              </button>
+            )}
+          </div>
+        </div>
 
         {/* Split-pane workbench — category list on the left, full
             detail workbench for the selected concept on the right.
@@ -810,43 +900,6 @@ export function WikiScreen() {
             'flex-1 min-w-0 flex flex-col border rounded-xl overflow-hidden lg:h-full',
             theme !== 'light' ? 'bg-[#111113] border-zinc-800/80' : 'bg-white border-zinc-200'
           )}>
-            {/* Preview frame header — stat badges + Import action, anchored
-                top-right of the right panel, above the concept title / chart. */}
-            <div className={cn(
-              'flex items-center justify-end gap-2 px-4 py-2.5 border-b flex-shrink-0',
-              theme !== 'light' ? 'border-zinc-800/80 bg-black/10' : 'border-zinc-200 bg-zinc-50/60'
-            )}>
-              <div className={cn(
-                'inline-flex items-center gap-1.5 text-[11px] font-medium px-2.5 py-1 rounded-full border whitespace-nowrap',
-                theme !== 'light' ? 'bg-zinc-900 border-zinc-800 text-zinc-400' : 'bg-white border-zinc-200 text-zinc-500'
-              )}>
-                <span>{wikiEntries.length} concept{wikiEntries.length === 1 ? '' : 's'}</span>
-                <span className="text-zinc-600">•</span>
-                <span>{presentCategoryNames.length} categor{presentCategoryNames.length === 1 ? 'y' : 'ies'}</span>
-              </div>
-              {!allStandardConceptsImported && (
-                <button
-                  onClick={handleClickImportStandardConcepts}
-                  className={cn(
-                    'flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs transition-colors flex-shrink-0 border',
-                    theme !== 'light'
-                      ? 'bg-sky-500/10 hover:bg-sky-500/20 text-sky-400 border-sky-500/30'
-                      : 'bg-sky-50 hover:bg-sky-100 text-sky-600 border-sky-200'
-                  )}
-                  title="Add the pre-loaded ICT & Price Action concept library"
-                >
-                  <Download className="w-3.5 h-3.5" />
-                  <span>Import Standard Concepts</span>
-                  <span className={cn(
-                    'text-[10px] font-semibold px-1.5 py-0.5 rounded-full',
-                    theme !== 'light' ? 'bg-sky-500/20' : 'bg-sky-200/70'
-                  )}>
-                    {missingStandardConcepts.length}
-                  </span>
-                </button>
-              )}
-            </div>
-
             {renderWikiDetailPanel()}
           </div>
         </div>
