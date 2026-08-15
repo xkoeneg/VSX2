@@ -980,6 +980,9 @@ export function useAppState() {
   // True while a file is being dragged over the modal's image dropzone, so it
   // can render an active drop-target state.
   const [isWikiImageDragActive, setIsWikiImageDragActive] = useState(false);
+  // Option B: "AI Auto-Fill" — true while a request to the auto-fill
+  // endpoint is in flight, drives the button's loading/pulse state.
+  const [isWikiAutoFilling, setIsWikiAutoFilling] = useState(false);
 
   const [selectedTimeframeTab, setSelectedTimeframeTab] = useState<string>('Execution/Result');
 
@@ -3802,6 +3805,89 @@ export function useAppState() {
     setWikiImageFocusRequested(false);
   }, [showAddWiki, wikiImageFocusRequested]);
 
+  // ---- Option B: "AI Auto-Fill" -----------------------------------------
+  // Fills the rest of the Add/Edit Wiki form from the typed title alone.
+  // Calls a Supabase Edge Function ("wiki-auto-fill") rather than an AI
+  // provider directly, since that's the only way to keep an API key off the
+  // client — swap the body of the try block if your backend exposes this
+  // differently (e.g. a REST route on your own server).
+  //
+  // Expected Edge Function response shape:
+  //   { category?: string; content?: string; keyRules?: string[];
+  //     bestSession?: string; timeframe?: string; contextNotes?: string }
+  const WIKI_AUTOFILL_TIMEOUT_MS = 20000;
+
+  const withTimeout = <T,>(promise: Promise<T>, ms: number): Promise<T> =>
+    Promise.race([
+      promise,
+      new Promise<T>((_, reject) => setTimeout(() => reject(new Error('AI auto-fill timed out')), ms)),
+    ]);
+
+  // Clean, empty structured template used whenever the AI call fails, times
+  // out, or hits a rate/credit limit — never leaves the form blank or resets
+  // what the user already typed.
+  const buildWikiAutoFillFallback = (): Partial<WikiEntry> => ({
+    category: WIKI_CATEGORIES[0],
+    content: 'Short description of the concept — what it is and why it matters.',
+    keyRules: ['1. Condition A', '2. Condition B', '3. Condition C'],
+    bestSession: '',
+    timeframe: '',
+    contextNotes: 'Add any additional session/timeframe confluence notes here.',
+  });
+
+  const handleWikiAutoFill = async () => {
+    const title = (newWiki.title || '').trim();
+    if (!title || isWikiAutoFilling) return;
+
+    setIsWikiAutoFilling(true);
+    try {
+      const { data, error } = await withTimeout(
+        supabase.functions.invoke('wiki-auto-fill', { body: { title } }),
+        WIKI_AUTOFILL_TIMEOUT_MS
+      );
+
+      // Treat a Supabase error (network failure, non-2xx status including
+      // 429/500, invoke timeout) exactly like a malformed/empty response —
+      // both fall through to the fallback template below.
+      if (error) throw error;
+
+      const result = data as {
+        category?: string;
+        content?: string;
+        keyRules?: string[];
+        bestSession?: string;
+        timeframe?: string;
+        contextNotes?: string;
+      } | null;
+
+      if (!result || typeof result !== 'object' || (!result.content && !result.keyRules)) {
+        throw new Error('AI auto-fill returned an unexpected response');
+      }
+
+      setNewWiki(prev => ({
+        ...prev,
+        category: (result.category && (WIKI_CATEGORIES as readonly string[]).includes(result.category))
+          ? (result.category as WikiCategory)
+          : (prev.category || WIKI_CATEGORIES[0]),
+        content: result.content?.trim() || prev.content || '',
+        keyRules: Array.isArray(result.keyRules) && result.keyRules.length > 0
+          ? result.keyRules.map(r => String(r).trim()).filter(Boolean)
+          : (prev.keyRules || []),
+        bestSession: result.bestSession?.trim() || prev.bestSession || '',
+        timeframe: result.timeframe?.trim() || prev.timeframe || '',
+        contextNotes: result.contextNotes?.trim() || prev.contextNotes || '',
+      }));
+    } catch (err) {
+      // API limit, timeout, network failure, or malformed response — never
+      // crash the app or wipe out the title the user already typed. Load
+      // the fallback template instead so they can fill it in by hand.
+      setNewWiki(prev => ({ ...prev, ...buildWikiAutoFillFallback() }));
+      showTradeImportToast('error', 'AI limits reached or unavailable. Loaded default template instead.');
+    } finally {
+      setIsWikiAutoFilling(false);
+    }
+  };
+
   // Key Rules / Conditions editor — stored as a string[], edited as one
   // rule per line via a small add/remove list (mirrors the pattern used
   // for Strategy steps rather than a single freeform textarea, so each
@@ -4686,6 +4772,7 @@ export function useAppState() {
     wikiImageDropzoneRef,
     wikiImageFocusRequested,
     isWikiImageDragActive,
+    isWikiAutoFilling,
     selectedTimeframeTab,
     setSelectedTimeframeTab,
     calculatedRR,
@@ -4916,6 +5003,7 @@ export function useAppState() {
     handleWikiImageDragLeave,
     handleWikiImageDrop,
     handleWikiImagePaste,
+    handleWikiAutoFill,
     addWikiKeyRule,
     updateWikiKeyRule,
     removeWikiKeyRule,
