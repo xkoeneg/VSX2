@@ -408,7 +408,7 @@ export function NoticesScreen() {
         key={notice.id}
         onClick={() => setPreviewNotice(notice)}
         className={cn(
-          'group relative rounded-xl border overflow-hidden cursor-pointer transition-all hover:-translate-y-0.5',
+          'group relative rounded-xl border overflow-hidden cursor-pointer transition-all hover:-translate-y-0.5 flex flex-col h-full',
           theme !== 'light' ? 'bg-zinc-900/50 border-zinc-800 hover:border-cyan-500/40' : 'bg-white border-zinc-200 hover:border-cyan-400/50 hover:shadow-md'
         )}
       >
@@ -438,9 +438,9 @@ export function NoticesScreen() {
         </div>
 
         {/* Content */}
-        <div className="p-2 space-y-1">
-          <h3 className={cn('text-xs font-bold leading-snug line-clamp-2', theme !== 'light' ? 'text-white' : 'text-zinc-900')}>{notice.title}</h3>
-          <div className="flex flex-wrap items-center gap-1">
+        <div className="p-2 flex flex-col gap-1 flex-1">
+          <h3 className={cn('text-xs font-bold leading-snug line-clamp-2 min-h-[2.2em]', theme !== 'light' ? 'text-white' : 'text-zinc-900')}>{notice.title}</h3>
+          <div className="flex flex-wrap items-center gap-1 min-h-[17px]">
             {notice.session && (
               <span className="px-1.5 py-0.5 rounded-full text-[9px] font-medium border bg-cyan-500/10 text-cyan-400 border-cyan-500/30">
                 {notice.session}
@@ -457,8 +457,10 @@ export function NoticesScreen() {
     );
 
     // Anti-Mistake / Trap card — structured problem vs. solution format:
-    // header with mistake tag pills, optional thumbnail banner, a dark
-    // "what happened" block, then a green-accented "prevention" block.
+    // header with mistake tag pills, thumbnail banner, a dark "what
+    // happened" block, then a green-accented "prevention" block. Every
+    // slot is always rendered (with a placeholder when empty) so every
+    // card in the grid comes out the same fixed height.
     const renderMistakeCard = (notice: MarketNotice) => {
       const tags = notice.tag ? notice.tag.split(',').map(t => t.trim()).filter(Boolean) : [];
       return (
@@ -466,7 +468,7 @@ export function NoticesScreen() {
           key={notice.id}
           onClick={() => setPreviewNotice(notice)}
           className={cn(
-            'group relative rounded-xl border overflow-hidden cursor-pointer transition-all hover:-translate-y-0.5',
+            'group relative rounded-xl border overflow-hidden cursor-pointer transition-all hover:-translate-y-0.5 flex flex-col h-full',
             theme !== 'light' ? 'bg-zinc-900/50 border-zinc-800 hover:border-rose-500/40' : 'bg-white border-zinc-200 hover:border-rose-400/50 hover:shadow-md'
           )}
         >
@@ -486,43 +488,43 @@ export function NoticesScreen() {
             </button>
           </div>
 
-          {/* Optional thumbnail banner */}
-          {notice.imageUrl && (
-            <div className={cn('w-full aspect-[16/10] overflow-hidden', theme !== 'light' ? 'bg-zinc-950' : 'bg-zinc-100')}>
+          {/* Thumbnail banner — always reserved so every card is the same height */}
+          <div className={cn('w-full aspect-[16/10] flex-shrink-0 flex items-center justify-center overflow-hidden', theme !== 'light' ? 'bg-zinc-950' : 'bg-zinc-100')}>
+            {notice.imageUrl ? (
               <img src={notice.imageUrl} alt={notice.title} className="w-full h-full object-cover" />
-            </div>
-          )}
+            ) : (
+              <ImageIcon className={cn('w-6 h-6', theme !== 'light' ? 'text-zinc-700' : 'text-zinc-400')} />
+            )}
+          </div>
 
-          <div className="p-3 space-y-2.5">
-            {/* Header: title + mistake tag pills */}
+          <div className="p-3 flex-1 flex flex-col gap-2.5">
+            {/* Header: title + mistake tag pills — pill row height reserved even when empty */}
             <div className="space-y-1.5 pr-8">
               <h3 className={cn('text-sm font-bold leading-snug line-clamp-2', theme !== 'light' ? 'text-white' : 'text-zinc-900')}>{notice.title}</h3>
-              {tags.length > 0 && (
-                <div className="flex flex-wrap gap-1">
-                  {tags.map(tag => (
-                    <span key={tag} className="px-2 py-0.5 rounded-full text-[10px] font-semibold border bg-rose-500/10 text-rose-400 border-rose-500/30">
-                      {tag}
-                    </span>
-                  ))}
-                </div>
-              )}
+              <div className="flex flex-wrap gap-1 min-h-[19px]">
+                {tags.length > 0 && tags.map(tag => (
+                  <span key={tag} className="px-2 py-0.5 rounded-full text-[10px] font-semibold border bg-rose-500/10 text-rose-400 border-rose-500/30">
+                    {tag}
+                  </span>
+                ))}
+              </div>
             </div>
 
             {/* What Happened */}
-            {notice.description && (
-              <div className={cn('rounded-md px-2.5 py-2', theme !== 'light' ? 'bg-zinc-800/60' : 'bg-zinc-100')}>
-                <p className={cn('text-[10px] font-semibold uppercase tracking-wide mb-0.5', theme !== 'light' ? 'text-zinc-500' : 'text-zinc-500')}>❌ What Happened</p>
-                <p className={cn('text-xs leading-snug line-clamp-2', theme !== 'light' ? 'text-zinc-400' : 'text-zinc-600')}>{notice.description}</p>
-              </div>
-            )}
+            <div className={cn('rounded-md px-2.5 py-2', theme !== 'light' ? 'bg-zinc-800/60' : 'bg-zinc-100')}>
+              <p className={cn('text-[10px] font-semibold uppercase tracking-wide mb-0.5', theme !== 'light' ? 'text-zinc-500' : 'text-zinc-500')}>❌ What Happened</p>
+              <p className={cn('text-xs leading-snug line-clamp-2', notice.description ? (theme !== 'light' ? 'text-zinc-400' : 'text-zinc-600') : 'text-zinc-600 italic')}>
+                {notice.description || 'No details added yet.'}
+              </p>
+            </div>
 
             {/* Prevention / Rule — accented so the lesson stands out */}
-            {notice.prevention && (
-              <div className="rounded-md border-l-2 border-emerald-500 bg-emerald-500/5 px-2.5 py-2">
-                <p className="text-[10px] font-semibold uppercase tracking-wide mb-0.5 text-emerald-400">💡 Rule / Prevention</p>
-                <p className="text-xs font-semibold leading-snug line-clamp-2 text-emerald-200">{notice.prevention}</p>
-              </div>
-            )}
+            <div className="rounded-md border-l-2 border-emerald-500 bg-emerald-500/5 px-2.5 py-2 mt-auto">
+              <p className="text-[10px] font-semibold uppercase tracking-wide mb-0.5 text-emerald-400">💡 Rule / Prevention</p>
+              <p className={cn('text-xs font-semibold leading-snug line-clamp-2', notice.prevention ? 'text-emerald-200' : 'text-emerald-200/50 italic')}>
+                {notice.prevention || 'No rule added yet.'}
+              </p>
+            </div>
           </div>
         </div>
       );
