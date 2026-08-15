@@ -354,13 +354,16 @@ export function NoticesScreen() {
                 <h2 className={cn('text-lg font-bold leading-snug', theme !== 'light' ? 'text-white' : 'text-zinc-900')}>{previewNotice.title}</h2>
               </div>
 
-              {(previewNotice.description || previewNotice.whatHappenedTitle) && (
+              {(previewNotice.description || previewNotice.whatHappenedTitle || previewNotice.keyTakeawayTitle) && (
                 <div className={cn('rounded-lg border p-3', theme !== 'light' ? 'bg-zinc-800/50 border-zinc-800' : 'bg-zinc-50 border-zinc-200')}>
                   <p className={cn('text-[11px] font-semibold uppercase tracking-wider mb-1.5 flex items-center gap-1.5', theme !== 'light' ? 'text-zinc-400' : 'text-zinc-500')}>
-                    {previewNotice.type === 'mistake' ? <>❌ What Happened</> : 'What You Noticed'}
+                    {previewNotice.type === 'mistake' ? <>❌ What Happened</> : '🔑 What You Noticed'}
                   </p>
                   {previewNotice.type === 'mistake' && previewNotice.whatHappenedTitle && (
                     <p className={cn('text-sm font-semibold mb-1', theme !== 'light' ? 'text-white' : 'text-zinc-900')}>{previewNotice.whatHappenedTitle}</p>
+                  )}
+                  {previewNotice.type === 'insight' && previewNotice.keyTakeawayTitle && (
+                    <p className={cn('text-sm font-semibold mb-1', theme !== 'light' ? 'text-white' : 'text-zinc-900')}>{previewNotice.keyTakeawayTitle}</p>
                   )}
                   {previewNotice.description && (
                     <p className={cn('text-sm leading-relaxed whitespace-pre-wrap', theme !== 'light' ? 'text-zinc-300' : 'text-zinc-700')}>{previewNotice.description}</p>
@@ -437,8 +440,8 @@ export function NoticesScreen() {
               columns feel equally complete at a glance */}
           <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/90 via-black/70 to-transparent px-2 pt-5 pb-1.5">
             <p className="text-[8px] font-semibold uppercase tracking-wide text-cyan-300/90">🔑 Key Takeaway</p>
-            <p className={cn('text-[10px] leading-snug line-clamp-1', notice.description ? 'text-white/90' : 'text-zinc-500 italic')}>
-              {notice.description || 'No note added yet.'}
+            <p className={cn('text-[10px] leading-snug line-clamp-1', notice.keyTakeawayTitle ? 'text-white/90' : 'text-zinc-500 italic')}>
+              {notice.keyTakeawayTitle || 'No title added yet.'}
             </p>
           </div>
         </div>
