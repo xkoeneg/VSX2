@@ -600,34 +600,34 @@ export function WikiScreen() {
           <div className="flex-1 overflow-y-auto min-h-0">
             {/* Chart viewport */}
             <div className="p-5 pb-0">
-              <div className="group relative rounded-xl overflow-hidden border border-slate-800 bg-slate-950">
-                <div className="aspect-[16/7] w-full relative">
-                  {entry.imageUrl ? (
-                    <img src={entry.imageUrl} alt={entry.title} className="w-full h-full object-cover" />
-                  ) : (
-                    <button
-                      type="button"
-                      onClick={() => handleOpenEditWiki(entry, true)}
-                      title="Add a diagram image (click to upload, or paste/drop one right here)"
-                      className="w-full h-full flex flex-col items-center justify-center gap-2 text-zinc-700 hover:text-zinc-500 transition-colors cursor-pointer"
-                    >
-                      <ImageIcon className="w-8 h-8" />
-                      <span className="text-xs">No chart diagram uploaded</span>
-                      <span className="text-[10px] text-zinc-600">Click to add — or paste (Ctrl+V) an image here</span>
-                    </button>
-                  )}
-                  {entry.imageUrl && (
-                    <button
-                      onClick={() => setLightboxImage(entry.imageUrl)}
-                      className="absolute inset-0 flex items-center justify-center bg-black/0 group-hover:bg-black/50 opacity-0 group-hover:opacity-100 transition-all"
-                    >
-                      <span className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-black/70 backdrop-blur-sm text-white text-xs font-medium border border-white/10">
-                        <ZoomIn className="w-3.5 h-3.5" />
-                        Full-screen preview
-                      </span>
-                    </button>
-                  )}
-                </div>
+              <div className="group relative w-full max-h-[380px] flex items-center justify-center bg-slate-950/60 rounded-xl border border-slate-800/80 p-4 overflow-hidden shadow-inner">
+                {entry.imageUrl ? (
+                  <img
+                    src={entry.imageUrl}
+                    alt={entry.title}
+                    className="max-h-[340px] w-auto h-auto object-contain rounded-lg transition-all duration-200"
+                  />
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => handleOpenEditWiki(entry, true)}
+                    title="Add a diagram image (click to upload, or paste/drop one right here)"
+                    className="w-full min-h-[200px] flex flex-col items-center justify-center gap-2 text-zinc-700 hover:text-zinc-500 transition-colors cursor-pointer"
+                  >
+                    <ImageIcon className="w-8 h-8" />
+                    <span className="text-xs">No chart diagram uploaded</span>
+                    <span className="text-[10px] text-zinc-600">Click to add — or paste (Ctrl+V) an image here</span>
+                  </button>
+                )}
+                {entry.imageUrl && (
+                  <button
+                    onClick={() => setLightboxImage(entry.imageUrl)}
+                    className="absolute top-3 right-3 flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-black/70 backdrop-blur-sm text-white text-xs font-medium border border-white/10 opacity-0 group-hover:opacity-100 transition-opacity"
+                  >
+                    <ZoomIn className="w-3.5 h-3.5" />
+                    Full-screen preview
+                  </button>
+                )}
               </div>
             </div>
 
