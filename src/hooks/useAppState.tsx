@@ -969,11 +969,17 @@ export function useAppState() {
   const [editingWikiId, setEditingWikiId] = useState<string | null>(null);
   // Which entry's full-detail modal is open, if any.
   const [viewWikiId, setViewWikiId] = useState<string | null>(null);
+  // Deleting a wiki entry always goes through a confirmation prompt first
+  // (see DeleteWikiConfirm) — this holds the id awaiting confirmation.
+  const [wikiPendingDelete, setWikiPendingDelete] = useState<string | null>(null);
+  // Same confirmation pattern for a single Key Rules / Conditions row inside
+  // the Add/Edit Wiki modal — holds the row's index awaiting confirmation.
+  const [wikiRulePendingDeleteIndex, setWikiRulePendingDeleteIndex] = useState<number | null>(null);
   const wikiImageInputRef = useRef<HTMLInputElement>(null);
   // Points at the "Upload diagram image" dropzone inside the Add/Edit Wiki
   // modal. When set, the modal scrolls it into view and focuses it on open —
   // used by the "quick image edit" click from the main preview placeholder.
-  const wikiImageDropzoneRef = useRef<HTMLButtonElement>(null);
+  const wikiImageDropzoneRef = useRef<HTMLDivElement>(null);
   // True for one render after the modal opens when it should immediately
   // draw attention to the image dropzone (see handleOpenEditWiki's focusImage arg).
   const [wikiImageFocusRequested, setWikiImageFocusRequested] = useState(false);
@@ -3726,10 +3732,18 @@ export function useAppState() {
     setDragOverWikiImageId(null);
   };
 
-  const handleDeleteWiki = (id: string) => {
+  // Deleting a wiki entry always goes through a confirmation prompt first
+  // (see DeleteWikiConfirm) — this just opens it; the actual removal
+  // happens in confirmDeleteWiki. Mirrors handleDeleteStrategy.
+  const handleDeleteWiki = (id: string) => setWikiPendingDelete(id);
+
+  const confirmDeleteWiki = () => {
+    if (!wikiPendingDelete) return;
+    const id = wikiPendingDelete;
     setWikiEntries(wikiEntries.filter(w => w.id !== id));
     if (viewWikiId === id) setViewWikiId(null);
     if (editingWikiId === id) { setEditingWikiId(null); setShowAddWiki(false); }
+    setWikiPendingDelete(null);
   };
 
   // The diagram/chart field now supports multiple images — every file
@@ -3999,6 +4013,17 @@ Return ONLY a JSON object — no markdown, no code fences, no commentary — wit
     return { ...prev, keyRules: rules };
   });
   const removeWikiKeyRule = (idx: number) => setNewWiki(prev => ({ ...prev, keyRules: (prev.keyRules || []).filter((_, i) => i !== idx) }));
+
+  // Confirmation-guarded variant of removeWikiKeyRule (see
+  // DeleteWikiRuleConfirm) — requestRemoveWikiKeyRule just opens the
+  // prompt, confirmRemoveWikiKeyRule performs the actual removal.
+  const requestRemoveWikiKeyRule = (idx: number) => setWikiRulePendingDeleteIndex(idx);
+
+  const confirmRemoveWikiKeyRule = () => {
+    if (wikiRulePendingDeleteIndex === null) return;
+    removeWikiKeyRule(wikiRulePendingDeleteIndex);
+    setWikiRulePendingDeleteIndex(null);
+  };
 
   // ---- Standard Trading Concepts import (Option A) ----------------------
   // One-click populate of the pre-written ICT / Price Action library. Dedupes
@@ -5106,6 +5131,9 @@ Return ONLY a JSON object — no markdown, no code fences, no commentary — wit
     handleOpenAddWiki,
     handleOpenEditWiki,
     handleDeleteWiki,
+    wikiPendingDelete,
+    setWikiPendingDelete,
+    confirmDeleteWiki,
     handleWikiImagesPick,
     // Back-compat alias — several screens/modals destructure the old
     // single-image handler name from context even though the wiki
@@ -5122,6 +5150,10 @@ Return ONLY a JSON object — no markdown, no code fences, no commentary — wit
     addWikiKeyRule,
     updateWikiKeyRule,
     removeWikiKeyRule,
+    requestRemoveWikiKeyRule,
+    wikiRulePendingDeleteIndex,
+    setWikiRulePendingDeleteIndex,
+    confirmRemoveWikiKeyRule,
     STANDARD_TRADING_CONCEPTS,
     missingStandardConcepts,
     allStandardConceptsImported,
