@@ -224,6 +224,7 @@ export const normalizeNotice = (n: any): MarketNotice => {
     imageUrl: normalizeStringField(n?.imageUrl),
     description: legacyDescription || legacyMessagesText,
     whatHappenedTitle: normalizeStringField(n?.whatHappenedTitle),
+    keyTakeawayTitle: normalizeStringField(n?.keyTakeawayTitle),
     consequence: normalizeStringField(n?.consequence),
     prevention: normalizeStringField(n?.prevention),
     preventionTitle: normalizeStringField(n?.preventionTitle),
