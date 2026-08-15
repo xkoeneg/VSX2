@@ -3820,7 +3820,13 @@ export function useAppState() {
   // you can rate-limit per user. Worth restricting the key itself to this
   // API in Google AI Studio / Cloud Console either way.
   const WIKI_AUTOFILL_TIMEOUT_MS = 20000;
-  const GEMINI_MODEL = 'gemini-2.5-flash';
+  // gemini-2.5-flash is on Google's Oct 16, 2026 deprecation list (and some
+  // developers have reported it 404ing even earlier than that date), and
+  // gemini-1.5-flash / all 1.x models are already fully shut down and will
+  // always 404. gemini-3.5-flash is the current GA flash model with no
+  // shutdown date announced — swap this constant if Google moves the
+  // goalposts again.
+  const GEMINI_MODEL = 'gemini-3.5-flash';
 
   const withTimeout = <T,>(promise: Promise<T>, ms: number): Promise<T> =>
     Promise.race([
