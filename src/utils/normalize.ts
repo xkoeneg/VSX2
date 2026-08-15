@@ -233,6 +233,10 @@ export const normalizeNotice = (n: any): MarketNotice => {
     session: SESSION_OPTIONS.includes(n?.session) ? n.session : '',
     tag: normalizeStringField(n?.tag),
     images: normalizeNoticeImages(n),
+    // Reuses the same step normalizer as Strategy — the shape is identical,
+    // and this also transparently handles notices saved before the
+    // step-by-step breakdown existed (defaults to an empty array).
+    steps: normalizeStrategySteps(n?.steps),
     description: legacyDescription || legacyMessagesText,
     whatHappenedTitle: normalizeStringField(n?.whatHappenedTitle),
     keyTakeawayTitle: normalizeStringField(n?.keyTakeawayTitle),
