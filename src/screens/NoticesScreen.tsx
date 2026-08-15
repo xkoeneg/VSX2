@@ -426,12 +426,21 @@ export function NoticesScreen() {
         <div className="absolute top-0 inset-x-0 h-0.5 bg-cyan-500/70 z-10" />
 
         {/* Chart preview */}
-        <div className={cn('w-full aspect-[16/10] flex items-center justify-center overflow-hidden', theme !== 'light' ? 'bg-zinc-950' : 'bg-zinc-100')}>
+        <div className={cn('relative w-full aspect-[16/10] flex items-center justify-center overflow-hidden', theme !== 'light' ? 'bg-zinc-950' : 'bg-zinc-100')}>
           {notice.imageUrl ? (
             <img src={notice.imageUrl} alt={notice.title} className="w-full h-full object-cover" />
           ) : (
             <ImageIcon className={cn('w-5 h-5', theme !== 'light' ? 'text-zinc-700' : 'text-zinc-400')} />
           )}
+
+          {/* Caption overlay — mirrors the mistake card's overlay so both
+              columns feel equally complete at a glance */}
+          <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/90 via-black/70 to-transparent px-2 pt-5 pb-1.5">
+            <p className="text-[8px] font-semibold uppercase tracking-wide text-cyan-300/90">🔑 Key Takeaway</p>
+            <p className={cn('text-[10px] leading-snug line-clamp-1', notice.description ? 'text-white/90' : 'text-zinc-500 italic')}>
+              {notice.description || 'No note added yet.'}
+            </p>
+          </div>
         </div>
 
         {/* Edit / Delete */}
