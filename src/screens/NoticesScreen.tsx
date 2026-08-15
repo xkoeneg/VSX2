@@ -488,7 +488,7 @@ export function NoticesScreen() {
 
           {/* Optional thumbnail banner */}
           {notice.imageUrl && (
-            <div className={cn('w-full h-24 overflow-hidden', theme !== 'light' ? 'bg-zinc-950' : 'bg-zinc-100')}>
+            <div className={cn('w-full aspect-[16/10] overflow-hidden', theme !== 'light' ? 'bg-zinc-950' : 'bg-zinc-100')}>
               <img src={notice.imageUrl} alt={notice.title} className="w-full h-full object-cover" />
             </div>
           )}
