@@ -879,7 +879,7 @@ export function AddWikiModal() {
     handleWikiImagePick, handleWikiImageDragOver, handleWikiImageDragLeave, handleWikiImageDrop,
     handleWikiImagePaste, wikiImageDropzoneRef, isWikiImageDragActive,
     isWikiAutoFilling, handleWikiAutoFill,
-    addWikiKeyRule, updateWikiKeyRule, removeWikiKeyRule, handleDeleteSetupType,
+    addWikiKeyRule, updateWikiKeyRule, removeWikiKeyRule, requestRemoveWikiKeyRule, handleDeleteSetupType,
     handleDeleteConfluence, handleDeleteMistakeType, handleChangeSetupTypeColor, handleChangeConfluenceColor,
     handleChangeMistakeColor, handleDeleteEmotion, handleChangeEmotionColor, colorForEmotion, colorForMistake,
     handleFileUpload, handleAddImageUrl, handleRemoveImage, handleReorderImages, updateTimeframeNotes,
@@ -1052,7 +1052,7 @@ export function AddWikiModal() {
                         placeholder="e.g. Must be formed by a displacement candle"
                         className="flex-1 min-w-0 bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-zinc-600"
                       />
-                      <button type="button" onClick={() => removeWikiKeyRule(idx)} className="p-1 text-zinc-600 hover:text-rose-400 flex-shrink-0">
+                      <button type="button" onClick={() => requestRemoveWikiKeyRule(idx)} className="p-1 text-zinc-600 hover:text-rose-400 flex-shrink-0">
                         <X className="w-4 h-4" />
                       </button>
                     </div>
@@ -1386,6 +1386,53 @@ export function DeleteWikiConfirm() {
           <button
             type="button"
             onClick={confirmDeleteWiki}
+            className="px-4 py-2 bg-rose-600 hover:bg-rose-700 text-white rounded-lg text-sm font-medium transition-colors"
+          >
+            Delete
+          </button>
+        </div>
+      </div>
+    </ModalBackdrop>
+  );
+}
+
+// ---- Delete confirmation for a single Key Rules / Conditions row inside
+// the Add/Edit Wiki modal's form. Stacks above AddWikiModal (z-[70] vs its
+// z-50) same as DeleteWikiConfirm above, since it's a guard on an action
+// that happens while that modal is open.
+export function DeleteWikiRuleConfirm() {
+  const { wikiRulePendingDeleteIndex, setWikiRulePendingDeleteIndex, confirmRemoveWikiKeyRule } = useAppContext();
+
+  if (wikiRulePendingDeleteIndex === null) return null;
+
+  const handleCancel = () => setWikiRulePendingDeleteIndex(null);
+
+  return (
+    <ModalBackdrop
+      onClose={handleCancel}
+      className="fixed inset-0 bg-black/80 backdrop-blur-sm z-[70] flex items-center justify-center p-4"
+    >
+      <div className="bg-[#121318] border border-white/10 rounded-2xl max-w-sm w-full p-6" onClick={(e) => e.stopPropagation()}>
+        <div className="flex items-center gap-3 mb-3">
+          <div className="w-10 h-10 rounded-full bg-rose-500/15 flex items-center justify-center flex-shrink-0">
+            <Trash2 className="w-5 h-5 text-rose-400" />
+          </div>
+          <h3 className="text-lg font-bold text-white">Delete Rule</h3>
+        </div>
+        <p className="text-sm text-zinc-400 mb-6">
+          Are you sure you want to remove this rule from the entry?
+        </p>
+        <div className="flex justify-end gap-3">
+          <button
+            type="button"
+            onClick={handleCancel}
+            className="px-4 py-2 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 rounded-lg text-sm font-medium transition-colors"
+          >
+            Cancel
+          </button>
+          <button
+            type="button"
+            onClick={confirmRemoveWikiKeyRule}
             className="px-4 py-2 bg-rose-600 hover:bg-rose-700 text-white rounded-lg text-sm font-medium transition-colors"
           >
             Delete
