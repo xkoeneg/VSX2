@@ -178,6 +178,7 @@ export interface MarketNotice {
   session: SessionOption | ''; // NY / London / Asia / Pre-market Open filter
   tag: string; // free-text asset/session tag, e.g. "NQ Futures"
   images: TradeImage[]; // TradingView chart screenshot reference(s) — supports multiple, first one used as the card thumbnail
+  steps: StrategyStep[]; // ordered, dynamic step-by-step breakdown — lets a single insight/trap be explained across multiple stages, each with its own notes and screenshot(s), for setups that need more than one image to explain
   description: string; // What Happened / Trap Description (mistake) or Key Takeaway Note (insight)
   whatHappenedTitle: string; // Short title shown on the card; description is the full text shown in preview
   keyTakeawayTitle: string; // Short title shown on the card for insight notices; description is the full note shown in preview
