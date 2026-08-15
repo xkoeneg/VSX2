@@ -747,6 +747,10 @@ export function useAppState() {
   // the edit modal (separate from the per-step drag state above).
   const [draggingCoverImageId, setDraggingCoverImageId] = useState<string | null>(null);
   const [dragOverCoverImageId, setDragOverCoverImageId] = useState<string | null>(null);
+  // Drag-reorder state for the Market Notice screenshot manager (mirrors the
+  // cover-image drag state above, scoped separately for the notice modal).
+  const [draggingNoticeImageId, setDraggingNoticeImageId] = useState<string | null>(null);
+  const [dragOverNoticeImageId, setDragOverNoticeImageId] = useState<string | null>(null);
   // Drag-reorder state for the Strategy Model gallery itself — lets the user
   // drag any strategy card into any position (e.g. pin a model to the front).
   const [draggingStrategyId, setDraggingStrategyId] = useState<string | null>(null);
@@ -929,8 +933,8 @@ export function useAppState() {
   const [editingRuleId, setEditingRuleId] = useState<string | null>(null);
   const [showRuleIconPicker, setShowRuleIconPicker] = useState(false);
   const [ruleIconPickerTab, setRuleIconPickerTab] = useState<'emoji' | 'icons' | 'color'>('emoji');
-  const emptyNoticeDraft = { type: 'mistake' as NoticeType, title: '', session: '' as SessionOption | '', tag: '', imageUrl: '', description: '', whatHappenedTitle: '', keyTakeawayTitle: '', consequence: '', prevention: '', preventionTitle: '' };
-  const [newNotice, setNewNotice] = useState<{ type: NoticeType; title: string; session: SessionOption | ''; tag: string; imageUrl: string; description: string; whatHappenedTitle: string; keyTakeawayTitle: string; consequence: string; prevention: string; preventionTitle: string }>(emptyNoticeDraft);
+  const emptyNoticeDraft = { type: 'mistake' as NoticeType, title: '', session: '' as SessionOption | '', tag: '', images: [] as TradeImage[], description: '', whatHappenedTitle: '', keyTakeawayTitle: '', consequence: '', prevention: '', preventionTitle: '' };
+  const [newNotice, setNewNotice] = useState<{ type: NoticeType; title: string; session: SessionOption | ''; tag: string; images: TradeImage[]; description: string; whatHappenedTitle: string; keyTakeawayTitle: string; consequence: string; prevention: string; preventionTitle: string }>(emptyNoticeDraft);
   const [newWiki, setNewWiki] = useState<Partial<WikiEntry>>({ title: '', content: '', category: WIKI_CATEGORIES[0], imageUrl: '', keyRules: [], bestSession: '', timeframe: '', contextNotes: '' });
   const [editingWikiId, setEditingWikiId] = useState<string | null>(null);
   // Which entry's full-detail modal is open, if any.
@@ -3398,12 +3402,37 @@ export function useAppState() {
     setViewStrategyId(prev => (prev === id ? null : prev));
   };
 
-  const handleNoticeImagePick = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    const reader = new FileReader();
-    reader.onload = (ev) => setNewNotice(prev => ({ ...prev, imageUrl: ev.target?.result as string }));
-    reader.readAsDataURL(file);
+  const handleNoticeImagesPick = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
+    Array.from(files).forEach(file => {
+      const reader = new FileReader();
+      reader.onload = (ev) => {
+        const url = ev.target?.result as string;
+        setNewNotice(prev => ({ ...prev, images: [...prev.images, { id: generateId(), url, type: 'base64' as const }] }));
+      };
+      reader.readAsDataURL(file);
+    });
+    e.target.value = ''; // allow re-selecting the same file(s) again later
+  };
+
+  const removeNoticeImage = (imageId: string) => {
+    setNewNotice(prev => ({ ...prev, images: prev.images.filter(img => img.id !== imageId) }));
+  };
+
+  // Drag-and-drop reordering of the notice's screenshots — mirrors
+  // moveStrategyImage above; the first image is used as the card thumbnail.
+  const moveNoticeImage = (fromImageId: string, toImageId: string) => {
+    if (fromImageId === toImageId) return;
+    setNewNotice(prev => {
+      const images = [...prev.images];
+      const fromIdx = images.findIndex(img => img.id === fromImageId);
+      const toIdx = images.findIndex(img => img.id === toImageId);
+      if (fromIdx === -1 || toIdx === -1) return prev;
+      const [moved] = images.splice(fromIdx, 1);
+      images.splice(toIdx, 0, moved);
+      return { ...prev, images };
+    });
   };
 
   const handleAddNotice = () => {
@@ -3436,12 +3465,19 @@ export function useAppState() {
 
   const handleEditNotice = (notice: MarketNotice) => {
     setEditingNoticeId(notice.id);
+    // Back-compat: older notices may still only have a single `imageUrl`
+    // string from before multi-image support — fold it into the array so
+    // existing data still shows up in the editor.
+    const legacyImageUrl = (notice as unknown as { imageUrl?: string }).imageUrl;
+    const migratedImages: TradeImage[] = notice.images ?? (legacyImageUrl
+      ? [{ id: generateId(), url: legacyImageUrl, type: legacyImageUrl.startsWith('data:') ? 'base64' as const : 'url' as const }]
+      : []);
     setNewNotice({
       type: notice.type,
       title: notice.title,
       session: notice.session,
       tag: notice.tag,
-      imageUrl: notice.imageUrl,
+      images: migratedImages,
       description: notice.description,
       whatHappenedTitle: notice.whatHappenedTitle,
       keyTakeawayTitle: notice.keyTakeawayTitle,
@@ -4263,6 +4299,10 @@ export function useAppState() {
     setDraggingCoverImageId,
     dragOverCoverImageId,
     setDragOverCoverImageId,
+    draggingNoticeImageId,
+    setDraggingNoticeImageId,
+    dragOverNoticeImageId,
+    setDragOverNoticeImageId,
     draggingStrategyId,
     setDraggingStrategyId,
     dragOverStrategyId,
@@ -4570,7 +4610,9 @@ export function useAppState() {
     handleSaveStrategy,
     handleDeleteStrategy,
     confirmDeleteStrategy,
-    handleNoticeImagePick,
+    handleNoticeImagesPick,
+    removeNoticeImage,
+    moveNoticeImage,
     handleAddNotice,
     handleOpenAddNotice,
     handleEditNotice,
