@@ -401,7 +401,7 @@ export function NoticesScreen() {
       )
     );
 
-    // Price Action Insight card — Notion gallery style: large aspect-ratio
+    // Price Action Insight card — compact Notion gallery style: small
     // chart image on top, bold title + session/asset pills below.
     const renderInsightCard = (notice: MarketNotice) => (
       <div
@@ -413,41 +413,41 @@ export function NoticesScreen() {
         )}
       >
         {/* Chart preview */}
-        <div className={cn('w-full aspect-video flex items-center justify-center overflow-hidden', theme !== 'light' ? 'bg-zinc-950' : 'bg-zinc-100')}>
+        <div className={cn('w-full h-20 flex items-center justify-center overflow-hidden', theme !== 'light' ? 'bg-zinc-950' : 'bg-zinc-100')}>
           {notice.imageUrl ? (
             <img src={notice.imageUrl} alt={notice.title} className="w-full h-full object-cover" />
           ) : (
-            <ImageIcon className={cn('w-6 h-6', theme !== 'light' ? 'text-zinc-700' : 'text-zinc-400')} />
+            <ImageIcon className={cn('w-5 h-5', theme !== 'light' ? 'text-zinc-700' : 'text-zinc-400')} />
           )}
         </div>
 
         {/* Edit / Delete */}
-        <div className="absolute top-2 right-2 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+        <div className="absolute top-1.5 right-1.5 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
           <button
             onClick={(e) => { e.stopPropagation(); handleEditNotice(notice); }}
-            className="p-1.5 rounded-md backdrop-blur-sm bg-black/60 text-zinc-300 hover:text-white transition-colors"
+            className="p-1 rounded-md backdrop-blur-sm bg-black/60 text-zinc-300 hover:text-white transition-colors"
           >
-            <Edit2 className="w-3 h-3" />
+            <Edit2 className="w-2.5 h-2.5" />
           </button>
           <button
             onClick={(e) => { e.stopPropagation(); handleDeleteNotice(notice.id); }}
-            className="p-1.5 rounded-md backdrop-blur-sm bg-black/60 text-zinc-400 hover:text-rose-400 transition-colors"
+            className="p-1 rounded-md backdrop-blur-sm bg-black/60 text-zinc-400 hover:text-rose-400 transition-colors"
           >
-            <Trash2 className="w-3 h-3" />
+            <Trash2 className="w-2.5 h-2.5" />
           </button>
         </div>
 
         {/* Content */}
-        <div className="p-3 space-y-1.5">
-          <h3 className={cn('text-sm font-bold leading-snug line-clamp-2', theme !== 'light' ? 'text-white' : 'text-zinc-900')}>{notice.title}</h3>
-          <div className="flex flex-wrap items-center gap-1.5">
+        <div className="p-2 space-y-1">
+          <h3 className={cn('text-xs font-bold leading-snug line-clamp-2', theme !== 'light' ? 'text-white' : 'text-zinc-900')}>{notice.title}</h3>
+          <div className="flex flex-wrap items-center gap-1">
             {notice.session && (
-              <span className="px-2 py-0.5 rounded-full text-[10px] font-medium border bg-cyan-500/10 text-cyan-400 border-cyan-500/30">
+              <span className="px-1.5 py-0.5 rounded-full text-[9px] font-medium border bg-cyan-500/10 text-cyan-400 border-cyan-500/30">
                 {notice.session}
               </span>
             )}
             {notice.tag && (
-              <span className={cn('px-2 py-0.5 rounded-full text-[10px] font-medium border', theme !== 'light' ? 'border-zinc-700 text-zinc-400 bg-zinc-800/60' : 'border-zinc-200 text-zinc-500 bg-zinc-100')}>
+              <span className={cn('px-1.5 py-0.5 rounded-full text-[9px] font-medium border', theme !== 'light' ? 'border-zinc-700 text-zinc-400 bg-zinc-800/60' : 'border-zinc-200 text-zinc-500 bg-zinc-100')}>
                 {notice.tag}
               </span>
             )}
@@ -588,7 +588,7 @@ export function NoticesScreen() {
                 and layout inside still read normally left-to-right. */}
             <div className={type === 'mistake' ? '[direction:ltr]' : undefined}>
             {list.length > 0 ? (
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div className={cn('grid gap-2.5', type === 'mistake' ? 'grid-cols-1 sm:grid-cols-2' : 'grid-cols-2 sm:grid-cols-3')}>
                 {list.map(type === 'mistake' ? renderMistakeCard : renderInsightCard)}
               </div>
             ) : (
