@@ -52,6 +52,7 @@ import {
   GripVertical,
   Expand,
   SlidersHorizontal,
+  SeparatorHorizontal,
   ArrowUpDown,
   Sun,
   Moon,
@@ -687,7 +688,7 @@ export function ManageRulesModal() {
               title="Add divider"
               className="p-1.5 rounded-lg bg-zinc-700/70 text-zinc-300 hover:bg-zinc-600 hover:text-white transition-colors"
             >
-              <SlidersHorizontal className="w-3.5 h-3.5" />
+              <SeparatorHorizontal className="w-3.5 h-3.5" />
             </button>
             <button
               onClick={() => openAddRuleModal(pillar)}
