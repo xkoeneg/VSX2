@@ -542,21 +542,23 @@ export function WikiScreen() {
             theme !== 'light' ? 'border-zinc-800/80' : 'border-zinc-200'
           )}>
             <div className="min-w-0">
-              <div className="flex items-center gap-2 flex-wrap mb-1.5">
+              <div className="flex items-center gap-2 mb-1">
+                <h2 className={cn('text-lg font-bold leading-tight truncate', theme !== 'light' ? 'text-white' : 'text-zinc-900')}>{entry.title}</h2>
+                {code && <span className="font-mono text-[10px] text-zinc-500 tracking-wider flex-shrink-0">{code}</span>}
+              </div>
+              <div className="flex items-center gap-1.5 flex-wrap">
                 {entry.category && (
                   <span className={cn('text-[10px] px-2 py-0.5 rounded-full font-semibold whitespace-nowrap', style.badge, style.glow)}>
                     {entry.category}
                   </span>
                 )}
                 {entry.bestSession && (
-                  <span className="inline-flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-500 border border-amber-500/20 font-semibold whitespace-nowrap">
-                    <Compass className="w-2.5 h-2.5" />
-                    {entry.bestSession} session
+                  <span className="inline-flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-500 border border-amber-500/20 font-semibold min-w-0 max-w-[260px]">
+                    <Compass className="w-2.5 h-2.5 flex-shrink-0" />
+                    <span className="truncate" title={`${entry.bestSession} session`}>{entry.bestSession} session</span>
                   </span>
                 )}
-                {code && <span className="font-mono text-[10px] text-zinc-500 tracking-wider">{code}</span>}
               </div>
-              <h2 className={cn('text-lg font-bold leading-tight truncate', theme !== 'light' ? 'text-white' : 'text-zinc-900')}>{entry.title}</h2>
             </div>
             <div className="flex items-center gap-1 flex-shrink-0">
               {entry.imageUrl && (
