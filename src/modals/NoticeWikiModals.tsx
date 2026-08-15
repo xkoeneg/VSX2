@@ -280,122 +280,253 @@ export function AddNoticeModal() {
     exportBackup, importBackup,
   } = useAppContext();
 
+  // Mistake tags are stored as a comma-separated string in the existing
+  // `tag` field (the same field used as "Asset / Tag" for insights) so no
+  // data-model changes are required — just a nicer multi-select UI on top.
+  const MISTAKE_TAG_OPTIONS = ['FOMO', 'Overtrade', 'Chased Entry', 'Early Close', 'Revenge Trade', 'No Stop Loss', 'Moved SL', 'Oversized'];
+  const selectedMistakeTags = newNotice.tag ? newNotice.tag.split(',').map(t => t.trim()).filter(Boolean) : [];
+  const toggleMistakeTag = (option: string) => {
+    setNewNotice(prev => {
+      const current = prev.tag ? prev.tag.split(',').map(t => t.trim()).filter(Boolean) : [];
+      const next = current.includes(option) ? current.filter(t => t !== option) : [...current, option];
+      return { ...prev, tag: next.join(', ') };
+    });
+  };
+  const isMistake = newNotice.type === 'mistake';
+
   return (
     showAddNotice && (
       <ModalBackdrop
         onClose={() => { setShowAddNotice(false); setEditingNoticeId(null); }}
         className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-start justify-center overflow-y-auto p-4 py-8"
       >
-        <div className="bg-zinc-900 border border-zinc-800 rounded-xl max-w-md w-full" onClick={(e) => e.stopPropagation()}>
-          <div className="px-6 py-4 border-b border-zinc-800 flex items-center justify-between">
-            <h3 className="text-lg font-bold text-white truncate">{editingNoticeId ? 'Edit Market Notice' : 'Add Market Notice'}</h3>
-            <button onClick={() => { setShowAddNotice(false); setEditingNoticeId(null); }} className="p-1 text-zinc-400 hover:text-white">
+        <div className="bg-zinc-900 border border-zinc-800 rounded-xl max-w-lg w-full max-h-[90vh] flex flex-col" onClick={(e) => e.stopPropagation()}>
+          <div className="sticky top-0 bg-zinc-900 border-b border-zinc-800 px-6 py-4 flex items-center justify-between flex-shrink-0 z-20">
+            <h3 className="text-xl font-bold text-white truncate">{editingNoticeId ? 'Edit Market Notice' : 'Add Market Notice'}</h3>
+            <button onClick={() => { setShowAddNotice(false); setEditingNoticeId(null); }} className="p-2 text-zinc-400 hover:text-white transition-colors">
               <X className="w-5 h-5" />
             </button>
           </div>
-          <div className="p-6 space-y-4">
-            {/* Type toggle */}
-            <div>
-              <label className="block text-sm text-zinc-400 mb-2">Type</label>
-              <div className="grid grid-cols-2 gap-2">
-                {(Object.keys(NOTICE_TYPE_META) as NoticeType[]).map(t => {
-                  const meta = NOTICE_TYPE_META[t];
-                  const active = newNotice.type === t;
-                  return (
+
+          <div className="p-6 space-y-4 overflow-y-auto">
+            {/* ================= SECTION 1: Type & Image ================= */}
+            <div className="bg-zinc-800 border border-zinc-700 p-4 rounded-xl space-y-3 shadow-[0_1px_0_0_rgba(255,255,255,0.02)_inset]">
+              <div className="flex items-center gap-2 pb-1">
+                <span className="text-[10px] font-bold text-cyan-400 font-mono tracking-widest">01</span>
+                <h4 className="text-xs font-semibold text-slate-300 uppercase tracking-wider">Type &amp; Chart</h4>
+              </div>
+
+              <div>
+                <label className="block text-xs text-zinc-400 mb-1.5">Type</label>
+                <div className="grid grid-cols-2 gap-2">
+                  {(Object.keys(NOTICE_TYPE_META) as NoticeType[]).map(t => {
+                    const meta = NOTICE_TYPE_META[t];
+                    const active = newNotice.type === t;
+                    return (
+                      <button
+                        key={t}
+                        type="button"
+                        onClick={() => setNewNotice(prev => ({ ...prev, type: t }))}
+                        className={cn(
+                          'flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-lg border text-xs font-medium transition-all',
+                          active
+                            ? t === 'mistake'
+                              ? 'bg-rose-500/10 border-rose-500/50 text-rose-300'
+                              : 'bg-cyan-500/10 border-cyan-500/50 text-cyan-300'
+                            : 'bg-zinc-900 border-zinc-700 text-zinc-500 hover:text-zinc-300'
+                        )}
+                      >
+                        <meta.headerIcon className={cn('w-3.5 h-3.5', active ? (t === 'mistake' ? 'text-rose-400' : 'text-cyan-400') : 'text-zinc-500')} />
+                        <span>{meta.label}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-xs text-zinc-400 mb-1.5">Screenshot (TradingView chart reference)</label>
+                <div className="relative">
+                  <button
+                    type="button"
+                    onClick={() => noticeImageInputRef.current?.click()}
+                    className={cn(
+                      'w-full aspect-video rounded-lg border border-dashed flex flex-col items-center justify-center gap-2 text-zinc-500 hover:text-zinc-300 transition-all overflow-hidden bg-zinc-900',
+                      isMistake ? 'border-zinc-700 hover:border-rose-500/60' : 'border-zinc-700 hover:border-cyan-500/60'
+                    )}
+                  >
+                    {newNotice.imageUrl ? (
+                      <img src={newNotice.imageUrl} alt="Preview" className="w-full h-full object-cover" />
+                    ) : (
+                      <>
+                        <ImagePlus className="w-5 h-5" />
+                        <span className="text-xs">Upload chart image</span>
+                      </>
+                    )}
+                  </button>
+                  {newNotice.imageUrl && (
                     <button
-                      key={t}
                       type="button"
-                      onClick={() => setNewNotice(prev => ({ ...prev, type: t }))}
-                      className={cn(
-                        'flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-lg border text-xs font-medium transition-all',
-                        active
-                          ? t === 'mistake'
-                            ? 'bg-rose-500/10 border-rose-500/50 text-rose-300'
-                            : 'bg-cyan-500/10 border-cyan-500/50 text-cyan-300'
-                          : 'bg-zinc-800 border-zinc-700 text-zinc-500 hover:text-zinc-300'
-                      )}
+                      onClick={() => setNewNotice(prev => ({ ...prev, imageUrl: '' }))}
+                      className="absolute top-2 right-2 p-1.5 rounded-lg bg-black/70 text-zinc-300 hover:text-white hover:bg-black/90 transition-colors"
+                      title="Remove image"
                     >
-                      <meta.headerIcon className={cn('w-3.5 h-3.5', active ? (t === 'mistake' ? 'text-rose-400' : 'text-cyan-400') : 'text-zinc-500')} />
-                      <span>{meta.label}</span>
+                      <X className="w-3.5 h-3.5" />
                     </button>
-                  );
-                })}
+                  )}
+                </div>
+                <input ref={noticeImageInputRef} type="file" accept="image/*" className="hidden" onChange={handleNoticeImagePick} />
+                <input
+                  type="text"
+                  value={newNotice.imageUrl.startsWith('data:') ? '' : newNotice.imageUrl}
+                  onChange={(e) => setNewNotice(prev => ({ ...prev, imageUrl: e.target.value }))}
+                  placeholder="...or paste an image URL"
+                  className="w-full mt-2 bg-zinc-900 border border-zinc-700 rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-zinc-600"
+                />
               </div>
             </div>
 
-            <div>
-              <label className="block text-sm text-zinc-400 mb-2">Screenshot (TradingView chart reference)</label>
+            {/* ================= SECTION 2: Details (dynamic by type) ================= */}
+            <div className="bg-zinc-800 border border-zinc-700 p-4 rounded-xl space-y-3 shadow-[0_1px_0_0_rgba(255,255,255,0.02)_inset]">
+              <div className="flex items-center gap-2 pb-1">
+                <span className="text-[10px] font-bold text-cyan-400 font-mono tracking-widest">02</span>
+                <h4 className="text-xs font-semibold text-slate-300 uppercase tracking-wider">
+                  {isMistake ? 'Trap Details' : 'Insight Details'}
+                </h4>
+              </div>
+
+              <div>
+                <label className="block text-xs text-zinc-400 mb-1.5">Title</label>
+                <input
+                  type="text"
+                  value={newNotice.title}
+                  onChange={(e) => setNewNotice(prev => ({ ...prev, title: e.target.value }))}
+                  placeholder={isMistake ? 'e.g. Chasing 9:30 AM Open Spikes' : 'e.g. London Open Liquidity Sweep'}
+                  className="w-full bg-zinc-900 border border-zinc-700 rounded-lg px-3 py-2.5 text-sm text-white focus:outline-none focus:border-zinc-600"
+                />
+              </div>
+
+              {isMistake ? (
+                <>
+                  {/* Mistake Tags — multi-select pill picker */}
+                  <div>
+                    <label className="block text-xs text-zinc-400 mb-1.5">Mistake Tags</label>
+                    <div className="flex flex-wrap gap-1.5">
+                      {MISTAKE_TAG_OPTIONS.map(option => {
+                        const active = selectedMistakeTags.includes(option);
+                        return (
+                          <button
+                            key={option}
+                            type="button"
+                            onClick={() => toggleMistakeTag(option)}
+                            className={cn(
+                              'px-2.5 py-1 rounded-full text-[11px] font-medium border transition-colors',
+                              active
+                                ? 'bg-rose-500/15 border-rose-500/50 text-rose-300'
+                                : 'bg-zinc-900 border-zinc-700 text-zinc-500 hover:text-zinc-300 hover:border-zinc-600'
+                            )}
+                          >
+                            {option}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-xs text-zinc-400 mb-1.5">What Happened</label>
+                    <textarea
+                      value={newNotice.description}
+                      onChange={(e) => setNewNotice(prev => ({ ...prev, description: e.target.value }))}
+                      placeholder="Describe the setup and behavior in detail..."
+                      rows={3}
+                      className="w-full bg-zinc-900 border border-zinc-700 rounded-lg px-3 py-2.5 text-sm text-white focus:outline-none focus:border-zinc-600 resize-none"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs text-zinc-400 mb-1.5">Consequence / Risk <span className="text-zinc-600">(optional)</span></label>
+                    <input
+                      type="text"
+                      value={newNotice.consequence}
+                      onChange={(e) => setNewNotice(prev => ({ ...prev, consequence: e.target.value }))}
+                      placeholder="e.g. Full Stop Loss + Revenge Trade trigger"
+                      className="w-full bg-zinc-900 border border-zinc-700 rounded-lg px-3 py-2.5 text-sm text-white focus:outline-none focus:border-zinc-600"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs text-emerald-400 mb-1.5 font-medium">Prevention Rule / Solution</label>
+                    <textarea
+                      value={newNotice.prevention}
+                      onChange={(e) => setNewNotice(prev => ({ ...prev, prevention: e.target.value }))}
+                      placeholder="The bold, actionable fix..."
+                      rows={2}
+                      className="w-full bg-zinc-900 border border-emerald-500/30 rounded-lg px-3 py-2.5 text-sm text-white focus:outline-none focus:border-emerald-500/60 resize-none"
+                    />
+                  </div>
+                </>
+              ) : (
+                <>
+                  {/* Session + Asset side-by-side */}
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-xs text-zinc-400 mb-1.5">Session</label>
+                      <select
+                        value={newNotice.session}
+                        onChange={(e) => setNewNotice(prev => ({ ...prev, session: e.target.value as SessionOption | '' }))}
+                        className="w-full bg-zinc-900 border border-zinc-700 rounded-lg px-3 py-2.5 text-sm text-white focus:outline-none focus:border-zinc-600"
+                      >
+                        <option value="">None</option>
+                        {SESSION_OPTIONS.map(s => (
+                          <option key={s} value={s}>{s}</option>
+                        ))}
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-xs text-zinc-400 mb-1.5">Asset</label>
+                      <input
+                        type="text"
+                        value={newNotice.tag}
+                        onChange={(e) => setNewNotice(prev => ({ ...prev, tag: e.target.value }))}
+                        placeholder="e.g. NQ Futures"
+                        className="w-full bg-zinc-900 border border-zinc-700 rounded-lg px-3 py-2.5 text-sm text-white focus:outline-none focus:border-zinc-600"
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-xs text-cyan-400 mb-1.5 font-medium">Key Takeaway Note</label>
+                    <textarea
+                      value={newNotice.description}
+                      onChange={(e) => setNewNotice(prev => ({ ...prev, description: e.target.value }))}
+                      placeholder="What you noticed and how to use it next time..."
+                      rows={3}
+                      className="w-full bg-zinc-900 border border-cyan-500/30 rounded-lg px-3 py-2.5 text-sm text-white focus:outline-none focus:border-cyan-500/60 resize-none"
+                    />
+                  </div>
+                </>
+              )}
+            </div>
+
+            <div className="flex justify-end gap-3 pt-1">
               <button
                 type="button"
-                onClick={() => noticeImageInputRef.current?.click()}
-                className="w-full aspect-video rounded-lg border border-dashed border-zinc-700 hover:border-zinc-500 flex flex-col items-center justify-center gap-2 text-zinc-500 hover:text-zinc-300 transition-all overflow-hidden bg-zinc-950"
+                onClick={() => { setShowAddNotice(false); setEditingNoticeId(null); }}
+                className="px-5 py-2 bg-zinc-800 hover:bg-zinc-700 text-white rounded-lg text-sm transition-colors"
               >
-                {newNotice.imageUrl ? (
-                  <img src={newNotice.imageUrl} alt="Preview" className="w-full h-full object-cover" />
-                ) : (
-                  <>
-                    <ImagePlus className="w-5 h-5" />
-                    <span className="text-xs">Upload chart image</span>
-                  </>
-                )}
+                Cancel
               </button>
-              <input ref={noticeImageInputRef} type="file" accept="image/*" className="hidden" onChange={handleNoticeImagePick} />
-              <input
-                type="text"
-                value={newNotice.imageUrl.startsWith('data:') ? '' : newNotice.imageUrl}
-                onChange={(e) => setNewNotice(prev => ({ ...prev, imageUrl: e.target.value }))}
-                placeholder="...or paste an image URL"
-                className="w-full mt-2 bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-zinc-600"
-              />
+              <button
+                type="button"
+                onClick={handleAddNotice}
+                disabled={!newNotice.title.trim()}
+                className="flex items-center gap-2 px-5 py-2 bg-white hover:bg-zinc-200 disabled:opacity-30 disabled:cursor-not-allowed text-black rounded-lg text-sm font-medium transition-colors"
+              >
+                <Save className="w-4 h-4" />
+                {editingNoticeId ? 'Save Changes' : 'Add Notice'}
+              </button>
             </div>
-
-            <div>
-              <label className="block text-sm text-zinc-400 mb-2">Title</label>
-              <input type="text" value={newNotice.title} onChange={(e) => setNewNotice(prev => ({ ...prev, title: e.target.value }))} placeholder="e.g. Chasing 9:30 AM Open Spikes" className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2.5 text-white focus:outline-none focus:border-zinc-600" />
-            </div>
-
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <label className="block text-sm text-zinc-400 mb-2">Session</label>
-                <select
-                  value={newNotice.session}
-                  onChange={(e) => setNewNotice(prev => ({ ...prev, session: e.target.value as SessionOption | '' }))}
-                  className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2.5 text-white focus:outline-none focus:border-zinc-600"
-                >
-                  <option value="">None</option>
-                  {SESSION_OPTIONS.map(s => (
-                    <option key={s} value={s}>{s}</option>
-                  ))}
-                </select>
-              </div>
-              <div>
-                <label className="block text-sm text-zinc-400 mb-2">Asset / Tag</label>
-                <input type="text" value={newNotice.tag} onChange={(e) => setNewNotice(prev => ({ ...prev, tag: e.target.value }))} placeholder="e.g. NQ Futures" className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2.5 text-white focus:outline-none focus:border-zinc-600" />
-              </div>
-            </div>
-
-            <div>
-              <label className="block text-sm text-zinc-400 mb-2">
-                {newNotice.type === 'mistake' ? 'What Happened / Trap Description' : 'What You Noticed'}
-              </label>
-              <textarea value={newNotice.description} onChange={(e) => setNewNotice(prev => ({ ...prev, description: e.target.value }))} placeholder="Describe the setup and behavior in detail..." rows={3} className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2.5 text-white focus:outline-none focus:border-zinc-600 resize-none" />
-            </div>
-
-            <div>
-              <label className="block text-sm text-zinc-400 mb-2">Consequence / Risk</label>
-              <input type="text" value={newNotice.consequence} onChange={(e) => setNewNotice(prev => ({ ...prev, consequence: e.target.value }))} placeholder="e.g. Full Stop Loss + Revenge Trade trigger" className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2.5 text-white focus:outline-none focus:border-zinc-600" />
-            </div>
-
-            <div>
-              <label className="block text-sm text-zinc-400 mb-2">
-                {newNotice.type === 'mistake' ? 'Prevention Rule / Solution' : 'How To Use This'}
-              </label>
-              <textarea value={newNotice.prevention} onChange={(e) => setNewNotice(prev => ({ ...prev, prevention: e.target.value }))} placeholder="The bold, actionable fix..." rows={2} className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2.5 text-white focus:outline-none focus:border-zinc-600 resize-none" />
-            </div>
-
-            <button type="button" onClick={handleAddNotice} disabled={!newNotice.title.trim()} className="w-full py-2.5 bg-white hover:bg-zinc-200 disabled:opacity-30 disabled:cursor-not-allowed text-black rounded-lg text-sm font-medium transition-colors">
-              {editingNoticeId ? 'Save Changes' : 'Add Notice'}
-            </button>
           </div>
         </div>
       </ModalBackdrop>
