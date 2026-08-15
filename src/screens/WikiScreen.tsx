@@ -624,33 +624,10 @@ export function WikiScreen() {
                         alt={entry.title}
                         className="max-h-full max-w-full w-auto h-auto object-contain rounded-lg shadow-2xl transition-transform duration-200 group-hover:scale-[1.01]"
                       />
-                      {/* Floating "click to view full size" hint — only when
-                          there's a single image, so it doesn't collide with
-                          the carousel dots below. */}
-                      {!hasMultipleImages && (
-                        <span className="absolute bottom-3 left-1/2 -translate-x-1/2 flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-black/70 backdrop-blur-sm text-white text-xs font-medium border border-white/10 opacity-0 group-hover:opacity-100 transition-opacity">
-                          <ZoomIn className="w-3.5 h-3.5" />
-                          Click to view full size
-                        </span>
-                      )}
                     </button>
-                    {/* Overlay control actions — zoom / edit */}
-                    <div className="absolute top-3 right-3 flex items-center gap-2 bg-slate-900/80 backdrop-blur-md p-1.5 rounded-lg border border-slate-700/50 opacity-0 group-hover:opacity-100 transition-opacity">
-                      <button
-                        onClick={() => setLightboxImage(activeImage.url)}
-                        className="p-1.5 rounded-md text-zinc-400 hover:text-white hover:bg-white/10 transition-colors"
-                        title="Zoom / full-screen preview"
-                      >
-                        <ZoomIn className="w-3.5 h-3.5" />
-                      </button>
-                      <button
-                        onClick={() => handleOpenEditWiki(entry, true)}
-                        className="p-1.5 rounded-md text-zinc-400 hover:text-white hover:bg-white/10 transition-colors"
-                        title="Change / manage images"
-                      >
-                        <Edit2 className="w-3.5 h-3.5" />
-                      </button>
-                    </div>
+                    {/* Overlay control actions removed per request — zoom/edit
+                        now handled elsewhere; keeping the click-to-zoom
+                        behavior on the image itself. */}
                     {hasMultipleImages && (
                       <>
                         <button
