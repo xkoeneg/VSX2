@@ -944,7 +944,7 @@ export function AddWikiModal() {
                 value={(newWiki.imageUrl || '').startsWith('data:') ? '' : (newWiki.imageUrl || '')}
                 onChange={(e) => setNewWiki(prev => ({ ...prev, imageUrl: e.target.value }))}
                 placeholder="...or paste an image URL"
-                className="w-full bg-zinc-900/60 border border-zinc-700 rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-zinc-600"
+                className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-zinc-600"
               />
             </div>
 
@@ -985,7 +985,7 @@ export function AddWikiModal() {
                   value={newWiki.title || ''}
                   onChange={(e) => setNewWiki(prev => ({ ...prev, title: e.target.value }))}
                   placeholder="Order Block"
-                  className="w-full bg-zinc-900/60 border border-zinc-700 rounded-lg px-3 py-2.5 text-sm text-white focus:outline-none focus:border-zinc-600"
+                  className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2.5 text-sm text-white focus:outline-none focus:border-zinc-600"
                 />
               </div>
 
@@ -1003,7 +1003,7 @@ export function AddWikiModal() {
                         onClick={() => setNewWiki(prev => ({ ...prev, category: cat }))}
                         className={cn(
                           'flex items-center gap-1.5 px-3 py-2 rounded-lg border text-xs font-medium transition-all',
-                          active ? style.active : 'bg-zinc-900/60 border-zinc-700 text-zinc-400 hover:text-zinc-200'
+                          active ? style.active : 'bg-zinc-800 border-zinc-700 text-zinc-400 hover:text-zinc-200'
                         )}
                       >
                         <span className={cn('w-1.5 h-1.5 rounded-full flex-shrink-0', style.dot)} />
@@ -1029,7 +1029,7 @@ export function AddWikiModal() {
                   onChange={(e) => setNewWiki(prev => ({ ...prev, content: e.target.value }))}
                   placeholder="Short description of the concept..."
                   rows={3}
-                  className="w-full bg-zinc-900/60 border border-zinc-700 rounded-lg px-3 py-2.5 text-sm text-white focus:outline-none focus:border-zinc-600 resize-none"
+                  className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2.5 text-sm text-white focus:outline-none focus:border-zinc-600 resize-none"
                 />
               </div>
 
@@ -1050,7 +1050,7 @@ export function AddWikiModal() {
                         value={rule}
                         onChange={(e) => updateWikiKeyRule(idx, e.target.value)}
                         placeholder="e.g. Must be formed by a displacement candle"
-                        className="flex-1 min-w-0 bg-zinc-900/60 border border-zinc-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-zinc-600"
+                        className="flex-1 min-w-0 bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-zinc-600"
                       />
                       <button type="button" onClick={() => removeWikiKeyRule(idx)} className="p-1 text-zinc-600 hover:text-rose-400 flex-shrink-0">
                         <X className="w-4 h-4" />
@@ -1079,7 +1079,7 @@ export function AddWikiModal() {
                     value={newWiki.bestSession || ''}
                     onChange={(e) => setNewWiki(prev => ({ ...prev, bestSession: e.target.value }))}
                     placeholder="e.g. NY Open"
-                    className="w-full bg-zinc-900/60 border border-zinc-700 rounded-lg px-3 py-2.5 text-sm text-white focus:outline-none focus:border-zinc-600"
+                    className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2.5 text-sm text-white focus:outline-none focus:border-zinc-600"
                   />
                 </div>
                 <div>
@@ -1089,7 +1089,7 @@ export function AddWikiModal() {
                     value={newWiki.timeframe || ''}
                     onChange={(e) => setNewWiki(prev => ({ ...prev, timeframe: e.target.value }))}
                     placeholder="e.g. 5m / 15m HTF"
-                    className="w-full bg-zinc-900/60 border border-zinc-700 rounded-lg px-3 py-2.5 text-sm text-white focus:outline-none focus:border-zinc-600"
+                    className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2.5 text-sm text-white focus:outline-none focus:border-zinc-600"
                   />
                 </div>
               </div>
@@ -1100,7 +1100,7 @@ export function AddWikiModal() {
                   onChange={(e) => setNewWiki(prev => ({ ...prev, contextNotes: e.target.value }))}
                   placeholder="Additional notes..."
                   rows={2}
-                  className="w-full bg-zinc-900/60 border border-zinc-700 rounded-lg px-3 py-2.5 text-sm text-white focus:outline-none focus:border-zinc-600 resize-none"
+                  className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2.5 text-sm text-white focus:outline-none focus:border-zinc-600 resize-none"
                 />
               </div>
             </div>
