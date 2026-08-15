@@ -588,7 +588,7 @@ export function NoticesScreen() {
                 and layout inside still read normally left-to-right. */}
             <div className={type === 'mistake' ? '[direction:ltr]' : undefined}>
             {list.length > 0 ? (
-              <div className={cn('grid gap-2.5', type === 'mistake' ? 'grid-cols-1 sm:grid-cols-2' : 'grid-cols-2 sm:grid-cols-3')}>
+              <div className={cn('grid gap-2.5 items-start', type === 'mistake' ? 'grid-cols-1 sm:grid-cols-2' : 'grid-cols-2 sm:grid-cols-3')}>
                 {list.map(type === 'mistake' ? renderMistakeCard : renderInsightCard)}
               </div>
             ) : (
