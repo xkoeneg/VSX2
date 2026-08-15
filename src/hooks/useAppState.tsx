@@ -969,6 +969,11 @@ export function useAppState() {
   const [editingWikiId, setEditingWikiId] = useState<string | null>(null);
   // Which entry's full-detail modal is open, if any.
   const [viewWikiId, setViewWikiId] = useState<string | null>(null);
+  // Entry pending a delete confirmation — set by handleDeleteWiki, cleared
+  // (and actually removed) by confirmDeleteWiki. Mirrors the
+  // tradePendingDelete / accountPendingDelete "are you sure?" pattern so an
+  // accidental click on the trash icon can't nuke a concept outright.
+  const [wikiPendingDelete, setWikiPendingDelete] = useState<string | null>(null);
   const wikiImageInputRef = useRef<HTMLInputElement>(null);
   // Points at the "Upload diagram image" dropzone inside the Add/Edit Wiki
   // modal. When set, the modal scrolls it into view and focuses it on open —
@@ -3696,10 +3701,21 @@ export function useAppState() {
     setWikiImageFocusRequested(focusImage);
   };
 
+  // Just opens the "are you sure?" prompt — the actual removal happens in
+  // confirmDeleteWiki once the person confirms, so an accidental click on
+  // the trash icon in the list or detail panel can't delete a concept
+  // outright.
   const handleDeleteWiki = (id: string) => {
-    setWikiEntries(wikiEntries.filter(w => w.id !== id));
+    setWikiPendingDelete(id);
+  };
+
+  const confirmDeleteWiki = () => {
+    if (!wikiPendingDelete) return;
+    const id = wikiPendingDelete;
+    setWikiEntries(prev => prev.filter(w => w.id !== id));
     if (viewWikiId === id) setViewWikiId(null);
     if (editingWikiId === id) { setEditingWikiId(null); setShowAddWiki(false); }
+    setWikiPendingDelete(null);
   };
 
   // Shared by the file picker, drag-and-drop, and clipboard paste inputs —
@@ -5043,6 +5059,9 @@ Return ONLY a JSON object — no markdown, no code fences, no commentary — wit
     handleOpenAddWiki,
     handleOpenEditWiki,
     handleDeleteWiki,
+    confirmDeleteWiki,
+    wikiPendingDelete,
+    setWikiPendingDelete,
     handleWikiImagePick,
     handleWikiImageDragOver,
     handleWikiImageDragLeave,
