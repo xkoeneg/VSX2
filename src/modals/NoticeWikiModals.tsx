@@ -512,7 +512,15 @@ export function AddNoticeModal() {
                   </div>
 
                   <div>
-                    <label className="block text-xs text-cyan-400 mb-1.5 font-medium">Key Takeaway Note</label>
+                    <label className="block text-xs text-cyan-400 mb-1.5 font-medium">Key Takeaway — Card Title</label>
+                    <input
+                      type="text"
+                      value={newNotice.keyTakeawayTitle}
+                      onChange={(e) => setNewNotice(prev => ({ ...prev, keyTakeawayTitle: e.target.value }))}
+                      placeholder="Short summary shown on the card, e.g. Fades hold at the range high"
+                      className="w-full bg-zinc-900 border border-cyan-500/30 rounded-lg px-3 py-2.5 text-sm text-white focus:outline-none focus:border-cyan-500/60"
+                    />
+                    <label className="block text-xs text-zinc-500 mt-2.5 mb-1.5">Full Note <span className="text-zinc-600">(shown when opened)</span></label>
                     <textarea
                       value={newNotice.description}
                       onChange={(e) => setNewNotice(prev => ({ ...prev, description: e.target.value }))}
