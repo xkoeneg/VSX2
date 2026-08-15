@@ -970,6 +970,16 @@ export function useAppState() {
   // Which entry's full-detail modal is open, if any.
   const [viewWikiId, setViewWikiId] = useState<string | null>(null);
   const wikiImageInputRef = useRef<HTMLInputElement>(null);
+  // Points at the "Upload diagram image" dropzone inside the Add/Edit Wiki
+  // modal. When set, the modal scrolls it into view and focuses it on open —
+  // used by the "quick image edit" click from the main preview placeholder.
+  const wikiImageDropzoneRef = useRef<HTMLDivElement>(null);
+  // True for one render after the modal opens when it should immediately
+  // draw attention to the image dropzone (see handleOpenEditWiki's focusImage arg).
+  const [wikiImageFocusRequested, setWikiImageFocusRequested] = useState(false);
+  // True while a file is being dragged over the modal's image dropzone, so it
+  // can render an active drop-target state.
+  const [isWikiImageDragActive, setIsWikiImageDragActive] = useState(false);
 
   const [selectedTimeframeTab, setSelectedTimeframeTab] = useState<string>('Execution/Result');
 
@@ -3662,7 +3672,11 @@ export function useAppState() {
     setShowAddWiki(true);
   };
 
-  const handleOpenEditWiki = (entry: WikiEntry) => {
+  // `focusImage` is set when opening the modal from the "quick image edit"
+  // entry point (clicking the empty chart placeholder on the main preview)
+  // so the modal can scroll/focus straight to the upload dropzone instead of
+  // the title field.
+  const handleOpenEditWiki = (entry: WikiEntry, focusImage: boolean = false) => {
     setEditingWikiId(entry.id);
     setNewWiki({
       title: entry.title,
@@ -3676,6 +3690,7 @@ export function useAppState() {
     });
     setViewWikiId(null);
     setShowAddWiki(true);
+    setWikiImageFocusRequested(focusImage);
   };
 
   const handleDeleteWiki = (id: string) => {
@@ -3684,14 +3699,108 @@ export function useAppState() {
     if (editingWikiId === id) { setEditingWikiId(null); setShowAddWiki(false); }
   };
 
-  const handleWikiImagePick = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
+  // Shared by the file picker, drag-and-drop, and clipboard paste inputs —
+  // all three ultimately just need to turn a File into a data URL and drop
+  // it into the draft entry's imageUrl.
+  const loadWikiImageFile = (file: File) => {
+    if (!file.type.startsWith('image/')) return;
     const reader = new FileReader();
     reader.onload = (ev) => setNewWiki(prev => ({ ...prev, imageUrl: ev.target?.result as string }));
     reader.readAsDataURL(file);
+  };
+
+  const handleWikiImagePick = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    loadWikiImageFile(file);
     e.target.value = '';
   };
+
+  // Drag-and-drop onto the "Upload diagram image" dropzone in the Add/Edit
+  // Wiki modal.
+  const handleWikiImageDragOver = (e: React.DragEvent<HTMLElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (!isWikiImageDragActive) setIsWikiImageDragActive(true);
+  };
+
+  const handleWikiImageDragLeave = (e: React.DragEvent<HTMLElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsWikiImageDragActive(false);
+  };
+
+  const handleWikiImageDrop = (e: React.DragEvent<HTMLElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsWikiImageDragActive(false);
+    const file = e.dataTransfer?.files?.[0];
+    if (file) loadWikiImageFile(file);
+  };
+
+  // Ctrl+V / Cmd+V while the Add/Edit Wiki modal is open — attach to the
+  // modal's outermost element (or the dropzone itself) via onPaste so it
+  // fires no matter which field inside the modal currently has focus.
+  const handleWikiImagePaste = (e: React.ClipboardEvent<HTMLElement>) => {
+    const items = e.clipboardData?.items;
+    if (!items) return;
+    for (let i = 0; i < items.length; i++) {
+      const item = items[i];
+      if (item.type.startsWith('image/')) {
+        const file = item.getAsFile();
+        if (file) {
+          e.preventDefault();
+          loadWikiImageFile(file);
+        }
+        break;
+      }
+    }
+  };
+
+  // Ctrl+V / Cmd+V directly on the main Knowledge Wiki page (no modal open)
+  // — updates whichever concept is currently active in the detail workbench.
+  // Wired up as a window-level listener below (see useEffect) so it works
+  // regardless of what happens to have focus on the page.
+  const handleWikiPageImagePaste = (e: ClipboardEvent) => {
+    if (!viewWikiId || showAddWiki) return;
+    const items = e.clipboardData?.items;
+    if (!items) return;
+    for (let i = 0; i < items.length; i++) {
+      const item = items[i];
+      if (item.type.startsWith('image/')) {
+        const file = item.getAsFile();
+        if (!file) continue;
+        e.preventDefault();
+        const reader = new FileReader();
+        reader.onload = (ev) => {
+          const dataUrl = ev.target?.result as string;
+          setWikiEntries(prev => prev.map(w => (w.id === viewWikiId ? { ...w, imageUrl: dataUrl } : w)));
+        };
+        reader.readAsDataURL(file);
+        break;
+      }
+    }
+  };
+
+  useEffect(() => {
+    if (!viewWikiId || showAddWiki) return;
+    const listener = (e: ClipboardEvent) => handleWikiPageImagePaste(e);
+    window.addEventListener('paste', listener);
+    return () => window.removeEventListener('paste', listener);
+  }, [viewWikiId, showAddWiki, setWikiEntries]);
+
+  // Once the Add/Edit Wiki modal has rendered with a focus request pending
+  // (see handleOpenEditWiki), scroll the dropzone into view and focus it,
+  // then clear the request so it doesn't re-trigger on later opens.
+  useEffect(() => {
+    if (!showAddWiki || !wikiImageFocusRequested) return;
+    const el = wikiImageDropzoneRef.current;
+    if (el) {
+      el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      el.focus({ preventScroll: true });
+    }
+    setWikiImageFocusRequested(false);
+  }, [showAddWiki, wikiImageFocusRequested]);
 
   // Key Rules / Conditions editor — stored as a string[], edited as one
   // rule per line via a small add/remove list (mirrors the pattern used
@@ -4574,6 +4683,9 @@ export function useAppState() {
     viewWikiId,
     setViewWikiId,
     wikiImageInputRef,
+    wikiImageDropzoneRef,
+    wikiImageFocusRequested,
+    isWikiImageDragActive,
     selectedTimeframeTab,
     setSelectedTimeframeTab,
     calculatedRR,
@@ -4800,6 +4912,10 @@ export function useAppState() {
     handleOpenEditWiki,
     handleDeleteWiki,
     handleWikiImagePick,
+    handleWikiImageDragOver,
+    handleWikiImageDragLeave,
+    handleWikiImageDrop,
+    handleWikiImagePaste,
     addWikiKeyRule,
     updateWikiKeyRule,
     removeWikiKeyRule,
