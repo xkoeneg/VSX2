@@ -157,6 +157,7 @@ const DeleteStepConfirm = lazyNamed<typeof import('./modals/StrategyModals').Del
 const StrategyDetailModal = lazyNamed<typeof import('./modals/StrategyModals').StrategyDetailModal>(() => import('./modals/StrategyModals'), 'StrategyDetailModal');
 const DeleteStrategyConfirm = lazyNamed<typeof import('./modals/StrategyModals').DeleteStrategyConfirm>(() => import('./modals/StrategyModals'), 'DeleteStrategyConfirm');
 const AddNoticeModal = lazyNamed<typeof import('./modals/NoticeWikiModals').AddNoticeModal>(() => import('./modals/NoticeWikiModals'), 'AddNoticeModal');
+const DeleteNoticeStepConfirm = lazyNamed<typeof import('./modals/NoticeWikiModals').DeleteNoticeStepConfirm>(() => import('./modals/NoticeWikiModals'), 'DeleteNoticeStepConfirm');
 const AddWikiModal = lazyNamed<typeof import('./modals/NoticeWikiModals').AddWikiModal>(() => import('./modals/NoticeWikiModals'), 'AddWikiModal');
 const WikiDetailModal = lazyNamed<typeof import('./modals/NoticeWikiModals').WikiDetailModal>(() => import('./modals/NoticeWikiModals'), 'WikiDetailModal');
 
@@ -904,6 +905,7 @@ function AppShell() {
         {<DeleteStepConfirm />}
         {<StrategyDetailModal />}
         {<AddNoticeModal />}
+        {<DeleteNoticeStepConfirm />}
         {<AddWikiModal />}
         {<WikiDetailModal />}
         {<DeleteTradeConfirm />}
