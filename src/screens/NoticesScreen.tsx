@@ -433,6 +433,53 @@ export function NoticesScreen() {
                 </div>
               )}
 
+              {/* Additional Breakdown — extra image+note blocks for setups
+                  that need more than one screenshot to explain, added in the
+                  Add/Edit Notice modal. Mirrors the Strategy Model's
+                  execution-step timeline, just worded as "parts" here. */}
+              {previewNotice.steps && previewNotice.steps.length > 0 && (
+                <div>
+                  <p className={cn('text-[11px] font-semibold uppercase tracking-wider mb-2', theme !== 'light' ? 'text-zinc-500' : 'text-zinc-500')}>Additional Breakdown</p>
+                  <div className="space-y-3">
+                    {previewNotice.steps.map((step, idx) => (
+                      <div key={step.id} className={cn('rounded-lg border overflow-hidden', theme !== 'light' ? 'border-zinc-800 bg-zinc-800/40' : 'border-zinc-200 bg-zinc-50')}>
+                        {step.images.length > 0 && (
+                          <div className={cn('grid gap-0.5', step.images.length === 1 ? 'grid-cols-1' : 'grid-cols-2')}>
+                            {step.images.map((img, imgIdx) => (
+                              <div
+                                key={img.id}
+                                className="relative w-full bg-zinc-950 cursor-pointer"
+                                onClick={() => setLightboxImage(img.url)}
+                              >
+                                <img
+                                  src={img.url}
+                                  alt={`${step.title || `Part ${idx + 1}`} screenshot`}
+                                  className="w-full h-full object-cover aspect-video"
+                                />
+                                {step.images.length > 1 && (
+                                  <div className="absolute top-2 left-2 bg-black/60 backdrop-blur-md text-white text-[10px] font-bold px-1.5 py-0.5 rounded-md border border-white/10 shadow-sm pointer-events-none">
+                                    #{imgIdx + 1}
+                                  </div>
+                                )}
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                        <div className="p-3 space-y-1">
+                          <p className={cn('text-[10px] font-bold uppercase tracking-wider', previewNotice.type === 'mistake' ? 'text-rose-400' : 'text-cyan-400')}>Part {idx + 1}</p>
+                          {step.title && (
+                            <p className={cn('text-sm font-semibold', theme !== 'light' ? 'text-white' : 'text-zinc-900')}>{step.title}</p>
+                          )}
+                          {step.notes && (
+                            <p className={cn('text-sm leading-relaxed whitespace-pre-wrap', theme !== 'light' ? 'text-zinc-300' : 'text-zinc-700')}>{step.notes}</p>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
               <div className="flex justify-end gap-2 pt-1">
                 <button
                   onClick={() => { handleEditNotice(previewNotice); setPreviewNotice(null); }}
