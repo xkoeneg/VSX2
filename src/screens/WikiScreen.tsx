@@ -318,7 +318,6 @@ export function WikiScreen() {
     }, [wikiEntries]);
 
     // ---- Summary widgets -----------------------------------------------
-    const totalConcepts = wikiEntries.length;
     const presentCategoryNames = useMemo(
       () => WIKI_CATEGORIES.filter(cat => wikiEntries.some(e => e.category === cat)),
       [wikiEntries]
@@ -841,10 +840,11 @@ export function WikiScreen() {
               </div>
             </div>
 
-            {/* Category pill filters, with a subtle count label anchoring
-                the section right below them. */}
+            {/* Category pill filters — single row, horizontally scrollable so
+                it never wraps or pushes a stray count line underneath (the
+                stats already live in the top cards). */}
             <div className={cn('p-3 border-b flex-shrink-0', theme !== 'light' ? 'border-zinc-800/80' : 'border-zinc-200')}>
-              <div className="flex flex-wrap items-center gap-1.5">
+              <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar py-1 whitespace-nowrap">
                 {FILTER_CATEGORIES.map(cat => {
                   const isActive = activeCategory === cat;
                   const count = cat === 'All' ? wikiEntries.length : wikiEntries.filter(e => e.category === cat).length;
@@ -854,24 +854,25 @@ export function WikiScreen() {
                       key={cat}
                       onClick={() => setActiveCategory(cat)}
                       className={cn(
-                        'flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-medium border transition-all',
+                        'flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-medium border transition-all flex-shrink-0',
                         isActive
-                          ? (style ? style.active : (theme !== 'light' ? 'bg-white/10 text-white border-white/20' : 'bg-zinc-900 text-white border-zinc-900'))
+                          ? (style
+                              ? cn(style.active, 'shadow-[0_0_12px_-2px_rgba(56,189,248,0.5)]')
+                              : (theme !== 'light'
+                                  ? 'bg-sky-500/15 text-sky-300 border-sky-500/40 shadow-[0_0_12px_-2px_rgba(56,189,248,0.5)]'
+                                  : 'bg-sky-50 text-sky-700 border-sky-300 shadow-[0_0_12px_-4px_rgba(56,189,248,0.4)]'))
                           : (theme !== 'light'
-                              ? 'bg-zinc-900 border-zinc-800 text-zinc-500 hover:text-zinc-300 hover:border-zinc-700'
+                              ? 'bg-slate-800/50 border-transparent text-slate-400 hover:bg-slate-800 hover:text-zinc-300'
                               : 'bg-zinc-50 border-zinc-200 text-zinc-500 hover:text-zinc-800 hover:border-zinc-300')
                       )}
                     >
-                      {style && <span className={cn('w-1.5 h-1.5 rounded-full', style.dot)} />}
+                      {style && <span className={cn('w-1.5 h-1.5 rounded-full flex-shrink-0', style.dot)} />}
                       <span>{cat}</span>
                       <span className={isActive ? 'opacity-70' : 'text-zinc-500'}>{count}</span>
                     </button>
                   );
                 })}
               </div>
-              <p className="mt-2 text-[10px] text-zinc-500">
-                {totalConcepts} concept{totalConcepts === 1 ? '' : 's'} • {presentCategoryNames.length} categor{presentCategoryNames.length === 1 ? 'y' : 'ies'}
-              </p>
             </div>
 
             {/* Scrollable concept list */}
