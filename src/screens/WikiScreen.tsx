@@ -275,7 +275,7 @@ export function WikiScreen() {
     handleDeleteSetupType,
     handleDeleteConfluence, handleDeleteMistakeType, handleChangeSetupTypeColor, handleChangeConfluenceColor,
     handleChangeMistakeColor, handleDeleteEmotion, handleChangeEmotionColor, colorForEmotion, colorForMistake,
-    handleFileUpload, handleAddImageUrl, handleRemoveImage, handleReorderImages, updateTimeframeNotes,
+    handleFileUpload, handleAddImageUrl, handleReorderImages, updateTimeframeNotes,
     exportBackup, importBackup,
   } = useAppContext();
 
@@ -468,6 +468,13 @@ export function WikiScreen() {
     };
 
     // ---- Right panel: full detail workbench for the selected concept ----
+    // Clears just the chart image on a wiki entry (imageUrl is a plain
+    // string field here, not a gallery array like trade images), so the
+    // overlay trash icon can delete inline without opening the edit modal.
+    const handleRemoveWikiImage = (id: string) => {
+      setWikiEntries(prev => prev.map(w => (w.id === id ? { ...w, imageUrl: '' } : w)));
+    };
+
     const renderWikiDetailPanel = () => {
       if (!selectedEntry) {
         // Search/category filter narrowed the list to zero, but the library
@@ -637,7 +644,7 @@ export function WikiScreen() {
                         <Edit2 className="w-3.5 h-3.5" />
                       </button>
                       <button
-                        onClick={() => handleRemoveImage(entry.id)}
+                        onClick={() => handleRemoveWikiImage(entry.id)}
                         className="p-1.5 rounded-md text-zinc-400 hover:text-rose-400 hover:bg-rose-500/10 transition-colors"
                         title="Remove image"
                       >
