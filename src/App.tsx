@@ -161,6 +161,7 @@ const DeleteNoticeStepConfirm = lazyNamed<typeof import('./modals/NoticeWikiModa
 const AddWikiModal = lazyNamed<typeof import('./modals/NoticeWikiModals').AddWikiModal>(() => import('./modals/NoticeWikiModals'), 'AddWikiModal');
 const WikiDetailModal = lazyNamed<typeof import('./modals/NoticeWikiModals').WikiDetailModal>(() => import('./modals/NoticeWikiModals'), 'WikiDetailModal');
 const DeleteWikiConfirm = lazyNamed<typeof import('./modals/NoticeWikiModals').DeleteWikiConfirm>(() => import('./modals/NoticeWikiModals'), 'DeleteWikiConfirm');
+const DeleteWikiRuleConfirm = lazyNamed<typeof import('./modals/NoticeWikiModals').DeleteWikiRuleConfirm>(() => import('./modals/NoticeWikiModals'), 'DeleteWikiRuleConfirm');
 
 // NOTE: there used to be a `ScreenLoadingFallback` pulse spinner rendered
 // here as the Suspense fallback. It's gone — see the `deferredView` +
@@ -910,6 +911,7 @@ function AppShell() {
         {<AddWikiModal />}
         {<WikiDetailModal />}
         {<DeleteWikiConfirm />}
+        {<DeleteWikiRuleConfirm />}
         {<DeleteTradeConfirm />}
         {<DeleteAccountConfirm />}
         {<DeleteStrategyConfirm />}
