@@ -3806,16 +3806,21 @@ export function useAppState() {
   }, [showAddWiki, wikiImageFocusRequested]);
 
   // ---- Option B: "AI Auto-Fill" -----------------------------------------
-  // Fills the rest of the Add/Edit Wiki form from the typed title alone.
-  // Calls a Supabase Edge Function ("wiki-auto-fill") rather than an AI
-  // provider directly, since that's the only way to keep an API key off the
-  // client — swap the body of the try block if your backend exposes this
-  // differently (e.g. a REST route on your own server).
+  // Fills the rest of the Add/Edit Wiki form from the typed title alone by
+  // calling the Gemini API directly from the browser using
+  // import.meta.env.VITE_GEMINI_API_KEY.
   //
-  // Expected Edge Function response shape:
-  //   { category?: string; content?: string; keyRules?: string[];
-  //     bestSession?: string; timeframe?: string; contextNotes?: string }
+  // ⚠️ Heads up: any `VITE_*` env var gets baked into the client bundle at
+  // build time, so this key is readable by anyone who opens devtools or
+  // views the bundled JS — there's no way to keep it secret in a pure
+  // client-side call. That's fine for a personal/local build, but if this
+  // app is ever deployed somewhere other people can reach, put a thin
+  // backend (Supabase Edge Function, Vercel/Next API route, etc.) in front
+  // of the Gemini call instead, so the key never ships to the browser and
+  // you can rate-limit per user. Worth restricting the key itself to this
+  // API in Google AI Studio / Cloud Console either way.
   const WIKI_AUTOFILL_TIMEOUT_MS = 20000;
+  const GEMINI_MODEL = 'gemini-2.5-flash';
 
   const withTimeout = <T,>(promise: Promise<T>, ms: number): Promise<T> =>
     Promise.race([
@@ -3835,33 +3840,66 @@ export function useAppState() {
     contextNotes: 'Add any additional session/timeframe confluence notes here.',
   });
 
+  const buildWikiAutoFillPrompt = (title: string) => `You are helping populate a personal trading knowledge-base entry for the concept "${title}" (ICT / Smart Money / price-action style trading).
+
+Return ONLY a JSON object — no markdown, no code fences, no commentary — with exactly these fields:
+{
+  "category": one of "PD Arrays", "Market Structure", "Terminology", "Execution Models" — whichever best fits "${title}",
+  "content": a 2-4 sentence core definition/overview of the concept,
+  "keyRules": an array of 3-6 short strings, each a concrete entry criterion/condition checklist item,
+  "bestSession": the trading session where this concept is most reliable (e.g. "NY Open", "London Open"), or "" if not session-specific,
+  "timeframe": the typical timeframe(s) this concept is analyzed on (e.g. "5m / 15m HTF"), or "" if not applicable,
+  "contextNotes": 1-2 sentences of additional confluence/context notes
+}`;
+
   const handleWikiAutoFill = async () => {
     const title = (newWiki.title || '').trim();
     if (!title || isWikiAutoFilling) return;
 
     setIsWikiAutoFilling(true);
     try {
-      const { data, error } = await withTimeout(
-        supabase.functions.invoke('wiki-auto-fill', { body: { title } }),
+      const apiKey = (import.meta.env as Record<string, string | undefined>).VITE_GEMINI_API_KEY;
+      if (!apiKey) throw new Error('Missing VITE_GEMINI_API_KEY');
+
+      const response = await withTimeout(
+        fetch(
+          `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${apiKey}`,
+          {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              contents: [{ parts: [{ text: buildWikiAutoFillPrompt(title) }] }],
+              generationConfig: {
+                responseMimeType: 'application/json',
+                temperature: 0.4,
+              },
+            }),
+          }
+        ),
         WIKI_AUTOFILL_TIMEOUT_MS
       );
 
-      // Treat a Supabase error (network failure, non-2xx status including
-      // 429/500, invoke timeout) exactly like a malformed/empty response —
-      // both fall through to the fallback template below.
-      if (error) throw error;
+      // Non-2xx covers rate limits (429), server errors (500), invalid key
+      // (401/403), etc. — all of these fall through to the fallback below.
+      if (!response.ok) throw new Error(`Gemini API error ${response.status}`);
 
-      const result = data as {
+      const payload = await response.json();
+      const rawText = payload?.candidates?.[0]?.content?.parts?.[0]?.text;
+      if (typeof rawText !== 'string' || !rawText.trim()) {
+        throw new Error('Gemini API returned an empty response');
+      }
+
+      const result = JSON.parse(rawText) as {
         category?: string;
         content?: string;
         keyRules?: string[];
         bestSession?: string;
         timeframe?: string;
         contextNotes?: string;
-      } | null;
+      };
 
       if (!result || typeof result !== 'object' || (!result.content && !result.keyRules)) {
-        throw new Error('AI auto-fill returned an unexpected response');
+        throw new Error('AI auto-fill returned an unexpected response shape');
       }
 
       setNewWiki(prev => ({
@@ -3878,9 +3916,10 @@ export function useAppState() {
         contextNotes: result.contextNotes?.trim() || prev.contextNotes || '',
       }));
     } catch (err) {
-      // API limit, timeout, network failure, or malformed response — never
-      // crash the app or wipe out the title the user already typed. Load
-      // the fallback template instead so they can fill it in by hand.
+      // API limit, timeout, network failure, missing/invalid key, or
+      // malformed response — never crash the app or wipe out the title the
+      // user already typed. Load the fallback template instead so they can
+      // fill it in by hand.
       setNewWiki(prev => ({ ...prev, ...buildWikiAutoFillFallback() }));
       showTradeImportToast('error', 'AI limits reached or unavailable. Loaded default template instead.');
     } finally {
