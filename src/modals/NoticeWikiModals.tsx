@@ -434,7 +434,15 @@ export function AddNoticeModal() {
                   </div>
 
                   <div>
-                    <label className="block text-xs text-zinc-400 mb-1.5">What Happened</label>
+                    <label className="block text-xs text-zinc-400 mb-1.5">What Happened — Card Title</label>
+                    <input
+                      type="text"
+                      value={newNotice.whatHappenedTitle}
+                      onChange={(e) => setNewNotice(prev => ({ ...prev, whatHappenedTitle: e.target.value }))}
+                      placeholder="Short summary shown on the card, e.g. Chased the 9:30 spike"
+                      className="w-full bg-zinc-900 border border-zinc-700 rounded-lg px-3 py-2.5 text-sm text-white focus:outline-none focus:border-zinc-600"
+                    />
+                    <label className="block text-xs text-zinc-500 mt-2.5 mb-1.5">Full Details <span className="text-zinc-600">(shown when opened)</span></label>
                     <textarea
                       value={newNotice.description}
                       onChange={(e) => setNewNotice(prev => ({ ...prev, description: e.target.value }))}
@@ -456,7 +464,15 @@ export function AddNoticeModal() {
                   </div>
 
                   <div>
-                    <label className="block text-xs text-emerald-400 mb-1.5 font-medium">Prevention Rule / Solution</label>
+                    <label className="block text-xs text-emerald-400 mb-1.5 font-medium">Prevention — Card Title</label>
+                    <input
+                      type="text"
+                      value={newNotice.preventionTitle}
+                      onChange={(e) => setNewNotice(prev => ({ ...prev, preventionTitle: e.target.value }))}
+                      placeholder="Short rule shown on the card, e.g. Wait for the retest"
+                      className="w-full bg-zinc-900 border border-emerald-500/30 rounded-lg px-3 py-2.5 text-sm text-white focus:outline-none focus:border-emerald-500/60"
+                    />
+                    <label className="block text-xs text-zinc-500 mt-2.5 mb-1.5">Full Details <span className="text-zinc-600">(shown when opened)</span></label>
                     <textarea
                       value={newNotice.prevention}
                       onChange={(e) => setNewNotice(prev => ({ ...prev, prevention: e.target.value }))}
