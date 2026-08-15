@@ -269,8 +269,8 @@ export function WikiScreen() {
     removeStrategyStep, confirmRemoveStrategyStep, handleStrategyStepImagesPick, removeStrategyStepImage,
     moveStrategyStepImage, handleSaveStrategy, handleDeleteStrategy, confirmDeleteStrategy,
     handleNoticeImagePick, handleAddNotice, handleOpenAddNotice, handleEditNotice, handleDeleteNotice,
-    WIKI_FORM_DEFAULT, handleAddWiki, handleOpenAddWiki, handleOpenEditWiki, handleDeleteWiki,
-    handleWikiImagePick, addWikiKeyRule, updateWikiKeyRule, removeWikiKeyRule,
+    WIKI_FORM_DEFAULT, getWikiImages, wikiCoverIndex, setWikiCoverIndex, handleAddWiki, handleOpenAddWiki, handleOpenEditWiki, handleDeleteWiki,
+    handleWikiImagesPick, addWikiKeyRule, updateWikiKeyRule, removeWikiKeyRule,
     missingStandardConcepts, allStandardConceptsImported, handleImportStandardConcepts,
     handleDeleteSetupType,
     handleDeleteConfluence, handleDeleteMistakeType, handleChangeSetupTypeColor, handleChangeConfluenceColor,
@@ -468,12 +468,11 @@ export function WikiScreen() {
     };
 
     // ---- Right panel: full detail workbench for the selected concept ----
-    // Clears just the chart image on a wiki entry (imageUrl is a plain
-    // string field here, not a gallery array like trade images), so the
-    // overlay trash icon can delete inline without opening the edit modal.
-    const handleRemoveWikiImage = (id: string) => {
-      setWikiEntries(prev => prev.map(w => (w.id === id ? { ...w, imageUrl: '' } : w)));
-    };
+    // Reset the chart carousel back to the first slide whenever a
+    // (different) concept is selected in the left panel.
+    useEffect(() => {
+      if (selectedWikiId) setWikiCoverIndex(0);
+    }, [selectedWikiId]);
 
     const renderWikiDetailPanel = () => {
       if (!selectedEntry) {
@@ -540,6 +539,10 @@ export function WikiScreen() {
       const entry = selectedEntry;
       const style = getWikiCategoryStyle(entry.category);
       const code = entryCodes.get(entry.id) || '';
+      const images = getWikiImages(entry);
+      const hasMultipleImages = images.length > 1;
+      const activeImageIdx = hasMultipleImages ? Math.min(wikiCoverIndex, images.length - 1) : 0;
+      const activeImage = images[activeImageIdx];
 
       return (
         <div className="flex flex-col h-full min-h-0">
@@ -568,9 +571,9 @@ export function WikiScreen() {
               </div>
             </div>
             <div className="flex items-center gap-1 flex-shrink-0">
-              {entry.imageUrl && (
+              {activeImage && (
                 <button
-                  onClick={() => setLightboxImage(entry.imageUrl)}
+                  onClick={() => setLightboxImage(activeImage.url)}
                   className={cn(
                     'p-2 rounded-lg transition-colors',
                     theme !== 'light' ? 'text-zinc-500 hover:text-white hover:bg-zinc-800' : 'text-zinc-500 hover:text-zinc-900 hover:bg-zinc-100'
@@ -605,32 +608,36 @@ export function WikiScreen() {
 
           {/* Scrollable workbench body */}
           <div className="flex-1 overflow-y-auto min-h-0">
-            {/* Chart viewport */}
+            {/* Chart viewport — carousel when there's more than one image */}
             <div className="p-5 pb-0">
               <div className="group relative w-full h-[450px] flex items-center justify-center bg-slate-950/80 rounded-xl border border-slate-800/80 p-6 overflow-hidden">
-                {entry.imageUrl ? (
+                {activeImage ? (
                   <>
                     <button
                       type="button"
-                      onClick={() => setLightboxImage(entry.imageUrl)}
+                      onClick={() => setLightboxImage(activeImage.url)}
                       title="Click to view full size"
                       className="relative w-full h-full flex items-center justify-center cursor-zoom-in"
                     >
                       <img
-                        src={entry.imageUrl}
+                        src={activeImage.url}
                         alt={entry.title}
                         className="max-h-full max-w-full w-auto h-auto object-contain rounded-lg shadow-2xl transition-transform duration-200 group-hover:scale-[1.01]"
                       />
-                      {/* Floating "click to view full size" hint */}
-                      <span className="absolute bottom-3 left-1/2 -translate-x-1/2 flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-black/70 backdrop-blur-sm text-white text-xs font-medium border border-white/10 opacity-0 group-hover:opacity-100 transition-opacity">
-                        <ZoomIn className="w-3.5 h-3.5" />
-                        Click to view full size
-                      </span>
+                      {/* Floating "click to view full size" hint — only when
+                          there's a single image, so it doesn't collide with
+                          the carousel dots below. */}
+                      {!hasMultipleImages && (
+                        <span className="absolute bottom-3 left-1/2 -translate-x-1/2 flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-black/70 backdrop-blur-sm text-white text-xs font-medium border border-white/10 opacity-0 group-hover:opacity-100 transition-opacity">
+                          <ZoomIn className="w-3.5 h-3.5" />
+                          Click to view full size
+                        </span>
+                      )}
                     </button>
-                    {/* Overlay control actions — zoom / edit / delete */}
+                    {/* Overlay control actions — zoom / edit */}
                     <div className="absolute top-3 right-3 flex items-center gap-2 bg-slate-900/80 backdrop-blur-md p-1.5 rounded-lg border border-slate-700/50 opacity-0 group-hover:opacity-100 transition-opacity">
                       <button
-                        onClick={() => setLightboxImage(entry.imageUrl)}
+                        onClick={() => setLightboxImage(activeImage.url)}
                         className="p-1.5 rounded-md text-zinc-400 hover:text-white hover:bg-white/10 transition-colors"
                         title="Zoom / full-screen preview"
                       >
@@ -639,11 +646,47 @@ export function WikiScreen() {
                       <button
                         onClick={() => handleOpenEditWiki(entry, true)}
                         className="p-1.5 rounded-md text-zinc-400 hover:text-white hover:bg-white/10 transition-colors"
-                        title="Change image"
+                        title="Change / manage images"
                       >
                         <Edit2 className="w-3.5 h-3.5" />
                       </button>
                     </div>
+                    {hasMultipleImages && (
+                      <>
+                        <button
+                          type="button"
+                          onClick={() => setWikiCoverIndex(prev => (prev === 0 ? images.length - 1 : prev - 1))}
+                          title="Previous image"
+                          className="absolute left-3 top-1/2 -translate-y-1/2 p-2.5 bg-black/50 hover:bg-black/75 backdrop-blur-sm rounded-full text-white opacity-0 group-hover:opacity-100 transition-opacity duration-200"
+                        >
+                          <ChevronLeft className="w-5 h-5" />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setWikiCoverIndex(prev => (prev === images.length - 1 ? 0 : prev + 1))}
+                          title="Next image"
+                          className="absolute right-3 top-1/2 -translate-y-1/2 p-2.5 bg-black/50 hover:bg-black/75 backdrop-blur-sm rounded-full text-white opacity-0 group-hover:opacity-100 transition-opacity duration-200"
+                        >
+                          <ChevronRight className="w-5 h-5" />
+                        </button>
+                        <div className="absolute top-3 left-3 px-1.5 py-0.5 rounded-md bg-black/60 backdrop-blur-md text-white text-[10px] font-bold border border-white/10 shadow-sm pointer-events-none">
+                          {activeImageIdx + 1} / {images.length}
+                        </div>
+                        <div className="absolute bottom-3 left-1/2 -translate-x-1/2 flex gap-1.5">
+                          {images.map((_, idx) => (
+                            <button
+                              key={idx}
+                              type="button"
+                              onClick={() => setWikiCoverIndex(idx)}
+                              className={cn(
+                                'h-1.5 rounded-full transition-all duration-200',
+                                idx === activeImageIdx ? 'w-4 bg-white' : 'w-1.5 bg-white/40 hover:bg-white/60'
+                              )}
+                            />
+                          ))}
+                        </div>
+                      </>
+                    )}
                   </>
                 ) : (
                   <button
