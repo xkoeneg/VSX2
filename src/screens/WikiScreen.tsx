@@ -1,5 +1,5 @@
 import type React from 'react';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   LayoutDashboard,
   BookOpen,
@@ -286,6 +286,19 @@ export function WikiScreen() {
     const [activeCategory, setActiveCategory] = useState<'All' | WikiCategory>('All');
     const [wikiSearch, setWikiSearch] = useState('');
     const FILTER_CATEGORIES: ('All' | WikiCategory)[] = ['All', ...WIKI_CATEGORIES];
+
+    // ---- Category pill strip: single row, wheel-scrollable -------------
+    // Keeps the row clean and straight (no wrap) while still being easy to
+    // navigate with a plain mouse wheel — vertical wheel motion is
+    // redirected to horizontal scroll on this element only.
+    const categoryStripRef = useRef<HTMLDivElement>(null);
+    const handleCategoryStripWheel = (e: React.WheelEvent<HTMLDivElement>) => {
+      const el = categoryStripRef.current;
+      if (!el || el.scrollWidth <= el.clientWidth) return;
+      if (Math.abs(e.deltaY) <= Math.abs(e.deltaX)) return; // already horizontal (trackpad) — let it pass through
+      e.preventDefault();
+      el.scrollLeft += e.deltaY;
+    };
 
     // ---- Master-detail selection (split-pane) ---------------------------
     // Which concept is open in the right-hand workbench, and which sub-tab
@@ -841,13 +854,17 @@ export function WikiScreen() {
               </div>
             </div>
 
-            {/* Category pill filters — flexible wrap so every pill stays
-                visible within the sidebar width, no horizontal scrolling
-                needed (mouse-friendly). Flat chip style (no glow/shadow) so
-                pills stay crisp and consistent at this size; only fill +
-                border color shifts to match the active category. */}
+            {/* Category pill filters — single straight row. Scrolls
+                horizontally if it overflows, but a normal mouse wheel works
+                too (see handleCategoryStripWheel), so it's not trackpad-only.
+                Flat chip style (no glow/shadow) keeps pills crisp; only
+                fill + border color shifts to match the active category. */}
             <div className={cn('p-3 border-b flex-shrink-0', theme !== 'light' ? 'border-zinc-800/80' : 'border-zinc-200')}>
-              <div className="flex flex-wrap items-center gap-1.5 w-full">
+              <div
+                ref={categoryStripRef}
+                onWheel={handleCategoryStripWheel}
+                className="flex items-center gap-1.5 w-full overflow-x-auto no-scrollbar"
+              >
                 {FILTER_CATEGORIES.map(cat => {
                   const isActive = activeCategory === cat;
                   const count = cat === 'All' ? wikiEntries.length : wikiEntries.filter(e => e.category === cat).length;
@@ -857,7 +874,7 @@ export function WikiScreen() {
                       key={cat}
                       onClick={() => setActiveCategory(cat)}
                       className={cn(
-                        'inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-medium border transition-colors',
+                        'inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-medium border transition-colors flex-shrink-0',
                         isActive
                           ? (style
                               ? style.active
@@ -869,9 +886,19 @@ export function WikiScreen() {
                               : 'bg-zinc-100 border-zinc-200 text-zinc-500 hover:bg-zinc-200/70 hover:text-zinc-700')
                       )}
                     >
-                      {style && <span className={cn('w-1.5 h-1.5 rounded-full flex-shrink-0', style.dot)} />}
-                      <span>{cat}</span>
-                      <span className={isActive ? 'opacity-70' : 'opacity-50'}>{count}</span>
+                      {/* Every pill gets a leading dot slot — even 'All' — so
+                          the label + count always start at the same offset
+                          and pills line up symmetrically regardless of word
+                          length. Count is fused to the label as one text
+                          run (not a separate flex item) so its spacing
+                          doesn't stretch differently per pill. */}
+                      <span className={cn(
+                        'w-1.5 h-1.5 rounded-full flex-shrink-0',
+                        style ? style.dot : (theme !== 'light' ? 'bg-zinc-500' : 'bg-zinc-400')
+                      )} />
+                      <span className="whitespace-nowrap">
+                        {cat} <span className={isActive ? 'opacity-70' : 'opacity-50'}>({count})</span>
+                      </span>
                     </button>
                   );
                 })}
