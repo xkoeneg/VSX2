@@ -751,6 +751,12 @@ export function useAppState() {
   // cover-image drag state above, scoped separately for the notice modal).
   const [draggingNoticeImageId, setDraggingNoticeImageId] = useState<string | null>(null);
   const [dragOverNoticeImageId, setDragOverNoticeImageId] = useState<string | null>(null);
+  // Step-by-step breakdown builder for Market Notices (mirrors the Strategy
+  // Model step builder above) — lets a single insight/trap be explained
+  // across multiple stages, each with its own notes and screenshot(s).
+  const [noticeStepPendingDeleteId, setNoticeStepPendingDeleteId] = useState<string | null>(null);
+  const [draggingNoticeStepImageId, setDraggingNoticeStepImageId] = useState<string | null>(null);
+  const [dragOverNoticeStepImageId, setDragOverNoticeStepImageId] = useState<string | null>(null);
   // Drag-reorder state for the Strategy Model gallery itself — lets the user
   // drag any strategy card into any position (e.g. pin a model to the front).
   const [draggingStrategyId, setDraggingStrategyId] = useState<string | null>(null);
@@ -796,6 +802,9 @@ export function useAppState() {
   // Dynamic step builder can have any number of steps, each with its own
   // optional screenshot uploader — keyed ref map instead of one ref per step.
   const strategyStepImageInputRefs = useRef<Record<string, HTMLInputElement | null>>({});
+  // Same keyed-ref pattern as strategyStepImageInputRefs, scoped to the
+  // Market Notice step builder's per-step screenshot uploaders.
+  const noticeStepImageInputRefs = useRef<Record<string, HTMLInputElement | null>>({});
   const [showAddNotice, setShowAddNotice] = useState(false);
   const [editingNoticeId, setEditingNoticeId] = useState<string | null>(null);
   const [showAddWiki, setShowAddWiki] = useState(false);
@@ -933,8 +942,8 @@ export function useAppState() {
   const [editingRuleId, setEditingRuleId] = useState<string | null>(null);
   const [showRuleIconPicker, setShowRuleIconPicker] = useState(false);
   const [ruleIconPickerTab, setRuleIconPickerTab] = useState<'emoji' | 'icons' | 'color'>('emoji');
-  const emptyNoticeDraft = { type: 'mistake' as NoticeType, title: '', session: '' as SessionOption | '', tag: '', images: [] as TradeImage[], description: '', whatHappenedTitle: '', keyTakeawayTitle: '', consequence: '', prevention: '', preventionTitle: '' };
-  const [newNotice, setNewNotice] = useState<{ type: NoticeType; title: string; session: SessionOption | ''; tag: string; images: TradeImage[]; description: string; whatHappenedTitle: string; keyTakeawayTitle: string; consequence: string; prevention: string; preventionTitle: string }>(emptyNoticeDraft);
+  const emptyNoticeDraft = { type: 'mistake' as NoticeType, title: '', session: '' as SessionOption | '', tag: '', images: [] as TradeImage[], steps: [] as StrategyStep[], description: '', whatHappenedTitle: '', keyTakeawayTitle: '', consequence: '', prevention: '', preventionTitle: '' };
+  const [newNotice, setNewNotice] = useState<{ type: NoticeType; title: string; session: SessionOption | ''; tag: string; images: TradeImage[]; steps: StrategyStep[]; description: string; whatHappenedTitle: string; keyTakeawayTitle: string; consequence: string; prevention: string; preventionTitle: string }>(emptyNoticeDraft);
   const [newWiki, setNewWiki] = useState<Partial<WikiEntry>>({ title: '', content: '', category: WIKI_CATEGORIES[0], imageUrl: '', keyRules: [], bestSession: '', timeframe: '', contextNotes: '' });
   const [editingWikiId, setEditingWikiId] = useState<string | null>(null);
   // Which entry's full-detail modal is open, if any.
@@ -3435,12 +3444,91 @@ export function useAppState() {
     });
   };
 
+  // Dynamic Step-by-Step Breakdown builder for Market Notices — mirrors the
+  // Strategy Model's addStrategyStep/updateStrategyStep/etc. exactly, just
+  // scoped to newNotice.steps instead of newStrategy.steps. Lets a single
+  // insight or trap be explained across multiple stages when one screenshot
+  // isn't enough to walk through the full idea.
+  const addNoticeStep = () => {
+    setNewNotice(prev => ({ ...prev, steps: [...prev.steps, { id: generateId(), title: '', notes: '', images: [] }] }));
+  };
+
+  const updateNoticeStep = (id: string, field: 'title' | 'notes', value: string) => {
+    setNewNotice(prev => ({ ...prev, steps: prev.steps.map(s => s.id === id ? { ...s, [field]: value } : s) }));
+  };
+
+  // Removing a step always goes through a confirmation prompt first — this
+  // just opens it; the actual removal happens in confirmRemoveNoticeStep.
+  const requestRemoveNoticeStep = (id: string) => setNoticeStepPendingDeleteId(id);
+
+  const removeNoticeStep = (id: string) => {
+    setNewNotice(prev => ({ ...prev, steps: prev.steps.filter(s => s.id !== id) }));
+    delete noticeStepImageInputRefs.current[id];
+  };
+
+  const confirmRemoveNoticeStep = () => {
+    if (!noticeStepPendingDeleteId) return;
+    removeNoticeStep(noticeStepPendingDeleteId);
+    setNoticeStepPendingDeleteId(null);
+  };
+
+  // Each step supports multiple screenshots — every file picked (the input
+  // allows multi-select) gets appended as its own entry rather than
+  // replacing whatever images the step already has.
+  const handleNoticeStepImagesPick = (id: string, e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
+    Array.from(files).forEach(file => {
+      const reader = new FileReader();
+      reader.onload = (ev) => {
+        const url = ev.target?.result as string;
+        setNewNotice(prev => ({
+          ...prev,
+          steps: prev.steps.map(s => s.id === id ? { ...s, images: [...s.images, { id: generateId(), url, type: 'base64' as const }] } : s),
+        }));
+      };
+      reader.readAsDataURL(file);
+    });
+    e.target.value = ''; // allow re-selecting the same file(s) again later
+  };
+
+  const removeNoticeStepImage = (stepId: string, imageId: string) => {
+    setNewNotice(prev => ({
+      ...prev,
+      steps: prev.steps.map(s => s.id === stepId ? { ...s, images: s.images.filter(img => img.id !== imageId) } : s),
+    }));
+  };
+
+  // Drag-and-drop reordering within a single step's image set — lets the
+  // user pick which screenshot shows first.
+  const moveNoticeStepImage = (stepId: string, fromImageId: string, toImageId: string) => {
+    if (fromImageId === toImageId) return;
+    setNewNotice(prev => ({
+      ...prev,
+      steps: prev.steps.map(s => {
+        if (s.id !== stepId) return s;
+        const images = [...s.images];
+        const fromIdx = images.findIndex(img => img.id === fromImageId);
+        const toIdx = images.findIndex(img => img.id === toImageId);
+        if (fromIdx === -1 || toIdx === -1) return s;
+        const [moved] = images.splice(fromIdx, 1);
+        images.splice(toIdx, 0, moved);
+        return { ...s, images };
+      }),
+    }));
+  };
+
   const handleAddNotice = () => {
     if (!newNotice.title.trim()) return;
+    // Drop fully-empty step rows (no title, no notes, no images) so blank
+    // "+ Add Step" rows the user never filled in aren't persisted.
+    const cleanedSteps = newNotice.steps
+      .map(s => ({ ...s, title: s.title.trim(), notes: s.notes.trim() }))
+      .filter(s => s.title || s.notes || s.images.length > 0);
     if (editingNoticeId) {
       setNotices(prev => prev.map(n =>
         n.id === editingNoticeId
-          ? { ...n, ...newNotice, title: newNotice.title.trim() }
+          ? { ...n, ...newNotice, title: newNotice.title.trim(), steps: cleanedSteps }
           : n
       ));
     } else {
@@ -3448,18 +3536,27 @@ export function useAppState() {
         id: generateId(),
         ...newNotice,
         title: newNotice.title.trim(),
+        steps: cleanedSteps,
         timestamp: new Date().toISOString(),
         messages: [],
       }]);
     }
     setNewNotice(emptyNoticeDraft);
     setEditingNoticeId(null);
+    noticeStepImageInputRefs.current = {};
+    setNoticeStepPendingDeleteId(null);
+    setDraggingNoticeStepImageId(null);
+    setDragOverNoticeStepImageId(null);
     setShowAddNotice(false);
   };
 
   const handleOpenAddNotice = (type: NoticeType = 'mistake') => {
     setEditingNoticeId(null);
     setNewNotice({ ...emptyNoticeDraft, type });
+    noticeStepImageInputRefs.current = {};
+    setNoticeStepPendingDeleteId(null);
+    setDraggingNoticeStepImageId(null);
+    setDragOverNoticeStepImageId(null);
     setShowAddNotice(true);
   };
 
@@ -3472,12 +3569,16 @@ export function useAppState() {
     const migratedImages: TradeImage[] = notice.images ?? (legacyImageUrl
       ? [{ id: generateId(), url: legacyImageUrl, type: legacyImageUrl.startsWith('data:') ? 'base64' as const : 'url' as const }]
       : []);
+    // Back-compat: notices saved before the step-by-step breakdown existed
+    // won't have a `steps` array yet — default to empty instead of crashing.
+    const migratedSteps: StrategyStep[] = (notice.steps ?? []).map(s => ({ ...s, images: s.images.map(img => ({ ...img })) }));
     setNewNotice({
       type: notice.type,
       title: notice.title,
       session: notice.session,
       tag: notice.tag,
       images: migratedImages,
+      steps: migratedSteps,
       description: notice.description,
       whatHappenedTitle: notice.whatHappenedTitle,
       keyTakeawayTitle: notice.keyTakeawayTitle,
@@ -3485,6 +3586,10 @@ export function useAppState() {
       prevention: notice.prevention,
       preventionTitle: notice.preventionTitle,
     });
+    noticeStepImageInputRefs.current = {};
+    setNoticeStepPendingDeleteId(null);
+    setDraggingNoticeStepImageId(null);
+    setDragOverNoticeStepImageId(null);
     setShowAddNotice(true);
   };
 
@@ -4303,6 +4408,13 @@ export function useAppState() {
     setDraggingNoticeImageId,
     dragOverNoticeImageId,
     setDragOverNoticeImageId,
+    noticeStepPendingDeleteId,
+    setNoticeStepPendingDeleteId,
+    draggingNoticeStepImageId,
+    setDraggingNoticeStepImageId,
+    dragOverNoticeStepImageId,
+    setDragOverNoticeStepImageId,
+    noticeStepImageInputRefs,
     draggingStrategyId,
     setDraggingStrategyId,
     dragOverStrategyId,
@@ -4618,6 +4730,14 @@ export function useAppState() {
     handleNoticeImagePick: handleNoticeImagesPick,
     removeNoticeImage,
     moveNoticeImage,
+    addNoticeStep,
+    updateNoticeStep,
+    requestRemoveNoticeStep,
+    removeNoticeStep,
+    confirmRemoveNoticeStep,
+    handleNoticeStepImagesPick,
+    removeNoticeStepImage,
+    moveNoticeStepImage,
     handleAddNotice,
     handleOpenAddNotice,
     handleEditNotice,
