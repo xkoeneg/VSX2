@@ -271,7 +271,8 @@ export function AddNoticeModal() {
     openEditStrategyModal, closeStrategyModal, addStrategyStep, updateStrategyStep, requestRemoveStrategyStep,
     removeStrategyStep, confirmRemoveStrategyStep, handleStrategyStepImagesPick, removeStrategyStepImage,
     moveStrategyStepImage, handleSaveStrategy, handleDeleteStrategy, confirmDeleteStrategy,
-    handleNoticeImagePick, handleAddNotice, handleOpenAddNotice, handleEditNotice, handleDeleteNotice,
+    handleNoticeImagesPick, removeNoticeImage, moveNoticeImage, draggingNoticeImageId, setDraggingNoticeImageId,
+    dragOverNoticeImageId, setDragOverNoticeImageId, handleAddNotice, handleOpenAddNotice, handleEditNotice, handleDeleteNotice,
     WIKI_FORM_DEFAULT, handleAddWiki, handleOpenAddWiki, handleOpenEditWiki, handleDeleteWiki,
     handleWikiImagePick, addWikiKeyRule, updateWikiKeyRule, removeWikiKeyRule, handleDeleteSetupType,
     handleDeleteConfluence, handleDeleteMistakeType, handleChangeSetupTypeColor, handleChangeConfluenceColor,
@@ -344,45 +345,81 @@ export function AddNoticeModal() {
                 </div>
               </div>
 
+              {/* SCREENSHOTS — supports multiple chart images for both notice
+                  types (Price Action Insight and Anti-Mistake/Trap), shown as
+                  a reorderable grid; the first image doubles as the card
+                  thumbnail. Mirrors the Strategy Model cover-image manager. */}
               <div>
-                <label className="block text-xs text-zinc-400 mb-1.5">Screenshot (TradingView chart reference)</label>
-                <div className="relative">
+                <div className="flex items-center justify-between mb-1.5">
+                  <label className="block text-xs text-zinc-400">Screenshot(s) (TradingView chart reference)</label>
+                  {newNotice.images.length > 0 && (
+                    <span className="text-xs text-zinc-600">{newNotice.images.length} image{newNotice.images.length === 1 ? '' : 's'}</span>
+                  )}
+                </div>
+                <div className="grid grid-cols-3 gap-2">
+                  {newNotice.images.map((img, imgIdx) => (
+                    <div
+                      key={img.id}
+                      draggable
+                      onDragStart={(e) => {
+                        setDraggingNoticeImageId(img.id);
+                        e.dataTransfer.effectAllowed = 'move';
+                        e.dataTransfer.setData('text/plain', img.id);
+                      }}
+                      onDragEnd={() => { setDraggingNoticeImageId(null); setDragOverNoticeImageId(null); }}
+                      onDragOver={(e) => { e.preventDefault(); e.dataTransfer.dropEffect = 'move'; }}
+                      onDragEnter={() => setDragOverNoticeImageId(img.id)}
+                      onDragLeave={() => setDragOverNoticeImageId(prev => (prev === img.id ? null : prev))}
+                      onDrop={(e) => {
+                        e.preventDefault();
+                        const draggedId = e.dataTransfer.getData('text/plain');
+                        moveNoticeImage(draggedId, img.id);
+                        setDraggingNoticeImageId(null);
+                        setDragOverNoticeImageId(null);
+                      }}
+                      onClick={() => setLightboxImage(img.url)}
+                      title="Drag to reorder — click to view larger"
+                      className={cn(
+                        "relative aspect-video rounded-lg overflow-hidden border bg-zinc-950 group cursor-grab active:cursor-grabbing transition-all",
+                        dragOverNoticeImageId === img.id
+                          ? (isMistake ? "border-rose-400 ring-2 ring-rose-400/60" : "border-cyan-400 ring-2 ring-cyan-400/60")
+                          : "border-zinc-700",
+                        draggingNoticeImageId === img.id && "opacity-40"
+                      )}
+                    >
+                      <img src={img.url} alt="Chart screenshot" className="w-full h-full object-cover pointer-events-none" />
+                      <div className="absolute top-1 left-1 flex items-center gap-0.5 px-1 py-0.5 rounded bg-black/70 text-white text-[9px] font-semibold pointer-events-none">
+                        <GripVertical className="w-2.5 h-2.5" />
+                        {imgIdx + 1}
+                      </div>
+                      <button
+                        type="button"
+                        onClick={(e) => { e.stopPropagation(); removeNoticeImage(img.id); }}
+                        title="Remove image"
+                        className="absolute top-1 right-1 p-1 rounded-full bg-black/70 text-white opacity-0 group-hover:opacity-100 focus:opacity-100 transition-opacity"
+                      >
+                        <X className="w-3 h-3" />
+                      </button>
+                    </div>
+                  ))}
                   <button
                     type="button"
                     onClick={() => noticeImageInputRef.current?.click()}
                     className={cn(
-                      'w-full aspect-video rounded-lg border border-dashed flex flex-col items-center justify-center gap-2 text-zinc-500 hover:text-zinc-300 transition-all overflow-hidden bg-zinc-900',
-                      isMistake ? 'border-zinc-700 hover:border-rose-500/60' : 'border-zinc-700 hover:border-cyan-500/60'
+                      "aspect-video rounded-lg border border-dashed flex flex-col items-center justify-center gap-1 text-zinc-500 hover:text-zinc-300 transition-all bg-zinc-950",
+                      isMistake ? "border-zinc-700 hover:border-rose-500/60" : "border-zinc-700 hover:border-cyan-500/60"
                     )}
                   >
-                    {newNotice.imageUrl ? (
-                      <img src={newNotice.imageUrl} alt="Preview" className="w-full h-full object-cover" />
-                    ) : (
-                      <>
-                        <ImagePlus className="w-5 h-5" />
-                        <span className="text-xs">Upload chart image</span>
-                      </>
-                    )}
+                    <ImagePlus className="w-4 h-4" />
+                    <span className="text-[10px] text-center leading-tight px-1">{newNotice.images.length > 0 ? 'Add more' : 'Upload chart image(s)'}</span>
                   </button>
-                  {newNotice.imageUrl && (
-                    <button
-                      type="button"
-                      onClick={() => setNewNotice(prev => ({ ...prev, imageUrl: '' }))}
-                      className="absolute top-2 right-2 p-1.5 rounded-lg bg-black/70 text-zinc-300 hover:text-white hover:bg-black/90 transition-colors"
-                      title="Remove image"
-                    >
-                      <X className="w-3.5 h-3.5" />
-                    </button>
-                  )}
                 </div>
-                <input ref={noticeImageInputRef} type="file" accept="image/*" className="hidden" onChange={handleNoticeImagePick} />
-                <input
-                  type="text"
-                  value={newNotice.imageUrl.startsWith('data:') ? '' : newNotice.imageUrl}
-                  onChange={(e) => setNewNotice(prev => ({ ...prev, imageUrl: e.target.value }))}
-                  placeholder="...or paste an image URL"
-                  className="w-full mt-2 bg-zinc-900 border border-zinc-700 rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-zinc-600"
-                />
+                <input ref={noticeImageInputRef} type="file" accept="image/*" multiple className="hidden" onChange={handleNoticeImagesPick} />
+                <p className="text-xs text-zinc-600 mt-1.5">
+                  {newNotice.images.length > 1
+                    ? 'Drag a screenshot to reorder — the first one becomes the card thumbnail.'
+                    : 'Add one or more chart screenshots for this notice.'}
+                </p>
               </div>
             </div>
 
@@ -662,7 +699,8 @@ export function AddWikiModal() {
     openEditStrategyModal, closeStrategyModal, addStrategyStep, updateStrategyStep, requestRemoveStrategyStep,
     removeStrategyStep, confirmRemoveStrategyStep, handleStrategyStepImagesPick, removeStrategyStepImage,
     moveStrategyStepImage, handleSaveStrategy, handleDeleteStrategy, confirmDeleteStrategy,
-    handleNoticeImagePick, handleAddNotice, handleOpenAddNotice, handleEditNotice, handleDeleteNotice,
+    handleNoticeImagesPick, removeNoticeImage, moveNoticeImage, draggingNoticeImageId, setDraggingNoticeImageId,
+    dragOverNoticeImageId, setDragOverNoticeImageId, handleAddNotice, handleOpenAddNotice, handleEditNotice, handleDeleteNotice,
     WIKI_FORM_DEFAULT, handleAddWiki, handleOpenAddWiki, handleOpenEditWiki, handleDeleteWiki,
     handleWikiImagePick, addWikiKeyRule, updateWikiKeyRule, removeWikiKeyRule, handleDeleteSetupType,
     handleDeleteConfluence, handleDeleteMistakeType, handleChangeSetupTypeColor, handleChangeConfluenceColor,
@@ -902,7 +940,8 @@ export function WikiDetailModal() {
     openEditStrategyModal, closeStrategyModal, addStrategyStep, updateStrategyStep, requestRemoveStrategyStep,
     removeStrategyStep, confirmRemoveStrategyStep, handleStrategyStepImagesPick, removeStrategyStepImage,
     moveStrategyStepImage, handleSaveStrategy, handleDeleteStrategy, confirmDeleteStrategy,
-    handleNoticeImagePick, handleAddNotice, handleOpenAddNotice, handleEditNotice, handleDeleteNotice,
+    handleNoticeImagesPick, removeNoticeImage, moveNoticeImage, draggingNoticeImageId, setDraggingNoticeImageId,
+    dragOverNoticeImageId, setDragOverNoticeImageId, handleAddNotice, handleOpenAddNotice, handleEditNotice, handleDeleteNotice,
     WIKI_FORM_DEFAULT, handleAddWiki, handleOpenAddWiki, handleOpenEditWiki, handleDeleteWiki,
     handleWikiImagePick, addWikiKeyRule, updateWikiKeyRule, removeWikiKeyRule, handleDeleteSetupType,
     handleDeleteConfluence, handleDeleteMistakeType, handleChangeSetupTypeColor, handleChangeConfluenceColor,
