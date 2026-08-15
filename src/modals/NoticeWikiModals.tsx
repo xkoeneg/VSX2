@@ -273,6 +273,10 @@ export function AddNoticeModal() {
     moveStrategyStepImage, handleSaveStrategy, handleDeleteStrategy, confirmDeleteStrategy,
     handleNoticeImagesPick, removeNoticeImage, moveNoticeImage, draggingNoticeImageId, setDraggingNoticeImageId,
     dragOverNoticeImageId, setDragOverNoticeImageId, handleAddNotice, handleOpenAddNotice, handleEditNotice, handleDeleteNotice,
+    noticeStepPendingDeleteId, setNoticeStepPendingDeleteId, draggingNoticeStepImageId, setDraggingNoticeStepImageId,
+    dragOverNoticeStepImageId, setDragOverNoticeStepImageId, noticeStepImageInputRefs, addNoticeStep, updateNoticeStep,
+    requestRemoveNoticeStep, removeNoticeStep, confirmRemoveNoticeStep, handleNoticeStepImagesPick, removeNoticeStepImage,
+    moveNoticeStepImage,
     WIKI_FORM_DEFAULT, handleAddWiki, handleOpenAddWiki, handleOpenEditWiki, handleDeleteWiki,
     handleWikiImagePick, addWikiKeyRule, updateWikiKeyRule, removeWikiKeyRule, handleDeleteSetupType,
     handleDeleteConfluence, handleDeleteMistakeType, handleChangeSetupTypeColor, handleChangeConfluenceColor,
@@ -570,6 +574,145 @@ export function AddNoticeModal() {
               )}
             </div>
 
+            {/* ================= SECTION 3: Step-by-Step Breakdown ================= */}
+            {/* Optional — for setups where one screenshot + one paragraph isn't
+                enough. Each step gets its own title, notes, and screenshot(s),
+                so a multi-part insight or trap can be walked through stage by
+                stage, exactly like the Strategy Model execution builder. */}
+            <div className="bg-zinc-800 border border-zinc-700 p-4 rounded-xl space-y-3 shadow-[0_1px_0_0_rgba(255,255,255,0.02)_inset]">
+              <div className="flex items-center gap-2 pb-1">
+                <span className="text-[10px] font-bold text-cyan-400 font-mono tracking-widest">03</span>
+                <h4 className="text-xs font-semibold text-slate-300 uppercase tracking-wider">Step-by-Step Breakdown</h4>
+                <span className="text-[10px] text-zinc-600">(optional)</span>
+                {newNotice.steps.length > 0 && (
+                  <span className="text-xs text-zinc-600 ml-auto">{newNotice.steps.length} step{newNotice.steps.length === 1 ? '' : 's'}</span>
+                )}
+              </div>
+              <p className="text-[11px] text-zinc-500 -mt-1.5">
+                Need more than one image to explain this? Break it into steps — each with its own note and screenshot(s).
+              </p>
+
+              {newNotice.steps.length > 0 && (
+                <div className="space-y-3">
+                  {newNotice.steps.map((step, idx) => (
+                    <div key={step.id} className="rounded-lg border border-zinc-700 bg-zinc-800/60 p-3 space-y-2.5">
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs font-bold uppercase tracking-wider text-zinc-400">Step {idx + 1}</span>
+                        <button
+                          type="button"
+                          onClick={() => requestRemoveNoticeStep(step.id)}
+                          title="Remove step"
+                          className="p-1 text-zinc-500 hover:text-rose-400 hover:bg-rose-500/10 rounded transition-colors"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                      <input
+                        type="text"
+                        value={step.title}
+                        onChange={(e) => updateNoticeStep(step.id, 'title', e.target.value)}
+                        placeholder={isMistake ? `Step ${idx + 1}: What led into the trap` : `Step ${idx + 1}: London Open Sweep & Reaction`}
+                        className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-zinc-600"
+                      />
+                      <textarea
+                        ref={(el) => { if (el) { el.style.height = 'auto'; el.style.height = `${el.scrollHeight}px`; } }}
+                        value={step.notes}
+                        onChange={(e) => {
+                          updateNoticeStep(step.id, 'notes', e.target.value);
+                          const el = e.currentTarget;
+                          el.style.height = 'auto';
+                          el.style.height = `${el.scrollHeight}px`;
+                        }}
+                        placeholder="Explain what's happening in this stage..."
+                        rows={2}
+                        className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-zinc-600 resize-none overflow-hidden"
+                      />
+                      <div>
+                        <div className="grid grid-cols-3 gap-2">
+                          {step.images.map((img, imgIdx) => (
+                            <div
+                              key={img.id}
+                              draggable
+                              onDragStart={(e) => {
+                                setDraggingNoticeStepImageId(img.id);
+                                e.dataTransfer.effectAllowed = 'move';
+                                e.dataTransfer.setData('text/plain', img.id);
+                              }}
+                              onDragEnd={() => { setDraggingNoticeStepImageId(null); setDragOverNoticeStepImageId(null); }}
+                              onDragOver={(e) => { e.preventDefault(); e.dataTransfer.dropEffect = 'move'; }}
+                              onDragEnter={() => setDragOverNoticeStepImageId(img.id)}
+                              onDragLeave={() => setDragOverNoticeStepImageId(prev => (prev === img.id ? null : prev))}
+                              onDrop={(e) => {
+                                e.preventDefault();
+                                const draggedId = e.dataTransfer.getData('text/plain');
+                                moveNoticeStepImage(step.id, draggedId, img.id);
+                                setDraggingNoticeStepImageId(null);
+                                setDragOverNoticeStepImageId(null);
+                              }}
+                              onClick={() => setLightboxImage(img.url)}
+                              title="Drag to reorder — click to view larger"
+                              className={cn(
+                                "relative aspect-video rounded-lg overflow-hidden border bg-zinc-950 group cursor-grab active:cursor-grabbing transition-all",
+                                dragOverNoticeStepImageId === img.id
+                                  ? (isMistake ? "border-rose-400 ring-2 ring-rose-400/60" : "border-cyan-400 ring-2 ring-cyan-400/60")
+                                  : "border-zinc-700",
+                                draggingNoticeStepImageId === img.id && "opacity-40"
+                              )}
+                            >
+                              <img src={img.url} alt="Step screenshot" className="w-full h-full object-cover pointer-events-none" />
+                              <div className="absolute top-1 left-1 flex items-center gap-0.5 px-1 py-0.5 rounded bg-black/70 text-white text-[9px] font-semibold pointer-events-none">
+                                <GripVertical className="w-2.5 h-2.5" />
+                                {imgIdx + 1}
+                              </div>
+                              <button
+                                type="button"
+                                onClick={(e) => { e.stopPropagation(); removeNoticeStepImage(step.id, img.id); }}
+                                title="Remove screenshot"
+                                className="absolute top-1 right-1 p-1 rounded-full bg-black/70 text-white opacity-0 group-hover:opacity-100 focus:opacity-100 transition-opacity"
+                              >
+                                <X className="w-3 h-3" />
+                              </button>
+                            </div>
+                          ))}
+                          <button
+                            type="button"
+                            onClick={() => noticeStepImageInputRefs.current[step.id]?.click()}
+                            className={cn(
+                              "aspect-video rounded-lg border border-dashed flex flex-col items-center justify-center gap-1 text-zinc-500 hover:text-zinc-300 transition-all bg-zinc-800",
+                              isMistake ? "border-zinc-700 hover:border-rose-500/60" : "border-zinc-700 hover:border-cyan-500/60"
+                            )}
+                          >
+                            <ImagePlus className="w-4 h-4" />
+                            <span className="text-[10px] text-center leading-tight px-1">{step.images.length > 0 ? 'Add more' : 'Upload screenshot(s)'}</span>
+                          </button>
+                        </div>
+                        {step.images.length > 1 && (
+                          <p className="text-[10px] text-zinc-600 mt-1.5">Drag a photo to reorder — the first one shows first. Click any photo to view it larger.</p>
+                        )}
+                        <input
+                          ref={(el) => { noticeStepImageInputRefs.current[step.id] = el; }}
+                          type="file"
+                          accept="image/*"
+                          multiple
+                          className="hidden"
+                          onChange={(e) => handleNoticeStepImagesPick(step.id, e)}
+                        />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              <button
+                type="button"
+                onClick={addNoticeStep}
+                className="w-full flex items-center justify-center gap-1.5 py-2.5 border border-dashed border-zinc-700 hover:border-zinc-500 text-zinc-400 hover:text-white rounded-lg text-xs font-medium transition-colors"
+              >
+                <Plus className="w-3.5 h-3.5" />
+                Add Step
+              </button>
+            </div>
+
             <div className="flex justify-end gap-3 pt-1">
               <button
                 type="button"
@@ -592,6 +735,49 @@ export function AddNoticeModal() {
         </div>
       </ModalBackdrop>
     )
+  );
+}
+
+export function DeleteNoticeStepConfirm() {
+  const { noticeStepPendingDeleteId, setNoticeStepPendingDeleteId, newNotice, confirmRemoveNoticeStep } = useAppContext();
+
+  if (!noticeStepPendingDeleteId) return null;
+  const step = newNotice.steps.find(s => s.id === noticeStepPendingDeleteId);
+  const idx = newNotice.steps.findIndex(s => s.id === noticeStepPendingDeleteId);
+
+  return (
+    <ModalBackdrop
+      onClose={() => setNoticeStepPendingDeleteId(null)}
+      className="fixed inset-0 bg-black/80 backdrop-blur-sm z-[70] flex items-center justify-center p-4"
+    >
+      <div className="bg-zinc-900 border border-zinc-800 rounded-xl max-w-sm w-full p-6" onClick={(e) => e.stopPropagation()}>
+        <div className="flex items-center gap-3 mb-3">
+          <div className="w-10 h-10 rounded-full bg-rose-500/15 flex items-center justify-center flex-shrink-0">
+            <Trash2 className="w-5 h-5 text-rose-400" />
+          </div>
+          <h3 className="text-lg font-bold text-white">Remove "{step?.title || `Step ${idx + 1}`}"?</h3>
+        </div>
+        <p className="text-sm text-zinc-400 mb-6">
+          This removes this step{step && step.images.length > 0 ? ` and its ${step.images.length} screenshot${step.images.length > 1 ? 's' : ''}` : ''} from the breakdown. This cannot be undone.
+        </p>
+        <div className="flex justify-end gap-3">
+          <button
+            type="button"
+            onClick={() => setNoticeStepPendingDeleteId(null)}
+            className="px-4 py-2 bg-zinc-800 hover:bg-zinc-700 text-white rounded-lg text-sm transition-colors"
+          >
+            Cancel
+          </button>
+          <button
+            type="button"
+            onClick={confirmRemoveNoticeStep}
+            className="px-4 py-2 bg-rose-500/90 hover:bg-rose-500 text-white rounded-lg text-sm font-medium transition-colors"
+          >
+            Remove
+          </button>
+        </div>
+      </div>
+    </ModalBackdrop>
   );
 }
 
