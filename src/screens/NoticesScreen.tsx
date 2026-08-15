@@ -498,13 +498,32 @@ export function NoticesScreen() {
             </button>
           </div>
 
-          {/* Thumbnail banner — always reserved so every card is the same height */}
-          <div className={cn('w-full aspect-[16/10] flex-shrink-0 flex items-center justify-center overflow-hidden', theme !== 'light' ? 'bg-zinc-950' : 'bg-zinc-100')}>
+          {/* Thumbnail banner — same aspect ratio as insight cards. What
+              Happened / Prevention titles are overlaid directly on top of
+              the image (not stacked below it) so the card's total height
+              stays identical to the insight cards regardless of content. */}
+          <div className={cn('relative w-full aspect-[16/10] flex-shrink-0 flex items-center justify-center overflow-hidden', theme !== 'light' ? 'bg-zinc-950' : 'bg-zinc-100')}>
             {notice.imageUrl ? (
               <img src={notice.imageUrl} alt={notice.title} className="w-full h-full object-cover" />
             ) : (
               <ImageIcon className={cn('w-5 h-5', theme !== 'light' ? 'text-zinc-700' : 'text-zinc-400')} />
             )}
+
+            {/* Caption overlay — dark scrim at the bottom of the image */}
+            <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/90 via-black/70 to-transparent px-2 pt-5 pb-1.5 flex flex-col gap-1">
+              <div>
+                <p className="text-[8px] font-semibold uppercase tracking-wide text-zinc-300/90">❌ What Happened</p>
+                <p className={cn('text-[10px] leading-snug line-clamp-1', notice.whatHappenedTitle ? 'text-white/90' : 'text-zinc-500 italic')}>
+                  {notice.whatHappenedTitle || 'No title added yet.'}
+                </p>
+              </div>
+              <div>
+                <p className="text-[8px] font-semibold uppercase tracking-wide text-emerald-400">💡 Rule / Prevention</p>
+                <p className={cn('text-[10px] font-semibold leading-snug line-clamp-1', notice.preventionTitle ? 'text-emerald-200' : 'text-emerald-200/50 italic')}>
+                  {notice.preventionTitle || 'No title added yet.'}
+                </p>
+              </div>
+            </div>
           </div>
 
           <div className="p-2 flex-1 flex flex-col gap-1">
@@ -518,24 +537,6 @@ export function NoticesScreen() {
                   </span>
                 ))}
               </div>
-            </div>
-
-            {/* What Happened — shows the short card title only; the full
-                description text lives behind the click-to-preview modal. */}
-            <div className={cn('rounded-md px-1.5 py-1', theme !== 'light' ? 'bg-zinc-800/60' : 'bg-zinc-100')}>
-              <p className={cn('text-[8px] font-semibold uppercase tracking-wide mb-0.5', theme !== 'light' ? 'text-zinc-500' : 'text-zinc-500')}>❌ What Happened</p>
-              <p className={cn('text-[10px] leading-snug line-clamp-2', notice.whatHappenedTitle ? (theme !== 'light' ? 'text-zinc-400' : 'text-zinc-600') : 'text-zinc-600 italic')}>
-                {notice.whatHappenedTitle || 'No title added yet.'}
-              </p>
-            </div>
-
-            {/* Prevention / Rule — accented so the lesson stands out.
-                Same idea: short title on the card, full text in preview. */}
-            <div className="rounded-md border-l-2 border-emerald-500 bg-emerald-500/5 px-1.5 py-1 mt-auto">
-              <p className="text-[8px] font-semibold uppercase tracking-wide mb-0.5 text-emerald-400">💡 Rule / Prevention</p>
-              <p className={cn('text-[10px] font-semibold leading-snug line-clamp-2', notice.preventionTitle ? 'text-emerald-200' : 'text-emerald-200/50 italic')}>
-                {notice.preventionTitle || 'No title added yet.'}
-              </p>
             </div>
           </div>
         </div>
