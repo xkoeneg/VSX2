@@ -178,8 +178,9 @@ export interface MarketNotice {
   session: SessionOption | ''; // NY / London / Asia / Pre-market Open filter
   tag: string; // free-text asset/session tag, e.g. "NQ Futures"
   imageUrl: string; // TradingView chart screenshot reference
-  description: string; // What Happened / Trap Description
+  description: string; // What Happened / Trap Description (mistake) or Key Takeaway Note (insight)
   whatHappenedTitle: string; // Short title shown on the card; description is the full text shown in preview
+  keyTakeawayTitle: string; // Short title shown on the card for insight notices; description is the full note shown in preview
   consequence: string; // Consequence / Risk
   prevention: string; // Prevention Rule / Solution (bold actionable fix)
   preventionTitle: string; // Short title shown on the card; prevention is the full text shown in preview
