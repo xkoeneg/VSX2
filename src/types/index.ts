@@ -179,8 +179,10 @@ export interface MarketNotice {
   tag: string; // free-text asset/session tag, e.g. "NQ Futures"
   imageUrl: string; // TradingView chart screenshot reference
   description: string; // What Happened / Trap Description
+  whatHappenedTitle: string; // Short title shown on the card; description is the full text shown in preview
   consequence: string; // Consequence / Risk
   prevention: string; // Prevention Rule / Solution (bold actionable fix)
+  preventionTitle: string; // Short title shown on the card; prevention is the full text shown in preview
   timestamp: string;
   // Legacy free-form observation log, kept only so old backups round-trip
   // cleanly. No longer surfaced in the Market Notices UI.
