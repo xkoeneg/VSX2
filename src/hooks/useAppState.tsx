@@ -3961,6 +3961,17 @@ Return ONLY a JSON object — no markdown, no code fences, no commentary — wit
   });
   const removeWikiKeyRule = (idx: number) => setNewWiki(prev => ({ ...prev, keyRules: (prev.keyRules || []).filter((_, i) => i !== idx) }));
 
+  // Guards the X button on each rule row with a confirmation, same
+  // request/confirm split used for strategy steps — requestRemoveWikiKeyRule
+  // just opens the prompt, confirmRemoveWikiKeyRule does the actual removal.
+  const [wikiRulePendingDeleteIndex, setWikiRulePendingDeleteIndex] = useState<number | null>(null);
+  const requestRemoveWikiKeyRule = (idx: number) => setWikiRulePendingDeleteIndex(idx);
+  const confirmRemoveWikiKeyRule = () => {
+    if (wikiRulePendingDeleteIndex === null) return;
+    removeWikiKeyRule(wikiRulePendingDeleteIndex);
+    setWikiRulePendingDeleteIndex(null);
+  };
+
   // ---- Standard Trading Concepts import (Option A) ----------------------
   // One-click populate of the pre-written ICT / Price Action library. Dedupes
   // by title (case-insensitive) so re-clicking after a partial import, or
@@ -5071,6 +5082,10 @@ Return ONLY a JSON object — no markdown, no code fences, no commentary — wit
     addWikiKeyRule,
     updateWikiKeyRule,
     removeWikiKeyRule,
+    wikiRulePendingDeleteIndex,
+    setWikiRulePendingDeleteIndex,
+    requestRemoveWikiKeyRule,
+    confirmRemoveWikiKeyRule,
     STANDARD_TRADING_CONCEPTS,
     missingStandardConcepts,
     allStandardConceptsImported,
