@@ -283,9 +283,16 @@ export function WikiScreen() {
     // ---- Local UI state: category filter + search --------------------
     // Scoped to this screen only (not app-wide persisted state) — filtering
     // the library is a transient viewing preference, not data.
-    const [activeCategory, setActiveCategory] = useState<'All' | WikiCategory>('All');
+    const [activeCategory, setActiveCategory] = useState<'All' | WikiCategory | 'Latest'>('All');
     const [wikiSearch, setWikiSearch] = useState('');
-    const FILTER_CATEGORIES: ('All' | WikiCategory)[] = ['All', ...WIKI_CATEGORIES];
+    // 'All' stays pinned first, real categories are alphabetized, and
+    // 'Latest' is pinned last as a standalone shortcut (not a real
+    // category) to jump straight to the most recently added concept.
+    const FILTER_CATEGORIES: ('All' | WikiCategory | 'Latest')[] = [
+      'All',
+      ...[...WIKI_CATEGORIES].sort((a, b) => a.localeCompare(b)),
+      'Latest',
+    ];
 
     // ---- Category pill strip: single row, wheel-scrollable -------------
     // Keeps the row clean and straight (no wrap) while still being easy to
@@ -352,10 +359,18 @@ export function WikiScreen() {
       );
     }, [wikiEntries, wikiSearch]);
 
-    const categoryFilteredEntries = useMemo(
-      () => activeCategory === 'All' ? searchedEntries : searchedEntries.filter(e => e.category === activeCategory),
-      [searchedEntries, activeCategory]
-    );
+    // 'Latest' isn't a real category — it resolves to whichever concept was
+    // added most recently (the last item in wikiEntries, per insertion
+    // order), so picking it always jumps to what you just made.
+    const latestEntry = wikiEntries.length > 0 ? wikiEntries[wikiEntries.length - 1] : null;
+
+    const categoryFilteredEntries = useMemo(() => {
+      if (activeCategory === 'All') return searchedEntries;
+      if (activeCategory === 'Latest') {
+        return latestEntry && searchedEntries.some(e => e.id === latestEntry.id) ? [latestEntry] : [];
+      }
+      return searchedEntries.filter(e => e.category === activeCategory);
+    }, [searchedEntries, activeCategory, latestEntry]);
 
     const isFiltering = activeCategory !== 'All' || wikiSearch.trim().length > 0;
 
@@ -869,8 +884,9 @@ export function WikiScreen() {
               >
                 {FILTER_CATEGORIES.map(cat => {
                   const isActive = activeCategory === cat;
-                  const count = cat === 'All' ? wikiEntries.length : wikiEntries.filter(e => e.category === cat).length;
-                  const style = cat === 'All' ? null : getWikiCategoryStyle(cat);
+                  const isLatest = cat === 'Latest';
+                  const count = cat === 'All' ? wikiEntries.length : isLatest ? (latestEntry ? 1 : 0) : wikiEntries.filter(e => e.category === cat).length;
+                  const style = (cat === 'All' || isLatest) ? null : getWikiCategoryStyle(cat);
                   return (
                     <button
                       key={cat}
@@ -880,26 +896,37 @@ export function WikiScreen() {
                         isActive
                           ? (style
                               ? style.active
-                              : (theme !== 'light'
-                                  ? 'bg-sky-500/15 text-sky-300 border-sky-500/40'
-                                  : 'bg-sky-100 text-sky-700 border-sky-300'))
+                              : isLatest
+                                ? (theme !== 'light'
+                                    ? 'bg-amber-500/15 text-amber-300 border-amber-500/40'
+                                    : 'bg-amber-100 text-amber-700 border-amber-300')
+                                : (theme !== 'light'
+                                    ? 'bg-sky-500/15 text-sky-300 border-sky-500/40'
+                                    : 'bg-sky-100 text-sky-700 border-sky-300'))
                           : (theme !== 'light'
                               ? 'bg-white/[0.04] border-white/[0.06] text-zinc-400 hover:bg-white/[0.07] hover:text-zinc-200'
                               : 'bg-zinc-100 border-zinc-200 text-zinc-500 hover:bg-zinc-200/70 hover:text-zinc-700')
                       )}
                     >
-                      {/* Every pill gets a leading dot slot — even 'All' — so
-                          the label + count always start at the same offset
-                          and pills line up symmetrically regardless of word
-                          length. Count is fused to the label as one text
-                          run (not a separate flex item) so its spacing
-                          doesn't stretch differently per pill. */}
-                      <span className={cn(
-                        'w-1.5 h-1.5 rounded-full flex-shrink-0',
-                        style ? style.dot : (theme !== 'light' ? 'bg-zinc-500' : 'bg-zinc-400')
-                      )} />
+                      {/* Every pill gets a leading icon slot — even 'All' — so
+                          the label always starts at the same offset and pills
+                          line up symmetrically regardless of word length.
+                          'Latest' gets a Flame instead of a dot since it's a
+                          shortcut, not a real category; count is fused to the
+                          label as one text run so spacing stays consistent. */}
+                      {isLatest ? (
+                        <Flame className={cn(
+                          'w-3 h-3 flex-shrink-0',
+                          isActive ? 'text-current' : (theme !== 'light' ? 'text-amber-400' : 'text-amber-500')
+                        )} />
+                      ) : (
+                        <span className={cn(
+                          'w-1.5 h-1.5 rounded-full flex-shrink-0',
+                          style ? style.dot : (theme !== 'light' ? 'bg-zinc-500' : 'bg-zinc-400')
+                        )} />
+                      )}
                       <span className="whitespace-nowrap">
-                        {cat} <span className={isActive ? 'opacity-70' : 'opacity-50'}>({count})</span>
+                        {isLatest ? 'Latest' : (<>{cat} <span className={isActive ? 'opacity-70' : 'opacity-50'}>({count})</span></>)}
                       </span>
                     </button>
                   );
