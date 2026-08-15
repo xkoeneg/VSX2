@@ -5107,6 +5107,11 @@ Return ONLY a JSON object — no markdown, no code fences, no commentary — wit
     handleOpenEditWiki,
     handleDeleteWiki,
     handleWikiImagesPick,
+    // Back-compat alias — several screens/modals destructure the old
+    // single-image handler name from context even though the wiki
+    // screenshot picker now supports multiple images. Keeping this avoids
+    // touching every one of those call sites just to compile.
+    handleWikiImagePick: handleWikiImagesPick,
     removeWikiImage,
     moveWikiImage,
     handleWikiImageDragOver,
