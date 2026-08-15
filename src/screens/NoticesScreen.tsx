@@ -413,7 +413,7 @@ export function NoticesScreen() {
         )}
       >
         {/* Chart preview */}
-        <div className={cn('w-full h-20 flex items-center justify-center overflow-hidden', theme !== 'light' ? 'bg-zinc-950' : 'bg-zinc-100')}>
+        <div className={cn('w-full aspect-[4/3] flex items-center justify-center overflow-hidden', theme !== 'light' ? 'bg-zinc-950' : 'bg-zinc-100')}>
           {notice.imageUrl ? (
             <img src={notice.imageUrl} alt={notice.title} className="w-full h-full object-cover" />
           ) : (
