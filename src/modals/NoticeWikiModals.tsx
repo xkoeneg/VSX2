@@ -1076,11 +1076,16 @@ export function AddWikiModal() {
               <div>
                 <label className="block text-xs text-zinc-400 mb-1.5">Core Definition</label>
                 <textarea
+                  ref={(el) => { if (el) { el.style.height = 'auto'; el.style.height = `${el.scrollHeight}px`; } }}
                   value={newWiki.content || ''}
-                  onChange={(e) => setNewWiki(prev => ({ ...prev, content: e.target.value }))}
+                  onChange={(e) => {
+                    setNewWiki(prev => ({ ...prev, content: e.target.value }));
+                    e.target.style.height = 'auto';
+                    e.target.style.height = `${e.target.scrollHeight}px`;
+                  }}
                   placeholder="Short description of the concept..."
                   rows={3}
-                  className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2.5 text-sm text-white focus:outline-none focus:border-zinc-600 resize-none"
+                  className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2.5 text-sm text-white focus:outline-none focus:border-zinc-600 resize-none overflow-hidden"
                 />
               </div>
 
@@ -1147,11 +1152,16 @@ export function AddWikiModal() {
               <div>
                 <label className="block text-xs text-zinc-400 mb-1.5">Additional Notes</label>
                 <textarea
+                  ref={(el) => { if (el) { el.style.height = 'auto'; el.style.height = `${el.scrollHeight}px`; } }}
                   value={newWiki.contextNotes || ''}
-                  onChange={(e) => setNewWiki(prev => ({ ...prev, contextNotes: e.target.value }))}
+                  onChange={(e) => {
+                    setNewWiki(prev => ({ ...prev, contextNotes: e.target.value }));
+                    e.target.style.height = 'auto';
+                    e.target.style.height = `${e.target.scrollHeight}px`;
+                  }}
                   placeholder="Additional notes..."
                   rows={2}
-                  className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2.5 text-sm text-white focus:outline-none focus:border-zinc-600 resize-none"
+                  className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2.5 text-sm text-white focus:outline-none focus:border-zinc-600 resize-none overflow-hidden"
                 />
               </div>
             </div>
