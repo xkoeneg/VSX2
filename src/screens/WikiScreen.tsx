@@ -69,7 +69,6 @@ import {
   Database,
   Settings,
   Scale,
-  Layers,
   ShieldCheck,
   Zap,
   AlertTriangle,
@@ -439,16 +438,62 @@ export function WikiScreen() {
     // ---- Right panel: full detail workbench for the selected concept ----
     const renderWikiDetailPanel = () => {
       if (!selectedEntry) {
+        // Search/category filter narrowed the list to zero, but the library
+        // itself has entries — offer a way back rather than the generic
+        // "no concept selected" placeholder below.
+        if (isFiltering) {
+          return (
+            <div className="flex-1 flex flex-col items-center justify-center text-center p-8">
+              <div className={cn(
+                'w-14 h-14 rounded-full border flex items-center justify-center mb-3',
+                theme !== 'light' ? 'bg-zinc-900 border-zinc-800' : 'bg-zinc-100 border-zinc-200'
+              )}>
+                <Search className={cn('w-6 h-6', theme !== 'light' ? 'text-zinc-700' : 'text-zinc-400')} />
+              </div>
+              <h3 className="text-sm font-semibold text-zinc-400">No concepts match</h3>
+              <p className="text-xs text-zinc-500 mt-1 max-w-[240px]">Try a different search term or category filter.</p>
+            </div>
+          );
+        }
+
+        // Nothing selected — either the library is genuinely empty, or
+        // nothing has been picked from the left panel yet. The 2-column
+        // layout stays put either way; only this inner card changes.
         return (
           <div className="flex-1 flex flex-col items-center justify-center text-center p-8">
             <div className={cn(
               'w-14 h-14 rounded-full border flex items-center justify-center mb-3',
               theme !== 'light' ? 'bg-zinc-900 border-zinc-800' : 'bg-zinc-100 border-zinc-200'
             )}>
-              <Search className={cn('w-6 h-6', theme !== 'light' ? 'text-zinc-700' : 'text-zinc-400')} />
+              <BookOpen className={cn('w-6 h-6', theme !== 'light' ? 'text-zinc-700' : 'text-zinc-400')} />
             </div>
-            <h3 className="text-sm font-semibold text-zinc-400">No concepts match</h3>
-            <p className="text-xs text-zinc-500 mt-1 max-w-[240px]">Try a different search term or category filter.</p>
+            <h3 className={cn('text-sm font-semibold', theme !== 'light' ? 'text-zinc-300' : 'text-zinc-600')}>No concept selected</h3>
+            <p className="text-xs text-zinc-500 mt-1 max-w-[280px]">
+              Select a concept from the left panel or create a new entry to get started.
+            </p>
+            <div className="flex items-center justify-center gap-2 flex-wrap mt-4">
+              <button onClick={handleOpenAddWiki} className={cn(
+                'inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm transition-colors',
+                theme !== 'light' ? 'bg-zinc-800 hover:bg-zinc-700 text-white' : 'bg-zinc-900 hover:bg-zinc-800 text-white'
+              )}>
+                <Plus className="w-4 h-4" />
+                Add Entry
+              </button>
+              {!allStandardConceptsImported && (
+                <button
+                  onClick={handleClickImportStandardConcepts}
+                  className={cn(
+                    'inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm transition-colors border',
+                    theme !== 'light'
+                      ? 'bg-sky-500/10 hover:bg-sky-500/20 text-sky-400 border-sky-500/30'
+                      : 'bg-sky-50 hover:bg-sky-100 text-sky-600 border-sky-200'
+                  )}
+                >
+                  <Download className="w-4 h-4" />
+                  📥 Import Standard Concepts
+                </button>
+              )}
+            </div>
           </div>
         );
       }
@@ -667,20 +712,6 @@ export function WikiScreen() {
           description="Visual reference for PD Arrays & trading concepts"
           actions={
             <>
-              <div className={cn(
-                'hidden sm:flex items-center gap-3 px-3 py-2 rounded-lg border text-xs flex-shrink-0 whitespace-nowrap',
-                theme !== 'light' ? 'bg-zinc-900/60 border-zinc-800/80 text-zinc-400' : 'bg-white border-zinc-200 text-zinc-500'
-              )}>
-                <span className="flex items-center gap-1.5">
-                  <BookOpen className="w-3.5 h-3.5 text-sky-500 flex-shrink-0" />
-                  <span className={cn('font-semibold', theme !== 'light' ? 'text-white' : 'text-zinc-900')}>{totalConcepts}</span> concepts
-                </span>
-                <span className={cn('w-px h-3 flex-shrink-0', theme !== 'light' ? 'bg-zinc-800' : 'bg-zinc-200')} />
-                <span className="flex items-center gap-1.5">
-                  <Layers className="w-3.5 h-3.5 text-purple-500 flex-shrink-0" />
-                  <span className={cn('font-semibold', theme !== 'light' ? 'text-white' : 'text-zinc-900')}>{presentCategoryNames.length}</span> categories
-                </span>
-              </div>
               {!allStandardConceptsImported && (
                 <button
                   onClick={handleClickImportStandardConcepts}
@@ -713,73 +744,40 @@ export function WikiScreen() {
           }
         />
 
-        {wikiEntries.length === 0 ? (
-          <div className="text-center py-12">
-            <div className={cn(
-              'w-16 h-16 mx-auto rounded-full flex items-center justify-center mb-4',
-              theme !== 'light' ? 'bg-zinc-800' : 'bg-zinc-100'
-            )}>
-              <Lightbulb className={cn('w-8 h-8', theme !== 'light' ? 'text-zinc-600' : 'text-zinc-400')} />
-            </div>
-            <h3 className={cn('text-lg font-medium mb-2', theme !== 'light' ? 'text-white' : 'text-zinc-900')}>No wiki entries yet</h3>
-            <p className="text-zinc-500 mb-4">Build your personal trading knowledge base</p>
-            <div className="flex items-center justify-center gap-2 flex-wrap">
-              {!allStandardConceptsImported && (
-                <button
-                  onClick={handleClickImportStandardConcepts}
+        {/* Split-pane workbench — category list on the left, full
+            detail workbench for the selected concept on the right.
+            Always rendered, even with zero entries — the right panel's own
+            placeholder (see renderWikiDetailPanel) handles the empty case,
+            so the page layout never flips to a different full-screen view. */}
+        <div className="flex flex-col lg:flex-row gap-4 lg:h-[calc(100vh-220px)] min-h-[520px]">
+          {/* Left sidebar — nav list (~35%) */}
+          <div className={cn(
+            'lg:w-[35%] lg:min-w-[300px] lg:max-w-[420px] flex flex-col border rounded-xl overflow-hidden lg:h-full',
+            theme !== 'light' ? 'bg-[#111113] border-zinc-800/80' : 'bg-white border-zinc-200'
+          )}>
+            {/* Search — scoped to the concept list it filters */}
+            <div className={cn('p-3 border-b flex-shrink-0', theme !== 'light' ? 'border-zinc-800/80' : 'border-zinc-200')}>
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-zinc-500 pointer-events-none" />
+                <input
+                  type="text"
+                  value={wikiSearch}
+                  onChange={(e) => setWikiSearch(e.target.value)}
+                  placeholder="Search concepts, rules, sessions..."
                   className={cn(
-                    'inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm transition-colors border',
+                    'w-full rounded-lg pl-9 pr-3 py-2 text-xs focus:outline-none focus:border-sky-500/50 border',
                     theme !== 'light'
-                      ? 'bg-sky-500/10 hover:bg-sky-500/20 text-sky-400 border-sky-500/30'
-                      : 'bg-sky-50 hover:bg-sky-100 text-sky-600 border-sky-200'
+                      ? 'bg-zinc-950 border-zinc-800 text-white placeholder:text-zinc-600'
+                      : 'bg-zinc-50 border-zinc-200 text-zinc-900 placeholder:text-zinc-400'
                   )}
-                >
-                  <Download className="w-4 h-4" />
-                  📥 Import Standard Concepts
-                </button>
-              )}
-              <button onClick={handleOpenAddWiki} className={cn(
-                'inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm transition-colors',
-                theme !== 'light' ? 'bg-zinc-800 hover:bg-zinc-700 text-white' : 'bg-zinc-900 hover:bg-zinc-800 text-white'
-              )}>
-                <Plus className="w-4 h-4" />
-                Add Entry
-              </button>
-            </div>
-          </div>
-        ) : (
-          /* Split-pane workbench — category list on the left, full
-             detail workbench for the selected concept on the right.
-             This sits directly under PageHeader (no block in between)
-             so its top border lands on the same baseline as the first
-             card row in Rules Playbook / Trade History. */
-          <div className="flex flex-col lg:flex-row gap-4 lg:h-[calc(100vh-220px)] min-h-[520px]">
-            {/* Left sidebar — nav list (~35%) */}
-            <div className={cn(
-              'lg:w-[35%] lg:min-w-[300px] lg:max-w-[420px] flex flex-col border rounded-xl overflow-hidden lg:h-full',
-              theme !== 'light' ? 'bg-[#111113] border-zinc-800/80' : 'bg-white border-zinc-200'
-            )}>
-              {/* Search — scoped to the concept list it filters */}
-              <div className={cn('p-3 border-b flex-shrink-0', theme !== 'light' ? 'border-zinc-800/80' : 'border-zinc-200')}>
-                <div className="relative">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-zinc-500 pointer-events-none" />
-                  <input
-                    type="text"
-                    value={wikiSearch}
-                    onChange={(e) => setWikiSearch(e.target.value)}
-                    placeholder="Search concepts, rules, sessions..."
-                    className={cn(
-                      'w-full rounded-lg pl-9 pr-3 py-2 text-xs focus:outline-none focus:border-sky-500/50 border',
-                      theme !== 'light'
-                        ? 'bg-zinc-950 border-zinc-800 text-white placeholder:text-zinc-600'
-                        : 'bg-zinc-50 border-zinc-200 text-zinc-900 placeholder:text-zinc-400'
-                    )}
-                  />
-                </div>
+                />
               </div>
+            </div>
 
-              {/* Category pill filters */}
-              <div className={cn('p-3 border-b flex flex-wrap items-center gap-1.5 flex-shrink-0', theme !== 'light' ? 'border-zinc-800/80' : 'border-zinc-200')}>
+            {/* Category pill filters, with a subtle count label anchoring
+                the section right below them. */}
+            <div className={cn('p-3 border-b flex-shrink-0', theme !== 'light' ? 'border-zinc-800/80' : 'border-zinc-200')}>
+              <div className="flex flex-wrap items-center gap-1.5">
                 {FILTER_CATEGORIES.map(cat => {
                   const isActive = activeCategory === cat;
                   const count = cat === 'All' ? wikiEntries.length : wikiEntries.filter(e => e.category === cat).length;
@@ -804,37 +802,40 @@ export function WikiScreen() {
                   );
                 })}
               </div>
-
-              {/* Scrollable concept list */}
-              <div className="flex-1 overflow-y-auto p-2 space-y-1 min-h-[240px]">
-                {categoryFilteredEntries.length > 0 ? (
-                  categoryFilteredEntries.map(renderWikiListItem)
-                ) : (
-                  <div className="text-center py-10 px-4">
-                    <Search className={cn('w-6 h-6 mx-auto mb-2', theme !== 'light' ? 'text-zinc-700' : 'text-zinc-300')} />
-                    <p className="text-xs text-zinc-500">No concepts match</p>
-                    {isFiltering && (
-                      <button
-                        onClick={() => { setActiveCategory('All'); setWikiSearch(''); }}
-                        className="mt-2 text-[11px] text-sky-500 hover:text-sky-600 transition-colors"
-                      >
-                        Clear filters
-                      </button>
-                    )}
-                  </div>
-                )}
-              </div>
+              <p className="mt-2 text-[10px] text-zinc-500">
+                {totalConcepts} concept{totalConcepts === 1 ? '' : 's'} • {presentCategoryNames.length} categor{presentCategoryNames.length === 1 ? 'y' : 'ies'}
+              </p>
             </div>
 
-            {/* Right main panel — detail workbench (~65%) */}
-            <div className={cn(
-              'flex-1 min-w-0 flex flex-col border rounded-xl overflow-hidden lg:h-full',
-              theme !== 'light' ? 'bg-[#111113] border-zinc-800/80' : 'bg-white border-zinc-200'
-            )}>
-              {renderWikiDetailPanel()}
+            {/* Scrollable concept list */}
+            <div className="flex-1 overflow-y-auto p-2 space-y-1 min-h-[240px]">
+              {categoryFilteredEntries.length > 0 ? (
+                categoryFilteredEntries.map(renderWikiListItem)
+              ) : (
+                <div className="text-center py-10 px-4">
+                  <Search className={cn('w-6 h-6 mx-auto mb-2', theme !== 'light' ? 'text-zinc-700' : 'text-zinc-300')} />
+                  <p className="text-xs text-zinc-500">{wikiEntries.length === 0 ? 'No concepts yet' : 'No concepts match'}</p>
+                  {isFiltering && (
+                    <button
+                      onClick={() => { setActiveCategory('All'); setWikiSearch(''); }}
+                      className="mt-2 text-[11px] text-sky-500 hover:text-sky-600 transition-colors"
+                    >
+                      Clear filters
+                    </button>
+                  )}
+                </div>
+              )}
             </div>
           </div>
-        )}
+
+          {/* Right main panel — detail workbench (~65%) */}
+          <div className={cn(
+            'flex-1 min-w-0 flex flex-col border rounded-xl overflow-hidden lg:h-full',
+            theme !== 'light' ? 'bg-[#111113] border-zinc-800/80' : 'bg-white border-zinc-200'
+          )}>
+            {renderWikiDetailPanel()}
+          </div>
+        </div>
       </div>
     );
 }
