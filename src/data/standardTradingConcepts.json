@@ -1,1 +1,222 @@
-
+[
+  {
+    "id": "fvg",
+    "title": "Fair Value Gap (FVG)",
+    "category": "PD Arrays",
+    "overview": "A Fair Value Gap is a three-candle imbalance that forms when price moves so impulsively that the high of the first candle fails to overlap the low of the third candle (or vice versa for bearish gaps). The untouched middle-candle range represents a zone where price moved too fast for two-sided (buyer/seller) trading to occur efficiently. Because delivery was one-sided, price is drawn back to this gap over time to 'rebalance' — trading through it fills the inefficiency and restores fair, two-sided price discovery before the broader move can continue.",
+    "checklist": [
+      "Confirm a clean 3-candle sequence where candle 1's wick does not overlap candle 3's wick",
+      "Verify the gap forms in the direction of the higher-timeframe draw on liquidity",
+      "Let price return into the gap rather than chasing the initial expansion",
+      "Prioritize FVGs that form on the leg of a fresh market structure shift",
+      "Use the 50% 'consequent encroachment' level of the gap as the primary entry trigger",
+      "Discard gaps that have already been fully traded through and closed"
+    ],
+    "sessionConfluence": {
+      "session": "London / New York",
+      "timeframe": "1H–4H for the gap, 5m–15m for entry confirmation",
+      "notes": "FVGs formed during a killzone displacement carry far more weight than ones formed in low-volume, rangebound hours — filter for gaps born from genuine expansion, not chop."
+    },
+    "tags": ["imbalance", "PD array", "rebalance", "consequent encroachment", "displacement"]
+  },
+  {
+    "id": "ifvg",
+    "title": "Inverse Fair Value Gap (IFVG)",
+    "category": "PD Arrays",
+    "overview": "An Inverse Fair Value Gap is a standard FVG that has been fully violated — price closes completely through the gap rather than just wicking into it. Once invalidated, the gap's polarity flips: a bullish FVG that gets closed through becomes bearish resistance, and a bearish FVG that gets closed through becomes bullish support. The IFVG signals that the imbalance was decisively rejected by the opposing side of the market, and that origin zone often acts as a springboard for the next leg in the new direction.",
+    "checklist": [
+      "Confirm the original FVG has been fully violated with a candle body close, not just a wick",
+      "Wait for price to close through the entire gap range before treating it as inverted",
+      "Look for price to return and react at the flipped gap as opposite-polarity support/resistance",
+      "Stack an MSS or CISD on a lower timeframe for confirmation before entry",
+      "Treat the 50% level of the inverted gap as the primary reaction zone",
+      "Give more weight to IFVGs that also swept liquidity on the violation candle"
+    ],
+    "sessionConfluence": {
+      "session": "London / New York overlap",
+      "timeframe": "5m–15m confirmation off a 1H IFVG",
+      "notes": "The violation candle itself is often the tell — look for it to also take out a nearby swing point, showing the flip was driven by real order flow rather than noise."
+    },
+    "tags": ["inversion", "polarity flip", "failed imbalance", "PD array"]
+  },
+  {
+    "id": "cisd",
+    "title": "Change In State of Delivery (CISD)",
+    "category": "Market Structure",
+    "overview": "Change in State of Delivery describes the moment order flow flips from one side of the market to the other. It's identified by marking the open of the first candle in a same-direction sequence (a 'delivery leg'), then waiting for a candle to close back beyond that open in the opposite direction. Because CISD only requires a close through the leg's origin — not a full swing-point break — it typically prints earlier than a Market Structure Shift, making it useful as a first sign that aggressive control of price has changed hands.",
+    "checklist": [
+      "Identify a clean series of same-direction candles that form a delivery leg",
+      "Mark the open price of the very first candle in that sequence",
+      "Wait for a candle close beyond that open in the new, opposing direction",
+      "Confirm the CISD occurs at a meaningful point of interest — OB, FVG, or swept liquidity",
+      "Use CISD as early confirmation ahead of a slower-forming MSS or BOS",
+      "Avoid acting on a CISD with no liquidity draw or POI immediately behind it"
+    ],
+    "sessionConfluence": {
+      "session": "London Open / New York Open killzones",
+      "timeframe": "1m–5m for the CISD trigger, 15m–1H for context",
+      "notes": "CISD works best as a trigger, not a standalone thesis — pair it with higher-timeframe bias so you're only reacting to flips that agree with the larger draw on liquidity."
+    },
+    "tags": ["order flow", "delivery", "reversal trigger", "confirmation"]
+  },
+  {
+    "id": "mss",
+    "title": "Market Structure Shift (MSS)",
+    "category": "Market Structure",
+    "overview": "A Market Structure Shift is a decisive break of a recent swing high or swing low that invalidates the prevailing short-term trend and signals a change in directional bias. Unlike a simple break, a valid MSS is typically preceded by a liquidity sweep of the opposing side — the market first runs stops beyond the old extreme before reversing hard enough to close through the swing point that defined the trend. MSS is one of the core confirmation tools used to time entries at premium/discount arrays after a reversal.",
+    "checklist": [
+      "Identify the prior swing high/low currently defining short-term structure",
+      "Wait for a liquidity sweep of the opposing extreme before the shift",
+      "Require a decisive candle close beyond the swing point, not just a wick",
+      "Look for an accompanying FVG or Order Block forming on the shift leg",
+      "Filter the shift against higher-timeframe bias before trading it",
+      "Avoid trading an MSS that occurs mid-range with no liquidity purpose"
+    ],
+    "sessionConfluence": {
+      "session": "London Open, New York Open, London Close",
+      "timeframe": "15m–1H for the shift, 5m for refined entry",
+      "notes": "The cleanest MSS setups occur right after a killzone liquidity raid — a shift with no preceding sweep is more likely to be noise than a genuine change in intent."
+    },
+    "tags": ["reversal", "swing break", "structure", "liquidity sweep"]
+  },
+  {
+    "id": "bos",
+    "title": "Break of Structure (BOS)",
+    "category": "Market Structure",
+    "overview": "Break of Structure is the continuation counterpart to MSS — it's a decisive close beyond the most recent same-direction swing point while the prevailing trend is still intact. Where MSS signals a reversal, BOS confirms the existing trend is extending, giving traders confidence to look for pullback entries at PD arrays in the direction of the trend rather than anticipating a reversal.",
+    "checklist": [
+      "Confirm price has been respecting a series of higher highs/higher lows (or lower lows/lower highs)",
+      "Wait for a close beyond the most recent same-direction swing point",
+      "Distinguish BOS from MSS by checking whether the break agrees with or reverses current trend",
+      "Use the BOS to validate continuation entries at the next pullback point of interest",
+      "Avoid trading a BOS into an un-swept opposing liquidity pool just ahead",
+      "Confirm higher-timeframe alignment before treating BOS as tradeable"
+    ],
+    "sessionConfluence": {
+      "session": "New York AM session",
+      "timeframe": "1H trend context, 15m for pullback entries",
+      "notes": "BOS is a green light to keep trading with the trend, not an entry signal on its own — wait for price to retrace into a fresh OB or FVG after the break."
+    },
+    "tags": ["continuation", "trend", "swing break", "structure"]
+  },
+  {
+    "id": "ob",
+    "title": "Order Block (OB)",
+    "category": "PD Arrays",
+    "overview": "An Order Block is the last opposing candle before an impulsive, displaced move away from a level — a down-close candle right before an explosive rally, or an up-close candle right before a sharp decline. It's treated as a footprint of large-scale institutional order flow: the origin candle where aggressive orders were absorbed before price expanded away. Price frequently returns to mitigate this zone before continuing in the direction of the original expansion.",
+    "checklist": [
+      "Identify the last down-close candle before bullish expansion (or up-close before bearish)",
+      "Confirm the expansion leg leaves behind a Fair Value Gap as proof of displacement",
+      "Mark the OB range from the candle's open to its low (or open to high for bearish)",
+      "Wait for price to return into the OB range before considering entries",
+      "Prioritize OBs that formed at a liquidity sweep or market structure shift",
+      "Discard OBs that have already been mitigated and broken through"
+    ],
+    "sessionConfluence": {
+      "session": "London / New York killzones",
+      "timeframe": "4H–1H for the OB, 15m for entry refinement",
+      "notes": "The strongest OBs are the ones that caused the displacement leading directly to an MSS — an OB with no structure shift behind it is a lower-probability zone."
+    },
+    "tags": ["institutional footprint", "displacement", "PD array", "mitigation"]
+  },
+  {
+    "id": "breaker-block",
+    "title": "Breaker Block",
+    "category": "PD Arrays",
+    "overview": "A Breaker Block forms when an Order Block fails — price trades through it and closes beyond, invalidating the zone as a continuation point. That failure, however, flips the block's role: the same range that used to act as support/resistance in one direction now acts as support/resistance in the opposite direction once price returns to it. Breakers are essentially a market-structure-based cousin of the Inverse FVG, built from failed order blocks rather than failed imbalances.",
+    "checklist": [
+      "Identify an Order Block that fails — price closes fully through its range",
+      "Confirm the failure is accompanied by a liquidity sweep of a nearby high/low",
+      "Wait for price to retrace back into the broken OB range",
+      "Treat the breaker as opposite-polarity support/resistance on the retest",
+      "Combine with a CISD or MSS on the failure leg for added confluence",
+      "Give more weight to breakers that align with the higher-timeframe draw on liquidity"
+    ],
+    "sessionConfluence": {
+      "session": "London Open / New York Open",
+      "timeframe": "1H for the breaker formation, 5m–15m for entry",
+      "notes": "Breaker Blocks tend to outperform in trending conditions where the failed OB was fighting the higher-timeframe bias to begin with — the failure confirms which side is actually in control."
+    },
+    "tags": ["failed order block", "polarity flip", "PD array", "structure"]
+  },
+  {
+    "id": "mitigation-block",
+    "title": "Mitigation Block",
+    "category": "PD Arrays",
+    "overview": "A Mitigation Block forms when a move attempts to expand but fails to displace price cleanly, leaving no true Fair Value Gap behind. Instead of a classic Order Block, the last opposing candle before the failed attempt becomes the level price returns to 'mitigate' unfilled orders before reversing. It's a subtler, lower-displacement cousin of the Order Block — most useful in choppier, inefficient market conditions where clean impulsive moves are harder to find.",
+    "checklist": [
+      "Identify a failed expansion attempt that does not leave a clean FVG",
+      "Confirm the origin candle has unmitigated order flow left behind it",
+      "Wait for price to return to that last order-flow candle",
+      "Look for a rejection wick or a CISD as confirmation on the retest",
+      "Favor Mitigation Blocks in ranging or inefficient market conditions",
+      "Deprioritize this array when a cleaner OB or FVG is available nearby"
+    ],
+    "sessionConfluence": {
+      "session": "Asian session / low-volatility hours",
+      "timeframe": "1H context, 15m for reaction confirmation",
+      "notes": "Because Mitigation Blocks lack the displacement of a true OB, treat them as a lower-conviction array — best used to fine-tune entries within a larger, higher-conviction thesis rather than as the primary setup."
+    },
+    "tags": ["unmitigated", "failed expansion", "PD array", "low displacement"]
+  },
+  {
+    "id": "bpr",
+    "title": "Balanced Price Range (BPR)",
+    "category": "PD Arrays",
+    "overview": "A Balanced Price Range forms when a bullish Fair Value Gap and a bearish Fair Value Gap occur back-to-back and overlap each other, typically during a sharp two-way whipsaw in price. The overlapping region represents a zone of genuine equilibrium — both sides of the market left an unfilled imbalance in the same area, so price is strongly drawn back to trade through and rebalance the whole overlapping range before continuing.",
+    "checklist": [
+      "Identify a bullish FVG immediately followed by a bearish FVG (or vice versa) that overlap in price",
+      "Mark the overlapping region between both gaps as the balanced range",
+      "Wait for price to trade back into the overlap zone before considering entries",
+      "Layer in higher-timeframe PD array confluence within the same zone",
+      "Treat the BPR as a reversal zone against the immediate move, or a continuation zone if it aligns with HTF trend",
+      "Avoid trading a BPR that has already been fully closed through"
+    ],
+    "sessionConfluence": {
+      "session": "New York AM session",
+      "timeframe": "15m–1H for BPR formation, 5m for entry",
+      "notes": "BPRs often mark the mid-point of a larger expansion — expect a reaction, but confirm with CISD before assuming the whole range will hold as a reversal."
+    },
+    "tags": ["equilibrium", "overlapping FVG", "PD array", "rebalance"]
+  },
+  {
+    "id": "liquidity-sweep-inducement",
+    "title": "Liquidity Sweep / Inducement",
+    "category": "Terminology",
+    "overview": "A Liquidity Sweep is a brief penetration beyond an obvious high, low, or level — equal highs/lows, a trendline, a session extreme — designed to trigger resting stop orders before price reverses. Inducement refers specifically to smaller, internal liquidity pools engineered to draw in early or retail positioning ahead of the real, external liquidity target. Recognizing the difference between inducement (a minor trap) and the main liquidity draw helps avoid entering on the wrong side of an engineered move.",
+    "checklist": [
+      "Identify obvious resting liquidity — equal highs/lows, trendline liquidity, or session extremes",
+      "Watch for a fast, wick-dominant penetration beyond the level with quick rejection",
+      "Confirm there is no sustained candle close beyond the swept level",
+      "Look for a CISD or MSS immediately following the sweep as confirmation",
+      "Distinguish minor inducement liquidity from the larger external liquidity target",
+      "Avoid entering in the direction of the sweep itself — it is the trap, not the trade"
+    ],
+    "sessionConfluence": {
+      "session": "All killzones — most reliable at London Open and New York Open",
+      "timeframe": "1m–5m for the sweep, 15m–1H for the liquidity map",
+      "notes": "Map out both internal (inducement) and external liquidity before the session opens — the sweep that matters is usually the one that finally clears external liquidity, not the small internal pools along the way."
+    },
+    "tags": ["stop hunt", "liquidity", "trap", "inducement", "smart money"]
+  },
+  {
+    "id": "asian-range-killzones",
+    "title": "Asian Range & Killzones",
+    "category": "Execution Models",
+    "overview": "The Asian Range is the high-to-low consolidation that typically forms during the low-volatility Asian trading session, acting as a liquidity pool for the more volatile sessions that follow. Killzones are the specific, recurring windows — London Open, New York Open, and London Close — where the highest-probability manipulation and directional moves tend to occur. The core execution model is to mark the Asian range, then watch for a killzone to sweep one side of it before reversing toward the opposite side or the next higher-timeframe liquidity target.",
+    "checklist": [
+      "Mark the Asian session high and low once the session closes",
+      "Wait for the London killzone to manipulate — sweep — one side of the Asian range",
+      "Look for a CISD or MSS to confirm reversal within the killzone window",
+      "Target the opposite side of the Asian range, or the next higher-timeframe liquidity pool",
+      "Avoid chasing entries once the killzone window has closed without clean confirmation",
+      "Confirm the day's higher-timeframe bias before committing to a direction"
+    ],
+    "sessionConfluence": {
+      "session": "London Open (02:00–05:00 EST) / New York Open (07:00–10:00 EST)",
+      "timeframe": "15m for the range and manipulation, 5m for entry timing",
+      "notes": "This model performs best on days with a clean, well-defined Asian range — an unusually wide or choppy Asian session tends to produce less reliable killzone reactions."
+    },
+    "tags": ["session model", "killzone", "range", "execution model", "manipulation"]
+  }
+]
