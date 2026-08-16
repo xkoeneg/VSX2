@@ -319,11 +319,12 @@ export const migrateStoredData = (raw: any): StoredData => {
       ? data.notebookFolders.filter((f: any) => typeof f === 'string' && f.trim())
       : [],
     notebookFolderColors: (data.notebookFolderColors && typeof data.notebookFolderColors === 'object' && !Array.isArray(data.notebookFolderColors))
-      ? Object.fromEntries(
-          Object.entries(data.notebookFolderColors).filter(
-            ([k, v]) => typeof k === 'string' && typeof v === 'string' && (NOTEBOOK_COVER_COLORS as readonly string[]).includes(v)
-          )
-        )
+      ? Object.entries(data.notebookFolderColors).reduce<Record<string, string>>((acc, [k, v]) => {
+          if (typeof k === 'string' && typeof v === 'string' && (NOTEBOOK_COVER_COLORS as readonly string[]).includes(v)) {
+            acc[k] = v;
+          }
+          return acc;
+        }, {})
       : {},
   };
 };
