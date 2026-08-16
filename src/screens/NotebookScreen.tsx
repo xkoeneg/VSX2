@@ -1066,21 +1066,24 @@ export function NotebookScreen() {
 
           {/* Recently Deleted — pinned as a footer row at the very bottom
               of the panel, outside the scrollable folder list, so it stays
-              put no matter how many folders there are. */}
-          <button
-            onClick={() => { setActiveFolder(RECENTLY_DELETED); setActiveTagFilter(null); }}
-            className={cn(
-              'w-full flex items-center gap-2.5 px-3.5 py-2.5 border-t text-base text-left transition-colors flex-shrink-0',
-              border,
-              isTrashView
-                ? (theme !== 'light' ? 'bg-rose-500/10 text-rose-300' : 'bg-rose-50 text-rose-700')
-                : cn(textBody, theme !== 'light' ? 'hover:bg-zinc-800/60' : 'hover:bg-zinc-50')
-            )}
-          >
-            <Trash2 className="w-4 h-4 flex-shrink-0" />
-            <span className="flex-1 truncate">Recently Deleted</span>
-            <span className={cn('text-xs', textMuted)}>{deletedEntries.length}</span>
-          </button>
+              put no matter how many folders there are. Styled to match the
+              inset pill rows above (rounded, same padding) instead of
+              stretching edge-to-edge, which read as an inconsistent strip. */}
+          <div className={cn('p-2.5 border-t flex-shrink-0', border)}>
+            <button
+              onClick={() => { setActiveFolder(RECENTLY_DELETED); setActiveTagFilter(null); }}
+              className={cn(
+                'w-full flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-base text-left font-medium transition-colors',
+                isTrashView
+                  ? (theme !== 'light' ? 'bg-rose-500/10 text-rose-300' : 'bg-rose-50 text-rose-700')
+                  : cn(textBody, theme !== 'light' ? 'hover:bg-zinc-800/60' : 'hover:bg-zinc-50')
+              )}
+            >
+              <Trash2 className="w-4 h-4 flex-shrink-0" />
+              <span className="flex-1 truncate">Recently Deleted</span>
+              <span className={cn('text-xs', textMuted)}>{deletedEntries.length}</span>
+            </button>
+          </div>
         </div>
 
         {/* ==== Notes + editor frame ==== */}
