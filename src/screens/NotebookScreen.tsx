@@ -648,26 +648,30 @@ export function NotebookScreen() {
         description="Your mindset notes, affirmations, and personal reflections"
         actions={
           <div className="relative flex items-center">
-            <button
-              type="button"
-              onClick={() => createNote()}
-              className="flex items-center gap-2 px-3 sm:px-4 py-2 bg-zinc-800 hover:bg-zinc-700 text-white rounded-lg text-sm transition-colors"
-            >
-              <Plus className="w-4 h-4" />
-              <span className="hidden sm:inline">New Note</span>
-            </button>
-            <button
-              onClick={() => setShowTemplateMenu(v => !v)}
-              title="New from template"
-              className={cn(
-                'flex items-center justify-center w-9 h-9 ml-1.5 rounded-lg border transition-colors flex-shrink-0',
-                theme !== 'light'
-                  ? 'bg-zinc-800 border-zinc-700 text-zinc-300 hover:bg-zinc-700'
-                  : 'bg-zinc-100 border-zinc-200 text-zinc-700 hover:bg-zinc-200'
-              )}
-            >
-              <ChevronDown className="w-3.5 h-3.5" />
-            </button>
+            {/* Single fused pill — same visual weight as "Add Entry" /
+                "Add Notice" on every other screen. The template chevron is
+                a second click-target inside the SAME rounded container
+                (divided by a 1px hairline), not a separate detached
+                button, so this still reads as one control at a glance. */}
+            <div className="flex items-center bg-zinc-800 hover:bg-zinc-700 rounded-lg text-white text-sm transition-colors overflow-hidden">
+              <button
+                type="button"
+                onClick={() => createNote()}
+                className="flex items-center gap-2 pl-3 sm:pl-4 pr-3 py-2"
+              >
+                <Plus className="w-4 h-4" />
+                <span className="hidden sm:inline">New Note</span>
+              </button>
+              <span className="w-px h-5 bg-white/10" />
+              <button
+                type="button"
+                onClick={() => setShowTemplateMenu(v => !v)}
+                title="New from template"
+                className="flex items-center justify-center pl-2 pr-3 py-2 h-full"
+              >
+                <ChevronDown className="w-3.5 h-3.5" />
+              </button>
+            </div>
             {showTemplateMenu && (
               <div className={cn('absolute right-0 top-full mt-1.5 w-60 rounded-lg border shadow-xl z-20 py-1.5', theme !== 'light' ? 'bg-zinc-900 border-zinc-800' : 'bg-white border-zinc-200')}>
                 {NOTEBOOK_TEMPLATES.map(t => (
