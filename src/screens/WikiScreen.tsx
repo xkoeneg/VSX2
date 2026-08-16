@@ -790,44 +790,47 @@ export function WikiScreen() {
 
     return (
       <div className="space-y-6 min-w-0">
-        <div className="flex items-start justify-between gap-4 flex-wrap">
-          <PageHeader
-            title="Knowledge Wiki"
-            description="Visual reference for PD Arrays & trading concepts"
-          />
-          <div className="flex items-center gap-2 flex-shrink-0">
-            {!allStandardConceptsImported && (
-              <button
-                onClick={handleClickImportStandardConcepts}
-                className={cn(
-                  'relative flex items-center justify-center w-9 h-9 rounded-lg transition-colors flex-shrink-0 border',
-                  theme !== 'light'
-                    ? 'bg-sky-500/10 hover:bg-sky-500/20 text-sky-400 border-sky-500/30'
-                    : 'bg-sky-50 hover:bg-sky-100 text-sky-600 border-sky-200'
-                )}
-                title={`Import Standard Concepts (${missingStandardConcepts.length} available)`}
-              >
-                <Download className="w-4 h-4" />
-                <span className={cn(
-                  'absolute -top-1.5 -right-1.5 text-[9px] font-semibold w-4 h-4 flex items-center justify-center rounded-full',
-                  theme !== 'light' ? 'bg-sky-500 text-white' : 'bg-sky-600 text-white'
-                )}>
-                  {missingStandardConcepts.length}
-                </span>
-              </button>
-            )}
-            <button
-              onClick={handleOpenAddWiki}
-              className={cn(
-                'flex items-center justify-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-colors flex-shrink-0',
-                theme !== 'light' ? 'bg-zinc-800 hover:bg-zinc-700 text-white' : 'bg-zinc-900 hover:bg-zinc-800 text-white'
+        {/* Page header — actions live inline in the header row, same
+            pattern as Trade History (Import icon button, then primary
+            Add button), so every screen's header lines up identically. */}
+        <PageHeader
+          title="Knowledge Wiki"
+          description="Visual reference for PD Arrays & trading concepts"
+          actions={
+            <>
+              {!allStandardConceptsImported && (
+                <button
+                  type="button"
+                  onClick={handleClickImportStandardConcepts}
+                  title={`Import Standard Concepts (${missingStandardConcepts.length} available)`}
+                  aria-label="Import Standard Concepts"
+                  className={cn(
+                    'relative flex items-center justify-center w-9 h-9 rounded-lg transition-colors border flex-shrink-0',
+                    theme !== 'light'
+                      ? 'bg-zinc-800 border-zinc-700 text-zinc-300 hover:bg-zinc-700'
+                      : 'bg-zinc-100 border-zinc-200 text-zinc-700 hover:bg-zinc-200'
+                  )}
+                >
+                  <Download className="w-4 h-4" />
+                  <span className={cn(
+                    'absolute -top-1.5 -right-1.5 text-[9px] font-semibold w-4 h-4 flex items-center justify-center rounded-full',
+                    theme !== 'light' ? 'bg-sky-500 text-white' : 'bg-sky-600 text-white'
+                  )}>
+                    {missingStandardConcepts.length}
+                  </span>
+                </button>
               )}
-            >
-              <Plus className="w-4 h-4 flex-shrink-0" />
-              <span className="whitespace-nowrap">Add Entry</span>
-            </button>
-          </div>
-        </div>
+              <button
+                type="button"
+                onClick={handleOpenAddWiki}
+                className="flex items-center gap-2 px-3 sm:px-4 py-2 bg-zinc-800 hover:bg-zinc-700 text-white rounded-lg text-sm transition-colors"
+              >
+                <Plus className="w-4 h-4" />
+                <span className="hidden sm:inline">Add Entry</span>
+              </button>
+            </>
+          }
+        />
 
         {/* Top stats bar — 3 mini cards, Discipline Tracker-style. */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
