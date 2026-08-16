@@ -239,6 +239,7 @@ export function NotebookScreen() {
   const [selectMode, setSelectMode] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [showTemplateMenu, setShowTemplateMenu] = useState(false);
+  const [showMoveMenu, setShowMoveMenu] = useState(false);
 
   const [titleDraft, setTitleDraft] = useState('');
   const [tagInput, setTagInput] = useState('');
@@ -1111,32 +1112,49 @@ export function NotebookScreen() {
                 <div className="relative">
                   <button
                     type="button"
+                    onClick={() => selectedIds.size > 0 && setShowMoveMenu(v => !v)}
                     disabled={selectedIds.size === 0}
                     title="Move to folder"
                     className={cn(
                       'flex items-center justify-center w-8 h-8 rounded-full transition-colors disabled:opacity-30 disabled:pointer-events-none',
-                      textMuted, theme !== 'light' ? 'hover:bg-zinc-800 hover:text-zinc-200' : 'hover:bg-zinc-100 hover:text-zinc-700'
+                      showMoveMenu ? 'bg-purple-500/15 text-purple-400' : textMuted,
+                      theme !== 'light' ? 'hover:bg-zinc-800 hover:text-zinc-200' : 'hover:bg-zinc-100 hover:text-zinc-700'
                     )}
                   >
                     <Folder className="w-4 h-4" />
                   </button>
-                  <select
-                    aria-label="Move to folder"
-                    onChange={(e) => {
-                      if (e.target.value && selectedIds.size > 0) {
-                        handleBulkMoveNotebookEntries(Array.from(selectedIds), e.target.value === '__uncategorized__' ? '' : e.target.value);
-                        setSelectedIds(new Set());
-                      }
-                      e.target.value = '';
-                    }}
-                    defaultValue=""
-                    disabled={selectedIds.size === 0}
-                    className="absolute inset-0 w-full h-full opacity-0 cursor-pointer disabled:cursor-not-allowed"
-                  >
-                    <option value="" disabled>Move to&hellip;</option>
-                    <option value="__uncategorized__" className={theme !== 'light' ? 'bg-zinc-900' : 'bg-white'}>Uncategorized</option>
-                    {notebookFolders.map(f => <option key={f} value={f} className={theme !== 'light' ? 'bg-zinc-900' : 'bg-white'}>{f}</option>)}
-                  </select>
+                  {showMoveMenu && (
+                    <div className={cn('absolute right-0 top-full mt-1.5 w-48 rounded-lg border shadow-xl z-20 py-1.5', theme !== 'light' ? 'bg-zinc-900 border-zinc-800' : 'bg-white border-zinc-200')}>
+                      <p className={cn('text-xs font-semibold uppercase tracking-wider px-3.5 pb-1', textMuted)}>Move to</p>
+                      <div className="themed-scrollbar max-h-56 overflow-y-auto">
+                        <button
+                          onClick={() => {
+                            handleBulkMoveNotebookEntries(Array.from(selectedIds), '');
+                            setSelectedIds(new Set());
+                            setShowMoveMenu(false);
+                          }}
+                          className={cn('w-full flex items-center gap-2.5 px-3.5 py-2 text-sm text-left transition-colors', textBody, theme !== 'light' ? 'hover:bg-zinc-800' : 'hover:bg-zinc-50')}
+                        >
+                          <Folder className="w-4 h-4 flex-shrink-0" />
+                          <span className="truncate">Uncategorized</span>
+                        </button>
+                        {notebookFolders.map(f => (
+                          <button
+                            key={f}
+                            onClick={() => {
+                              handleBulkMoveNotebookEntries(Array.from(selectedIds), f);
+                              setSelectedIds(new Set());
+                              setShowMoveMenu(false);
+                            }}
+                            className={cn('w-full flex items-center gap-2.5 px-3.5 py-2 text-sm text-left transition-colors', textBody, theme !== 'light' ? 'hover:bg-zinc-800' : 'hover:bg-zinc-50')}
+                          >
+                            <Folder className="w-4 h-4 flex-shrink-0" />
+                            <span className="truncate">{f}</span>
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                 </div>
                 <span className={cn('w-px h-4', theme !== 'light' ? 'bg-zinc-800' : 'bg-zinc-200')} />
                 <button
@@ -1149,7 +1167,7 @@ export function NotebookScreen() {
                 </button>
                 <span className={cn('w-px h-4', theme !== 'light' ? 'bg-zinc-800' : 'bg-zinc-200')} />
                 <button
-                  onClick={() => { setSelectMode(false); setSelectedIds(new Set()); }}
+                  onClick={() => { setSelectMode(false); setSelectedIds(new Set()); setShowMoveMenu(false); }}
                   title="Cancel"
                   className={cn('flex items-center justify-center w-8 h-8 rounded-full transition-colors', textMuted, theme !== 'light' ? 'hover:bg-zinc-800 hover:text-zinc-200' : 'hover:bg-zinc-100 hover:text-zinc-700')}
                 >
