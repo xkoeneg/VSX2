@@ -552,7 +552,7 @@ export function NotebookScreen() {
   };
 
   return (
-    <div className="space-y-4 min-w-0">
+    <div className="space-y-6 min-w-0">
       <PageHeader
         title="Notebook"
         description="Your mindset notes, affirmations, and personal reflections"
