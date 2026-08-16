@@ -516,9 +516,9 @@ export function NotebookScreen() {
                 return next;
               })}
               style={{ marginLeft: depth * 10 }}
-              className={cn('p-0.5 rounded flex-shrink-0', textMuted, 'hover:text-zinc-200')}
+              className={cn('p-1 rounded flex-shrink-0', textMuted, 'hover:text-zinc-200')}
             >
-              {collapsed ? <ChevronRight className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
+              {collapsed ? <ChevronRight className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
             </button>
           ) : (
             <span style={{ marginLeft: depth * 10 + 14 }} />
@@ -526,23 +526,23 @@ export function NotebookScreen() {
           <button
             onClick={() => { setActiveFolder(node.fullPath); setActiveTagFilter(null); }}
             className={cn(
-              'flex-1 flex items-center gap-2 px-2 py-1.5 rounded-lg text-sm text-left transition-colors min-w-0',
+              'flex-1 flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-base text-left transition-colors min-w-0',
               activeFolder === node.fullPath
                 ? (theme !== 'light' ? 'bg-purple-500/10 text-purple-300' : 'bg-purple-50 text-purple-700')
                 : cn(textBody, theme !== 'light' ? 'hover:bg-zinc-800/60' : 'hover:bg-zinc-50')
             )}
           >
-            <span className={cn('w-2 h-2 rounded-full flex-shrink-0', folderColor(node.fullPath))} />
+            <span className={cn('w-2.5 h-2.5 rounded-full flex-shrink-0', folderColor(node.fullPath))} />
             <span className="truncate flex-1">{node.name}</span>
-            <span className={cn('text-[10px] flex-shrink-0', textMuted)}>{countForFolderPath(node.fullPath)}</span>
+            <span className={cn('text-xs flex-shrink-0', textMuted)}>{countForFolderPath(node.fullPath)}</span>
           </button>
           {!isDefault && (
             <button
               onClick={() => setFolderPendingDelete(node.fullPath)}
               title="Delete folder"
-              className={cn('absolute right-1 p-1 rounded-md opacity-0 group-hover/folder:opacity-100 transition-opacity', textMuted, 'hover:text-rose-400')}
+              className={cn('absolute right-1 p-1.5 rounded-md opacity-0 group-hover/folder:opacity-100 transition-opacity', textMuted, 'hover:text-rose-400')}
             >
-              <X className="w-3 h-3" />
+              <X className="w-3.5 h-3.5" />
             </button>
           )}
         </div>
@@ -575,37 +575,37 @@ export function NotebookScreen() {
       />
 
       {/* ---- Search + filter row ---- */}
-      <div className="flex items-center gap-2">
+      <div className="flex items-center gap-2.5">
         <div className="relative flex-1 max-w-md">
-          <Search className={cn('absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5', textMuted)} />
+          <Search className={cn('absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4', textMuted)} />
           <input
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Search notes and tags"
-            className={cn('w-full pl-9 pr-3 py-2 rounded-lg text-sm border outline-none', panelBg, border, theme !== 'light' ? 'text-white placeholder-zinc-500 focus:border-zinc-600' : 'text-zinc-900 placeholder-zinc-400 focus:border-zinc-300')}
+            className={cn('w-full pl-10 pr-3.5 py-2.5 rounded-lg text-base border outline-none', panelBg, border, theme !== 'light' ? 'text-white placeholder-zinc-500 focus:border-zinc-600' : 'text-zinc-900 placeholder-zinc-400 focus:border-zinc-300')}
           />
         </div>
         <div className="relative">
           <button
             onClick={() => setShowFilter(v => !v)}
             title="Filter by tag"
-            className={cn('p-2 rounded-lg border transition-colors', panelBg, border, activeTagFilter ? 'text-purple-400 border-purple-500/40' : cn(textMuted, 'hover:text-zinc-200'))}
+            className={cn('p-2.5 rounded-lg border transition-colors', panelBg, border, activeTagFilter ? 'text-purple-400 border-purple-500/40' : cn(textMuted, 'hover:text-zinc-200'))}
           >
-            <Filter className="w-3.5 h-3.5" />
+            <Filter className="w-4 h-4" />
           </button>
           {showFilter && (
-            <div className={cn('absolute right-0 mt-1.5 w-52 rounded-lg border shadow-xl z-20 p-2', theme !== 'light' ? 'bg-zinc-900 border-zinc-800' : 'bg-white border-zinc-200')}>
-              <p className={cn('text-[10px] font-semibold uppercase tracking-wider px-1.5 pb-1.5', textMuted)}>Filter by tag</p>
+            <div className={cn('absolute right-0 mt-1.5 w-56 rounded-lg border shadow-xl z-20 p-2.5', theme !== 'light' ? 'bg-zinc-900 border-zinc-800' : 'bg-white border-zinc-200')}>
+              <p className={cn('text-xs font-semibold uppercase tracking-wider px-2 pb-1.5', textMuted)}>Filter by tag</p>
               {allTags.length === 0 ? (
-                <p className={cn('text-xs px-1.5 py-1', textMuted)}>No tags yet</p>
+                <p className={cn('text-sm px-2 py-1.5', textMuted)}>No tags yet</p>
               ) : (
-                <div className="themed-scrollbar max-h-48 overflow-y-auto flex flex-col gap-0.5">
+                <div className="themed-scrollbar max-h-48 overflow-y-auto flex flex-col gap-1">
                   {allTags.map(tag => (
                     <button
                       key={tag}
                       onClick={() => { setActiveTagFilter(prev => prev === tag ? null : tag); setShowFilter(false); }}
                       className={cn(
-                        'text-left px-1.5 py-1 rounded-md text-xs transition-colors',
+                        'text-left px-2 py-1.5 rounded-md text-sm transition-colors',
                         activeTagFilter === tag
                           ? (theme !== 'light' ? 'bg-purple-500/15 text-purple-300' : 'bg-purple-50 text-purple-700')
                           : cn(textBody, theme !== 'light' ? 'hover:bg-zinc-800' : 'hover:bg-zinc-50')
@@ -617,7 +617,7 @@ export function NotebookScreen() {
                 </div>
               )}
               {activeTagFilter && (
-                <button onClick={() => { setActiveTagFilter(null); setShowFilter(false); }} className="w-full text-left px-1.5 py-1 mt-1 rounded-md text-xs text-rose-400 hover:bg-zinc-800">
+                <button onClick={() => { setActiveTagFilter(null); setShowFilter(false); }} className="w-full text-left px-2 py-1.5 mt-1 rounded-md text-sm text-rose-400 hover:bg-zinc-800">
                   Clear filter
                 </button>
               )}
@@ -637,11 +637,11 @@ export function NotebookScreen() {
           just kept growing the row (and the whole frame) instead of
           scrolling internally. Capping it with h-[70vh] at lg gives the
           flex-1 children something finite to fill and clip against. */}
-      <div className={cn('grid grid-cols-1 lg:grid-cols-[220px_280px_1fr] gap-0 rounded-xl border overflow-hidden min-h-[70vh] lg:h-[70vh]', border, panelBg)}
+      <div className={cn('grid grid-cols-1 lg:grid-cols-[248px_320px_1fr] gap-0 rounded-xl border overflow-hidden min-h-[75vh] lg:h-[75vh]', border, panelBg)}
       >
         {/* ==== Folder rail ==== */}
         <div className={cn('flex flex-col min-h-0 border-b lg:border-b-0 lg:border-r', border)}>
-          <div className={cn('p-3 border-b', border)}>
+          <div className={cn('p-3.5 border-b', border)}>
             {isAddingFolder ? (
               <input
                 autoFocus
@@ -650,48 +650,48 @@ export function NotebookScreen() {
                 onKeyDown={(e) => { if (e.key === 'Enter') submitNewFolder(); if (e.key === 'Escape') { setIsAddingFolder(false); setNewFolderName(''); } }}
                 onBlur={submitNewFolder}
                 placeholder="Folder name, or Parent/Child"
-                className={cn('w-full px-2.5 py-1.5 rounded-lg text-xs border outline-none', theme !== 'light' ? 'bg-zinc-800 border-zinc-700 text-white placeholder-zinc-500' : 'bg-zinc-50 border-zinc-200 text-zinc-900 placeholder-zinc-400')}
+                className={cn('w-full px-3 py-2 rounded-lg text-sm border outline-none', theme !== 'light' ? 'bg-zinc-800 border-zinc-700 text-white placeholder-zinc-500' : 'bg-zinc-50 border-zinc-200 text-zinc-900 placeholder-zinc-400')}
               />
             ) : (
               <button
                 onClick={() => setIsAddingFolder(true)}
-                className={cn('w-full flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium transition-colors', theme !== 'light' ? 'text-zinc-300 hover:bg-zinc-800' : 'text-zinc-700 hover:bg-zinc-50')}
+                className={cn('w-full flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-colors', theme !== 'light' ? 'text-zinc-300 hover:bg-zinc-800' : 'text-zinc-700 hover:bg-zinc-50')}
               >
-                <FolderPlus className="w-3.5 h-3.5" />
+                <FolderPlus className="w-4 h-4" />
                 Add folder
               </button>
             )}
           </div>
 
-          <div className="themed-scrollbar flex-1 min-h-0 overflow-y-auto p-2">
-            <p className={cn('text-[10px] font-semibold uppercase tracking-wider px-2 pt-1 pb-1.5', textMuted)}>Folders</p>
+          <div className="themed-scrollbar flex-1 min-h-0 overflow-y-auto p-2.5">
+            <p className={cn('text-xs font-semibold uppercase tracking-wider px-2.5 pt-1 pb-1.5', textMuted)}>Folders</p>
 
             <button
               onClick={() => { setActiveFolder(ALL_NOTES); setActiveTagFilter(null); }}
               className={cn(
-                'w-full flex items-center gap-2 px-2 py-1.5 rounded-lg text-sm text-left transition-colors',
+                'w-full flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-base text-left transition-colors',
                 activeFolder === ALL_NOTES
                   ? (theme !== 'light' ? 'bg-purple-500/10 text-purple-300' : 'bg-purple-50 text-purple-700')
                   : cn(textBody, theme !== 'light' ? 'hover:bg-zinc-800/60' : 'hover:bg-zinc-50')
               )}
             >
-              <StickyNote className="w-3.5 h-3.5 flex-shrink-0" />
+              <StickyNote className="w-4 h-4 flex-shrink-0" />
               <span className="flex-1 truncate">All notes</span>
-              <span className={cn('text-[10px]', textMuted)}>{liveEntries.length}</span>
+              <span className={cn('text-xs', textMuted)}>{liveEntries.length}</span>
             </button>
 
             <button
               onClick={() => { setActiveFolder(FAVORITES); setActiveTagFilter(null); }}
               className={cn(
-                'w-full flex items-center gap-2 px-2 py-1.5 rounded-lg text-sm text-left transition-colors',
+                'w-full flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-base text-left transition-colors',
                 isFavoritesView
                   ? (theme !== 'light' ? 'bg-purple-500/10 text-purple-300' : 'bg-purple-50 text-purple-700')
                   : cn(textBody, theme !== 'light' ? 'hover:bg-zinc-800/60' : 'hover:bg-zinc-50')
               )}
             >
-              <Star className="w-3.5 h-3.5 flex-shrink-0" />
+              <Star className="w-4 h-4 flex-shrink-0" />
               <span className="flex-1 truncate">Favorites</span>
-              <span className={cn('text-[10px]', textMuted)}>{liveEntries.filter(e => e.favorite).length}</span>
+              <span className={cn('text-xs', textMuted)}>{liveEntries.filter(e => e.favorite).length}</span>
             </button>
 
             {folderTree.map(node => renderFolderNode(node, 0))}
@@ -701,27 +701,27 @@ export function NotebookScreen() {
             <button
               onClick={() => { setActiveFolder(RECENTLY_DELETED); setActiveTagFilter(null); }}
               className={cn(
-                'w-full flex items-center gap-2 px-2 py-1.5 rounded-lg text-sm text-left transition-colors',
+                'w-full flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-base text-left transition-colors',
                 isTrashView
                   ? (theme !== 'light' ? 'bg-rose-500/10 text-rose-300' : 'bg-rose-50 text-rose-700')
                   : cn(textBody, theme !== 'light' ? 'hover:bg-zinc-800/60' : 'hover:bg-zinc-50')
               )}
             >
-              <Trash2 className="w-3.5 h-3.5 flex-shrink-0" />
+              <Trash2 className="w-4 h-4 flex-shrink-0" />
               <span className="flex-1 truncate">Recently Deleted</span>
-              <span className={cn('text-[10px]', textMuted)}>{deletedEntries.length}</span>
+              <span className={cn('text-xs', textMuted)}>{deletedEntries.length}</span>
             </button>
           </div>
         </div>
 
         {/* ==== Note list ==== */}
         <div className={cn('flex flex-col min-h-0 border-b lg:border-b-0 lg:border-r', border)}>
-          <div className={cn('flex items-center justify-between gap-2 p-3 border-b', border)}>
+          <div className={cn('flex items-center justify-between gap-2.5 p-3.5 border-b', border)}>
             {isTrashView ? (
               <div className="flex items-center justify-between w-full">
-                <span className={cn('text-xs font-medium', textMuted)}>Recently Deleted</span>
+                <span className={cn('text-sm font-medium', textMuted)}>Recently Deleted</span>
                 {deletedEntries.length > 0 && (
-                  <button onClick={() => setConfirmEmptyTrash(true)} className="text-[11px] font-medium text-rose-400 hover:underline">
+                  <button onClick={() => setConfirmEmptyTrash(true)} className="text-sm font-medium text-rose-400 hover:underline">
                     Empty Trash
                   </button>
                 )}
@@ -731,54 +731,54 @@ export function NotebookScreen() {
                 <div className="relative flex items-center">
                   <button
                     onClick={() => createNote()}
-                    className={cn('flex items-center gap-1.5 text-xs font-medium transition-colors', theme !== 'light' ? 'text-zinc-300 hover:text-white' : 'text-zinc-700 hover:text-zinc-900')}
+                    className={cn('flex items-center gap-2 text-sm font-medium transition-colors', theme !== 'light' ? 'text-zinc-300 hover:text-white' : 'text-zinc-700 hover:text-zinc-900')}
                   >
-                    <Plus className="w-3.5 h-3.5" />
+                    <Plus className="w-4 h-4" />
                     New note
                   </button>
                   <button
                     onClick={() => setShowTemplateMenu(v => !v)}
                     title="New from template"
-                    className={cn('p-1 ml-0.5 rounded-md transition-colors', textMuted, 'hover:text-zinc-200')}
+                    className={cn('p-1.5 ml-0.5 rounded-md transition-colors', textMuted, 'hover:text-zinc-200')}
                   >
-                    <ChevronDown className="w-3 h-3" />
+                    <ChevronDown className="w-3.5 h-3.5" />
                   </button>
                   {showTemplateMenu && (
-                    <div className={cn('absolute left-0 top-full mt-1 w-56 rounded-lg border shadow-xl z-20 py-1', theme !== 'light' ? 'bg-zinc-900 border-zinc-800' : 'bg-white border-zinc-200')}>
+                    <div className={cn('absolute left-0 top-full mt-1 w-60 rounded-lg border shadow-xl z-20 py-1.5', theme !== 'light' ? 'bg-zinc-900 border-zinc-800' : 'bg-white border-zinc-200')}>
                       {NOTEBOOK_TEMPLATES.map(t => (
                         <button
                           key={t.id}
                           onClick={() => createNote(t)}
-                          className={cn('w-full text-left px-3 py-1.5 transition-colors', theme !== 'light' ? 'hover:bg-zinc-800' : 'hover:bg-zinc-50')}
+                          className={cn('w-full text-left px-3.5 py-2 transition-colors', theme !== 'light' ? 'hover:bg-zinc-800' : 'hover:bg-zinc-50')}
                         >
-                          <p className={cn('text-xs font-medium', theme !== 'light' ? 'text-white' : 'text-zinc-900')}>{t.name}</p>
-                          <p className={cn('text-[10px]', textMuted)}>{t.description}</p>
+                          <p className={cn('text-sm font-medium', theme !== 'light' ? 'text-white' : 'text-zinc-900')}>{t.name}</p>
+                          <p className={cn('text-xs', textMuted)}>{t.description}</p>
                         </button>
                       ))}
                     </div>
                   )}
                 </div>
-                <div className="flex items-center gap-0.5">
+                <div className="flex items-center gap-1">
                   <button
                     onClick={() => setSelectMode(v => !v)}
                     title="Select notes"
-                    className={cn('p-1 rounded-md transition-colors', selectMode ? 'text-purple-400' : cn(textMuted, 'hover:text-zinc-200'))}
+                    className={cn('p-1.5 rounded-md transition-colors', selectMode ? 'text-purple-400' : cn(textMuted, 'hover:text-zinc-200'))}
                   >
-                    <CheckSquare className="w-3.5 h-3.5" />
+                    <CheckSquare className="w-4 h-4" />
                   </button>
                   <button
                     onClick={() => setViewMode(v => v === 'list' ? 'grid' : 'list')}
                     title={viewMode === 'list' ? 'Grid view' : 'List view'}
-                    className={cn('p-1 rounded-md transition-colors', textMuted, 'hover:text-zinc-200')}
+                    className={cn('p-1.5 rounded-md transition-colors', textMuted, 'hover:text-zinc-200')}
                   >
-                    {viewMode === 'list' ? <LayoutGrid className="w-3.5 h-3.5" /> : <Rows3 className="w-3.5 h-3.5" />}
+                    {viewMode === 'list' ? <LayoutGrid className="w-4 h-4" /> : <Rows3 className="w-4 h-4" />}
                   </button>
                   <button
                     onClick={cycleSort}
                     title={`Sort: ${sortLabel}`}
-                    className={cn('p-1 rounded-md transition-colors', textMuted, 'hover:text-zinc-200')}
+                    className={cn('p-1.5 rounded-md transition-colors', textMuted, 'hover:text-zinc-200')}
                   >
-                    <ArrowUpDown className="w-3.5 h-3.5" />
+                    <ArrowUpDown className="w-4 h-4" />
                   </button>
                 </div>
               </>
@@ -786,9 +786,9 @@ export function NotebookScreen() {
           </div>
 
           {selectMode && !isTrashView && (
-            <div className={cn('flex items-center justify-between gap-2 px-3 py-2 border-b', border, theme !== 'light' ? 'bg-zinc-800/40' : 'bg-zinc-50')}>
-              <span className={cn('text-[11px]', textMuted)}>{selectedIds.size} selected</span>
-              <div className="flex items-center gap-1.5">
+            <div className={cn('flex items-center justify-between gap-2.5 px-3.5 py-2.5 border-b', border, theme !== 'light' ? 'bg-zinc-800/40' : 'bg-zinc-50')}>
+              <span className={cn('text-sm', textMuted)}>{selectedIds.size} selected</span>
+              <div className="flex items-center gap-2">
                 <select
                   onChange={(e) => {
                     if (e.target.value && selectedIds.size > 0) {
@@ -799,7 +799,7 @@ export function NotebookScreen() {
                   }}
                   defaultValue=""
                   disabled={selectedIds.size === 0}
-                  className={cn('text-[11px] border rounded-md px-1.5 py-1 outline-none bg-transparent disabled:opacity-40', border, textMuted)}
+                  className={cn('text-sm border rounded-md px-2 py-1.5 outline-none bg-transparent disabled:opacity-40', border, textMuted)}
                 >
                   <option value="" disabled>Move to&hellip;</option>
                   <option value="__uncategorized__">Uncategorized</option>
@@ -808,13 +808,13 @@ export function NotebookScreen() {
                 <button
                   onClick={() => { handleBulkSoftDeleteNotebookEntries(Array.from(selectedIds)); setSelectedIds(new Set()); }}
                   disabled={selectedIds.size === 0}
-                  className="text-[11px] font-medium text-rose-400 px-2 py-1 rounded-md hover:bg-rose-500/10 disabled:opacity-40 transition-colors"
+                  className="text-sm font-medium text-rose-400 px-2.5 py-1.5 rounded-md hover:bg-rose-500/10 disabled:opacity-40 transition-colors"
                 >
                   Delete
                 </button>
                 <button
                   onClick={() => { setSelectMode(false); setSelectedIds(new Set()); }}
-                  className={cn('text-[11px] px-2 py-1 rounded-md transition-colors', textMuted, 'hover:text-zinc-200')}
+                  className={cn('text-sm px-2.5 py-1.5 rounded-md transition-colors', textMuted, 'hover:text-zinc-200')}
                 >
                   Cancel
                 </button>
@@ -824,16 +824,16 @@ export function NotebookScreen() {
 
           <div className="themed-scrollbar flex-1 min-h-0 overflow-y-auto">
             {notebookEntriesLoading ? (
-              <p className={cn('text-xs text-center py-10', textMuted)}>Loading your notes...</p>
+              <p className={cn('text-sm text-center py-12', textMuted)}>Loading your notes...</p>
             ) : visibleEntries.length === 0 ? (
-              <div className="text-center py-10 px-4">
-                <StickyNote className={cn('w-6 h-6 mx-auto mb-2', theme !== 'light' ? 'text-zinc-700' : 'text-zinc-300')} />
-                <p className={cn('text-xs', textMuted)}>
+              <div className="text-center py-12 px-5">
+                <StickyNote className={cn('w-7 h-7 mx-auto mb-2', theme !== 'light' ? 'text-zinc-700' : 'text-zinc-300')} />
+                <p className={cn('text-sm', textMuted)}>
                   {isTrashView ? 'Recently Deleted is empty.' : isFavoritesView ? 'No favorites yet.' : 'No notes here yet.'}
                 </p>
               </div>
             ) : viewMode === 'grid' && !isTrashView ? (
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 p-2">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 p-2.5">
                 {visibleEntries.map(entry => {
                   const cc = entry.color ? COVER_COLOR_CLASSES[entry.color] : null;
                   return (
@@ -841,7 +841,7 @@ export function NotebookScreen() {
                       key={entry.id}
                       onClick={() => selectMode ? toggleSelect(entry.id) : setSelectedEntryId(entry.id)}
                       className={cn(
-                        'text-left p-3 rounded-lg border flex flex-col gap-1 min-h-[92px] transition-colors',
+                        'text-left p-3.5 rounded-lg border flex flex-col gap-1.5 min-h-[112px] transition-colors',
                         border,
                         selectedEntryId === entry.id && !selectMode
                           ? (theme !== 'light' ? 'bg-zinc-800/70' : 'bg-zinc-100')
@@ -849,16 +849,16 @@ export function NotebookScreen() {
                         cc?.bgSoft
                       )}
                     >
-                      <div className="flex items-center gap-1.5">
-                        {selectMode && (selectedIds.has(entry.id) ? <CheckSquare className="w-3 h-3 text-purple-400 flex-shrink-0" /> : <Square className={cn('w-3 h-3 flex-shrink-0', textMuted)} />)}
-                        {entry.pinned && <Pin className="w-2.5 h-2.5 text-amber-400 flex-shrink-0" />}
-                        {entry.favorite && <Star className="w-2.5 h-2.5 text-amber-400 fill-amber-400 flex-shrink-0" />}
-                        <p className={cn('text-sm font-semibold truncate flex-1', theme !== 'light' ? 'text-white' : 'text-zinc-900')}>
+                      <div className="flex items-center gap-2">
+                        {selectMode && (selectedIds.has(entry.id) ? <CheckSquare className="w-3.5 h-3.5 text-purple-400 flex-shrink-0" /> : <Square className={cn('w-3.5 h-3.5 flex-shrink-0', textMuted)} />)}
+                        {entry.pinned && <Pin className="w-3 h-3 text-amber-400 flex-shrink-0" />}
+                        {entry.favorite && <Star className="w-3 h-3 text-amber-400 fill-amber-400 flex-shrink-0" />}
+                        <p className={cn('text-base font-semibold truncate flex-1', theme !== 'light' ? 'text-white' : 'text-zinc-900')}>
                           {formatNoteHeading(entry)}
                         </p>
                       </div>
-                      <p className={cn('text-[11px] truncate', textMuted)}>{stripHtml(entry.body) || 'Empty note'}</p>
-                      <p className={cn('text-[10px] mt-auto', textMuted)}>{formatShortDate(entry.updatedAt)}</p>
+                      <p className={cn('text-sm truncate', textMuted)}>{stripHtml(entry.body) || 'Empty note'}</p>
+                      <p className={cn('text-xs mt-auto', textMuted)}>{formatShortDate(entry.updatedAt)}</p>
                     </button>
                   );
                 })}
@@ -880,26 +880,26 @@ export function NotebookScreen() {
                   >
                     {selectMode && !isTrashView && (
                       <button onClick={() => toggleSelect(entry.id)} className="flex items-center pl-3.5 flex-shrink-0">
-                        {selectedIds.has(entry.id) ? <CheckSquare className="w-3.5 h-3.5 text-purple-400" /> : <Square className={cn('w-3.5 h-3.5', textMuted)} />}
+                        {selectedIds.has(entry.id) ? <CheckSquare className="w-4 h-4 text-purple-400" /> : <Square className={cn('w-4 h-4', textMuted)} />}
                       </button>
                     )}
                     {cc && <span className={cn('w-1 flex-shrink-0', cc.bar)} />}
                     <button
                       onClick={() => selectMode && !isTrashView ? toggleSelect(entry.id) : setSelectedEntryId(entry.id)}
-                      className="flex-1 text-left px-3.5 py-3 min-w-0"
+                      className="flex-1 text-left px-4 py-3.5 min-w-0"
                     >
-                      <div className="flex items-center gap-1.5 mb-0.5">
-                        {entry.pinned && !isTrashView && <Pin className="w-2.5 h-2.5 text-amber-400 flex-shrink-0" />}
-                        {entry.favorite && !isTrashView && <Star className="w-2.5 h-2.5 text-amber-400 fill-amber-400 flex-shrink-0" />}
-                        <p className={cn('text-sm font-semibold truncate', theme !== 'light' ? 'text-white' : 'text-zinc-900')}>
+                      <div className="flex items-center gap-2 mb-0.5">
+                        {entry.pinned && !isTrashView && <Pin className="w-3 h-3 text-amber-400 flex-shrink-0" />}
+                        {entry.favorite && !isTrashView && <Star className="w-3 h-3 text-amber-400 fill-amber-400 flex-shrink-0" />}
+                        <p className={cn('text-base font-semibold truncate', theme !== 'light' ? 'text-white' : 'text-zinc-900')}>
                           {formatNoteHeading(entry)}
                         </p>
                       </div>
-                      <div className="flex items-center gap-2">
-                        <p className={cn('text-[11px]', textMuted)}>{formatShortDate(entry.updatedAt)}</p>
+                      <div className="flex items-center gap-2.5">
+                        <p className={cn('text-sm', textMuted)}>{formatShortDate(entry.updatedAt)}</p>
                         {entry.reminderAt && !isTrashView && (
-                          <span className={cn('flex items-center gap-0.5 text-[10px]', overdue ? 'text-rose-400' : textMuted)}>
-                            <Bell className="w-2.5 h-2.5" />
+                          <span className={cn('flex items-center gap-1 text-xs', overdue ? 'text-rose-400' : textMuted)}>
+                            <Bell className="w-3 h-3" />
                             {formatShortDate(entry.reminderAt)}
                           </span>
                         )}
@@ -915,42 +915,42 @@ export function NotebookScreen() {
         {/* ==== Editor / detail pane ==== */}
         <div className="flex flex-col min-h-0 min-w-0">
           {!selectedEntry ? (
-            <div className="flex-1 flex flex-col items-center justify-center gap-2 p-8">
-              <StickyNote className={cn('w-8 h-8', theme !== 'light' ? 'text-zinc-700' : 'text-zinc-300')} />
-              <p className={cn('text-sm', textMuted)}>
+            <div className="flex-1 flex flex-col items-center justify-center gap-2.5 p-8">
+              <StickyNote className={cn('w-9 h-9', theme !== 'light' ? 'text-zinc-700' : 'text-zinc-300')} />
+              <p className={cn('text-base', textMuted)}>
                 {isTrashView ? 'Nothing selected' : 'Select a note, or create a new one'}
               </p>
             </div>
           ) : isTrashView ? (
             <div className="flex flex-col min-h-0 h-full">
-              <div className={cn('flex items-center justify-between gap-3 px-5 py-4 border-b', border)}>
-                <h2 className={cn('text-lg font-semibold truncate', theme !== 'light' ? 'text-white' : 'text-zinc-900')}>
+              <div className={cn('flex items-center justify-between gap-3.5 px-6 py-5 border-b', border)}>
+                <h2 className={cn('text-xl font-semibold truncate', theme !== 'light' ? 'text-white' : 'text-zinc-900')}>
                   {formatNoteHeading(selectedEntry)}
                 </h2>
-                <div className="flex items-center gap-1.5 flex-shrink-0">
+                <div className="flex items-center gap-2 flex-shrink-0">
                   <button
                     onClick={() => handleRestoreNotebookEntry(selectedEntry.id)}
-                    className={cn('flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors', theme !== 'light' ? 'bg-zinc-800 hover:bg-zinc-700 text-zinc-200' : 'bg-zinc-100 hover:bg-zinc-200 text-zinc-700')}
+                    className={cn('flex items-center gap-2 px-3.5 py-2 rounded-lg text-sm font-medium transition-colors', theme !== 'light' ? 'bg-zinc-800 hover:bg-zinc-700 text-zinc-200' : 'bg-zinc-100 hover:bg-zinc-200 text-zinc-700')}
                   >
-                    <RotateCcw className="w-3.5 h-3.5" />
+                    <RotateCcw className="w-4 h-4" />
                     Restore
                   </button>
                   <button
                     onClick={() => setEntryPendingDelete(selectedEntry)}
-                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-rose-600 hover:bg-rose-500 text-white transition-colors"
+                    className="flex items-center gap-2 px-3.5 py-2 rounded-lg text-sm font-medium bg-rose-600 hover:bg-rose-500 text-white transition-colors"
                   >
-                    <Trash2 className="w-3.5 h-3.5" />
+                    <Trash2 className="w-4 h-4" />
                     Delete forever
                   </button>
                 </div>
               </div>
-              <div className="themed-scrollbar flex-1 min-h-0 overflow-y-auto p-5">
+              <div className="themed-scrollbar flex-1 min-h-0 overflow-y-auto p-6">
                 {selectedEntry.deletedAt && (
-                  <p className={cn('text-[11px] mb-3', textMuted)}>
+                  <p className={cn('text-sm mb-3', textMuted)}>
                     Deleted {formatFullDateTime(selectedEntry.deletedAt)} &middot; auto-purges 30 days after deletion
                   </p>
                 )}
-                <p className={cn('text-sm leading-relaxed whitespace-pre-wrap', textBody)}>
+                <p className={cn('text-base leading-relaxed whitespace-pre-wrap', textBody)}>
                   {stripHtml(selectedEntry.body) || <span className="italic opacity-60">Empty note</span>}
                 </p>
               </div>
@@ -959,95 +959,95 @@ export function NotebookScreen() {
             <div className="flex flex-col min-h-0 h-full min-w-0">
               {selectedEntry.color && <div className={cn('h-1 flex-shrink-0', COVER_COLOR_CLASSES[selectedEntry.color]?.bar)} />}
               {/* Title + meta + more menu */}
-              <div className={cn('px-5 pt-4 pb-3 border-b', border)}>
-                <div className="flex items-start justify-between gap-3">
+              <div className={cn('px-6 pt-4 pb-3 border-b', border)}>
+                <div className="flex items-start justify-between gap-3.5">
                   <input
                     value={titleDraft}
                     onChange={onTitleChange}
                     onBlur={onTitleBlur}
                     placeholder="Untitled"
-                    className={cn('flex-1 min-w-0 bg-transparent outline-none text-lg font-semibold', theme !== 'light' ? 'text-white placeholder-zinc-600' : 'text-zinc-900 placeholder-zinc-300')}
+                    className={cn('flex-1 min-w-0 bg-transparent outline-none text-xl font-semibold', theme !== 'light' ? 'text-white placeholder-zinc-600' : 'text-zinc-900 placeholder-zinc-300')}
                   />
                   <div className="relative flex-shrink-0">
                     <button
                       onClick={() => setShowMoreMenu(v => !v)}
-                      className={cn('p-1.5 rounded-md transition-colors', textMuted, 'hover:text-zinc-200')}
+                      className={cn('p-2 rounded-md transition-colors', textMuted, 'hover:text-zinc-200')}
                     >
-                      <MoreHorizontal className="w-4 h-4" />
+                      <MoreHorizontal className="w-5 h-5" />
                     </button>
                     {showMoreMenu && (
-                      <div className={cn('absolute right-0 mt-1 w-60 rounded-lg border shadow-xl z-20 py-1', theme !== 'light' ? 'bg-zinc-900 border-zinc-800' : 'bg-white border-zinc-200')}>
+                      <div className={cn('absolute right-0 mt-1 w-64 rounded-lg border shadow-xl z-20 py-1.5', theme !== 'light' ? 'bg-zinc-900 border-zinc-800' : 'bg-white border-zinc-200')}>
                         <button
                           onClick={() => { handleToggleNotebookEntryPin(selectedEntry.id); setShowMoreMenu(false); }}
-                          className={cn('w-full flex items-center gap-2 px-3 py-1.5 text-xs text-left transition-colors', textBody, theme !== 'light' ? 'hover:bg-zinc-800' : 'hover:bg-zinc-50')}
+                          className={cn('w-full flex items-center gap-2.5 px-3.5 py-2 text-sm text-left transition-colors', textBody, theme !== 'light' ? 'hover:bg-zinc-800' : 'hover:bg-zinc-50')}
                         >
-                          {selectedEntry.pinned ? <PinOff className="w-3.5 h-3.5" /> : <Pin className="w-3.5 h-3.5" />}
+                          {selectedEntry.pinned ? <PinOff className="w-4 h-4" /> : <Pin className="w-4 h-4" />}
                           {selectedEntry.pinned ? 'Unpin note' : 'Pin note'}
                         </button>
                         <button
                           onClick={() => { handleToggleNotebookEntryFavorite(selectedEntry.id); setShowMoreMenu(false); }}
-                          className={cn('w-full flex items-center gap-2 px-3 py-1.5 text-xs text-left transition-colors', textBody, theme !== 'light' ? 'hover:bg-zinc-800' : 'hover:bg-zinc-50')}
+                          className={cn('w-full flex items-center gap-2.5 px-3.5 py-2 text-sm text-left transition-colors', textBody, theme !== 'light' ? 'hover:bg-zinc-800' : 'hover:bg-zinc-50')}
                         >
-                          <Star className={cn('w-3.5 h-3.5', selectedEntry.favorite && 'fill-amber-400 text-amber-400')} />
+                          <Star className={cn('w-4 h-4', selectedEntry.favorite && 'fill-amber-400 text-amber-400')} />
                           {selectedEntry.favorite ? 'Remove from favorites' : 'Add to favorites'}
                         </button>
                         <button
                           onClick={duplicateNote}
-                          className={cn('w-full flex items-center gap-2 px-3 py-1.5 text-xs text-left transition-colors', textBody, theme !== 'light' ? 'hover:bg-zinc-800' : 'hover:bg-zinc-50')}
+                          className={cn('w-full flex items-center gap-2.5 px-3.5 py-2 text-sm text-left transition-colors', textBody, theme !== 'light' ? 'hover:bg-zinc-800' : 'hover:bg-zinc-50')}
                         >
-                          <Copy className="w-3.5 h-3.5" />
+                          <Copy className="w-4 h-4" />
                           Duplicate note
                         </button>
                         <button
                           onClick={exportNote}
-                          className={cn('w-full flex items-center gap-2 px-3 py-1.5 text-xs text-left transition-colors', textBody, theme !== 'light' ? 'hover:bg-zinc-800' : 'hover:bg-zinc-50')}
+                          className={cn('w-full flex items-center gap-2.5 px-3.5 py-2 text-sm text-left transition-colors', textBody, theme !== 'light' ? 'hover:bg-zinc-800' : 'hover:bg-zinc-50')}
                         >
-                          <Download className="w-3.5 h-3.5" />
+                          <Download className="w-4 h-4" />
                           Export as .txt
                         </button>
                         <button
                           onClick={printNote}
-                          className={cn('w-full flex items-center gap-2 px-3 py-1.5 text-xs text-left transition-colors', textBody, theme !== 'light' ? 'hover:bg-zinc-800' : 'hover:bg-zinc-50')}
+                          className={cn('w-full flex items-center gap-2.5 px-3.5 py-2 text-sm text-left transition-colors', textBody, theme !== 'light' ? 'hover:bg-zinc-800' : 'hover:bg-zinc-50')}
                         >
-                          <Printer className="w-3.5 h-3.5" />
+                          <Printer className="w-4 h-4" />
                           Print note
                         </button>
 
                         <div className={cn('my-1 border-t', border)} />
 
-                        <div className="px-3 py-1.5">
-                          <p className={cn('text-[10px] font-semibold uppercase tracking-wider mb-1.5', textMuted)}>Cover color</p>
-                          <div className="flex items-center gap-1.5 flex-wrap">
+                        <div className="px-3.5 py-2">
+                          <p className={cn('text-xs font-semibold uppercase tracking-wider mb-1.5', textMuted)}>Cover color</p>
+                          <div className="flex items-center gap-2 flex-wrap">
                             <button
                               onClick={() => flushSave({ color: undefined })}
                               title="No color"
-                              className={cn('w-4 h-4 rounded-full border flex items-center justify-center', border, !selectedEntry.color && 'ring-2 ring-offset-1 ring-purple-400')}
+                              className={cn('w-5 h-5 rounded-full border flex items-center justify-center', border, !selectedEntry.color && 'ring-2 ring-offset-1 ring-purple-400')}
                             >
-                              <X className={cn('w-2.5 h-2.5', textMuted)} />
+                              <X className={cn('w-3 h-3', textMuted)} />
                             </button>
                             {NOTEBOOK_COVER_COLORS.map(c => (
                               <button
                                 key={c}
                                 onClick={() => flushSave({ color: c })}
                                 title={c}
-                                className={cn('w-4 h-4 rounded-full', COVER_COLOR_CLASSES[c].dot, selectedEntry.color === c && 'ring-2 ring-offset-1 ring-purple-400')}
+                                className={cn('w-5 h-5 rounded-full', COVER_COLOR_CLASSES[c].dot, selectedEntry.color === c && 'ring-2 ring-offset-1 ring-purple-400')}
                               />
                             ))}
                           </div>
                         </div>
 
-                        <div className="px-3 py-1.5">
-                          <p className={cn('text-[10px] font-semibold uppercase tracking-wider mb-1.5', textMuted)}>Reminder</p>
-                          <div className="flex items-center gap-1.5">
+                        <div className="px-3.5 py-2">
+                          <p className={cn('text-xs font-semibold uppercase tracking-wider mb-1.5', textMuted)}>Reminder</p>
+                          <div className="flex items-center gap-2">
                             <input
                               type="datetime-local"
                               value={toDatetimeLocalValue(selectedEntry.reminderAt)}
                               onChange={(e) => flushSave({ reminderAt: e.target.value ? new Date(e.target.value).toISOString() : undefined })}
-                              className={cn('flex-1 min-w-0 text-[11px] border rounded-md px-1.5 py-1 outline-none bg-transparent', border, textBody)}
+                              className={cn('flex-1 min-w-0 text-sm border rounded-md px-2 py-1.5 outline-none bg-transparent', border, textBody)}
                             />
                             {selectedEntry.reminderAt && (
                               <button onClick={() => flushSave({ reminderAt: undefined })} title="Clear reminder" className={cn(textMuted, 'hover:text-rose-400')}>
-                                <X className="w-3.5 h-3.5" />
+                                <X className="w-4 h-4" />
                               </button>
                             )}
                           </div>
@@ -1057,31 +1057,31 @@ export function NotebookScreen() {
 
                         <button
                           onClick={() => { handleSoftDeleteNotebookEntry(selectedEntry.id); setShowMoreMenu(false); }}
-                          className="w-full flex items-center gap-2 px-3 py-1.5 text-xs text-left text-rose-400 hover:bg-zinc-800 transition-colors"
+                          className="w-full flex items-center gap-2.5 px-3.5 py-2 text-sm text-left text-rose-400 hover:bg-zinc-800 transition-colors"
                         >
-                          <Trash2 className="w-3.5 h-3.5" />
+                          <Trash2 className="w-4 h-4" />
                           Delete note
                         </button>
                       </div>
                     )}
                   </div>
                 </div>
-                <div className="flex items-center gap-3 mt-1 flex-wrap">
-                  <p className={cn('text-[11px]', textMuted)}>
+                <div className="flex items-center gap-3.5 mt-1 flex-wrap">
+                  <p className={cn('text-sm', textMuted)}>
                     Created {formatFullDateTime(selectedEntry.createdAt)} &middot; Last updated {formatFullDateTime(selectedEntry.updatedAt)}
                   </p>
                   <select
                     value={selectedEntry.folder}
                     onChange={(e) => flushSave({ folder: e.target.value })}
-                    className={cn('text-[11px] bg-transparent outline-none border-none cursor-pointer', textMuted, 'hover:text-zinc-300')}
+                    className={cn('text-sm bg-transparent outline-none border-none cursor-pointer', textMuted, 'hover:text-zinc-300')}
                   >
                     {notebookFolders.map(folder => (
                       <option key={folder} value={folder} className={theme !== 'light' ? 'bg-zinc-900' : 'bg-white'}>{folder}</option>
                     ))}
                   </select>
                   {selectedEntry.reminderAt && (
-                    <span className={cn('flex items-center gap-1 text-[11px]', new Date(selectedEntry.reminderAt).getTime() < Date.now() ? 'text-rose-400' : textMuted)}>
-                      <Bell className="w-3 h-3" />
+                    <span className={cn('flex items-center gap-1.5 text-sm', new Date(selectedEntry.reminderAt).getTime() < Date.now() ? 'text-rose-400' : textMuted)}>
+                      <Bell className="w-3.5 h-3.5" />
                       {formatFullDateTime(selectedEntry.reminderAt)}
                     </span>
                   )}
@@ -1089,13 +1089,13 @@ export function NotebookScreen() {
               </div>
 
               {/* Formatting toolbar */}
-              <div className={cn('flex items-center gap-0.5 px-4 py-1.5 border-b overflow-x-auto', border)}>
+              <div className={cn('flex items-center gap-1 px-5 py-2 border-b overflow-x-auto', border)}>
                 <select
                   onMouseDown={saveSelection}
                   onChange={(e) => { const v = e.target.value; if (v) exec('formatBlock', v); e.target.value = ''; }}
                   defaultValue=""
                   title="Text style"
-                  className={cn('text-[11px] bg-transparent border rounded-md pl-1.5 pr-1 py-1 outline-none cursor-pointer flex-shrink-0', border, textMuted)}
+                  className={cn('text-sm bg-transparent border rounded-md pl-1.5 pr-1 py-1.5 outline-none cursor-pointer flex-shrink-0', border, textMuted)}
                 >
                   <option value="" disabled>Style</option>
                   <option value="P">Paragraph</option>
@@ -1103,7 +1103,7 @@ export function NotebookScreen() {
                   <option value="H2">Heading 2</option>
                   <option value="H3">Heading 3</option>
                 </select>
-                <div className={cn('w-px h-4 mx-1', theme !== 'light' ? 'bg-zinc-800' : 'bg-zinc-200')} />
+                <div className={cn('w-px h-5 mx-1', theme !== 'light' ? 'bg-zinc-800' : 'bg-zinc-200')} />
                 {[
                   { icon: Bold, cmd: 'bold', title: 'Bold' },
                   { icon: Italic, cmd: 'italic', title: 'Italic' },
@@ -1111,8 +1111,8 @@ export function NotebookScreen() {
                   { icon: Strikethrough, cmd: 'strikeThrough', title: 'Strikethrough' },
                 ].map(({ icon: Icon, cmd, title }) => (
                   <button key={cmd} onMouseDown={(e) => { e.preventDefault(); saveSelection(); }} onClick={() => exec(cmd)} title={title}
-                    className={cn('p-1.5 rounded-md transition-colors', textMuted, 'hover:text-zinc-200', theme !== 'light' ? 'hover:bg-zinc-800' : 'hover:bg-zinc-100')}>
-                    <Icon className="w-3.5 h-3.5" />
+                    className={cn('p-2 rounded-md transition-colors', textMuted, 'hover:text-zinc-200', theme !== 'light' ? 'hover:bg-zinc-800' : 'hover:bg-zinc-100')}>
+                    <Icon className="w-4 h-4" />
                   </button>
                 ))}
                 <input
@@ -1120,62 +1120,62 @@ export function NotebookScreen() {
                   title="Text color"
                   onMouseDown={saveSelection}
                   onChange={(e) => exec('foreColor', e.target.value)}
-                  className="w-5 h-5 rounded cursor-pointer border-0 bg-transparent p-0 flex-shrink-0"
+                  className="w-6 h-6 rounded cursor-pointer border-0 bg-transparent p-0 flex-shrink-0"
                 />
                 <input
                   type="color"
                   title="Highlight color"
                   onMouseDown={saveSelection}
                   onChange={(e) => exec('hiliteColor', e.target.value)}
-                  className="w-5 h-5 rounded cursor-pointer border-0 bg-transparent p-0 flex-shrink-0"
+                  className="w-6 h-6 rounded cursor-pointer border-0 bg-transparent p-0 flex-shrink-0"
                 />
-                <div className={cn('w-px h-4 mx-1', theme !== 'light' ? 'bg-zinc-800' : 'bg-zinc-200')} />
+                <div className={cn('w-px h-5 mx-1', theme !== 'light' ? 'bg-zinc-800' : 'bg-zinc-200')} />
                 {[
                   { icon: AlignLeft, cmd: 'justifyLeft', title: 'Align left' },
                   { icon: AlignCenter, cmd: 'justifyCenter', title: 'Align center' },
                   { icon: AlignRight, cmd: 'justifyRight', title: 'Align right' },
                 ].map(({ icon: Icon, cmd, title }) => (
                   <button key={cmd} onMouseDown={(e) => { e.preventDefault(); saveSelection(); }} onClick={() => exec(cmd)} title={title}
-                    className={cn('p-1.5 rounded-md transition-colors', textMuted, 'hover:text-zinc-200', theme !== 'light' ? 'hover:bg-zinc-800' : 'hover:bg-zinc-100')}>
-                    <Icon className="w-3.5 h-3.5" />
+                    className={cn('p-2 rounded-md transition-colors', textMuted, 'hover:text-zinc-200', theme !== 'light' ? 'hover:bg-zinc-800' : 'hover:bg-zinc-100')}>
+                    <Icon className="w-4 h-4" />
                   </button>
                 ))}
-                <div className={cn('w-px h-4 mx-1', theme !== 'light' ? 'bg-zinc-800' : 'bg-zinc-200')} />
+                <div className={cn('w-px h-5 mx-1', theme !== 'light' ? 'bg-zinc-800' : 'bg-zinc-200')} />
                 <button onMouseDown={(e) => { e.preventDefault(); saveSelection(); }} onClick={() => exec('insertUnorderedList')} title="Bulleted list"
-                  className={cn('p-1.5 rounded-md transition-colors', textMuted, 'hover:text-zinc-200', theme !== 'light' ? 'hover:bg-zinc-800' : 'hover:bg-zinc-100')}>
-                  <List className="w-3.5 h-3.5" />
+                  className={cn('p-2 rounded-md transition-colors', textMuted, 'hover:text-zinc-200', theme !== 'light' ? 'hover:bg-zinc-800' : 'hover:bg-zinc-100')}>
+                  <List className="w-4 h-4" />
                 </button>
                 <button onMouseDown={(e) => { e.preventDefault(); saveSelection(); }} onClick={() => exec('insertOrderedList')} title="Numbered list"
-                  className={cn('p-1.5 rounded-md transition-colors', textMuted, 'hover:text-zinc-200', theme !== 'light' ? 'hover:bg-zinc-800' : 'hover:bg-zinc-100')}>
-                  <ListOrdered className="w-3.5 h-3.5" />
+                  className={cn('p-2 rounded-md transition-colors', textMuted, 'hover:text-zinc-200', theme !== 'light' ? 'hover:bg-zinc-800' : 'hover:bg-zinc-100')}>
+                  <ListOrdered className="w-4 h-4" />
                 </button>
                 <button onMouseDown={(e) => { e.preventDefault(); saveSelection(); }} onClick={insertChecklistItem} title="Checklist item"
-                  className={cn('p-1.5 rounded-md transition-colors', textMuted, 'hover:text-zinc-200', theme !== 'light' ? 'hover:bg-zinc-800' : 'hover:bg-zinc-100')}>
-                  <ListChecks className="w-3.5 h-3.5" />
+                  className={cn('p-2 rounded-md transition-colors', textMuted, 'hover:text-zinc-200', theme !== 'light' ? 'hover:bg-zinc-800' : 'hover:bg-zinc-100')}>
+                  <ListChecks className="w-4 h-4" />
                 </button>
                 <button onMouseDown={(e) => { e.preventDefault(); saveSelection(); }} onClick={() => exec('formatBlock', 'BLOCKQUOTE')} title="Quote"
-                  className={cn('p-1.5 rounded-md transition-colors', textMuted, 'hover:text-zinc-200', theme !== 'light' ? 'hover:bg-zinc-800' : 'hover:bg-zinc-100')}>
-                  <Quote className="w-3.5 h-3.5" />
+                  className={cn('p-2 rounded-md transition-colors', textMuted, 'hover:text-zinc-200', theme !== 'light' ? 'hover:bg-zinc-800' : 'hover:bg-zinc-100')}>
+                  <Quote className="w-4 h-4" />
                 </button>
-                <div className={cn('w-px h-4 mx-1', theme !== 'light' ? 'bg-zinc-800' : 'bg-zinc-200')} />
+                <div className={cn('w-px h-5 mx-1', theme !== 'light' ? 'bg-zinc-800' : 'bg-zinc-200')} />
                 <button onMouseDown={(e) => { e.preventDefault(); saveSelection(); }} onClick={insertLink} title="Insert link"
-                  className={cn('p-1.5 rounded-md transition-colors', textMuted, 'hover:text-zinc-200', theme !== 'light' ? 'hover:bg-zinc-800' : 'hover:bg-zinc-100')}>
-                  <Link2 className="w-3.5 h-3.5" />
+                  className={cn('p-2 rounded-md transition-colors', textMuted, 'hover:text-zinc-200', theme !== 'light' ? 'hover:bg-zinc-800' : 'hover:bg-zinc-100')}>
+                  <Link2 className="w-4 h-4" />
                 </button>
-                <div className={cn('w-px h-4 mx-1', theme !== 'light' ? 'bg-zinc-800' : 'bg-zinc-200')} />
+                <div className={cn('w-px h-5 mx-1', theme !== 'light' ? 'bg-zinc-800' : 'bg-zinc-200')} />
                 <button onMouseDown={(e) => e.preventDefault()} onClick={() => exec('undo')} title="Undo"
-                  className={cn('p-1.5 rounded-md transition-colors', textMuted, 'hover:text-zinc-200', theme !== 'light' ? 'hover:bg-zinc-800' : 'hover:bg-zinc-100')}>
-                  <Undo2 className="w-3.5 h-3.5" />
+                  className={cn('p-2 rounded-md transition-colors', textMuted, 'hover:text-zinc-200', theme !== 'light' ? 'hover:bg-zinc-800' : 'hover:bg-zinc-100')}>
+                  <Undo2 className="w-4 h-4" />
                 </button>
                 <button onMouseDown={(e) => e.preventDefault()} onClick={() => exec('redo')} title="Redo"
-                  className={cn('p-1.5 rounded-md transition-colors', textMuted, 'hover:text-zinc-200', theme !== 'light' ? 'hover:bg-zinc-800' : 'hover:bg-zinc-100')}>
-                  <Redo2 className="w-3.5 h-3.5" />
+                  className={cn('p-2 rounded-md transition-colors', textMuted, 'hover:text-zinc-200', theme !== 'light' ? 'hover:bg-zinc-800' : 'hover:bg-zinc-100')}>
+                  <Redo2 className="w-4 h-4" />
                 </button>
-                <span className={cn('ml-auto text-[10px] flex-shrink-0 pl-3 whitespace-nowrap', textMuted)}>{wordCount} {wordCount === 1 ? 'word' : 'words'}</span>
+                <span className={cn('ml-auto text-xs flex-shrink-0 pl-3 whitespace-nowrap', textMuted)}>{wordCount} {wordCount === 1 ? 'word' : 'words'}</span>
               </div>
 
               {/* Body */}
-              <div className="themed-scrollbar flex-1 min-h-0 overflow-y-auto px-5 py-4">
+              <div className="themed-scrollbar flex-1 min-h-0 overflow-y-auto px-6 py-5">
                 <div
                   ref={bodyRef}
                   contentEditable
@@ -1188,19 +1188,19 @@ export function NotebookScreen() {
                   onKeyUp={saveSelection}
                   data-placeholder="Write your note... (Ctrl/Cmd+B/I/U, Ctrl/Cmd+S to save)"
                   className={cn(
-                    'notebook-editable min-h-[200px] text-sm leading-relaxed outline-none',
+                    'notebook-editable min-h-[240px] text-base leading-relaxed outline-none',
                     textBody
                   )}
                 />
               </div>
 
               {/* Tags */}
-              <div className={cn('flex flex-wrap items-center gap-1.5 px-5 py-3 border-t', border)}>
+              <div className={cn('flex flex-wrap items-center gap-2 px-6 py-3.5 border-t', border)}>
                 {selectedEntry.tags.map(tag => (
-                  <span key={tag} className={cn('flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold border', theme !== 'light' ? 'bg-purple-500/10 text-purple-400 border-purple-500/30' : 'bg-purple-50 text-purple-600 border-purple-200')}>
+                  <span key={tag} className={cn('flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold border', theme !== 'light' ? 'bg-purple-500/10 text-purple-400 border-purple-500/30' : 'bg-purple-50 text-purple-600 border-purple-200')}>
                     {tag}
                     <button onClick={() => removeTag(tag)} className="hover:text-rose-400 transition-colors">
-                      <X className="w-2.5 h-2.5" />
+                      <X className="w-3 h-3" />
                     </button>
                   </span>
                 ))}
@@ -1212,15 +1212,15 @@ export function NotebookScreen() {
                     onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); commitTag(); } if (e.key === 'Escape') setShowTagSuggestions(false); }}
                     onBlur={() => window.setTimeout(() => setShowTagSuggestions(false), 120)}
                     placeholder="Add tag"
-                    className={cn('px-2 py-1 rounded-full text-[11px] border outline-none w-24 focus:w-36 transition-all', theme !== 'light' ? 'bg-zinc-800 border-zinc-700 text-white placeholder-zinc-500 focus:border-zinc-600' : 'bg-zinc-50 border-zinc-200 text-zinc-900 placeholder-zinc-400 focus:border-zinc-300')}
+                    className={cn('px-2.5 py-1.5 rounded-full text-sm border outline-none w-28 focus:w-40 transition-all', theme !== 'light' ? 'bg-zinc-800 border-zinc-700 text-white placeholder-zinc-500 focus:border-zinc-600' : 'bg-zinc-50 border-zinc-200 text-zinc-900 placeholder-zinc-400 focus:border-zinc-300')}
                   />
                   {showTagSuggestions && suggestibleTags.length > 0 && (
-                    <div className={cn('themed-scrollbar absolute bottom-full left-0 mb-1.5 w-40 rounded-lg border shadow-xl z-20 py-1 max-h-40 overflow-y-auto', theme !== 'light' ? 'bg-zinc-900 border-zinc-800' : 'bg-white border-zinc-200')}>
+                    <div className={cn('themed-scrollbar absolute bottom-full left-0 mb-1.5 w-44 rounded-lg border shadow-xl z-20 py-1.5 max-h-40 overflow-y-auto', theme !== 'light' ? 'bg-zinc-900 border-zinc-800' : 'bg-white border-zinc-200')}>
                       {suggestibleTags.map(tag => (
                         <button
                           key={tag}
                           onMouseDown={(e) => { e.preventDefault(); commitTag(tag); }}
-                          className={cn('w-full text-left px-3 py-1 text-xs transition-colors', textBody, theme !== 'light' ? 'hover:bg-zinc-800' : 'hover:bg-zinc-50')}
+                          className={cn('w-full text-left px-3.5 py-1.5 text-sm transition-colors', textBody, theme !== 'light' ? 'hover:bg-zinc-800' : 'hover:bg-zinc-50')}
                         >
                           {tag}
                         </button>
@@ -1243,23 +1243,23 @@ export function NotebookScreen() {
         .notebook-editable ol { list-style: decimal; padding-left: 1.25rem; }
         .notebook-editable img { max-width: 100%; height: auto; border-radius: 0.5rem; }
         .notebook-editable a { color: ${theme !== 'light' ? '#c4b5fd' : '#7c3aed'}; text-decoration: underline; }
-        .notebook-editable h1 { font-size: 1.4rem; font-weight: 700; margin: 0.6rem 0; }
-        .notebook-editable h2 { font-size: 1.2rem; font-weight: 700; margin: 0.5rem 0; }
-        .notebook-editable h3 { font-size: 1.05rem; font-weight: 600; margin: 0.4rem 0; }
+        .notebook-editable h1 { font-size: 1.6rem; font-weight: 700; margin: 0.75rem 0; }
+        .notebook-editable h2 { font-size: 1.35rem; font-weight: 700; margin: 0.6rem 0; }
+        .notebook-editable h3 { font-size: 1.15rem; font-weight: 600; margin: 0.5rem 0; }
         .notebook-editable blockquote {
           border-left: 3px solid ${theme !== 'light' ? '#a78bfa' : '#7c3aed'};
-          padding-left: 0.75rem;
-          margin: 0.5rem 0;
+          padding-left: 0.875rem;
+          margin: 0.6rem 0;
           opacity: 0.85;
         }
         .notebook-editable .notebook-checklist-item {
           display: flex;
           align-items: flex-start;
-          gap: 6px;
-          margin: 2px 0;
+          gap: 8px;
+          margin: 4px 0;
         }
         .notebook-editable .notebook-checklist-item input[type="checkbox"] {
-          margin-top: 3px;
+          margin-top: 4px;
           cursor: pointer;
         }
         .notebook-editable .notebook-checklist-item input[type="checkbox"]:checked + span {
@@ -1270,17 +1270,17 @@ export function NotebookScreen() {
 
       {/* ---- Delete folder confirm ---- */}
       {folderPendingDelete && (
-        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-[70] flex items-center justify-center p-4" onClick={() => setFolderPendingDelete(null)}>
-          <div className={cn('rounded-xl max-w-sm w-full border p-5', theme !== 'light' ? 'bg-zinc-900 border-zinc-800' : 'bg-white border-zinc-200')} onClick={(e) => e.stopPropagation()}>
-            <h3 className={cn('text-sm font-semibold mb-2', theme !== 'light' ? 'text-white' : 'text-zinc-900')}>Delete "{folderPendingDelete}"?</h3>
-            <p className="text-xs text-zinc-500 mb-4 leading-relaxed">
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-[70] flex items-center justify-center p-5" onClick={() => setFolderPendingDelete(null)}>
+          <div className={cn('rounded-xl max-w-sm w-full border p-6', theme !== 'light' ? 'bg-zinc-900 border-zinc-800' : 'bg-white border-zinc-200')} onClick={(e) => e.stopPropagation()}>
+            <h3 className={cn('text-base font-semibold mb-2', theme !== 'light' ? 'text-white' : 'text-zinc-900')}>Delete "{folderPendingDelete}"?</h3>
+            <p className="text-sm text-zinc-500 mb-4 leading-relaxed">
               Notes in this folder won't be deleted — they'll move to Uncategorized. Sub-folders aren't deleted automatically.
             </p>
-            <div className="flex items-center justify-end gap-2">
-              <button onClick={() => setFolderPendingDelete(null)} className={cn('px-3.5 py-1.5 rounded-lg text-xs', theme !== 'light' ? 'bg-zinc-800 hover:bg-zinc-700 text-zinc-300' : 'bg-zinc-100 hover:bg-zinc-200 text-zinc-700')}>
+            <div className="flex items-center justify-end gap-2.5">
+              <button onClick={() => setFolderPendingDelete(null)} className={cn('px-4 py-2 rounded-lg text-sm', theme !== 'light' ? 'bg-zinc-800 hover:bg-zinc-700 text-zinc-300' : 'bg-zinc-100 hover:bg-zinc-200 text-zinc-700')}>
                 Cancel
               </button>
-              <button onClick={confirmDeleteFolder} className="px-3.5 py-1.5 rounded-lg text-xs font-medium bg-rose-600 hover:bg-rose-500 text-white">
+              <button onClick={confirmDeleteFolder} className="px-4 py-2 rounded-lg text-sm font-medium bg-rose-600 hover:bg-rose-500 text-white">
                 Delete Folder
               </button>
             </div>
@@ -1290,19 +1290,19 @@ export function NotebookScreen() {
 
       {/* ---- Permanent delete confirm ---- */}
       {entryPendingDelete && (
-        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-[70] flex items-center justify-center p-4" onClick={() => setEntryPendingDelete(null)}>
-          <div className={cn('rounded-xl max-w-sm w-full border p-5', theme !== 'light' ? 'bg-zinc-900 border-zinc-800' : 'bg-white border-zinc-200')} onClick={(e) => e.stopPropagation()}>
-            <h3 className={cn('text-sm font-semibold mb-2', theme !== 'light' ? 'text-white' : 'text-zinc-900')}>Delete forever?</h3>
-            <p className="text-xs text-zinc-500 mb-4 leading-relaxed">
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-[70] flex items-center justify-center p-5" onClick={() => setEntryPendingDelete(null)}>
+          <div className={cn('rounded-xl max-w-sm w-full border p-6', theme !== 'light' ? 'bg-zinc-900 border-zinc-800' : 'bg-white border-zinc-200')} onClick={(e) => e.stopPropagation()}>
+            <h3 className={cn('text-base font-semibold mb-2', theme !== 'light' ? 'text-white' : 'text-zinc-900')}>Delete forever?</h3>
+            <p className="text-sm text-zinc-500 mb-4 leading-relaxed">
               This permanently deletes "{entryPendingDelete.title || 'this note'}". This can't be undone.
             </p>
-            <div className="flex items-center justify-end gap-2">
-              <button onClick={() => setEntryPendingDelete(null)} className={cn('px-3.5 py-1.5 rounded-lg text-xs', theme !== 'light' ? 'bg-zinc-800 hover:bg-zinc-700 text-zinc-300' : 'bg-zinc-100 hover:bg-zinc-200 text-zinc-700')}>
+            <div className="flex items-center justify-end gap-2.5">
+              <button onClick={() => setEntryPendingDelete(null)} className={cn('px-4 py-2 rounded-lg text-sm', theme !== 'light' ? 'bg-zinc-800 hover:bg-zinc-700 text-zinc-300' : 'bg-zinc-100 hover:bg-zinc-200 text-zinc-700')}>
                 Cancel
               </button>
               <button
                 onClick={() => { handlePermanentDeleteNotebookEntry(entryPendingDelete.id); setEntryPendingDelete(null); }}
-                className="px-3.5 py-1.5 rounded-lg text-xs font-medium bg-rose-600 hover:bg-rose-500 text-white"
+                className="px-4 py-2 rounded-lg text-sm font-medium bg-rose-600 hover:bg-rose-500 text-white"
               >
                 Delete Forever
               </button>
@@ -1313,19 +1313,19 @@ export function NotebookScreen() {
 
       {/* ---- Empty trash confirm ---- */}
       {confirmEmptyTrash && (
-        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-[70] flex items-center justify-center p-4" onClick={() => setConfirmEmptyTrash(false)}>
-          <div className={cn('rounded-xl max-w-sm w-full border p-5', theme !== 'light' ? 'bg-zinc-900 border-zinc-800' : 'bg-white border-zinc-200')} onClick={(e) => e.stopPropagation()}>
-            <h3 className={cn('text-sm font-semibold mb-2', theme !== 'light' ? 'text-white' : 'text-zinc-900')}>Empty trash?</h3>
-            <p className="text-xs text-zinc-500 mb-4 leading-relaxed">
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-[70] flex items-center justify-center p-5" onClick={() => setConfirmEmptyTrash(false)}>
+          <div className={cn('rounded-xl max-w-sm w-full border p-6', theme !== 'light' ? 'bg-zinc-900 border-zinc-800' : 'bg-white border-zinc-200')} onClick={(e) => e.stopPropagation()}>
+            <h3 className={cn('text-base font-semibold mb-2', theme !== 'light' ? 'text-white' : 'text-zinc-900')}>Empty trash?</h3>
+            <p className="text-sm text-zinc-500 mb-4 leading-relaxed">
               This permanently deletes all {deletedEntries.length} note{deletedEntries.length === 1 ? '' : 's'} in Recently Deleted. This can't be undone.
             </p>
-            <div className="flex items-center justify-end gap-2">
-              <button onClick={() => setConfirmEmptyTrash(false)} className={cn('px-3.5 py-1.5 rounded-lg text-xs', theme !== 'light' ? 'bg-zinc-800 hover:bg-zinc-700 text-zinc-300' : 'bg-zinc-100 hover:bg-zinc-200 text-zinc-700')}>
+            <div className="flex items-center justify-end gap-2.5">
+              <button onClick={() => setConfirmEmptyTrash(false)} className={cn('px-4 py-2 rounded-lg text-sm', theme !== 'light' ? 'bg-zinc-800 hover:bg-zinc-700 text-zinc-300' : 'bg-zinc-100 hover:bg-zinc-200 text-zinc-700')}>
                 Cancel
               </button>
               <button
                 onClick={() => { handleEmptyNotebookTrash(); setConfirmEmptyTrash(false); }}
-                className="px-3.5 py-1.5 rounded-lg text-xs font-medium bg-rose-600 hover:bg-rose-500 text-white"
+                className="px-4 py-2 rounded-lg text-sm font-medium bg-rose-600 hover:bg-rose-500 text-white"
               >
                 Empty Trash
               </button>
