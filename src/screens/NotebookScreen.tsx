@@ -977,7 +977,12 @@ export function NotebookScreen() {
             ) : (
               <button
                 onClick={() => setIsAddingFolder(true)}
-                className={cn('w-full flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-colors', theme !== 'light' ? 'text-zinc-300 hover:bg-zinc-800' : 'text-zinc-700 hover:bg-zinc-50')}
+                className={cn(
+                  'w-full flex items-center justify-center gap-2 px-3 py-2 rounded-lg text-sm font-medium border transition-colors',
+                  theme !== 'light'
+                    ? 'bg-zinc-800 hover:bg-zinc-700 border-zinc-700 text-white'
+                    : 'bg-zinc-900 hover:bg-zinc-800 border-zinc-900 text-white'
+                )}
               >
                 <FolderPlus className="w-4 h-4" />
                 Add folder
