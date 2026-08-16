@@ -640,7 +640,7 @@ export function NotebookScreen() {
       <div className={cn('grid grid-cols-1 lg:grid-cols-[220px_280px_1fr] gap-0 rounded-xl border overflow-hidden min-h-[70vh] lg:h-[70vh]', border, panelBg)}
       >
         {/* ==== Folder rail ==== */}
-        <div className={cn('flex flex-col border-b lg:border-b-0 lg:border-r', border)}>
+        <div className={cn('flex flex-col min-h-0 border-b lg:border-b-0 lg:border-r', border)}>
           <div className={cn('p-3 border-b', border)}>
             {isAddingFolder ? (
               <input
@@ -663,7 +663,7 @@ export function NotebookScreen() {
             )}
           </div>
 
-          <div className="themed-scrollbar flex-1 overflow-y-auto p-2">
+          <div className="themed-scrollbar flex-1 min-h-0 overflow-y-auto p-2">
             <p className={cn('text-[10px] font-semibold uppercase tracking-wider px-2 pt-1 pb-1.5', textMuted)}>Folders</p>
 
             <button
@@ -715,7 +715,7 @@ export function NotebookScreen() {
         </div>
 
         {/* ==== Note list ==== */}
-        <div className={cn('flex flex-col border-b lg:border-b-0 lg:border-r', border)}>
+        <div className={cn('flex flex-col min-h-0 border-b lg:border-b-0 lg:border-r', border)}>
           <div className={cn('flex items-center justify-between gap-2 p-3 border-b', border)}>
             {isTrashView ? (
               <div className="flex items-center justify-between w-full">
@@ -822,7 +822,7 @@ export function NotebookScreen() {
             </div>
           )}
 
-          <div className="themed-scrollbar flex-1 overflow-y-auto">
+          <div className="themed-scrollbar flex-1 min-h-0 overflow-y-auto">
             {notebookEntriesLoading ? (
               <p className={cn('text-xs text-center py-10', textMuted)}>Loading your notes...</p>
             ) : visibleEntries.length === 0 ? (
@@ -913,7 +913,7 @@ export function NotebookScreen() {
         </div>
 
         {/* ==== Editor / detail pane ==== */}
-        <div className="flex flex-col min-w-0">
+        <div className="flex flex-col min-h-0 min-w-0">
           {!selectedEntry ? (
             <div className="flex-1 flex flex-col items-center justify-center gap-2 p-8">
               <StickyNote className={cn('w-8 h-8', theme !== 'light' ? 'text-zinc-700' : 'text-zinc-300')} />
@@ -922,7 +922,7 @@ export function NotebookScreen() {
               </p>
             </div>
           ) : isTrashView ? (
-            <div className="flex flex-col h-full">
+            <div className="flex flex-col min-h-0 h-full">
               <div className={cn('flex items-center justify-between gap-3 px-5 py-4 border-b', border)}>
                 <h2 className={cn('text-lg font-semibold truncate', theme !== 'light' ? 'text-white' : 'text-zinc-900')}>
                   {formatNoteHeading(selectedEntry)}
@@ -944,7 +944,7 @@ export function NotebookScreen() {
                   </button>
                 </div>
               </div>
-              <div className="themed-scrollbar flex-1 overflow-y-auto p-5">
+              <div className="themed-scrollbar flex-1 min-h-0 overflow-y-auto p-5">
                 {selectedEntry.deletedAt && (
                   <p className={cn('text-[11px] mb-3', textMuted)}>
                     Deleted {formatFullDateTime(selectedEntry.deletedAt)} &middot; auto-purges 30 days after deletion
@@ -956,7 +956,7 @@ export function NotebookScreen() {
               </div>
             </div>
           ) : (
-            <div className="flex flex-col h-full min-w-0">
+            <div className="flex flex-col min-h-0 h-full min-w-0">
               {selectedEntry.color && <div className={cn('h-1 flex-shrink-0', COVER_COLOR_CLASSES[selectedEntry.color]?.bar)} />}
               {/* Title + meta + more menu */}
               <div className={cn('px-5 pt-4 pb-3 border-b', border)}>
@@ -1175,7 +1175,7 @@ export function NotebookScreen() {
               </div>
 
               {/* Body */}
-              <div className="themed-scrollbar flex-1 overflow-y-auto px-5 py-4">
+              <div className="themed-scrollbar flex-1 min-h-0 overflow-y-auto px-5 py-4">
                 <div
                   ref={bodyRef}
                   contentEditable
@@ -1241,6 +1241,7 @@ export function NotebookScreen() {
         }
         .notebook-editable ul { list-style: disc; padding-left: 1.25rem; }
         .notebook-editable ol { list-style: decimal; padding-left: 1.25rem; }
+        .notebook-editable img { max-width: 100%; height: auto; border-radius: 0.5rem; }
         .notebook-editable a { color: ${theme !== 'light' ? '#c4b5fd' : '#7c3aed'}; text-decoration: underline; }
         .notebook-editable h1 { font-size: 1.4rem; font-weight: 700; margin: 0.6rem 0; }
         .notebook-editable h2 { font-size: 1.2rem; font-weight: 700; margin: 0.5rem 0; }
