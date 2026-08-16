@@ -134,6 +134,7 @@ const PlaybookScreen = lazyNamed<typeof import('./screens/PlaybookScreen').Playb
 const NoticesScreen = lazyNamed<typeof import('./screens/NoticesScreen').NoticesScreen>(() => import('./screens/NoticesScreen'), 'NoticesScreen');
 const WikiScreen = lazyNamed<typeof import('./screens/WikiScreen').WikiScreen>(() => import('./screens/WikiScreen'), 'WikiScreen');
 const CalendarScreen = lazyNamed<typeof import('./screens/CalendarScreen').CalendarScreen>(() => import('./screens/CalendarScreen'), 'CalendarScreen');
+const NotebookScreen = lazyNamed<typeof import('./screens/NotebookScreen').NotebookScreen>(() => import('./screens/NotebookScreen'), 'NotebookScreen');
 
 const SettingsModal = lazyNamed<typeof import('./modals/SettingsModal').SettingsModal>(() => import('./modals/SettingsModal'), 'SettingsModal');
 const DayDetailsModal = lazyNamed<typeof import('./modals/LifeDisciplineModals').DayDetailsModal>(() => import('./modals/LifeDisciplineModals'), 'DayDetailsModal');
@@ -867,6 +868,7 @@ function AppShell() {
             {deferredView === 'notices' && <NoticesScreen />}
             {deferredView === 'wiki' && <WikiScreen />}
             {deferredView === 'calendar' && <CalendarScreen />}
+            {deferredView === 'notebook' && <NotebookScreen />}
           </Suspense>
         </div>
       </main>
