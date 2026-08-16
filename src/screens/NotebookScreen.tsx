@@ -1096,37 +1096,64 @@ export function NotebookScreen() {
           </div>
 
           {selectMode && !isTrashView && (
-            <div className={cn('flex flex-wrap items-center justify-between gap-x-2 gap-y-1.5 px-3.5 py-2.5 border-b', border, theme !== 'light' ? 'bg-zinc-800/40' : 'bg-zinc-50')}>
-              <span className={cn('text-sm flex-shrink-0', textMuted)}>{selectedIds.size} selected</span>
-              <div className="flex items-center gap-1 flex-wrap justify-end">
-                <select
-                  onChange={(e) => {
-                    if (e.target.value && selectedIds.size > 0) {
-                      handleBulkMoveNotebookEntries(Array.from(selectedIds), e.target.value === '__uncategorized__' ? '' : e.target.value);
-                      setSelectedIds(new Set());
-                    }
-                    e.target.value = '';
-                  }}
-                  defaultValue=""
-                  disabled={selectedIds.size === 0}
-                  className={cn('text-sm border rounded-md px-1.5 py-1.5 outline-none bg-transparent disabled:opacity-40 min-w-0 max-w-[92px]', border, textMuted)}
-                >
-                  <option value="" disabled>Move to&hellip;</option>
-                  <option value="__uncategorized__">Uncategorized</option>
-                  {notebookFolders.map(f => <option key={f} value={f}>{f}</option>)}
-                </select>
+            <div className={cn('flex items-center justify-between gap-2 px-3 py-2 border-b', border, theme !== 'light' ? 'bg-zinc-900/60' : 'bg-zinc-50')}>
+              <div className="flex items-center gap-2 min-w-0">
+                <span className={cn(
+                  'flex items-center justify-center w-6 h-6 rounded-full text-xs font-semibold flex-shrink-0 transition-colors',
+                  selectedIds.size > 0 ? 'bg-purple-500 text-white' : cn(theme !== 'light' ? 'bg-zinc-800' : 'bg-zinc-200', textMuted)
+                )}>
+                  {selectedIds.size}
+                </span>
+                <span className={cn('text-sm truncate', textMuted)}>selected</span>
+              </div>
+
+              <div className={cn('flex items-center gap-0.5 rounded-full border p-0.5 flex-shrink-0', border, theme !== 'light' ? 'bg-zinc-900' : 'bg-white')}>
+                <div className="relative">
+                  <button
+                    type="button"
+                    disabled={selectedIds.size === 0}
+                    title="Move to folder"
+                    className={cn(
+                      'flex items-center justify-center w-8 h-8 rounded-full transition-colors disabled:opacity-30 disabled:pointer-events-none',
+                      textMuted, theme !== 'light' ? 'hover:bg-zinc-800 hover:text-zinc-200' : 'hover:bg-zinc-100 hover:text-zinc-700'
+                    )}
+                  >
+                    <Folder className="w-4 h-4" />
+                  </button>
+                  <select
+                    aria-label="Move to folder"
+                    onChange={(e) => {
+                      if (e.target.value && selectedIds.size > 0) {
+                        handleBulkMoveNotebookEntries(Array.from(selectedIds), e.target.value === '__uncategorized__' ? '' : e.target.value);
+                        setSelectedIds(new Set());
+                      }
+                      e.target.value = '';
+                    }}
+                    defaultValue=""
+                    disabled={selectedIds.size === 0}
+                    className="absolute inset-0 w-full h-full opacity-0 cursor-pointer disabled:cursor-not-allowed"
+                  >
+                    <option value="" disabled>Move to&hellip;</option>
+                    <option value="__uncategorized__" className={theme !== 'light' ? 'bg-zinc-900' : 'bg-white'}>Uncategorized</option>
+                    {notebookFolders.map(f => <option key={f} value={f} className={theme !== 'light' ? 'bg-zinc-900' : 'bg-white'}>{f}</option>)}
+                  </select>
+                </div>
+                <span className={cn('w-px h-4', theme !== 'light' ? 'bg-zinc-800' : 'bg-zinc-200')} />
                 <button
                   onClick={() => { handleBulkSoftDeleteNotebookEntries(Array.from(selectedIds)); setSelectedIds(new Set()); }}
                   disabled={selectedIds.size === 0}
-                  className="text-sm font-medium text-rose-400 px-2 py-1.5 rounded-md hover:bg-rose-500/10 disabled:opacity-40 transition-colors flex-shrink-0"
+                  title="Delete"
+                  className="flex items-center justify-center w-8 h-8 rounded-full text-rose-400 hover:bg-rose-500/10 disabled:opacity-30 disabled:pointer-events-none transition-colors"
                 >
-                  Delete
+                  <Trash2 className="w-4 h-4" />
                 </button>
+                <span className={cn('w-px h-4', theme !== 'light' ? 'bg-zinc-800' : 'bg-zinc-200')} />
                 <button
                   onClick={() => { setSelectMode(false); setSelectedIds(new Set()); }}
-                  className={cn('text-sm px-2 py-1.5 rounded-md transition-colors flex-shrink-0', textMuted, 'hover:text-zinc-200')}
+                  title="Cancel"
+                  className={cn('flex items-center justify-center w-8 h-8 rounded-full transition-colors', textMuted, theme !== 'light' ? 'hover:bg-zinc-800 hover:text-zinc-200' : 'hover:bg-zinc-100 hover:text-zinc-700')}
                 >
-                  Cancel
+                  <X className="w-4 h-4" />
                 </button>
               </div>
             </div>
