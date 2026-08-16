@@ -1464,7 +1464,14 @@ export function useAppState() {
         if (error) throw error;
       },
       (e: any) => {
+        // Previously silent (console.error only) — Discipline Tracker,
+        // theme, and Daily Creed settings could fail to sync with zero
+        // user-facing signal. A Postgres "no unique or exclusion
+        // constraint matching ON CONFLICT" error (42P10) here means the
+        // `preferences` table is missing a UNIQUE constraint on user_id;
+        // every upsert will keep failing until that's added.
         console.error('Failed to save preferences to Supabase:', e);
+        showTradeImportToast('error', 'Failed to save your settings/Discipline Tracker data — they may not sync. Check your connection.');
       }
     );
   }, [
@@ -4268,6 +4275,23 @@ Return ONLY a JSON object — no markdown, no code fences, no commentary — wit
     hasStarted: hasStartedChallenge,
   });
 
+  // Full snapshot of the OTHER half of the `preferences` row — everything
+  // that isn't the Life Discipline Hub itself but still only lives in
+  // `preferences`, not `journal_data`. Without this, "Full System Backup"
+  // silently left theme, privacy mode, pillar layout, the pre-session
+  // checklist, custom Daily Creed quotes, and saved challenge presets out
+  // of the export entirely — a restore could never bring those back
+  // because they were never captured in the first place.
+  const buildAppPreferencesSnapshot = () => ({
+    theme,
+    privacyMode,
+    pillarsPerRow,
+    preSessionChecklist,
+    customCreedQuotes,
+    dailyCreedState: { date: dailyCreedDateRef.current || new Date().toLocaleDateString('en-CA'), index: creedIndex },
+    userChallengePresets,
+  });
+
   // Shared "download this string as a file" helper — prefers the browser's
   // native Save As dialog (File System Access API) so the user picks the
   // filename and folder, and falls back to a classic auto-download link.
@@ -4310,7 +4334,11 @@ Return ONLY a JSON object — no markdown, no code fences, no commentary — wit
   // challenge config, daily check logs, and history) so a restore can
   // rehydrate everything 1:1.
   const exportBackup = async () => {
-    const backupData: StoredData & { exportedAt: string; lifeDisciplineData: ReturnType<typeof buildLifeDisciplineSnapshot> } = {
+    const backupData: StoredData & {
+      exportedAt: string;
+      lifeDisciplineData: ReturnType<typeof buildLifeDisciplineSnapshot>;
+      appPreferencesData: ReturnType<typeof buildAppPreferencesSnapshot>;
+    } = {
       version: DATA_SCHEMA_VERSION,
       exportedAt: new Date().toISOString(),
       accounts,
@@ -4326,6 +4354,7 @@ Return ONLY a JSON object — no markdown, no code fences, no commentary — wit
       customSymbols,
       customPillars,
       lifeDisciplineData: buildLifeDisciplineSnapshot(),
+      appPreferencesData: buildAppPreferencesSnapshot(),
     };
 
     const jsonString = JSON.stringify(backupData, null, 2);
@@ -4423,18 +4452,44 @@ Return ONLY a JSON object — no markdown, no code fences, no commentary — wit
           if (typeof lifeDiscipline.hasStarted === 'boolean') setHasStartedChallenge(lifeDiscipline.hasStarted);
           restoredLifeDiscipline = lifeDiscipline;
         }
-        if (userId && restoredLifeDiscipline) {
+
+        // Re-hydrate the rest of `preferences` (theme, privacy mode, pillar
+        // layout, pre-session checklist, custom Daily Creed quotes, and
+        // saved challenge presets) — the other half of the `preferences`
+        // row that older backups (before this fix) never captured, so it's
+        // restored independently and just no-ops on older backup files.
+        const appPrefs = raw.appPreferencesData;
+        let restoredAppPrefs: any = null;
+        if (appPrefs && typeof appPrefs === 'object') {
+          if (appPrefs.theme === 'light' || appPrefs.theme === 'dark' || appPrefs.theme === 'minecraft') setTheme(appPrefs.theme);
+          if (typeof appPrefs.privacyMode === 'boolean') setPrivacyMode(appPrefs.privacyMode);
+          if (typeof appPrefs.pillarsPerRow === 'number') setPillarsPerRow(appPrefs.pillarsPerRow as PillarsPerRow);
+          if (appPrefs.preSessionChecklist && typeof appPrefs.preSessionChecklist === 'object') setPreSessionChecklist(appPrefs.preSessionChecklist);
+          if (Array.isArray(appPrefs.customCreedQuotes)) setCustomCreedQuotes(appPrefs.customCreedQuotes);
+          if (appPrefs.dailyCreedState?.date && typeof appPrefs.dailyCreedState?.index === 'number') {
+            dailyCreedDateRef.current = appPrefs.dailyCreedState.date;
+            setCreedIndex(appPrefs.dailyCreedState.index);
+          }
+          if (Array.isArray(appPrefs.userChallengePresets)) setUserChallengePresets(appPrefs.userChallengePresets);
+          restoredAppPrefs = appPrefs;
+        }
+
+        if (userId && (restoredLifeDiscipline || restoredAppPrefs)) {
           try {
             const { data: existingPrefsRow } = await supabase.from('preferences').select('data').eq('user_id', userId).maybeSingle();
             const existingPrefs = (existingPrefsRow?.data as any) || {};
             const { error: prefsErr } = await supabase.from('preferences').upsert({
               user_id: userId,
-              data: { ...existingPrefs, lifeDiscipline: restoredLifeDiscipline },
+              data: {
+                ...existingPrefs,
+                ...(restoredAppPrefs || {}),
+                ...(restoredLifeDiscipline ? { lifeDiscipline: restoredLifeDiscipline } : {}),
+              },
             }, { onConflict: 'user_id' });
             if (prefsErr) throw prefsErr;
           } catch (err) {
-            console.error('Failed to sync restored Life Discipline Hub data to Supabase:', err);
-            alert('Backup restored locally, but the Life Discipline Hub failed to sync to your account — check your connection and try again.');
+            console.error('Failed to sync restored Discipline Tracker / settings data to Supabase:', err);
+            alert('Backup restored locally, but the Discipline Tracker and settings failed to sync to your account — check your connection and try again.');
           }
         }
 
