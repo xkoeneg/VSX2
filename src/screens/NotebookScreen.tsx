@@ -253,6 +253,7 @@ export function NotebookScreen() {
   const [entryPendingDelete, setEntryPendingDelete] = useState<NotebookEntry | null>(null);
   const [confirmEmptyTrash, setConfirmEmptyTrash] = useState(false);
   const [confirmBulkDelete, setConfirmBulkDelete] = useState(false);
+  const [entryPendingTrash, setEntryPendingTrash] = useState<NotebookEntry | null>(null);
   const [collapsedFolders, setCollapsedFolders] = useState<Set<string>>(new Set());
 
   const [selectMode, setSelectMode] = useState(false);
@@ -1491,7 +1492,7 @@ export function NotebookScreen() {
                         <div className={cn('my-1 border-t', border)} />
 
                         <button
-                          onClick={() => { handleSoftDeleteNotebookEntry(selectedEntry.id); setShowMoreMenu(false); }}
+                          onClick={() => { setEntryPendingTrash(selectedEntry); setShowMoreMenu(false); }}
                           className="w-full flex items-center gap-2.5 px-3.5 py-2 text-sm text-left text-rose-400 hover:bg-zinc-800 transition-colors"
                         >
                           <Trash2 className="w-4 h-4" />
@@ -1863,6 +1864,29 @@ export function NotebookScreen() {
                 className="px-4 py-2 rounded-lg text-sm font-medium bg-rose-600 hover:bg-rose-500 text-white"
               >
                 Empty Trash
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ---- Single note delete (move to trash) confirm ---- */}
+      {entryPendingTrash && (
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-[70] flex items-center justify-center p-5" onClick={() => setEntryPendingTrash(null)}>
+          <div className={cn('rounded-xl max-w-sm w-full border p-6', theme !== 'light' ? 'bg-zinc-900 border-zinc-800' : 'bg-white border-zinc-200')} onClick={(e) => e.stopPropagation()}>
+            <h3 className={cn('text-base font-semibold mb-2', theme !== 'light' ? 'text-white' : 'text-zinc-900')}>Delete note?</h3>
+            <p className="text-sm text-zinc-500 mb-4 leading-relaxed">
+              "{entryPendingTrash.title || formatNoteHeading(entryPendingTrash)}" will be moved to Recently Deleted, where you can restore it later.
+            </p>
+            <div className="flex items-center justify-end gap-2.5">
+              <button onClick={() => setEntryPendingTrash(null)} className={cn('px-4 py-2 rounded-lg text-sm', theme !== 'light' ? 'bg-zinc-800 hover:bg-zinc-700 text-zinc-300' : 'bg-zinc-100 hover:bg-zinc-200 text-zinc-700')}>
+                Cancel
+              </button>
+              <button
+                onClick={() => { handleSoftDeleteNotebookEntry(entryPendingTrash.id); setEntryPendingTrash(null); }}
+                className="px-4 py-2 rounded-lg text-sm font-medium bg-rose-600 hover:bg-rose-500 text-white"
+              >
+                Delete
               </button>
             </div>
           </div>
