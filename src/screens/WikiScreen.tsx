@@ -553,7 +553,7 @@ export function WikiScreen() {
           )}>
             <div className="min-w-0 flex-1">
               <div className="flex items-center gap-2 mb-1">
-                <h2 className={cn('text-lg font-bold leading-tight truncate', theme !== 'light' ? 'text-white' : 'text-zinc-900')}>{entry.title}</h2>
+                <h2 className={cn('text-2xl font-bold leading-tight truncate', theme !== 'light' ? 'text-white' : 'text-zinc-900')}>{entry.title}</h2>
                 {code && <span className="font-mono text-xs text-zinc-500 tracking-wider flex-shrink-0">{code}</span>}
               </div>
             </div>
