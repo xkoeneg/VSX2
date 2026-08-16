@@ -790,15 +790,47 @@ export function WikiScreen() {
 
     return (
       <div className="space-y-6 min-w-0">
-        <PageHeader
-          title="Knowledge Wiki"
-          description="Visual reference for PD Arrays & trading concepts"
-        />
+        <div className="flex items-start justify-between gap-4 flex-wrap">
+          <PageHeader
+            title="Knowledge Wiki"
+            description="Visual reference for PD Arrays & trading concepts"
+          />
+          <div className="flex items-center gap-2 flex-shrink-0">
+            {!allStandardConceptsImported && (
+              <button
+                onClick={handleClickImportStandardConcepts}
+                className={cn(
+                  'relative flex items-center justify-center w-9 h-9 rounded-lg transition-colors flex-shrink-0 border',
+                  theme !== 'light'
+                    ? 'bg-sky-500/10 hover:bg-sky-500/20 text-sky-400 border-sky-500/30'
+                    : 'bg-sky-50 hover:bg-sky-100 text-sky-600 border-sky-200'
+                )}
+                title={`Import Standard Concepts (${missingStandardConcepts.length} available)`}
+              >
+                <Download className="w-4 h-4" />
+                <span className={cn(
+                  'absolute -top-1.5 -right-1.5 text-[9px] font-semibold w-4 h-4 flex items-center justify-center rounded-full',
+                  theme !== 'light' ? 'bg-sky-500 text-white' : 'bg-sky-600 text-white'
+                )}>
+                  {missingStandardConcepts.length}
+                </span>
+              </button>
+            )}
+            <button
+              onClick={handleOpenAddWiki}
+              className={cn(
+                'flex items-center justify-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-colors flex-shrink-0',
+                theme !== 'light' ? 'bg-zinc-800 hover:bg-zinc-700 text-white' : 'bg-zinc-900 hover:bg-zinc-800 text-white'
+              )}
+            >
+              <Plus className="w-4 h-4 flex-shrink-0" />
+              <span className="whitespace-nowrap">Add Entry</span>
+            </button>
+          </div>
+        </div>
 
-        {/* Top stats bar — 4 mini cards, Discipline Tracker-style. Replaces
-            the loose header buttons/badges: counts, active filter, and
-            actions (Add Entry + compact Import trigger) all live here now. */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+        {/* Top stats bar — 3 mini cards, Discipline Tracker-style. */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
           {/* Card 1 — Total Concepts */}
           <div className={cn(
             'rounded-xl border p-4 flex items-center gap-3',
@@ -856,42 +888,6 @@ export function WikiScreen() {
             </div>
           </div>
 
-          {/* Card 4 — Quick Actions & Import */}
-          <div className={cn(
-            'rounded-xl border p-4 flex items-center justify-between gap-2',
-            theme !== 'light' ? 'bg-[#111113] border-zinc-800/80' : 'bg-white border-zinc-200'
-          )}>
-            <button
-              onClick={handleOpenAddWiki}
-              className={cn(
-                'flex items-center justify-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-colors flex-1 min-w-0',
-                theme !== 'light' ? 'bg-zinc-800 hover:bg-zinc-700 text-white' : 'bg-zinc-900 hover:bg-zinc-800 text-white'
-              )}
-            >
-              <Plus className="w-4 h-4 flex-shrink-0" />
-              <span className="truncate">Add Entry</span>
-            </button>
-            {!allStandardConceptsImported && (
-              <button
-                onClick={handleClickImportStandardConcepts}
-                className={cn(
-                  'relative flex items-center justify-center w-9 h-9 rounded-lg transition-colors flex-shrink-0 border',
-                  theme !== 'light'
-                    ? 'bg-sky-500/10 hover:bg-sky-500/20 text-sky-400 border-sky-500/30'
-                    : 'bg-sky-50 hover:bg-sky-100 text-sky-600 border-sky-200'
-                )}
-                title={`Import Standard Concepts (${missingStandardConcepts.length} available)`}
-              >
-                <Download className="w-4 h-4" />
-                <span className={cn(
-                  'absolute -top-1.5 -right-1.5 text-[9px] font-semibold w-4 h-4 flex items-center justify-center rounded-full',
-                  theme !== 'light' ? 'bg-sky-500 text-white' : 'bg-sky-600 text-white'
-                )}>
-                  {missingStandardConcepts.length}
-                </span>
-              </button>
-            )}
-          </div>
         </div>
 
         {/* Split-pane workbench — category list on the left, full
