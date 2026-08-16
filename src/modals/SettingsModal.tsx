@@ -274,7 +274,7 @@ export function SettingsModal() {
     handleDeleteConfluence, handleDeleteMistakeType, handleChangeSetupTypeColor, handleChangeConfluenceColor,
     handleChangeMistakeColor, handleDeleteEmotion, handleChangeEmotionColor, colorForEmotion, colorForMistake,
     handleFileUpload, handleAddImageUrl, handleRemoveImage, handleReorderImages, updateTimeframeNotes,
-    exportBackup, importBackup, exportTradesOnly, handleFullSystemReset,
+    exportBackup, importBackup, exportTradesOnly, importTradesOnly, handleFullSystemReset,
   } = useAppContext();
 
     const [tradesExportFormat, setTradesExportFormat] = useState<'csv' | 'json'>('csv');
@@ -468,7 +468,7 @@ export function SettingsModal() {
                 </div>
               </div>
 
-              {/* OPTION 2: Trades Only Export */}
+              {/* OPTION 2: Trades Only Export/Import */}
               <div className="px-4 py-3.5 rounded-xl bg-zinc-800/50 border border-zinc-800">
                 <div className="flex items-center gap-3 mb-2">
                   <div className="w-9 h-9 rounded-lg bg-zinc-800 flex items-center justify-center flex-shrink-0">
@@ -477,7 +477,7 @@ export function SettingsModal() {
                   <p className="text-sm font-medium text-white">Trades Only Export</p>
                 </div>
                 <p className="text-xs text-zinc-500 mb-3 leading-relaxed">
-                  Export just your trade records — Entry, Exit, Pair, R:R, PnL, Date, Status, and Account — in a clean format for spreadsheet analysis or sharing. No discipline logs, habits, or system settings included.
+                  Export just your trades (no rules, notices, wiki, or Discipline Tracker data). <span className="text-zinc-400">.json is a full 1:1 backup</span> — screenshots, notes, setups, everything — restorable exactly. <span className="text-zinc-400">.csv</span> is a simplified spreadsheet view (Date, Account, Pair, Entry, Exit, R:R, PnL, Status) for Excel/Sheets; re-importing a .csv can only rebuild basic trade records.
                 </p>
                 <div className="flex items-center gap-1 mb-3 p-1 rounded-lg bg-zinc-900/60 border border-zinc-800 w-fit">
                   <button
@@ -507,8 +507,23 @@ export function SettingsModal() {
                   <Download className="w-4 h-4" />
                   {isExportingTrades ? 'Exporting…' : `Export Trades (.${tradesExportFormat})`}
                 </button>
+
+                {/* Import counterpart — a full-fidelity .json (scope:
+                    'trades-only') restores trades+accounts exactly, by id,
+                    safe to re-import. A .csv or an older flat-row .json
+                    can only rebuild basic trades, since that format never
+                    captured the deep fields to begin with. */}
+                <label className="mt-2 w-full flex items-center justify-center gap-2 px-3 py-2 rounded-lg text-sm font-medium bg-zinc-800 text-zinc-200 hover:bg-zinc-700 border border-zinc-700 transition-all cursor-pointer">
+                  <FolderSync className="w-4 h-4" />
+                  Import Trades (.csv / .json)
+                  <input type="file" accept=".csv,.json,text/csv,application/json" className="hidden" onChange={importTradesOnly} />
+                </label>
+                <p className="mt-2 text-[11px] text-zinc-600 leading-relaxed">
+                  Importing a .json exported here restores trades exactly, screenshots and all. Importing a .csv (or an older trades .json) can only rebuild the basics — Date, Account, Pair, Entry, Exit, R:R, PnL, Status — since that's all a spreadsheet format can hold.
+                </p>
               </div>
             </div>
+
           )}
 
           {/* Danger Zone — always visible at the bottom, regardless of tab */}
