@@ -714,7 +714,7 @@ export function NotebookScreen() {
           {isDraggable && (
             <span
               title="Drag to reorder"
-              className={cn('absolute left-0.5 top-1/2 -translate-y-1/2 cursor-grab active:cursor-grabbing opacity-0 group-hover/folder:opacity-40 hover:!opacity-90 transition-opacity', textMuted)}
+              className={cn('flex-shrink-0 w-2.5 flex items-center justify-center cursor-grab active:cursor-grabbing opacity-0 group-hover/folder:opacity-40 hover:!opacity-90 transition-opacity', textMuted)}
               style={{ marginLeft: depth * 10 }}
             >
               <svg width="10" height="14" viewBox="0 0 10 14" fill="currentColor"><circle cx="2.5" cy="2.5" r="1.4" /><circle cx="7.5" cy="2.5" r="1.4" /><circle cx="2.5" cy="7" r="1.4" /><circle cx="7.5" cy="7" r="1.4" /><circle cx="2.5" cy="11.5" r="1.4" /><circle cx="7.5" cy="11.5" r="1.4" /></svg>
@@ -724,8 +724,9 @@ export function NotebookScreen() {
           {/* Fixed-width leading slot for the collapse chevron — only
               reserved when there's actually a chevron to show (has
               children) or when nested (depth indent). Top-level leaf
-              folders skip it entirely so their icon sits flush left,
-              lined up with the All notes / Favorites icons above. */}
+              folders skip it entirely so their icon sits closer to
+              flush left, lined up with the All notes / Favorites icons
+              above. */}
           {(hasChildren || depth > 0) && (
             <div style={{ marginLeft: depth * 10 }} className="w-4 h-4 flex-shrink-0 flex items-center justify-center">
               {hasChildren && (
@@ -751,7 +752,7 @@ export function NotebookScreen() {
             type="button"
             onClick={(e) => { e.stopPropagation(); setColorPickerFolder(prev => prev === node.fullPath ? null : node.fullPath); }}
             title="Change folder color"
-            className="flex-shrink-0 -ml-1 p-1 rounded-md hover:ring-2 hover:ring-zinc-600 transition-all"
+            className="flex-shrink-0 p-1 rounded-md hover:ring-2 hover:ring-zinc-600 transition-all"
           >
             <Folder className={cn('w-4 h-4', toTextColorClass(resolveFolderColor(node.fullPath)))} fill="currentColor" fillOpacity={0.18} />
           </button>
