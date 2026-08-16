@@ -551,35 +551,31 @@ export function WikiScreen() {
             'flex items-start justify-between gap-3 px-5 py-4 border-b flex-shrink-0',
             theme !== 'light' ? 'border-zinc-800/80' : 'border-zinc-200'
           )}>
-            <div className="min-w-0">
+            <div className="min-w-0 flex-1">
               <div className="flex items-center gap-2 mb-1">
                 <h2 className={cn('text-lg font-bold leading-tight truncate', theme !== 'light' ? 'text-white' : 'text-zinc-900')}>{entry.title}</h2>
-                {code && <span className="font-mono text-[10px] text-zinc-500 tracking-wider flex-shrink-0">{code}</span>}
+                {code && <span className="font-mono text-xs text-zinc-500 tracking-wider flex-shrink-0">{code}</span>}
               </div>
               {entry.category && (
-                <span className={cn('text-[10px] px-2 py-0.5 rounded-full font-semibold whitespace-nowrap', style.badge, style.glow)}>
+                <span className={cn('text-xs px-2.5 py-1 rounded-full font-semibold whitespace-nowrap', style.badge, style.glow)}>
                   {entry.category}
                 </span>
               )}
             </div>
-            {/* Ideal-session badge gets its own flexible middle column instead of
-                being crammed into the left title block next to the category tag.
-                In there it was fighting the title for space AND capped at
-                max-w-[260px] to avoid colliding with the action icons, so long
-                session ranges (e.g. "London Open (02:00–05:00 EST) / New York...")
-                truncated almost immediately. As a middle flex-1 column it gets
-                whatever space is left between the title and the icons — which on
-                a normal-width header is usually the whole page, not 260px — and
-                right-aligns itself so it still sits next to the action buttons. */}
-            {entry.bestSession && (
-              <div className="flex-1 min-w-0 flex justify-end px-3">
-                <span className="inline-flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-500 border border-amber-500/20 font-semibold min-w-0 max-w-full">
-                  <Compass className="w-2.5 h-2.5 flex-shrink-0" />
+            {/* Session badge + action icons are grouped together as one unit
+                pinned to the right edge, instead of the badge floating in a
+                middle column. `entry.category` stays with the title on the
+                left; the title block is `flex-1` so it eats the leftover
+                space and the right group just hugs the edge — matches "badge
+                on the right" instead of center-balanced. */}
+            <div className="flex items-center gap-3 flex-shrink-0">
+              {entry.bestSession && (
+                <span className="inline-flex items-center gap-1 text-xs px-2.5 py-1 rounded-full bg-amber-500/10 text-amber-500 border border-amber-500/20 font-semibold min-w-0 max-w-[320px]">
+                  <Compass className="w-3 h-3 flex-shrink-0" />
                   <span className="truncate" title={`${entry.bestSession} session`}>{entry.bestSession} session</span>
                 </span>
-              </div>
-            )}
-            <div className="flex items-center gap-1 flex-shrink-0">
+              )}
+              <div className="flex items-center gap-1 flex-shrink-0">
               {activeImage && (
                 <button
                   onClick={() => setLightboxImage(activeImage.url)}
@@ -612,6 +608,7 @@ export function WikiScreen() {
               >
                 <Trash2 className="w-4 h-4" />
               </button>
+              </div>
             </div>
           </div>
 
@@ -683,7 +680,7 @@ export function WikiScreen() {
                   >
                     <ImageIcon className="w-8 h-8" />
                     <span className="text-xs">No chart diagram uploaded</span>
-                    <span className="text-[10px] text-zinc-600">Click to add — or paste (Ctrl+V) an image here</span>
+                    <span className="text-xs text-zinc-600">Click to add — or paste (Ctrl+V) an image here</span>
                   </button>
                 )}
               </div>
@@ -721,7 +718,7 @@ export function WikiScreen() {
                 <div className="space-y-4">
                   {entry.content ? (
                     <div>
-                      <p className="text-[10px] uppercase tracking-wide text-zinc-500 font-semibold mb-2">Core Definition</p>
+                      <p className="text-xs uppercase tracking-wide text-zinc-500 font-semibold mb-2">Core Definition</p>
                       <div className={cn(
                         'rounded-lg border p-4',
                         theme !== 'light' ? 'bg-zinc-900/60 border-zinc-800/70' : 'bg-zinc-50 border-zinc-200'
@@ -770,7 +767,7 @@ export function WikiScreen() {
                     'rounded-lg border p-4',
                     theme !== 'light' ? 'bg-zinc-900/50 border-zinc-800/60' : 'bg-zinc-50 border-zinc-200'
                   )}>
-                    <p className="flex items-center gap-1.5 text-[10px] uppercase tracking-wide text-zinc-500 font-semibold mb-2">
+                    <p className="flex items-center gap-1.5 text-xs uppercase tracking-wide text-zinc-500 font-semibold mb-2">
                       <Clock className="w-3 h-3" />
                       Ideal Timeframe
                     </p>
@@ -780,7 +777,7 @@ export function WikiScreen() {
                     'rounded-lg border p-4',
                     theme !== 'light' ? 'bg-zinc-900/50 border-zinc-800/60' : 'bg-zinc-50 border-zinc-200'
                   )}>
-                    <p className="flex items-center gap-1.5 text-[10px] uppercase tracking-wide text-zinc-500 font-semibold mb-2">
+                    <p className="flex items-center gap-1.5 text-xs uppercase tracking-wide text-zinc-500 font-semibold mb-2">
                       <Compass className="w-3 h-3" />
                       Ideal Session
                     </p>
@@ -855,7 +852,7 @@ export function WikiScreen() {
               <BookOpen className="w-5 h-5" />
             </div>
             <div className="min-w-0">
-              <p className="text-[10px] uppercase tracking-wide text-zinc-500 font-semibold">Total Concepts</p>
+              <p className="text-xs uppercase tracking-wide text-zinc-500 font-semibold">Total Concepts</p>
               <p className={cn('text-xl font-bold leading-tight', theme !== 'light' ? 'text-white' : 'text-zinc-900')}>
                 {wikiEntries.length}
               </p>
@@ -874,7 +871,7 @@ export function WikiScreen() {
               <Grid className="w-5 h-5" />
             </div>
             <div className="min-w-0">
-              <p className="text-[10px] uppercase tracking-wide text-zinc-500 font-semibold">Categories</p>
+              <p className="text-xs uppercase tracking-wide text-zinc-500 font-semibold">Categories</p>
               <p className={cn('text-xl font-bold leading-tight', theme !== 'light' ? 'text-white' : 'text-zinc-900')}>
                 {presentCategoryNames.length}
               </p>
@@ -893,7 +890,7 @@ export function WikiScreen() {
               <Filter className="w-5 h-5" />
             </div>
             <div className="min-w-0">
-              <p className="text-[10px] uppercase tracking-wide text-zinc-500 font-semibold">Active Filter</p>
+              <p className="text-xs uppercase tracking-wide text-zinc-500 font-semibold">Active Filter</p>
               <p className={cn('text-xl font-bold leading-tight truncate', theme !== 'light' ? 'text-white' : 'text-zinc-900')}>
                 {activeCategory}
               </p>
@@ -923,7 +920,7 @@ export function WikiScreen() {
                   onChange={(e) => setWikiSearch(e.target.value)}
                   placeholder="Search concepts, rules, sessions..."
                   className={cn(
-                    'w-full rounded-lg pl-9 pr-3 py-2 text-xs focus:outline-none focus:border-sky-500/50 border',
+                    'w-full rounded-lg pl-9 pr-3 py-2 text-sm focus:outline-none focus:border-sky-500/50 border',
                     theme !== 'light'
                       ? 'bg-zinc-950 border-zinc-800 text-white placeholder:text-zinc-600'
                       : 'bg-zinc-50 border-zinc-200 text-zinc-900 placeholder:text-zinc-400'
@@ -951,7 +948,7 @@ export function WikiScreen() {
                       key={cat}
                       onClick={() => setActiveCategory(cat)}
                       className={cn(
-                        'inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-medium border transition-colors flex-shrink-0',
+                        'inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium border transition-colors flex-shrink-0',
                         isActive
                           ? (style
                               ? style.active
@@ -992,7 +989,7 @@ export function WikiScreen() {
                   {isFiltering && (
                     <button
                       onClick={() => { setActiveCategory('All'); setWikiSearch(''); }}
-                      className="mt-2 text-[11px] text-sky-500 hover:text-sky-600 transition-colors"
+                      className="mt-2 text-xs text-sky-500 hover:text-sky-600 transition-colors"
                     >
                       Clear filters
                     </button>
