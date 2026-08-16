@@ -1008,20 +1008,23 @@ export function NotebookScreen() {
       </div>
 
       {/* ---- 3-pane layout ----
-          `lg:h-[70vh]` (not just min-h) is the fix here: below lg the three
-          panes stack vertically and the page itself scrolls, so a min-height
-          is fine. At lg+ they sit side-by-side as a fixed-height grid row —
-          each pane is a `flex flex-col` with an inner `flex-1 overflow-y-auto`
-          region (folder rail, note list, editor body) that's meant to scroll
-          on its own. That only works if this grid row has a bounded height;
-          with min-height alone the row had no ceiling, so a long note body
-          just kept growing the row (and the whole frame) instead of
-          scrolling internally. Capping it with h-[70vh] at lg gives the
-          flex-1 children something finite to fill and clip against. */}
-      <div className={cn('flex flex-col lg:flex-row gap-3 min-h-[75vh] lg:h-[75vh]')}
+          At lg+ the three panes sit side-by-side and need a *bounded*
+          height to give their internal `flex-1 overflow-y-auto` regions
+          (folder rail, note list, editor body) something finite to fill and
+          clip against — otherwise a long note body just keeps growing this
+          row (and the whole page) instead of scrolling internally.
+          `lg:flex-1 lg:min-h-0` (rather than a fixed `lg:h-[75vh]`) is what
+          gives it that bound now: the root wrapper above is `flex flex-col
+          h-full`, so `flex-1` here means "take up whatever vertical space
+          is left after the header and search row" — filling the viewport
+          exactly, on any screen height, with no leftover gap at the bottom
+          and no fixed-vh guess that's wrong on short/tall screens.
+          Below lg the three panes stack vertically instead, so a min-height
+          is used there and the page itself scrolls. */}
+      <div className={cn('flex flex-col lg:flex-row gap-3 min-h-[75vh] lg:h-auto lg:flex-1 lg:min-h-0')}
       >
         {/* ==== Folder rail ==== */}
-        <div className={cn('relative flex flex-col min-h-0 rounded-xl border overflow-hidden lg:w-[248px] lg:flex-shrink-0', border, panelBg)}>
+        <div className={cn('relative flex flex-col min-h-0 h-full rounded-xl border overflow-hidden lg:w-[248px] lg:flex-shrink-0', border, panelBg)}>
           <div className={cn('p-3.5 border-b', border)}>
             {isAddingFolder ? (
               <div className="space-y-2">
@@ -1159,7 +1162,7 @@ export function NotebookScreen() {
         {/* ==== Notes + editor frame ==== */}
         <div className={cn('grid grid-cols-1 lg:grid-cols-[320px_1fr] gap-0 rounded-xl border overflow-hidden min-h-0 flex-1', border, panelBg)}>
         {/* ==== Note list ==== */}
-        <div className={cn('flex flex-col min-h-0 border-b lg:border-b-0 lg:border-r', border)}>
+        <div className={cn('flex flex-col min-h-0 h-full border-b lg:border-b-0 lg:border-r', border)}>
           <div className={cn('flex items-center justify-between gap-2.5 p-3.5 border-b', border)}>
             {isTrashView ? (
               <div className="flex items-center justify-between w-full">
@@ -1435,7 +1438,7 @@ export function NotebookScreen() {
         </div>
 
         {/* ==== Editor / detail pane ==== */}
-        <div className="flex flex-col min-h-0 min-w-0">
+        <div className="flex flex-col min-h-0 h-full min-w-0">
           {!selectedEntry ? (
             <div className="flex-1 flex flex-col items-center justify-center gap-2.5 p-8">
               <StickyNote className={cn('w-9 h-9', theme !== 'light' ? 'text-zinc-700' : 'text-zinc-300')} />
