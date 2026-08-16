@@ -556,20 +556,29 @@ export function WikiScreen() {
                 <h2 className={cn('text-lg font-bold leading-tight truncate', theme !== 'light' ? 'text-white' : 'text-zinc-900')}>{entry.title}</h2>
                 {code && <span className="font-mono text-[10px] text-zinc-500 tracking-wider flex-shrink-0">{code}</span>}
               </div>
-              <div className="flex items-center gap-1.5 flex-wrap">
-                {entry.category && (
-                  <span className={cn('text-[10px] px-2 py-0.5 rounded-full font-semibold whitespace-nowrap', style.badge, style.glow)}>
-                    {entry.category}
-                  </span>
-                )}
-                {entry.bestSession && (
-                  <span className="inline-flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-500 border border-amber-500/20 font-semibold min-w-0 max-w-[260px]">
-                    <Compass className="w-2.5 h-2.5 flex-shrink-0" />
-                    <span className="truncate" title={`${entry.bestSession} session`}>{entry.bestSession} session</span>
-                  </span>
-                )}
-              </div>
+              {entry.category && (
+                <span className={cn('text-[10px] px-2 py-0.5 rounded-full font-semibold whitespace-nowrap', style.badge, style.glow)}>
+                  {entry.category}
+                </span>
+              )}
             </div>
+            {/* Ideal-session badge gets its own flexible middle column instead of
+                being crammed into the left title block next to the category tag.
+                In there it was fighting the title for space AND capped at
+                max-w-[260px] to avoid colliding with the action icons, so long
+                session ranges (e.g. "London Open (02:00–05:00 EST) / New York...")
+                truncated almost immediately. As a middle flex-1 column it gets
+                whatever space is left between the title and the icons — which on
+                a normal-width header is usually the whole page, not 260px — and
+                right-aligns itself so it still sits next to the action buttons. */}
+            {entry.bestSession && (
+              <div className="flex-1 min-w-0 flex justify-end px-3">
+                <span className="inline-flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-500 border border-amber-500/20 font-semibold min-w-0 max-w-full">
+                  <Compass className="w-2.5 h-2.5 flex-shrink-0" />
+                  <span className="truncate" title={`${entry.bestSession} session`}>{entry.bestSession} session</span>
+                </span>
+              </div>
+            )}
             <div className="flex items-center gap-1 flex-shrink-0">
               {activeImage && (
                 <button
