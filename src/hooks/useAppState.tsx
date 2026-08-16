@@ -4589,6 +4589,8 @@ Return ONLY a JSON object — no markdown, no code fences, no commentary — wit
       emotionsList,
       customSymbols,
       customPillars,
+      notebookEntries,
+      notebookFolders,
       lifeDisciplineData: buildLifeDisciplineSnapshot(),
       appPreferencesData: buildAppPreferencesSnapshot(),
     };
@@ -4627,6 +4629,12 @@ Return ONLY a JSON object — no markdown, no code fences, no commentary — wit
         setCustomSymbols(migrated.customSymbols);
         setCustomPillars(migrated.customPillars);
 
+        // Notebook folders — small config-like list, restored independently
+        // (like lifeDisciplineData/appPreferencesData below) since older
+        // backups predate this field and just no-op here.
+        const restoredNotebookFolders: string[] | null = Array.isArray(raw.notebookFolders) ? raw.notebookFolders : null;
+        if (restoredNotebookFolders) setNotebookFolders(restoredNotebookFolders);
+
         // Everything now lives in Supabase (accounts/trades, journal data,
         // and preferences), so a full restore replaces this user's
         // server-side rows too — otherwise the restored data would look
@@ -4662,9 +4670,25 @@ Return ONLY a JSON object — no markdown, no code fences, no commentary — wit
                 mistakesList: migrated.mistakesList,
                 emotionsList: migrated.emotionsList,
                 customSymbols: migrated.customSymbols,
+                ...(restoredNotebookFolders ? { notebookFolders: restoredNotebookFolders } : {}),
               },
             }, { onConflict: 'user_id' });
             if (journalErr) throw journalErr;
+
+            // Notebook entries — own row per entry, same delete-then-reinsert
+            // pattern as trades/accounts above, since these live in their
+            // own `notebook_entries` table rather than the journal_data blob.
+            if (Array.isArray(raw.notebookEntries)) {
+              await supabase.from('notebook_entries').delete().eq('user_id', userId);
+              const restoredNotebookEntries: NotebookEntry[] = raw.notebookEntries.map((e: any) => normalizeNotebookEntry(e));
+              if (restoredNotebookEntries.length > 0) {
+                const { error: notebookInsertErr } = await supabase.from('notebook_entries').insert(
+                  restoredNotebookEntries.map((e: NotebookEntry) => ({ id: e.id, user_id: userId, data: e }))
+                );
+                if (notebookInsertErr) throw notebookInsertErr;
+              }
+              setNotebookEntries(restoredNotebookEntries);
+            }
           } catch (err) {
             console.error('Failed to sync restored backup to Supabase:', err);
             alert('Backup restored locally, but some data failed to sync to your account — check your connection and try again.');
