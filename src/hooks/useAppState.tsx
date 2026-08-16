@@ -102,7 +102,7 @@ import {
   CustomPillar, TradeImage, TimeframeChart, StrategyStep, ChatMessage, RoutineCategory, RoutineItem,
   ChallengeConfig, ChallengePreset, EconomicEvent, ParsedMTTrade, ViewType, GalleryView, TradeFilter,
   TradeSortField, SortOrder, PillarsPerRow, NoticeType, SessionOption, WikiCategory, RulePillar,
-  RuleAccentColor, StoredData,
+  RuleAccentColor, StoredData, NotebookEntry,
 } from '../types';
 import {
   WIKI_CATEGORIES,
@@ -136,7 +136,7 @@ import {
   normalizeAccount, normalizeTrade, normalizeTrades, normalizeStringField, guessRulePillar,
   normalizeRule, normalizeCustomPillar, normalizeStrategyStep, normalizeStrategySteps,
   normalizeStrategyImages, normalizeStrategy, normalizeChatMessage, normalizeNotice, normalizeWiki,
-  normalizeNamedItem, migrateStoredData,
+  normalizeNamedItem, migrateStoredData, normalizeNotebookEntry,
 } from '../utils/normalize';
 import {
   parseMTNumber, parseMTTimestamp, classifyMTHeaders, rowToMTTrade, splitMTDelimitedLine,
@@ -214,6 +214,14 @@ type StandardConceptSeed = {
 };
 
 const STANDARD_TRADING_CONCEPTS = standardTradingConceptsSeed as StandardConceptSeed[];
+
+// ----------------------------------------------------------------------------
+// Notebook — default folders. A couple of sensible built-ins, always
+// present, merged ahead of whatever custom folders the user has added
+// (`notebookFolders` in journal_data). Not persisted themselves — they're
+// implicit, so removing/renaming them here doesn't require a migration.
+// ----------------------------------------------------------------------------
+const DEFAULT_NOTEBOOK_FOLDERS = ['Mindset', 'Daily Reflections'] as const;
 
 // ============================================================================
 // useAppState — the entire journal's state + business logic.
@@ -566,6 +574,18 @@ export function useAppState() {
   );
   const [customSymbols, setCustomSymbols] = useState<string[]>([]);
   const [customPillars, setCustomPillars] = useState<CustomPillar[]>([]);
+
+  // ---- Notebook ----
+  // Custom folder NAMES only — small config-like list, persisted inside the
+  // journal_data blob (see Journal Data section) alongside setupTypes/
+  // confluences/etc. The entries themselves live in their own Supabase
+  // table (own-row-per-entry, like `trades`) and are loaded/state-managed
+  // separately below.
+  const [notebookFolders, setNotebookFolders] = useState<string[]>([]);
+  const [notebookEntries, setNotebookEntries] = useState<NotebookEntry[]>([]);
+  // True while the initial Supabase fetch for notebook entries is in
+  // flight — mirrors accountsTradesLoading's purpose for this table.
+  const [notebookEntriesLoading, setNotebookEntriesLoading] = useState(true);
 
   // ---- MT4/MT5 Trade Import: UI state ----
   const tradeImportInputRef = useRef<HTMLInputElement | null>(null);
@@ -1051,6 +1071,7 @@ export function useAppState() {
       setEmotionsList(migrated.emotionsList);
       setCustomSymbols(migrated.customSymbols);
       setCustomPillars(migrated.customPillars);
+      setNotebookFolders(migrated.notebookFolders);
     } catch (e) {
       console.error('Failed to load journal data from Supabase:', e);
       showTradeImportToast('error', 'Failed to load your Playbook/Notices/Wiki/Tags — check your connection and reload.');
@@ -1071,7 +1092,7 @@ export function useAppState() {
   // saved server-side before it's even been fetched.
   useEffect(() => {
     if (!userId || !hasLoadedJournalDataRef.current) return;
-    const payload = { rules, strategies, notices, wikiEntries, setupTypes, confluences, mistakesList, emotionsList, customSymbols, customPillars };
+    const payload = { rules, strategies, notices, wikiEntries, setupTypes, confluences, mistakesList, emotionsList, customSymbols, customPillars, notebookFolders };
     writeJournalData(
       async () => {
         const { error } = await supabase
@@ -1084,7 +1105,7 @@ export function useAppState() {
         showTradeImportToast('error', 'Failed to save your changes — they may not sync to other devices. Check your connection.');
       }
     );
-  }, [userId, rules, strategies, notices, wikiEntries, setupTypes, confluences, mistakesList, emotionsList, customSymbols, customPillars, writeJournalData]);
+  }, [userId, rules, strategies, notices, wikiEntries, setupTypes, confluences, mistakesList, emotionsList, customSymbols, customPillars, notebookFolders, writeJournalData]);
 
   // ==========================================================================
   // Accounts & Trades: Supabase (per-user, synced across devices)
@@ -1162,6 +1183,216 @@ export function useAppState() {
       loadAccountsAndTrades(userId);
     }
   }, [userId, loadAccountsAndTrades]);
+
+  // ==========================================================================
+  // Notebook Entries: Supabase (per-user, synced across devices)
+  // ==========================================================================
+  // Own row per entry in `public.notebook_entries` (id, user_id, data jsonb),
+  // same pattern as `trades` — NOT folded into the journal_data blob, since
+  // entries can grow large/numerous over time unlike that blob's small
+  // config-like slices. `notebookFolders` (just the folder names) is the
+  // one small piece of Notebook state that DOES live in journal_data — see
+  // the Journal Data section above.
+  const loadNotebookEntries = useCallback(async (uid: string) => {
+    setNotebookEntriesLoading(true);
+    try {
+      const { data: rows, error } = await supabase
+        .from('notebook_entries')
+        .select('id, data')
+        .eq('user_id', uid);
+      if (error) throw error;
+      setNotebookEntries((rows || []).map(r => normalizeNotebookEntry({ ...(r.data as any), id: r.id })));
+    } catch (e) {
+      console.error('Failed to load notebook entries from Supabase:', e);
+      showTradeImportToast('error', 'Failed to load your Notebook — check your connection and reload.');
+    } finally {
+      setNotebookEntriesLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (userId) loadNotebookEntries(userId);
+  }, [userId, loadNotebookEntries]);
+
+  // ---- Notebook: CRUD handlers ----
+  // Same shape as the Account/Trade handlers above: optimistic local state
+  // update + fire-and-forget Supabase call scoped to user_id, with an
+  // explicit toast (not a silent no-op) if there's no authenticated user or
+  // the write fails, so data loss is never invisible.
+  const handleAddNotebookEntry = useCallback((entry: { title: string; body: string; folder: string; tags: string[] }) => {
+    const now = new Date().toISOString();
+    const newEntry: NotebookEntry = {
+      id: generateId(),
+      title: entry.title,
+      body: entry.body,
+      folder: entry.folder,
+      tags: entry.tags,
+      pinned: false,
+      isDeleted: false,
+      createdAt: now,
+      updatedAt: now,
+    };
+    setNotebookEntries(prev => [...prev, newEntry]);
+    if (userId) {
+      supabase.from('notebook_entries').insert({ id: newEntry.id, user_id: userId, data: newEntry }).then(({ error }) => {
+        if (error) {
+          console.error('Failed to save notebook entry to Supabase:', error);
+          showTradeImportToast('error', 'Failed to save the new note — it may not appear on other devices.');
+        }
+      });
+    } else {
+      console.error('Cannot save notebook entry to Supabase: no authenticated user id.');
+      showTradeImportToast('error', 'Not signed in — this note was NOT saved and will be lost on refresh.');
+    }
+    return newEntry;
+  }, [userId]);
+
+  const handleUpdateNotebookEntry = useCallback((id: string, updates: Partial<Pick<NotebookEntry, 'title' | 'body' | 'folder' | 'tags'>>) => {
+    setNotebookEntries(prev => {
+      const existing = prev.find(e => e.id === id);
+      if (!existing) return prev;
+      const updated: NotebookEntry = { ...existing, ...updates, updatedAt: new Date().toISOString() };
+      if (userId) {
+        supabase.from('notebook_entries').update({ data: updated }).eq('id', id).eq('user_id', userId).then(({ error }) => {
+          if (error) {
+            console.error('Failed to update notebook entry in Supabase:', error);
+            showTradeImportToast('error', 'Failed to save note changes — it may not sync to other devices.');
+          }
+        });
+      } else {
+        console.error('Cannot update notebook entry in Supabase: no authenticated user id.');
+        showTradeImportToast('error', 'Not signed in — these note changes were NOT saved and will be lost on refresh.');
+      }
+      return prev.map(e => e.id === id ? updated : e);
+    });
+  }, [userId]);
+
+  const handleToggleNotebookEntryPin = useCallback((id: string) => {
+    setNotebookEntries(prev => {
+      const existing = prev.find(e => e.id === id);
+      if (!existing) return prev;
+      const updated: NotebookEntry = { ...existing, pinned: !existing.pinned, updatedAt: new Date().toISOString() };
+      if (userId) {
+        supabase.from('notebook_entries').update({ data: updated }).eq('id', id).eq('user_id', userId).then(({ error }) => {
+          if (error) {
+            console.error('Failed to update notebook entry pin in Supabase:', error);
+            showTradeImportToast('error', 'Failed to save pin change — it may not sync to other devices.');
+          }
+        });
+      } else {
+        console.error('Cannot update notebook entry in Supabase: no authenticated user id.');
+        showTradeImportToast('error', 'Not signed in — this change was NOT saved and will be lost on refresh.');
+      }
+      return prev.map(e => e.id === id ? updated : e);
+    });
+  }, [userId]);
+
+  // Soft delete — marks isDeleted/deletedAt instead of removing the row, so
+  // the entry can appear in a "Recently Deleted" view before permanent
+  // removal (see handlePermanentDeleteNotebookEntry).
+  const handleSoftDeleteNotebookEntry = useCallback((id: string) => {
+    setNotebookEntries(prev => {
+      const existing = prev.find(e => e.id === id);
+      if (!existing) return prev;
+      const updated: NotebookEntry = { ...existing, isDeleted: true, deletedAt: new Date().toISOString(), pinned: false };
+      if (userId) {
+        supabase.from('notebook_entries').update({ data: updated }).eq('id', id).eq('user_id', userId).then(({ error }) => {
+          if (error) {
+            console.error('Failed to soft-delete notebook entry in Supabase:', error);
+            showTradeImportToast('error', 'Failed to delete the note on the server — it may reappear on reload.');
+          }
+        });
+      } else {
+        console.error('Cannot update notebook entry in Supabase: no authenticated user id.');
+        showTradeImportToast('error', 'Not signed in — this note was only removed locally and may reappear on reload.');
+      }
+      return prev.map(e => e.id === id ? updated : e);
+    });
+  }, [userId]);
+
+  const handleRestoreNotebookEntry = useCallback((id: string) => {
+    setNotebookEntries(prev => {
+      const existing = prev.find(e => e.id === id);
+      if (!existing) return prev;
+      const updated: NotebookEntry = { ...existing, isDeleted: false, deletedAt: undefined, updatedAt: new Date().toISOString() };
+      if (userId) {
+        supabase.from('notebook_entries').update({ data: updated }).eq('id', id).eq('user_id', userId).then(({ error }) => {
+          if (error) {
+            console.error('Failed to restore notebook entry in Supabase:', error);
+            showTradeImportToast('error', 'Failed to restore the note on the server — it may still show as deleted on reload.');
+          }
+        });
+      } else {
+        console.error('Cannot update notebook entry in Supabase: no authenticated user id.');
+        showTradeImportToast('error', 'Not signed in — this restore was NOT saved and will be lost on refresh.');
+      }
+      return prev.map(e => e.id === id ? updated : e);
+    });
+  }, [userId]);
+
+  const handlePermanentDeleteNotebookEntry = useCallback((id: string) => {
+    setNotebookEntries(prev => prev.filter(e => e.id !== id));
+    if (userId) {
+      supabase.from('notebook_entries').delete().eq('id', id).eq('user_id', userId).then(({ error }) => {
+        if (error) {
+          console.error('Failed to permanently delete notebook entry from Supabase:', error);
+          showTradeImportToast('error', 'Failed to permanently delete the note on the server — it may reappear on reload.');
+        }
+      });
+    } else {
+      console.error('Cannot delete notebook entry from Supabase: no authenticated user id.');
+      showTradeImportToast('error', 'Not signed in — this note was only removed locally and may reappear on reload.');
+    }
+  }, [userId]);
+
+  // ---- Notebook: folders ----
+  // Folder names live in journal_data (see handling above), not their own
+  // table — adding one just appends to the small persisted string list, and
+  // the existing journal_data debounced writer picks up the change
+  // automatically via its effect dependency array.
+  const notebookFoldersWithDefaults = useMemo(() => {
+    const custom = notebookFolders.filter(f => !(DEFAULT_NOTEBOOK_FOLDERS as readonly string[]).includes(f));
+    return [...DEFAULT_NOTEBOOK_FOLDERS, ...custom];
+  }, [notebookFolders]);
+
+  const handleAddNotebookFolder = useCallback((name: string) => {
+    const trimmed = name.trim();
+    if (!trimmed) return;
+    setNotebookFolders(prev => {
+      if (prev.includes(trimmed) || (DEFAULT_NOTEBOOK_FOLDERS as readonly string[]).includes(trimmed)) return prev;
+      return [...prev, trimmed];
+    });
+  }, []);
+
+  const handleDeleteNotebookFolder = useCallback((name: string) => {
+    if ((DEFAULT_NOTEBOOK_FOLDERS as readonly string[]).includes(name)) return; // default folders aren't removable
+    setNotebookFolders(prev => prev.filter(f => f !== name));
+    // Entries that were in the deleted folder fall back to uncategorized
+    // rather than pointing at a folder that no longer exists. Each entry is
+    // its own Supabase row, so the reset has to be pushed per-entry, not
+    // just via the journal_data blob (which only holds the folder names).
+    setNotebookEntries(prev => {
+      const affected = prev.filter(e => e.folder === name);
+      const updated = prev.map(e => e.folder === name ? { ...e, folder: '', updatedAt: new Date().toISOString() } : e);
+      if (affected.length > 0) {
+        if (userId) {
+          affected.forEach(e => {
+            const updatedEntry = updated.find(u => u.id === e.id)!;
+            supabase.from('notebook_entries').update({ data: updatedEntry }).eq('id', e.id).eq('user_id', userId).then(({ error }) => {
+              if (error) {
+                console.error('Failed to update notebook entry after folder deletion in Supabase:', error);
+                showTradeImportToast('error', 'Failed to move some notes out of the deleted folder — they may reappear on reload.');
+              }
+            });
+          });
+        } else {
+          console.error('Cannot update notebook entries in Supabase: no authenticated user id.');
+          showTradeImportToast('error', 'Not signed in — these note changes were NOT saved and will be lost on refresh.');
+        }
+      }
+      return updated;
+    });
+  }, [userId]);
 
   // ---- Logout cleanup ----
   // useAppState() lives inside a single AppProvider that wraps both
@@ -1494,6 +1725,10 @@ export function useAppState() {
       setAccountsTradesLoading(true);
       hasAttemptedMigrationRef.current = false;
 
+      // ---- Notebook ----
+      setNotebookEntries([]);
+      setNotebookEntriesLoading(true);
+
       // ---- Journal Data (Rules/Playbook, Notices, Wiki, Tags) ----
       setRules([]);
       setStrategies([]);
@@ -1505,6 +1740,7 @@ export function useAppState() {
       setMistakesList([]);
       setEmotionsList(EMOTION_OPTIONS.map(name => ({ id: generateId(), name, color: 'purple' as TagColor })));
       setCustomSymbols([]);
+      setNotebookFolders([]);
       setJournalDataLoading(true);
       hasLoadedJournalDataRef.current = false;
 
@@ -4825,6 +5061,12 @@ Return ONLY a JSON object — no markdown, no code fences, no commentary — wit
         throw new Error('Failed to delete accounts from the server.');
       }
 
+      const { error: notebookError } = await supabase.from('notebook_entries').delete().eq('user_id', userId);
+      if (notebookError) {
+        console.error('Failed to delete notebook entries from Supabase during reset:', notebookError);
+        throw new Error('Failed to delete notebook entries from the server.');
+      }
+
       const { error: journalError } = await supabase.from('journal_data').delete().eq('user_id', userId);
       if (journalError) {
         console.error('Failed to delete journal data from Supabase during reset:', journalError);
@@ -4861,6 +5103,10 @@ Return ONLY a JSON object — no markdown, no code fences, no commentary — wit
     setAccounts([]);
     setTrades([]);
     setSelectedAccounts(['all']);
+
+    // Notebook
+    setNotebookEntries([]);
+    setNotebookFolders([]);
 
     // Journal Data: Rules/Playbook, Notices, Wiki, Tags
     setRules([]);
@@ -4966,6 +5212,18 @@ Return ONLY a JSON object — no markdown, no code fences, no commentary — wit
     accountsTradesLoading,
     journalDataLoading,
     preferencesLoading,
+    // ---- Notebook ----
+    notebookEntries,
+    notebookEntriesLoading,
+    notebookFolders: notebookFoldersWithDefaults,
+    handleAddNotebookEntry,
+    handleUpdateNotebookEntry,
+    handleToggleNotebookEntryPin,
+    handleSoftDeleteNotebookEntry,
+    handleRestoreNotebookEntry,
+    handlePermanentDeleteNotebookEntry,
+    handleAddNotebookFolder,
+    handleDeleteNotebookFolder,
     rules,
     setRules,
     strategies,
