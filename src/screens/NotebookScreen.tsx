@@ -552,7 +552,23 @@ export function NotebookScreen() {
   };
 
   return (
-    <div className="space-y-6 min-w-0">
+    <div
+      className="space-y-6 min-w-0"
+      style={theme !== 'light'
+        ? { ['--scrollbar-thumb' as any]: 'rgba(161,161,170,0.35)', ['--scrollbar-thumb-hover' as any]: 'rgba(161,161,170,0.55)', ['--scrollbar-track' as any]: 'transparent' }
+        : { ['--scrollbar-thumb' as any]: 'rgba(113,113,122,0.3)', ['--scrollbar-thumb-hover' as any]: 'rgba(113,113,122,0.5)', ['--scrollbar-track' as any]: 'transparent' }}
+    >
+      {/* Themed scrollbar — matches the page's dark/light theme instead of
+          the browser's default (light-on-dark, or vice versa) scrollbar.
+          Colors come from the --scrollbar-* vars set above based on `theme`,
+          so every `.themed-scrollbar` pane below stays in sync automatically. */}
+      <style>{`
+        .themed-scrollbar { scrollbar-width: thin; scrollbar-color: var(--scrollbar-thumb) var(--scrollbar-track); }
+        .themed-scrollbar::-webkit-scrollbar { width: 8px; height: 8px; }
+        .themed-scrollbar::-webkit-scrollbar-track { background: var(--scrollbar-track); }
+        .themed-scrollbar::-webkit-scrollbar-thumb { background-color: var(--scrollbar-thumb); border-radius: 9999px; }
+        .themed-scrollbar::-webkit-scrollbar-thumb:hover { background-color: var(--scrollbar-thumb-hover); }
+      `}</style>
       <PageHeader
         title="Notebook"
         description="Your mindset notes, affirmations, and personal reflections"
@@ -583,7 +599,7 @@ export function NotebookScreen() {
               {allTags.length === 0 ? (
                 <p className={cn('text-xs px-1.5 py-1', textMuted)}>No tags yet</p>
               ) : (
-                <div className="max-h-48 overflow-y-auto flex flex-col gap-0.5">
+                <div className="themed-scrollbar max-h-48 overflow-y-auto flex flex-col gap-0.5">
                   {allTags.map(tag => (
                     <button
                       key={tag}
@@ -647,7 +663,7 @@ export function NotebookScreen() {
             )}
           </div>
 
-          <div className="flex-1 overflow-y-auto p-2">
+          <div className="themed-scrollbar flex-1 overflow-y-auto p-2">
             <p className={cn('text-[10px] font-semibold uppercase tracking-wider px-2 pt-1 pb-1.5', textMuted)}>Folders</p>
 
             <button
@@ -806,7 +822,7 @@ export function NotebookScreen() {
             </div>
           )}
 
-          <div className="flex-1 overflow-y-auto">
+          <div className="themed-scrollbar flex-1 overflow-y-auto">
             {notebookEntriesLoading ? (
               <p className={cn('text-xs text-center py-10', textMuted)}>Loading your notes...</p>
             ) : visibleEntries.length === 0 ? (
@@ -928,7 +944,7 @@ export function NotebookScreen() {
                   </button>
                 </div>
               </div>
-              <div className="flex-1 overflow-y-auto p-5">
+              <div className="themed-scrollbar flex-1 overflow-y-auto p-5">
                 {selectedEntry.deletedAt && (
                   <p className={cn('text-[11px] mb-3', textMuted)}>
                     Deleted {formatFullDateTime(selectedEntry.deletedAt)} &middot; auto-purges 30 days after deletion
@@ -1159,7 +1175,7 @@ export function NotebookScreen() {
               </div>
 
               {/* Body */}
-              <div className="flex-1 overflow-y-auto px-5 py-4">
+              <div className="themed-scrollbar flex-1 overflow-y-auto px-5 py-4">
                 <div
                   ref={bodyRef}
                   contentEditable
@@ -1199,7 +1215,7 @@ export function NotebookScreen() {
                     className={cn('px-2 py-1 rounded-full text-[11px] border outline-none w-24 focus:w-36 transition-all', theme !== 'light' ? 'bg-zinc-800 border-zinc-700 text-white placeholder-zinc-500 focus:border-zinc-600' : 'bg-zinc-50 border-zinc-200 text-zinc-900 placeholder-zinc-400 focus:border-zinc-300')}
                   />
                   {showTagSuggestions && suggestibleTags.length > 0 && (
-                    <div className={cn('absolute bottom-full left-0 mb-1.5 w-40 rounded-lg border shadow-xl z-20 py-1 max-h-40 overflow-y-auto', theme !== 'light' ? 'bg-zinc-900 border-zinc-800' : 'bg-white border-zinc-200')}>
+                    <div className={cn('themed-scrollbar absolute bottom-full left-0 mb-1.5 w-40 rounded-lg border shadow-xl z-20 py-1 max-h-40 overflow-y-auto', theme !== 'light' ? 'bg-zinc-900 border-zinc-800' : 'bg-white border-zinc-200')}>
                       {suggestibleTags.map(tag => (
                         <button
                           key={tag}
