@@ -93,6 +93,7 @@ import {
   Dumbbell,
   Coffee,
   Heart,
+  NotebookPen,
   User as UserIcon,
   LogOut,
   type LucideIcon,
@@ -533,6 +534,7 @@ export function Sidebar({ isMobile }: { isMobile: boolean }) {
                 items: [
                   { id: 'notices' as ViewType, icon: FileText, label: 'Market Notices' },
                   { id: 'wiki' as ViewType, icon: Lightbulb, label: 'Knowledge Wiki' },
+                  { id: 'notebook' as ViewType, icon: NotebookPen, label: 'Notebook' },
                 ],
               },
             ].map((section, sectionIndex) => (
