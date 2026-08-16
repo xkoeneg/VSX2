@@ -277,9 +277,13 @@ export function NotebookScreen() {
   const [showFontFamilyMenu, setShowFontFamilyMenu] = useState(false);
   const [fontFamilyMenuPos, setFontFamilyMenuPos] = useState({ top: 0, left: 0 });
   const fontFamilyButtonRef = useRef<HTMLButtonElement>(null);
+  // Label shown on the Font button itself, so it reflects the last size
+  // picked from the dropdown instead of a static "Font" caption.
+  const [selectedFontFamilyLabel, setSelectedFontFamilyLabel] = useState<string | null>(null);
   const [showFontSizeMenu, setShowFontSizeMenu] = useState(false);
   const [fontSizeMenuPos, setFontSizeMenuPos] = useState({ top: 0, left: 0 });
   const fontSizeButtonRef = useRef<HTMLButtonElement>(null);
+  const [selectedFontSizeLabel, setSelectedFontSizeLabel] = useState<number | null>(null);
   const [colorPickerPos, setColorPickerPos] = useState({ top: 0, left: 0 });
   const [richColorMenu, setRichColorMenu] = useState<null | 'text' | 'highlight'>(null);
   const [richColorMenuPos, setRichColorMenuPos] = useState({ top: 0, left: 0 });
@@ -1783,10 +1787,10 @@ export function NotebookScreen() {
                       setShowFontFamilyMenu(v => !v);
                     }}
                     title="Font"
-                    className={cn('flex items-center gap-1 text-sm bg-transparent border rounded-md pl-2.5 pr-1.5 py-1.5 outline-none cursor-pointer', border, textMuted)}
+                    className={cn('flex items-center gap-1 text-sm bg-transparent border rounded-md pl-2.5 pr-1.5 py-1.5 outline-none cursor-pointer max-w-[9rem]', border, textMuted)}
                   >
-                    Font
-                    <ChevronDown className="w-3.5 h-3.5" />
+                    <span className="truncate">{selectedFontFamilyLabel ?? 'Font'}</span>
+                    <ChevronDown className="w-3.5 h-3.5 flex-shrink-0" />
                   </button>
                   {showFontFamilyMenu && createPortal(
                     <>
@@ -1810,7 +1814,7 @@ export function NotebookScreen() {
                           <button
                             key={value}
                             onMouseDown={(e) => { e.preventDefault(); }}
-                            onClick={() => { exec('fontName', value); setShowFontFamilyMenu(false); }}
+                            onClick={() => { exec('fontName', value); setSelectedFontFamilyLabel(label); setShowFontFamilyMenu(false); }}
                             style={{ fontFamily: value }}
                             className={cn('w-full px-3.5 py-2 text-sm text-left transition-colors', textBody, theme !== 'light' ? 'hover:bg-zinc-800' : 'hover:bg-zinc-50')}
                           >
@@ -1837,7 +1841,7 @@ export function NotebookScreen() {
                     title="Font size"
                     className={cn('flex items-center gap-1 text-sm bg-transparent border rounded-md pl-2.5 pr-1.5 py-1.5 outline-none cursor-pointer', border, textMuted)}
                   >
-                    Size
+                    {selectedFontSizeLabel ?? 'Size'}
                     <ChevronDown className="w-3.5 h-3.5" />
                   </button>
                   {showFontSizeMenu && createPortal(
@@ -1851,7 +1855,7 @@ export function NotebookScreen() {
                           <button
                             key={px}
                             onMouseDown={(e) => { e.preventDefault(); }}
-                            onClick={() => { applyFontSize(px); setShowFontSizeMenu(false); }}
+                            onClick={() => { applyFontSize(px); setSelectedFontSizeLabel(px); setShowFontSizeMenu(false); }}
                             className={cn('w-full px-3.5 py-2 text-sm text-left transition-colors', textBody, theme !== 'light' ? 'hover:bg-zinc-800' : 'hover:bg-zinc-50')}
                           >
                             {px}
