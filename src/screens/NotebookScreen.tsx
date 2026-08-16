@@ -262,6 +262,7 @@ export function NotebookScreen() {
   // it through a portal with fixed coordinates escapes that clipping.
   const [styleMenuPos, setStyleMenuPos] = useState({ top: 0, left: 0 });
   const styleButtonRef = useRef<HTMLButtonElement>(null);
+  const [colorPickerPos, setColorPickerPos] = useState({ top: 0, left: 0 });
   const [showEntryFolderMenu, setShowEntryFolderMenu] = useState(false);
   const [collapsedFolders, setCollapsedFolders] = useState<Set<string>>(new Set());
 
@@ -750,7 +751,14 @@ export function NotebookScreen() {
               after creation, not just at creation. */}
           <button
             type="button"
-            onClick={(e) => { e.stopPropagation(); setColorPickerFolder(prev => prev === node.fullPath ? null : node.fullPath); }}
+            onClick={(e) => {
+              e.stopPropagation();
+              if (colorPickerFolder !== node.fullPath) {
+                const rect = e.currentTarget.getBoundingClientRect();
+                setColorPickerPos({ top: rect.bottom + 6, left: rect.left });
+              }
+              setColorPickerFolder(prev => prev === node.fullPath ? null : node.fullPath);
+            }}
             title="Change folder color"
             className="flex-shrink-0 p-1 rounded-md hover:ring-2 hover:ring-zinc-600 transition-all"
           >
@@ -787,12 +795,16 @@ export function NotebookScreen() {
           </div>
 
 
-          {colorPickerFolder === node.fullPath && (
+          {colorPickerFolder === node.fullPath && createPortal(
             <>
+              {/* Click-away catcher — sits under the menu, above everything
+                  else, so a click outside closes it without needing a
+                  document-level listener. */}
               <div className="fixed inset-0 z-20" onClick={() => setColorPickerFolder(null)} />
               <div
+                style={{ position: 'fixed', top: colorPickerPos.top, left: colorPickerPos.left }}
                 className={cn(
-                  'absolute left-7 top-full mt-1 z-30 w-36 p-2 rounded-lg border shadow-xl',
+                  'w-36 p-2 rounded-lg border shadow-xl z-30',
                   theme !== 'light' ? 'bg-zinc-900 border-zinc-800' : 'bg-white border-zinc-200'
                 )}
               >
@@ -810,9 +822,25 @@ export function NotebookScreen() {
                       )}
                     />
                   ))}
+                  {/* Reset swatch — same grid, same size as the color dots,
+                      so picking "automatic" feels like just another color
+                      choice instead of a separate button bolted on below. */}
+                  <button
+                    type="button"
+                    title="Automatic color"
+                    onClick={() => { handleSetNotebookFolderColor(node.fullPath, undefined); setColorPickerFolder(null); }}
+                    className={cn(
+                      'w-5 h-5 rounded-full flex-shrink-0 flex items-center justify-center border-2 border-dashed transition-transform',
+                      theme !== 'light' ? 'border-zinc-600' : 'border-zinc-300',
+                      !notebookFolderColors[node.fullPath] ? 'ring-2 ring-offset-1 ring-purple-400 scale-110' : 'hover:scale-110'
+                    )}
+                  >
+                    <X className={cn('w-3 h-3', textMuted)} />
+                  </button>
                 </div>
               </div>
-            </>
+            </>,
+            document.body
           )}
         </div>
         {hasChildren && !collapsed && node.children.map(child => renderFolderNode(child, depth + 1))}
