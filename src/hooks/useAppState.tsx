@@ -582,6 +582,11 @@ export function useAppState() {
   // table (own-row-per-entry, like `trades`) and are loaded/state-managed
   // separately below.
   const [notebookFolders, setNotebookFolders] = useState<string[]>([]);
+  // Explicit color choice per folder name (see StoredData.notebookFolderColors
+  // for why it's keyed this way). Folders with no entry here fall back to a
+  // deterministic name-hash color in the UI, so this only needs to hold the
+  // folders someone actually picked a color for.
+  const [notebookFolderColors, setNotebookFolderColors] = useState<Record<string, string>>({});
   const [notebookEntries, setNotebookEntries] = useState<NotebookEntry[]>([]);
   // True while the initial Supabase fetch for notebook entries is in
   // flight — mirrors accountsTradesLoading's purpose for this table.
@@ -1072,6 +1077,7 @@ export function useAppState() {
       setCustomSymbols(migrated.customSymbols);
       setCustomPillars(migrated.customPillars);
       setNotebookFolders(migrated.notebookFolders);
+      setNotebookFolderColors(migrated.notebookFolderColors);
     } catch (e) {
       console.error('Failed to load journal data from Supabase:', e);
       showTradeImportToast('error', 'Failed to load your Playbook/Notices/Wiki/Tags — check your connection and reload.');
@@ -1092,7 +1098,7 @@ export function useAppState() {
   // saved server-side before it's even been fetched.
   useEffect(() => {
     if (!userId || !hasLoadedJournalDataRef.current) return;
-    const payload = { rules, strategies, notices, wikiEntries, setupTypes, confluences, mistakesList, emotionsList, customSymbols, customPillars, notebookFolders };
+    const payload = { rules, strategies, notices, wikiEntries, setupTypes, confluences, mistakesList, emotionsList, customSymbols, customPillars, notebookFolders, notebookFolderColors };
     writeJournalData(
       async () => {
         const { error } = await supabase
@@ -1105,7 +1111,7 @@ export function useAppState() {
         showTradeImportToast('error', 'Failed to save your changes — they may not sync to other devices. Check your connection.');
       }
     );
-  }, [userId, rules, strategies, notices, wikiEntries, setupTypes, confluences, mistakesList, emotionsList, customSymbols, customPillars, notebookFolders, writeJournalData]);
+  }, [userId, rules, strategies, notices, wikiEntries, setupTypes, confluences, mistakesList, emotionsList, customSymbols, customPillars, notebookFolders, notebookFolderColors, writeJournalData]);
 
   // ==========================================================================
   // Accounts & Trades: Supabase (per-user, synced across devices)
@@ -1489,18 +1495,41 @@ export function useAppState() {
     return [...DEFAULT_NOTEBOOK_FOLDERS, ...custom];
   }, [notebookFolders]);
 
-  const handleAddNotebookFolder = useCallback((name: string) => {
+  const handleAddNotebookFolder = useCallback((name: string, color?: string) => {
     const trimmed = name.trim();
     if (!trimmed) return;
     setNotebookFolders(prev => {
       if (prev.includes(trimmed) || (DEFAULT_NOTEBOOK_FOLDERS as readonly string[]).includes(trimmed)) return prev;
       return [...prev, trimmed];
     });
+    if (color) {
+      setNotebookFolderColors(prev => ({ ...prev, [trimmed]: color }));
+    }
+  }, []);
+
+  // Recolors a folder after the fact (not just at creation) — same
+  // journal_data-backed map as the color chosen on create, just updated in
+  // place. Passing undefined clears the explicit choice and falls back to
+  // the deterministic name-hash color again.
+  const handleSetNotebookFolderColor = useCallback((name: string, color: string | undefined) => {
+    setNotebookFolderColors(prev => {
+      if (!color) {
+        if (!(name in prev)) return prev;
+        const { [name]: _omit, ...rest } = prev;
+        return rest;
+      }
+      return { ...prev, [name]: color };
+    });
   }, []);
 
   const handleDeleteNotebookFolder = useCallback((name: string) => {
     if ((DEFAULT_NOTEBOOK_FOLDERS as readonly string[]).includes(name)) return; // default folders aren't removable
     setNotebookFolders(prev => prev.filter(f => f !== name));
+    setNotebookFolderColors(prev => {
+      if (!(name in prev)) return prev;
+      const { [name]: _omit, ...rest } = prev;
+      return rest;
+    });
     // Entries that were in the deleted folder fall back to uncategorized
     // rather than pointing at a folder that no longer exists. Each entry is
     // its own Supabase row, so the reset has to be pushed per-entry, not
@@ -1875,6 +1904,7 @@ export function useAppState() {
       setEmotionsList(EMOTION_OPTIONS.map(name => ({ id: generateId(), name, color: 'purple' as TagColor })));
       setCustomSymbols([]);
       setNotebookFolders([]);
+      setNotebookFolderColors({});
       setJournalDataLoading(true);
       hasLoadedJournalDataRef.current = false;
 
@@ -4730,6 +4760,7 @@ Return ONLY a JSON object — no markdown, no code fences, no commentary — wit
       customPillars,
       notebookEntries,
       notebookFolders,
+      notebookFolderColors,
       lifeDisciplineData: buildLifeDisciplineSnapshot(),
       appPreferencesData: buildAppPreferencesSnapshot(),
     };
@@ -4773,6 +4804,11 @@ Return ONLY a JSON object — no markdown, no code fences, no commentary — wit
         // backups predate this field and just no-op here.
         const restoredNotebookFolders: string[] | null = Array.isArray(raw.notebookFolders) ? raw.notebookFolders : null;
         if (restoredNotebookFolders) setNotebookFolders(restoredNotebookFolders);
+        const restoredNotebookFolderColors: Record<string, string> | null =
+          raw.notebookFolderColors && typeof raw.notebookFolderColors === 'object' && !Array.isArray(raw.notebookFolderColors)
+            ? raw.notebookFolderColors
+            : null;
+        if (restoredNotebookFolderColors) setNotebookFolderColors(restoredNotebookFolderColors);
 
         // Everything now lives in Supabase (accounts/trades, journal data,
         // and preferences), so a full restore replaces this user's
@@ -4810,6 +4846,7 @@ Return ONLY a JSON object — no markdown, no code fences, no commentary — wit
                 emotionsList: migrated.emotionsList,
                 customSymbols: migrated.customSymbols,
                 ...(restoredNotebookFolders ? { notebookFolders: restoredNotebookFolders } : {}),
+                ...(restoredNotebookFolderColors ? { notebookFolderColors: restoredNotebookFolderColors } : {}),
               },
             }, { onConflict: 'user_id' });
             if (journalErr) throw journalErr;
@@ -5270,6 +5307,7 @@ Return ONLY a JSON object — no markdown, no code fences, no commentary — wit
     // Notebook
     setNotebookEntries([]);
     setNotebookFolders([]);
+    setNotebookFolderColors({});
 
     // Journal Data: Rules/Playbook, Notices, Wiki, Tags
     setRules([]);
@@ -5379,6 +5417,8 @@ Return ONLY a JSON object — no markdown, no code fences, no commentary — wit
     notebookEntries,
     notebookEntriesLoading,
     notebookFolders: notebookFoldersWithDefaults,
+    notebookFolderColors,
+    handleSetNotebookFolderColor,
     handleAddNotebookEntry,
     handleUpdateNotebookEntry,
     handleToggleNotebookEntryPin,
