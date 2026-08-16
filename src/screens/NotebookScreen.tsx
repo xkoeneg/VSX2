@@ -1866,8 +1866,12 @@ export function NotebookScreen() {
               </div>
 
               {/* Tags */}
-              <div className={cn('flex flex-wrap items-center gap-2 px-6 py-3.5 border-t', border)}>
-                {selectedEntry.tags.map(tag => (
+              <div className={cn('px-6 py-3.5 border-t', border)}>
+                <div className={cn(
+                  'inline-flex flex-wrap items-center gap-2 max-w-full rounded-xl border px-2.5 py-2',
+                  theme !== 'light' ? 'bg-zinc-900/50 border-zinc-800' : 'bg-zinc-50 border-zinc-200'
+                )}>
+                  {selectedEntry.tags.map(tag => (
                   <span key={tag} className={cn('flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold border', theme !== 'light' ? 'bg-purple-500/10 text-purple-400 border-purple-500/30' : 'bg-purple-50 text-purple-600 border-purple-200')}>
                     {tag}
                     <button onClick={() => removeTag(tag)} className="hover:text-rose-400 transition-colors">
@@ -1919,6 +1923,7 @@ export function NotebookScreen() {
                       ))}
                     </div>
                   )}
+                </div>
                 </div>
               </div>
             </div>
