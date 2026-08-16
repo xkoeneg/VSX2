@@ -779,7 +779,7 @@ export function NotebookScreen() {
             <button
               onClick={() => setFolderPendingDelete(node.fullPath)}
               title="Delete folder"
-              className="absolute inset-0 flex items-center justify-end rounded-md text-rose-400/70 hover:text-rose-400 hover:bg-rose-500/10 transition-opacity duration-150 opacity-0 group-hover/folder:opacity-100 focus:opacity-100"
+              className="absolute right-0 top-1/2 -translate-y-1/2 w-6 h-6 flex items-center justify-center rounded-md text-rose-400/70 hover:text-rose-400 hover:bg-rose-500/10 transition-opacity duration-150 opacity-0 group-hover/folder:opacity-100 focus:opacity-100"
             >
               <Trash2 className="w-3.5 h-3.5" />
             </button>
