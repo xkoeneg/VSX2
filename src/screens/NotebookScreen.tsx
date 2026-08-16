@@ -267,6 +267,15 @@ export function NotebookScreen() {
   const [confirmEmptyTrash, setConfirmEmptyTrash] = useState(false);
   const [confirmBulkDelete, setConfirmBulkDelete] = useState(false);
   const [entryPendingTrash, setEntryPendingTrash] = useState<NotebookEntry | null>(null);
+  // Defaults the notes editor should always fall back to — on first open,
+  // on every note switch, and after a page refresh — so the toolbar and
+  // the actual note content never drift into an inconsistent "whatever the
+  // browser felt like" state. Paragraph / Default font / 14px.
+  const DEFAULT_STYLE_LABEL = 'Paragraph';
+  const DEFAULT_FONT_FAMILY_VALUE = 'sans-serif';
+  const DEFAULT_FONT_FAMILY_LABEL = 'Default';
+  const DEFAULT_FONT_SIZE = 14;
+
   const [showStyleMenu, setShowStyleMenu] = useState(false);
   // The toolbar scrolls horizontally (overflow-x-auto), which clips any
   // absolutely-positioned dropdown anchored inside it — the Style menu
@@ -274,16 +283,23 @@ export function NotebookScreen() {
   // it through a portal with fixed coordinates escapes that clipping.
   const [styleMenuPos, setStyleMenuPos] = useState({ top: 0, left: 0 });
   const styleButtonRef = useRef<HTMLButtonElement>(null);
+  // Label shown on the Style button itself, so it reflects the current
+  // block style instead of a static "Style" caption. Defaults to
+  // Paragraph, same as a fresh/refreshed note.
+  const [selectedStyleLabel, setSelectedStyleLabel] = useState<string>(DEFAULT_STYLE_LABEL);
   const [showFontFamilyMenu, setShowFontFamilyMenu] = useState(false);
   const [fontFamilyMenuPos, setFontFamilyMenuPos] = useState({ top: 0, left: 0 });
   const fontFamilyButtonRef = useRef<HTMLButtonElement>(null);
   // Label shown on the Font button itself, so it reflects the last size
-  // picked from the dropdown instead of a static "Font" caption.
-  const [selectedFontFamilyLabel, setSelectedFontFamilyLabel] = useState<string | null>(null);
+  // picked from the dropdown instead of a static "Font" caption. Defaults
+  // to "Default" rather than null so the button — and the note itself —
+  // always start from a known, consistent state.
+  const [selectedFontFamilyLabel, setSelectedFontFamilyLabel] = useState<string>(DEFAULT_FONT_FAMILY_LABEL);
   const [showFontSizeMenu, setShowFontSizeMenu] = useState(false);
   const [fontSizeMenuPos, setFontSizeMenuPos] = useState({ top: 0, left: 0 });
   const fontSizeButtonRef = useRef<HTMLButtonElement>(null);
-  const [selectedFontSizeLabel, setSelectedFontSizeLabel] = useState<number | null>(null);
+  // Defaults to 14 (not null) for the same reason as the font family label.
+  const [selectedFontSizeLabel, setSelectedFontSizeLabel] = useState<number>(DEFAULT_FONT_SIZE);
   const [colorPickerPos, setColorPickerPos] = useState({ top: 0, left: 0 });
   const [richColorMenu, setRichColorMenu] = useState<null | 'text' | 'highlight'>(null);
   const [richColorMenuPos, setRichColorMenuPos] = useState({ top: 0, left: 0 });
@@ -402,6 +418,15 @@ export function NotebookScreen() {
     if (bodyRef.current) bodyRef.current.innerHTML = toEditableHtml(selectedEntry.body);
     setWordCount(countWords(selectedEntry.body));
     setTagInput('');
+    // Every note starts from the same known formatting baseline — Paragraph
+    // style, Default font, 14px — rather than whatever the toolbar happened
+    // to show for the previously open note (or nothing at all right after a
+    // refresh). New text typed with nothing selected picks this up too,
+    // since defaultParagraphSeparator controls what tag Enter produces.
+    setSelectedStyleLabel(DEFAULT_STYLE_LABEL);
+    setSelectedFontFamilyLabel(DEFAULT_FONT_FAMILY_LABEL);
+    setSelectedFontSizeLabel(DEFAULT_FONT_SIZE);
+    document.execCommand('defaultParagraphSeparator', false, 'p');
   }, [selectedEntry]);
 
   const scheduleSave = useCallback((patch: Partial<Pick<NotebookEntry, 'title' | 'body' | 'folder' | 'tags' | 'color' | 'reminderAt'>>) => {
@@ -1795,7 +1820,7 @@ export function NotebookScreen() {
                     title="Text style"
                     className={cn('flex items-center gap-1 text-sm bg-transparent border rounded-md pl-2.5 pr-1.5 py-1.5 outline-none cursor-pointer', border, textMuted)}
                   >
-                    Style
+                    {selectedStyleLabel}
                     <ChevronDown className="w-3.5 h-3.5" />
                   </button>
                   {showStyleMenu && createPortal(
@@ -1817,7 +1842,7 @@ export function NotebookScreen() {
                           <button
                             key={value}
                             onMouseDown={(e) => { e.preventDefault(); }}
-                            onClick={() => { exec('formatBlock', value); setShowStyleMenu(false); }}
+                            onClick={() => { exec('formatBlock', value); setSelectedStyleLabel(label); setShowStyleMenu(false); }}
                             className={cn('w-full px-3.5 py-2 text-sm text-left transition-colors', textBody, theme !== 'light' ? 'hover:bg-zinc-800' : 'hover:bg-zinc-50')}
                           >
                             {label}
@@ -1843,7 +1868,7 @@ export function NotebookScreen() {
                     title="Font"
                     className={cn('flex items-center gap-1 text-sm bg-transparent border rounded-md pl-2.5 pr-1.5 py-1.5 outline-none cursor-pointer max-w-[9rem]', border, textMuted)}
                   >
-                    <span className="truncate">{selectedFontFamilyLabel ?? 'Font'}</span>
+                    <span className="truncate">{selectedFontFamilyLabel}</span>
                     <ChevronDown className="w-3.5 h-3.5 flex-shrink-0" />
                   </button>
                   {showFontFamilyMenu && createPortal(
@@ -1895,7 +1920,7 @@ export function NotebookScreen() {
                     title="Font size"
                     className={cn('flex items-center gap-1 text-sm bg-transparent border rounded-md pl-2.5 pr-1.5 py-1.5 outline-none cursor-pointer', border, textMuted)}
                   >
-                    {selectedFontSizeLabel ?? 'Size'}
+                    {selectedFontSizeLabel}
                     <ChevronDown className="w-3.5 h-3.5" />
                   </button>
                   {showFontSizeMenu && createPortal(
@@ -2081,8 +2106,9 @@ export function NotebookScreen() {
                   onMouseUp={saveSelection}
                   onKeyUp={saveSelection}
                   data-placeholder="Write your note... (Ctrl/Cmd+B/I/U, Ctrl/Cmd+S to save)"
+                  style={{ fontFamily: DEFAULT_FONT_FAMILY_VALUE, fontSize: `${DEFAULT_FONT_SIZE}px` }}
                   className={cn(
-                    'notebook-editable min-h-[240px] text-base leading-relaxed outline-none',
+                    'notebook-editable min-h-[240px] leading-relaxed outline-none',
                     textBody
                   )}
                 />
