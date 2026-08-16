@@ -1705,6 +1705,7 @@ export function NotebookScreen() {
                   ref={bodyRef}
                   contentEditable
                   suppressContentEditableWarning
+                  spellCheck={false}
                   onInput={onBodyInput}
                   onBlur={onBodyBlur}
                   onClick={onBodyClick}
