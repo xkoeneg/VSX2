@@ -951,9 +951,9 @@ export function NotebookScreen() {
       <div className={cn('grid grid-cols-1 lg:grid-cols-[248px_320px_1fr] gap-0 rounded-xl border overflow-hidden min-h-[75vh] lg:h-[75vh]', border, panelBg)}
       >
         {/* ==== Folder rail ==== */}
-        <div className={cn('flex flex-col min-h-0 border-b lg:border-b-0 lg:border-r', border)}>
-          <div className={cn('p-3.5 border-b', border)}>
-            {isAddingFolder ? (
+        <div className={cn('relative flex flex-col min-h-0 border-b lg:border-b-0 lg:border-r', border)}>
+          {isAddingFolder && (
+            <div className={cn('p-3.5 border-b', border)}>
               <div className="space-y-2">
                 <div className="flex items-center gap-1.5">
                   <input
@@ -1014,23 +1014,10 @@ export function NotebookScreen() {
                   ))}
                 </div>
               </div>
-            ) : (
-              <button
-                onClick={() => setIsAddingFolder(true)}
-                className={cn(
-                  'w-full flex items-center justify-center gap-2 px-3 py-2.5 rounded-xl text-sm font-medium border transition-colors',
-                  theme !== 'light'
-                    ? 'bg-zinc-800/80 hover:bg-zinc-800 border-zinc-700/80 text-white'
-                    : 'bg-zinc-900 hover:bg-zinc-800 border-zinc-900 text-white'
-                )}
-              >
-                <FolderPlus className="w-4 h-4" />
-                Add folder
-              </button>
-            )}
-          </div>
+            </div>
+          )}
 
-          <div className="themed-scrollbar flex-1 min-h-0 overflow-y-auto p-2.5">
+          <div className="themed-scrollbar flex-1 min-h-0 overflow-y-auto p-2.5 pb-16">
             <p className={cn('text-xs font-semibold uppercase tracking-wider px-2.5 pt-1 pb-1.5', textMuted)}>Folders</p>
 
             <button
@@ -1079,6 +1066,23 @@ export function NotebookScreen() {
               <span className={cn('text-xs', textMuted)}>{deletedEntries.length}</span>
             </button>
           </div>
+
+          {/* Floating add-folder button — bottom-right, icon-only, so it
+              doesn't compete with the folder list for attention up top. */}
+          {!isAddingFolder && (
+            <button
+              onClick={() => setIsAddingFolder(true)}
+              title="Add folder"
+              className={cn(
+                'absolute bottom-3 right-3 p-3 rounded-full shadow-lg transition-colors',
+                theme !== 'light'
+                  ? 'bg-zinc-800/90 hover:bg-zinc-800 border border-zinc-700/80 text-white'
+                  : 'bg-zinc-900 hover:bg-zinc-800 text-white'
+              )}
+            >
+              <FolderPlus className="w-4 h-4" />
+            </button>
+          )}
         </div>
 
         {/* ==== Note list ==== */}
