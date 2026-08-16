@@ -632,17 +632,6 @@ export function NotebookScreen() {
         ? { ['--scrollbar-thumb' as any]: 'rgba(161,161,170,0.35)', ['--scrollbar-thumb-hover' as any]: 'rgba(161,161,170,0.55)', ['--scrollbar-track' as any]: 'transparent' }
         : { ['--scrollbar-thumb' as any]: 'rgba(113,113,122,0.3)', ['--scrollbar-thumb-hover' as any]: 'rgba(113,113,122,0.5)', ['--scrollbar-track' as any]: 'transparent' }}
     >
-      {/* Themed scrollbar — matches the page's dark/light theme instead of
-          the browser's default (light-on-dark, or vice versa) scrollbar.
-          Colors come from the --scrollbar-* vars set above based on `theme`,
-          so every `.themed-scrollbar` pane below stays in sync automatically. */}
-      <style>{`
-        .themed-scrollbar { scrollbar-width: thin; scrollbar-color: var(--scrollbar-thumb) var(--scrollbar-track); }
-        .themed-scrollbar::-webkit-scrollbar { width: 8px; height: 8px; }
-        .themed-scrollbar::-webkit-scrollbar-track { background: var(--scrollbar-track); }
-        .themed-scrollbar::-webkit-scrollbar-thumb { background-color: var(--scrollbar-thumb); border-radius: 9999px; }
-        .themed-scrollbar::-webkit-scrollbar-thumb:hover { background-color: var(--scrollbar-thumb-hover); }
-      `}</style>
       <PageHeader
         title="Notebook"
         description="Your mindset notes, affirmations, and personal reflections"
@@ -689,6 +678,26 @@ export function NotebookScreen() {
           </div>
         }
       />
+
+      {/* Themed scrollbar — matches the page's dark/light theme instead of
+          the browser's default (light-on-dark, or vice versa) scrollbar.
+          Colors come from the --scrollbar-* vars set above based on `theme`,
+          so every `.themed-scrollbar` pane below stays in sync automatically.
+          NOTE: this must NOT be the first child of the space-y-6 container
+          above — Tailwind's space-y-* adds margin-top to every child past
+          the first, purely by DOM order, regardless of whether that child
+          actually renders visibly. A <style> tag has zero visual height but
+          still counts as "a child" for that purpose, so putting it first
+          silently pushed PageHeader down by one full space-y gap (it was
+          being treated as the "second" item). Keeping it after PageHeader
+          avoids that. */}
+      <style>{`
+        .themed-scrollbar { scrollbar-width: thin; scrollbar-color: var(--scrollbar-thumb) var(--scrollbar-track); }
+        .themed-scrollbar::-webkit-scrollbar { width: 8px; height: 8px; }
+        .themed-scrollbar::-webkit-scrollbar-track { background: var(--scrollbar-track); }
+        .themed-scrollbar::-webkit-scrollbar-thumb { background-color: var(--scrollbar-thumb); border-radius: 9999px; }
+        .themed-scrollbar::-webkit-scrollbar-thumb:hover { background-color: var(--scrollbar-thumb-hover); }
+      `}</style>
 
       {/* ---- Search + filter row ---- */}
       <div className="flex items-center gap-2.5">
