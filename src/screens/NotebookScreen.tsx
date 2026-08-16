@@ -948,10 +948,10 @@ export function NotebookScreen() {
           just kept growing the row (and the whole frame) instead of
           scrolling internally. Capping it with h-[70vh] at lg gives the
           flex-1 children something finite to fill and clip against. */}
-      <div className={cn('grid grid-cols-1 lg:grid-cols-[248px_320px_1fr] gap-0 rounded-xl border overflow-hidden min-h-[75vh] lg:h-[75vh]', border, panelBg)}
+      <div className={cn('flex flex-col lg:flex-row gap-3 min-h-[75vh] lg:h-[75vh]')}
       >
         {/* ==== Folder rail ==== */}
-        <div className={cn('relative flex flex-col min-h-0 border-b lg:border-b-0 lg:border-r', border)}>
+        <div className={cn('relative flex flex-col min-h-0 rounded-xl border overflow-hidden lg:w-[248px] lg:flex-shrink-0', border, panelBg)}>
           {isAddingFolder && (
             <div className={cn('p-3.5 border-b', border)}>
               <div className="space-y-2">
@@ -1049,23 +1049,23 @@ export function NotebookScreen() {
             </button>
 
             {folderTree.map(node => renderFolderNode(node, 0))}
-
-            <div className={cn('my-2 border-t', border)} />
-
-            <button
-              onClick={() => { setActiveFolder(RECENTLY_DELETED); setActiveTagFilter(null); }}
-              className={cn(
-                'w-full flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-base text-left transition-colors',
-                isTrashView
-                  ? (theme !== 'light' ? 'bg-rose-500/10 text-rose-300' : 'bg-rose-50 text-rose-700')
-                  : cn(textBody, theme !== 'light' ? 'hover:bg-zinc-800/60' : 'hover:bg-zinc-50')
-              )}
-            >
-              <Trash2 className="w-4 h-4 flex-shrink-0" />
-              <span className="flex-1 truncate">Recently Deleted</span>
-              <span className={cn('text-xs', textMuted)}>{deletedEntries.length}</span>
-            </button>
           </div>
+
+          {/* Recently Deleted — icon-only, bottom-left, mirroring the
+              add-folder button on the right so neither competes with the
+              folder list above. */}
+          <button
+            onClick={() => { setActiveFolder(RECENTLY_DELETED); setActiveTagFilter(null); }}
+            title="Recently Deleted"
+            className={cn(
+              'absolute bottom-3 left-3 p-3 rounded-full shadow-lg transition-colors',
+              isTrashView
+                ? 'bg-rose-600 hover:bg-rose-500 text-white'
+                : (theme !== 'light' ? 'bg-zinc-800/90 hover:bg-zinc-800 border border-zinc-700/80 text-white' : 'bg-zinc-900 hover:bg-zinc-800 text-white')
+            )}
+          >
+            <Trash2 className="w-4 h-4" />
+          </button>
 
           {/* Floating add-folder button — bottom-right, icon-only, so it
               doesn't compete with the folder list for attention up top. */}
@@ -1085,6 +1085,8 @@ export function NotebookScreen() {
           )}
         </div>
 
+        {/* ==== Notes + editor frame ==== */}
+        <div className={cn('grid grid-cols-1 lg:grid-cols-[320px_1fr] gap-0 rounded-xl border overflow-hidden min-h-0 flex-1', border, panelBg)}>
         {/* ==== Note list ==== */}
         <div className={cn('flex flex-col min-h-0 border-b lg:border-b-0 lg:border-r', border)}>
           <div className={cn('flex items-center justify-between gap-2.5 p-3.5 border-b', border)}>
@@ -1762,6 +1764,7 @@ export function NotebookScreen() {
               </div>
             </div>
           )}
+        </div>
         </div>
       </div>
 
