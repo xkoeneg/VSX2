@@ -2,7 +2,7 @@ import { generateId } from './id';
 import { WIKI_CATEGORIES } from '../types';
 import type {
   TradeImage, TimeframeChart, Account, Trade, RulePillar, Rule, CustomPillar, StrategyStep, Strategy,
-  ChatMessage, MarketNotice, WikiEntry, TagColor, StoredData, NotebookEntry,
+  ChatMessage, MarketNotice, WikiEntry, TagColor, StoredData, NotebookEntry, DeletedNotebookFolder,
 } from '../types';
 import { NOTEBOOK_COVER_COLORS } from '../types';
 import { DEFAULT_TAG_COLOR, TAG_COLOR_PALETTE } from '../constants/tagColors';
@@ -291,6 +291,15 @@ export const normalizeNotebookEntry = (e: any): NotebookEntry => {
   };
 };
 
+const normalizeDeletedNotebookFolder = (item: any): DeletedNotebookFolder | null => {
+  if (typeof item?.name !== 'string' || !item.name.trim()) return null;
+  return {
+    name: item.name,
+    color: typeof item.color === 'string' && (NOTEBOOK_COVER_COLORS as readonly string[]).includes(item.color) ? item.color : undefined,
+    deletedAt: typeof item.deletedAt === 'string' ? item.deletedAt : new Date().toISOString(),
+  };
+};
+
 export const migrateStoredData = (raw: any): StoredData => {
   const data = raw && typeof raw === 'object' ? raw : {};
   return {
@@ -330,5 +339,8 @@ export const migrateStoredData = (raw: any): StoredData => {
           return acc;
         }, {})
       : {},
+    notebookDeletedFolders: Array.isArray(data.notebookDeletedFolders)
+      ? data.notebookDeletedFolders.map(normalizeDeletedNotebookFolder).filter((f: DeletedNotebookFolder | null): f is DeletedNotebookFolder => f !== null)
+      : [],
   };
 };
