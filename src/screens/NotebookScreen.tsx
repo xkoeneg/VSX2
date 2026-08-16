@@ -689,7 +689,7 @@ export function NotebookScreen() {
       <div key={node.fullPath}>
         <div
           className={cn(
-            'group/folder relative flex items-center gap-1 rounded-lg pl-2.5 pr-2 py-1 transition-colors',
+            'group/folder relative flex items-center gap-1 rounded-lg pl-2.5 pr-2.5 py-1 transition-colors',
             isBeingDragged && 'opacity-40',
             isDragOverTarget && (theme !== 'light' ? 'ring-1 ring-purple-500/50' : 'ring-1 ring-purple-400/60'),
             // Selection tint now lives on the whole row (icon included),
@@ -697,7 +697,7 @@ export function NotebookScreen() {
             // too when active instead of looking unselected next to it.
             activeFolder === node.fullPath
               ? toFolderSelectedClass(resolveFolderColor(node.fullPath), theme)
-              : cn(textBody, theme !== 'light' ? 'hover:bg-zinc-50' : 'hover:bg-zinc-800/60')
+              : cn(textBody, theme !== 'light' ? 'hover:bg-zinc-800/60' : 'hover:bg-zinc-50')
           )}
           draggable={isDraggable}
           onDragStart={isDraggable ? (e) => { setDraggedFolder(node.fullPath); e.dataTransfer.effectAllowed = 'move'; } : undefined}
