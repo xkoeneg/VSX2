@@ -553,7 +553,7 @@ export function WikiScreen() {
           )}>
             <div className="min-w-0 flex-1">
               <div className="flex items-center gap-2 mb-1">
-                <h2 className={cn('text-2xl font-bold leading-tight truncate', theme !== 'light' ? 'text-white' : 'text-zinc-900')}>{entry.title}</h2>
+                <h2 className={cn('text-xl font-bold leading-tight truncate', theme !== 'light' ? 'text-white' : 'text-zinc-900')}>{entry.title}</h2>
                 {code && <span className="font-mono text-xs text-zinc-500 tracking-wider flex-shrink-0">{code}</span>}
               </div>
             </div>
@@ -570,7 +570,7 @@ export function WikiScreen() {
                 </span>
               )}
               {entry.bestSession && (
-                <span className="inline-flex items-center gap-1 text-xs px-2.5 py-1 rounded-full bg-amber-500/10 text-amber-500 border border-amber-500/20 font-semibold min-w-0 max-w-[320px]">
+                <span className="inline-flex items-center gap-1 text-xs px-2.5 py-1 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 font-semibold min-w-0 max-w-[320px]">
                   <Compass className="w-3 h-3 flex-shrink-0" />
                   <span className="truncate" title={`${entry.bestSession} session`}>{entry.bestSession} session</span>
                 </span>
