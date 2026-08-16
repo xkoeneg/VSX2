@@ -292,6 +292,7 @@ export function NotebookScreen() {
   const [wordCount, setWordCount] = useState(0);
 
   const bodyRef = useRef<HTMLDivElement>(null);
+  const moreMenuRef = useRef<HTMLDivElement>(null);
   const imageInputRef = useRef<HTMLInputElement>(null);
   const saveTimeoutRef = useRef<number | undefined>(undefined);
   const pendingNewNoteRef = useRef(false);
@@ -415,6 +416,22 @@ export function NotebookScreen() {
     window.addEventListener('keydown', onKeyDown);
     return () => window.removeEventListener('keydown', onKeyDown);
   }, [selectedEntryId, titleDraft, flushSave]);
+
+  // The note's "more" menu (and its nested "Move to folder" submenu) stayed
+  // open when clicking anywhere outside it — neither had a way to detect an
+  // outside click. Closing on any mousedown outside the menu's own DOM
+  // subtree fixes that without interfering with clicks on the menu's items.
+  useEffect(() => {
+    if (!showMoreMenu && !showEntryFolderMenu) return;
+    const onMouseDown = (e: MouseEvent) => {
+      if (moreMenuRef.current && !moreMenuRef.current.contains(e.target as Node)) {
+        setShowMoreMenu(false);
+        setShowEntryFolderMenu(false);
+      }
+    };
+    document.addEventListener('mousedown', onMouseDown);
+    return () => document.removeEventListener('mousedown', onMouseDown);
+  }, [showMoreMenu, showEntryFolderMenu]);
 
   // Without this, a pending debounced save (scheduleSave's 500ms timer) is
   // simply thrown away the instant the tab closes, refreshes, or the app
@@ -1471,7 +1488,7 @@ export function NotebookScreen() {
                     placeholder="Untitled"
                     className={cn('flex-1 min-w-0 bg-transparent outline-none text-xl font-semibold', theme !== 'light' ? 'text-white placeholder-zinc-600' : 'text-zinc-900 placeholder-zinc-300')}
                   />
-                  <div className="relative flex-shrink-0">
+                  <div className="relative flex-shrink-0" ref={moreMenuRef}>
                     <button
                       onClick={() => setShowMoreMenu(v => !v)}
                       className={cn('p-2 rounded-md transition-colors', textMuted, 'hover:text-zinc-200')}
@@ -1501,6 +1518,52 @@ export function NotebookScreen() {
                           <Copy className="w-4 h-4" />
                           Duplicate note
                         </button>
+                        <div className="relative">
+                          <button
+                            onClick={() => setShowEntryFolderMenu(v => !v)}
+                            className={cn('w-full flex items-center gap-2.5 px-3.5 py-2 text-sm text-left transition-colors', textBody, theme !== 'light' ? 'hover:bg-zinc-800' : 'hover:bg-zinc-50')}
+                          >
+                            <Folder className="w-4 h-4" />
+                            Move to folder
+                            <span className={cn('ml-auto truncate max-w-[6.5rem] text-xs', textMuted)}>
+                              {selectedEntry.folder || 'Uncategorized'}
+                            </span>
+                            <ChevronDown className="w-3.5 h-3.5 flex-shrink-0 -rotate-90" />
+                          </button>
+                          {showEntryFolderMenu && (
+                            <div className={cn('absolute right-full top-0 mr-1 w-52 rounded-lg border shadow-xl z-30 py-1.5', theme !== 'light' ? 'bg-zinc-900 border-zinc-800' : 'bg-white border-zinc-200')}>
+                              <div className="themed-scrollbar max-h-56 overflow-y-auto">
+                                <button
+                                  onClick={() => { flushSave({ folder: '' }); setShowEntryFolderMenu(false); setShowMoreMenu(false); }}
+                                  className={cn(
+                                    'w-full flex items-center gap-2.5 px-3.5 py-2 text-sm text-left transition-colors',
+                                    !selectedEntry.folder
+                                      ? (theme !== 'light' ? 'bg-purple-500/15 text-purple-300' : 'bg-purple-50 text-purple-700')
+                                      : cn(textBody, theme !== 'light' ? 'hover:bg-zinc-800' : 'hover:bg-zinc-50')
+                                  )}
+                                >
+                                  <Folder className="w-4 h-4 flex-shrink-0" />
+                                  <span className="truncate">Uncategorized</span>
+                                </button>
+                                {notebookFolders.map(folder => (
+                                  <button
+                                    key={folder}
+                                    onClick={() => { flushSave({ folder }); setShowEntryFolderMenu(false); setShowMoreMenu(false); }}
+                                    className={cn(
+                                      'w-full flex items-center gap-2.5 px-3.5 py-2 text-sm text-left transition-colors',
+                                      folder === selectedEntry.folder
+                                        ? (theme !== 'light' ? 'bg-purple-500/15 text-purple-300' : 'bg-purple-50 text-purple-700')
+                                        : cn(textBody, theme !== 'light' ? 'hover:bg-zinc-800' : 'hover:bg-zinc-50')
+                                    )}
+                                  >
+                                    <Folder className="w-4 h-4 flex-shrink-0" />
+                                    <span className="truncate">{folder}</span>
+                                  </button>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+                        </div>
                         <button
                           onClick={exportNote}
                           className={cn('w-full flex items-center gap-2.5 px-3.5 py-2 text-sm text-left transition-colors', textBody, theme !== 'light' ? 'hover:bg-zinc-800' : 'hover:bg-zinc-50')}
@@ -1573,49 +1636,6 @@ export function NotebookScreen() {
                   <p className={cn('text-sm', textMuted)}>
                     Created {formatFullDateTime(selectedEntry.createdAt)} &middot; Last updated {formatFullDateTime(selectedEntry.updatedAt)}
                   </p>
-                  <div className="relative">
-                    <button
-                      type="button"
-                      onClick={() => setShowEntryFolderMenu(v => !v)}
-                      className={cn('flex items-center gap-1 text-sm transition-colors', textMuted, 'hover:text-zinc-300')}
-                    >
-                      {selectedEntry.folder || 'Uncategorized'}
-                      <ChevronDown className="w-3.5 h-3.5" />
-                    </button>
-                    {showEntryFolderMenu && (
-                      <div className={cn('absolute left-0 top-full mt-1.5 w-52 rounded-lg border shadow-xl z-20 py-1.5', theme !== 'light' ? 'bg-zinc-900 border-zinc-800' : 'bg-white border-zinc-200')}>
-                        <div className="themed-scrollbar max-h-56 overflow-y-auto">
-                          <button
-                            onClick={() => { flushSave({ folder: '' }); setShowEntryFolderMenu(false); }}
-                            className={cn(
-                              'w-full flex items-center gap-2.5 px-3.5 py-2 text-sm text-left transition-colors',
-                              !selectedEntry.folder
-                                ? (theme !== 'light' ? 'bg-purple-500/15 text-purple-300' : 'bg-purple-50 text-purple-700')
-                                : cn(textBody, theme !== 'light' ? 'hover:bg-zinc-800' : 'hover:bg-zinc-50')
-                            )}
-                          >
-                            <Folder className="w-4 h-4 flex-shrink-0" />
-                            <span className="truncate">Uncategorized</span>
-                          </button>
-                          {notebookFolders.map(folder => (
-                            <button
-                              key={folder}
-                              onClick={() => { flushSave({ folder }); setShowEntryFolderMenu(false); }}
-                              className={cn(
-                                'w-full flex items-center gap-2.5 px-3.5 py-2 text-sm text-left transition-colors',
-                                folder === selectedEntry.folder
-                                  ? (theme !== 'light' ? 'bg-purple-500/15 text-purple-300' : 'bg-purple-50 text-purple-700')
-                                  : cn(textBody, theme !== 'light' ? 'hover:bg-zinc-800' : 'hover:bg-zinc-50')
-                              )}
-                            >
-                              <Folder className="w-4 h-4 flex-shrink-0" />
-                              <span className="truncate">{folder}</span>
-                            </button>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-                  </div>
                   {selectedEntry.reminderAt && (
                     <span className={cn('flex items-center gap-1.5 text-sm', new Date(selectedEntry.reminderAt).getTime() < Date.now() ? 'text-rose-400' : textMuted)}>
                       <Bell className="w-3.5 h-3.5" />
