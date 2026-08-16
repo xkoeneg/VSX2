@@ -197,6 +197,7 @@ export function NotebookScreen() {
     handleBulkMoveNotebookEntries, handleBulkSoftDeleteNotebookEntries, handleEmptyNotebookTrash,
     handleSoftDeleteNotebookEntry, handleRestoreNotebookEntry, handlePermanentDeleteNotebookEntry,
     handleAddNotebookFolder, handleDeleteNotebookFolder, handleSetNotebookFolderColor,
+    handleReorderNotebookFolder,
   } = useAppContext();
 
   // ---- Local screen state ----
@@ -213,6 +214,8 @@ export function NotebookScreen() {
   const [newFolderColor, setNewFolderColor] = useState<string | null>(null);
   const [colorPickerFolder, setColorPickerFolder] = useState<string | null>(null);
   const [folderPendingDelete, setFolderPendingDelete] = useState<string | null>(null);
+  const [draggedFolder, setDraggedFolder] = useState<string | null>(null);
+  const [dragOverFolder, setDragOverFolder] = useState<string | null>(null);
   const [entryPendingDelete, setEntryPendingDelete] = useState<NotebookEntry | null>(null);
   const [confirmEmptyTrash, setConfirmEmptyTrash] = useState(false);
   const [collapsedFolders, setCollapsedFolders] = useState<Set<string>>(new Set());
@@ -623,12 +626,44 @@ export function NotebookScreen() {
   };
 
   const renderFolderNode = (node: FolderNode, depth: number): React.ReactNode => {
-    const isDefault = node.fullPath === 'Mindset' || node.fullPath === 'Daily Reflections';
+    // Top-level folders are drag-reorderable (dropping onto another root
+    // folder moves this one's whole subtree to sit just before it — see
+    // reorderNotebookFolders in useAppState). Nested folders stay put
+    // relative to their parent since drag targeting depth is ambiguous.
+    const isDraggable = depth === 0;
+    const isBeingDragged = draggedFolder === node.fullPath;
+    const isDragOverTarget = dragOverFolder === node.fullPath && draggedFolder !== null && draggedFolder !== node.fullPath;
     const hasChildren = node.children.length > 0;
     const collapsed = collapsedFolders.has(node.fullPath);
     return (
       <div key={node.fullPath}>
-        <div className="group/folder relative flex items-center gap-0.5">
+        <div
+          className={cn(
+            'group/folder relative flex items-center gap-0.5 rounded-lg transition-opacity',
+            isBeingDragged && 'opacity-40',
+            isDragOverTarget && (theme !== 'light' ? 'ring-1 ring-purple-500/50' : 'ring-1 ring-purple-400/60')
+          )}
+          draggable={isDraggable}
+          onDragStart={isDraggable ? (e) => { setDraggedFolder(node.fullPath); e.dataTransfer.effectAllowed = 'move'; } : undefined}
+          onDragEnd={isDraggable ? () => { setDraggedFolder(null); setDragOverFolder(null); } : undefined}
+          onDragOver={isDraggable ? (e) => { if (draggedFolder && draggedFolder !== node.fullPath) { e.preventDefault(); e.dataTransfer.dropEffect = 'move'; setDragOverFolder(node.fullPath); } } : undefined}
+          onDragLeave={isDraggable ? () => setDragOverFolder(prev => prev === node.fullPath ? null : prev) : undefined}
+          onDrop={isDraggable ? (e) => {
+            e.preventDefault();
+            if (draggedFolder && draggedFolder !== node.fullPath) handleReorderNotebookFolder(draggedFolder, node.fullPath);
+            setDraggedFolder(null);
+            setDragOverFolder(null);
+          } : undefined}
+        >
+          {isDraggable && (
+            <span
+              title="Drag to reorder"
+              className={cn('flex-shrink-0 -ml-0.5 cursor-grab active:cursor-grabbing opacity-0 group-hover/folder:opacity-40 hover:!opacity-90 transition-opacity', textMuted)}
+              style={{ marginLeft: depth * 10 }}
+            >
+              <svg width="10" height="14" viewBox="0 0 10 14" fill="currentColor"><circle cx="2.5" cy="2.5" r="1.4" /><circle cx="7.5" cy="2.5" r="1.4" /><circle cx="2.5" cy="7" r="1.4" /><circle cx="7.5" cy="7" r="1.4" /><circle cx="2.5" cy="11.5" r="1.4" /><circle cx="7.5" cy="11.5" r="1.4" /></svg>
+            </span>
+          )}
           {hasChildren ? (
             <button
               onClick={() => setCollapsedFolders(prev => {
@@ -647,21 +682,16 @@ export function NotebookScreen() {
 
           {/* Color dot — its own button (not nested inside the folder-select
               button below, since a <button> can't contain another <button>)
-              so custom folders can be recolored after creation, not just at
-              creation. Default folders skip the affordance entirely since
-              their color/name are fixed. */}
-          {isDefault ? (
-            <span className={cn('w-2.5 h-2.5 rounded-full flex-shrink-0 mx-2', resolveFolderColor(node.fullPath))} />
-          ) : (
-            <button
-              type="button"
-              onClick={(e) => { e.stopPropagation(); setColorPickerFolder(prev => prev === node.fullPath ? null : node.fullPath); }}
-              title="Change folder color"
-              className="flex-shrink-0 mx-1 p-1 rounded-full hover:ring-2 hover:ring-zinc-600 transition-all"
-            >
-              <span className={cn('block w-2.5 h-2.5 rounded-full', resolveFolderColor(node.fullPath))} />
-            </button>
-          )}
+              so every folder can be recolored after creation, not just at
+              creation. */}
+          <button
+            type="button"
+            onClick={(e) => { e.stopPropagation(); setColorPickerFolder(prev => prev === node.fullPath ? null : node.fullPath); }}
+            title="Change folder color"
+            className="flex-shrink-0 mx-1 p-1 rounded-full hover:ring-2 hover:ring-zinc-600 transition-all"
+          >
+            <span className={cn('block w-2.5 h-2.5 rounded-full', resolveFolderColor(node.fullPath))} />
+          </button>
 
           <button
             onClick={() => { setActiveFolder(node.fullPath); setActiveTagFilter(null); }}
@@ -676,21 +706,19 @@ export function NotebookScreen() {
             <span className={cn('text-xs flex-shrink-0', textMuted)}>{countForFolderPath(node.fullPath)}</span>
           </button>
 
-          {/* Delete — its own permanently-visible button now, instead of an
-              absolutely-positioned X that only appeared on hover directly
-              on top of the note-count number (illegible, looked like "×0").
-              Kept at reduced opacity by default so it doesn't compete with
-              the folder name, but it's always there and always clickable,
-              not a hover-only affordance. */}
-          {!isDefault && (
-            <button
-              onClick={() => setFolderPendingDelete(node.fullPath)}
-              title="Delete folder"
-              className="flex-shrink-0 p-1.5 rounded-md text-rose-400/60 hover:text-rose-400 hover:bg-rose-500/10 transition-colors"
-            >
-              <Trash2 className="w-3.5 h-3.5" />
-            </button>
-          )}
+          {/* Delete — a dedicated button (not an absolutely-positioned X
+              overlapping the note-count number, which was illegible and
+              looked like "×0"), but only shown on hover/focus of the row
+              so it doesn't sit there permanently next to every folder
+              name. Every folder is deletable, including the starter ones —
+              nothing here is "built in". */}
+          <button
+            onClick={() => setFolderPendingDelete(node.fullPath)}
+            title="Delete folder"
+            className="flex-shrink-0 p-1.5 rounded-md text-rose-400/70 hover:text-rose-400 hover:bg-rose-500/10 transition-colors opacity-0 group-hover/folder:opacity-100 focus:opacity-100"
+          >
+            <Trash2 className="w-3.5 h-3.5" />
+          </button>
 
           {colorPickerFolder === node.fullPath && (
             <div
@@ -873,18 +901,46 @@ export function NotebookScreen() {
           <div className={cn('p-3.5 border-b', border)}>
             {isAddingFolder ? (
               <div className="space-y-2">
-                <input
-                  autoFocus
-                  value={newFolderName}
-                  onChange={(e) => setNewFolderName(e.target.value)}
-                  onKeyDown={(e) => { if (e.key === 'Enter') submitNewFolder(); if (e.key === 'Escape') { setIsAddingFolder(false); setNewFolderName(''); setNewFolderColor(null); } }}
-                  onBlur={submitNewFolder}
-                  placeholder="Folder name, or Parent/Child"
-                  className={cn('w-full px-3 py-2 rounded-lg text-sm border outline-none', theme !== 'light' ? 'bg-zinc-800 border-zinc-700 text-white placeholder-zinc-500' : 'bg-zinc-50 border-zinc-200 text-zinc-900 placeholder-zinc-400')}
-                />
+                <div className="flex items-center gap-1.5">
+                  <input
+                    autoFocus
+                    value={newFolderName}
+                    onChange={(e) => setNewFolderName(e.target.value)}
+                    onKeyDown={(e) => { if (e.key === 'Enter') submitNewFolder(); if (e.key === 'Escape') { setIsAddingFolder(false); setNewFolderName(''); setNewFolderColor(null); } }}
+                    placeholder="Folder name, or Parent/Child"
+                    className={cn('flex-1 min-w-0 px-3 py-2 rounded-lg text-sm border outline-none', theme !== 'light' ? 'bg-zinc-800 border-zinc-700 text-white placeholder-zinc-500' : 'bg-zinc-50 border-zinc-200 text-zinc-900 placeholder-zinc-400')}
+                  />
+                  {/* Explicit confirm/cancel buttons, not just Enter/blur —
+                      mousedown is prevented so clicking either doesn't blur
+                      the input first and fire some other handler before the
+                      click registers. */}
+                  <button
+                    type="button"
+                    title="Add folder"
+                    onMouseDown={(e) => e.preventDefault()}
+                    onClick={submitNewFolder}
+                    disabled={!newFolderName.trim()}
+                    className={cn(
+                      'flex-shrink-0 p-2 rounded-lg transition-colors',
+                      newFolderName.trim()
+                        ? (theme !== 'light' ? 'bg-purple-600 hover:bg-purple-500 text-white' : 'bg-purple-600 hover:bg-purple-700 text-white')
+                        : (theme !== 'light' ? 'bg-zinc-800 text-zinc-600 cursor-not-allowed' : 'bg-zinc-100 text-zinc-300 cursor-not-allowed')
+                    )}
+                  >
+                    <Plus className="w-4 h-4" />
+                  </button>
+                  <button
+                    type="button"
+                    title="Cancel"
+                    onMouseDown={(e) => e.preventDefault()}
+                    onClick={() => { setIsAddingFolder(false); setNewFolderName(''); setNewFolderColor(null); }}
+                    className={cn('flex-shrink-0 p-2 rounded-lg transition-colors', textMuted, theme !== 'light' ? 'hover:bg-zinc-800 hover:text-zinc-200' : 'hover:bg-zinc-100 hover:text-zinc-700')}
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                </div>
                 {/* Color swatches — mousedown is prevented so clicking one
-                    doesn't blur the name input above and prematurely submit
-                    the folder via its onBlur handler. Leaving no swatch
+                    doesn't blur the name input above. Leaving no swatch
                     selected keeps the old automatic hash-based color, so
                     picking one is optional, not required. */}
                 <div className="flex items-center gap-1.5 px-0.5">
