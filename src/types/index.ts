@@ -339,6 +339,39 @@ export interface MarketSessionDef {
   killzoneBadgeLabel: string;
 }
 
+// ----------------------------------------------------------------------------
+// Notebook — personal mindset/affirmation/commitment writing space. Modeled
+// after TradeZella's Notebook feature: folders + tags + pinning + soft
+// delete, deliberately NOT a flat unstructured list (that becomes a junk
+// drawer). Distinct from every other "notes" surface in the app (per-trade
+// notes, Discipline Tracker emotional notes, Rules Playbook strategy steps,
+// Life Discipline Hub failed-day notes, Market Notices, Knowledge Wiki) —
+// this is for free-form personal thoughts that aren't tied to a specific
+// trade, routine failure, price-action pattern, or mistake log.
+//
+// Persisted as its own Supabase table (`notebook_entries`, one row per
+// entry — see useAppState's Notebook section) rather than folded into the
+// `journal_data` jsonb blob, since entries can grow large/numerous over
+// time, unlike the small config-like slices that blob holds.
+// ----------------------------------------------------------------------------
+export interface NotebookEntry {
+  id: string;
+  title: string;
+  body: string;
+  // '' means "no folder" / uncategorized — still shows up in an "All
+  // Notes"-style view, just not under any named folder.
+  folder: string;
+  tags: string[];
+  pinned: boolean;
+  // Soft-delete: moves the entry to "Recently Deleted" instead of removing
+  // it immediately. deletedAt lets the UI (part 2 session) show "deleted
+  // 3 days ago" and/or auto-purge after a retention window.
+  isDeleted: boolean;
+  deletedAt?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export interface StoredData {
   version: number;
   accounts: Account[];
@@ -353,6 +386,15 @@ export interface StoredData {
   emotionsList: EmotionTag[];
   customSymbols: string[];
   customPillars: CustomPillar[];
+  // Notebook folder *names* only (a small config-like list, hence it lives
+  // in this jsonb blob alongside the other small slices) — this is what
+  // lets an empty custom folder exist even with zero entries in it yet.
+  // Default folders (e.g. "Mindset") are a hardcoded constant merged in at
+  // render/normalize time and are NOT part of this persisted list.
+  // notebookEntries themselves are NOT part of StoredData/journal_data —
+  // they live in their own `notebook_entries` table, loaded/saved the same
+  // way `accounts`/`trades` are (see useAppState.tsx).
+  notebookFolders: string[];
 }
 
 export interface ParsedMTTrade {
