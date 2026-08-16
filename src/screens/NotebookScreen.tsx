@@ -572,24 +572,14 @@ export function NotebookScreen() {
   // what caused the earlier bug where a whole block got restyled.
   const applyFontFamily = (family: string) => exec('fontName', family);
 
-  // Font size: execCommand's 'fontSize' only understands legacy levels
-  // 1–7, not real px values, so we still need a two-step trick — apply
-  // level 7 (letting the browser's own selection logic decide the scope,
-  // same as fontName/bold above), then swap the resulting <font size="7">
-  // for a real <span style="font-size:Npx">.
-  //
-  // Two bugs lived in the previous version of this function:
-  //  1. The check that re-pointed the cursor into the new span was
-  //     `sel.rangeCount === 0`, which is never true — we'd just restored
-  //     the selection two lines above, so it was always 1. The cursor
-  //     was left wherever the browser happened to put it (sometimes the
-  //     very end of the note), which is why typing afterward could land
-  //     in the wrong place, or previously-typed text appeared to "jump".
-  //  2. If the saved selection pointed at a node that had since been
-  //     replaced by a *previous* size change, `sel.addRange(...)` threw
-  //     silently — which aborted the whole function before it reached
-  //     `onBodyInput()`, so every size click after that first glitch
-  //     appeared to do nothing at all ("all sizes stop working").
+  // Font size: execCommand('fontSize') only understands legacy levels
+  // 1–7, not real px values, and relies on the browser's own undocumented
+  // choice of *where* and *whether* to wrap a <font> tag for that level —
+  // which is exactly why this kept being flaky (worked for some sizes/
+  // selections, silently did nothing for others, especially larger
+  // values). This version doesn't touch execCommand at all: it inserts
+  // the <span style="font-size:Npx"> itself, directly, so the outcome is
+  // the same 100% of the time regardless of which size or browser.
   const applyFontSize = (px: number) => {
     const editor = bodyRef.current;
     if (!editor) return;
@@ -621,46 +611,29 @@ export function NotebookScreen() {
       sel.removeAllRanges();
       sel.addRange(range);
     }
+    if (!editor.contains(range.commonAncestorContainer)) return;
 
-    const wasCollapsed = range.collapsed;
-    const originalRange = range.cloneRange();
+    const span = document.createElement('span');
+    span.style.fontSize = `${px}px`;
 
-    document.execCommand('fontSize', false, '7');
-
-    // A selection that crossed existing bold/link/etc. nodes can come
-    // back as more than one <font> tag — replace every one of them.
-    const spans: HTMLElement[] = [];
-    editor.querySelectorAll('font[size="7"]').forEach((fontEl) => {
-      const span = document.createElement('span');
-      span.style.fontSize = `${px}px`;
-      while (fontEl.firstChild) span.appendChild(fontEl.firstChild);
-      fontEl.replaceWith(span);
-      spans.push(span);
-    });
-
-    // Some browsers don't materialize any <font> tag for a plain caret
-    // with nothing highlighted — insert an empty marker ourselves so the
-    // size still applies to whatever gets typed next.
-    if (spans.length === 0 && wasCollapsed) {
-      const span = document.createElement('span');
-      span.style.fontSize = `${px}px`;
+    if (range.collapsed) {
+      // No highlight — nothing already on the page should change. Insert
+      // an empty marker at the caret and land the cursor inside it, so
+      // only text typed AFTER this point inherits the size.
       span.appendChild(document.createTextNode('\u200B'));
-      originalRange.insertNode(span);
-      spans.push(span);
-    }
-
-    if (spans.length > 0) {
+      range.insertNode(span);
       const newRange = document.createRange();
-      if (wasCollapsed) {
-        // Land the cursor at the END of the new span — right after the
-        // text that was already there — so new typing continues forward
-        // from where the caret actually was, not from inside/around it.
-        newRange.selectNodeContents(spans[spans.length - 1]);
-        newRange.collapse(false);
-      } else {
-        newRange.setStartBefore(spans[0]);
-        newRange.setEndAfter(spans[spans.length - 1]);
-      }
+      newRange.selectNodeContents(span);
+      newRange.collapse(false);
+      sel.removeAllRanges();
+      sel.addRange(newRange);
+      savedRangeRef.current = newRange.cloneRange();
+    } else {
+      // Highlighted text — wrap exactly what was selected, nothing more.
+      span.appendChild(range.extractContents());
+      range.insertNode(span);
+      const newRange = document.createRange();
+      newRange.selectNodeContents(span);
       sel.removeAllRanges();
       sel.addRange(newRange);
       savedRangeRef.current = newRange.cloneRange();
