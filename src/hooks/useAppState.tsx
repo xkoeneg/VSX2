@@ -4572,6 +4572,11 @@ Return ONLY a JSON object — no markdown, no code fences, no commentary — wit
   const exportBackup = async () => {
     const backupData: StoredData & {
       exportedAt: string;
+      // Not part of StoredData/journal_data (see the type's own comment —
+      // notebook entries live in their own `notebook_entries` table), but
+      // still belongs in a FULL system backup, so it's added here rather
+      // than to the shared StoredData shape.
+      notebookEntries: NotebookEntry[];
       lifeDisciplineData: ReturnType<typeof buildLifeDisciplineSnapshot>;
       appPreferencesData: ReturnType<typeof buildAppPreferencesSnapshot>;
     } = {
