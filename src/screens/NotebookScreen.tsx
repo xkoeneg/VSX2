@@ -1,5 +1,6 @@
 import type React from 'react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import {
   Plus,
   X,
@@ -255,6 +256,12 @@ export function NotebookScreen() {
   const [confirmBulkDelete, setConfirmBulkDelete] = useState(false);
   const [entryPendingTrash, setEntryPendingTrash] = useState<NotebookEntry | null>(null);
   const [showStyleMenu, setShowStyleMenu] = useState(false);
+  // The toolbar scrolls horizontally (overflow-x-auto), which clips any
+  // absolutely-positioned dropdown anchored inside it — the Style menu
+  // was getting cut off/hidden behind the toolbar's own bounds. Rendering
+  // it through a portal with fixed coordinates escapes that clipping.
+  const [styleMenuPos, setStyleMenuPos] = useState({ top: 0, left: 0 });
+  const styleButtonRef = useRef<HTMLButtonElement>(null);
   const [showEntryFolderMenu, setShowEntryFolderMenu] = useState(false);
   const [collapsedFolders, setCollapsedFolders] = useState<Set<string>>(new Set());
 
@@ -1564,33 +1571,50 @@ export function NotebookScreen() {
               <div className={cn('flex items-center gap-1 px-5 py-2 border-b overflow-x-auto', border)}>
                 <div className="relative flex-shrink-0">
                   <button
+                    ref={styleButtonRef}
                     type="button"
                     onMouseDown={(e) => { e.preventDefault(); saveSelection(); }}
-                    onClick={() => setShowStyleMenu(v => !v)}
+                    onClick={() => {
+                      if (!showStyleMenu) {
+                        const rect = styleButtonRef.current?.getBoundingClientRect();
+                        if (rect) setStyleMenuPos({ top: rect.bottom + 6, left: rect.left });
+                      }
+                      setShowStyleMenu(v => !v);
+                    }}
                     title="Text style"
                     className={cn('flex items-center gap-1 text-sm bg-transparent border rounded-md pl-2.5 pr-1.5 py-1.5 outline-none cursor-pointer', border, textMuted)}
                   >
                     Style
                     <ChevronDown className="w-3.5 h-3.5" />
                   </button>
-                  {showStyleMenu && (
-                    <div className={cn('absolute left-0 top-full mt-1.5 w-40 rounded-lg border shadow-xl z-20 py-1.5', theme !== 'light' ? 'bg-zinc-900 border-zinc-800' : 'bg-white border-zinc-200')}>
-                      {[
-                        { value: 'P', label: 'Paragraph' },
-                        { value: 'H1', label: 'Heading 1' },
-                        { value: 'H2', label: 'Heading 2' },
-                        { value: 'H3', label: 'Heading 3' },
-                      ].map(({ value, label }) => (
-                        <button
-                          key={value}
-                          onMouseDown={(e) => { e.preventDefault(); }}
-                          onClick={() => { exec('formatBlock', value); setShowStyleMenu(false); }}
-                          className={cn('w-full px-3.5 py-2 text-sm text-left transition-colors', textBody, theme !== 'light' ? 'hover:bg-zinc-800' : 'hover:bg-zinc-50')}
-                        >
-                          {label}
-                        </button>
-                      ))}
-                    </div>
+                  {showStyleMenu && createPortal(
+                    <>
+                      {/* Click-away catcher — sits under the menu, above everything
+                          else, so a click outside closes it without needing a
+                          document-level listener. */}
+                      <div className="fixed inset-0 z-20" onClick={() => setShowStyleMenu(false)} />
+                      <div
+                        style={{ position: 'fixed', top: styleMenuPos.top, left: styleMenuPos.left }}
+                        className={cn('w-40 rounded-lg border shadow-xl z-30 py-1.5', theme !== 'light' ? 'bg-zinc-900 border-zinc-800' : 'bg-white border-zinc-200')}
+                      >
+                        {[
+                          { value: 'P', label: 'Paragraph' },
+                          { value: 'H1', label: 'Heading 1' },
+                          { value: 'H2', label: 'Heading 2' },
+                          { value: 'H3', label: 'Heading 3' },
+                        ].map(({ value, label }) => (
+                          <button
+                            key={value}
+                            onMouseDown={(e) => { e.preventDefault(); }}
+                            onClick={() => { exec('formatBlock', value); setShowStyleMenu(false); }}
+                            className={cn('w-full px-3.5 py-2 text-sm text-left transition-colors', textBody, theme !== 'light' ? 'hover:bg-zinc-800' : 'hover:bg-zinc-50')}
+                          >
+                            {label}
+                          </button>
+                        ))}
+                      </div>
+                    </>,
+                    document.body
                   )}
                 </div>
                 <div className={cn('w-px h-5 mx-1', theme !== 'light' ? 'bg-zinc-800' : 'bg-zinc-200')} />
