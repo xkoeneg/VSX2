@@ -1243,6 +1243,7 @@ export function NotebookScreen() {
                           {formatNoteHeading(entry)}
                         </p>
                       </div>
+                      <p className={cn('text-sm truncate mb-0.5', textMuted)}>{stripHtml(entry.body) || 'Empty note'}</p>
                       <div className="flex items-center gap-2.5">
                         <p className={cn('text-sm', textMuted)}>{formatShortDate(entry.updatedAt)}</p>
                         {entry.reminderAt && !isTrashView && (
