@@ -66,6 +66,14 @@ const folderColor = (name: string) => {
   return FOLDER_COLORS[hash % FOLDER_COLORS.length];
 };
 
+// Maps a NOTEBOOK_COVER_COLORS id (e.g. 'purple') to the same swatch class
+// the hash-based folderColor() above returns, so an explicitly-chosen color
+// and the deterministic fallback render identically either way.
+const FOLDER_COLOR_DOT_BY_ID: Record<string, string> = {
+  purple: 'bg-purple-500', blue: 'bg-blue-500', emerald: 'bg-emerald-500', pink: 'bg-pink-500',
+  amber: 'bg-amber-500', rose: 'bg-rose-500', cyan: 'bg-cyan-500', indigo: 'bg-indigo-500',
+};
+
 // Static Tailwind class map for note cover colors — kept as literal
 // strings (not built with template literals) so Tailwind's JIT scanner
 // picks them all up at build time.
@@ -183,12 +191,12 @@ const buildFolderTree = (folders: string[]): FolderNode[] => {
 
 export function NotebookScreen() {
   const {
-    theme, notebookEntries, notebookEntriesLoading, notebookFolders,
+    theme, notebookEntries, notebookEntriesLoading, notebookFolders, notebookFolderColors,
     handleAddNotebookEntry, handleUpdateNotebookEntry, handleToggleNotebookEntryPin,
     handleToggleNotebookEntryFavorite, handleDuplicateNotebookEntry,
     handleBulkMoveNotebookEntries, handleBulkSoftDeleteNotebookEntries, handleEmptyNotebookTrash,
     handleSoftDeleteNotebookEntry, handleRestoreNotebookEntry, handlePermanentDeleteNotebookEntry,
-    handleAddNotebookFolder, handleDeleteNotebookFolder,
+    handleAddNotebookFolder, handleDeleteNotebookFolder, handleSetNotebookFolderColor,
   } = useAppContext();
 
   // ---- Local screen state ----
@@ -202,6 +210,8 @@ export function NotebookScreen() {
 
   const [isAddingFolder, setIsAddingFolder] = useState(false);
   const [newFolderName, setNewFolderName] = useState('');
+  const [newFolderColor, setNewFolderColor] = useState<string | null>(null);
+  const [colorPickerFolder, setColorPickerFolder] = useState<string | null>(null);
   const [folderPendingDelete, setFolderPendingDelete] = useState<string | null>(null);
   const [entryPendingDelete, setEntryPendingDelete] = useState<NotebookEntry | null>(null);
   const [confirmEmptyTrash, setConfirmEmptyTrash] = useState(false);
@@ -584,8 +594,9 @@ export function NotebookScreen() {
   // ---- Folder management ----
   const submitNewFolder = () => {
     const trimmed = newFolderName.trim();
-    if (trimmed) handleAddNotebookFolder(trimmed);
+    if (trimmed) handleAddNotebookFolder(trimmed, newFolderColor ?? undefined);
     setNewFolderName('');
+    setNewFolderColor(null);
     setIsAddingFolder(false);
   };
 
@@ -606,13 +617,18 @@ export function NotebookScreen() {
   const sortLabel = sortMode === 'updated' ? 'Last updated' : sortMode === 'title' ? 'Title' : 'Date created';
   const cycleSort = () => setSortMode(m => (m === 'updated' ? 'title' : m === 'title' ? 'created' : 'updated'));
 
+  const resolveFolderColor = (name: string) => {
+    const chosen = notebookFolderColors[name];
+    return (chosen && FOLDER_COLOR_DOT_BY_ID[chosen]) || folderColor(name);
+  };
+
   const renderFolderNode = (node: FolderNode, depth: number): React.ReactNode => {
     const isDefault = node.fullPath === 'Mindset' || node.fullPath === 'Daily Reflections';
     const hasChildren = node.children.length > 0;
     const collapsed = collapsedFolders.has(node.fullPath);
     return (
       <div key={node.fullPath}>
-        <div className="group/folder relative flex items-center">
+        <div className="group/folder relative flex items-center gap-0.5">
           {hasChildren ? (
             <button
               onClick={() => setCollapsedFolders(prev => {
@@ -628,27 +644,84 @@ export function NotebookScreen() {
           ) : (
             <span style={{ marginLeft: depth * 10 + 14 }} />
           )}
+
+          {/* Color dot — its own button (not nested inside the folder-select
+              button below, since a <button> can't contain another <button>)
+              so custom folders can be recolored after creation, not just at
+              creation. Default folders skip the affordance entirely since
+              their color/name are fixed. */}
+          {isDefault ? (
+            <span className={cn('w-2.5 h-2.5 rounded-full flex-shrink-0 mx-2', resolveFolderColor(node.fullPath))} />
+          ) : (
+            <button
+              type="button"
+              onClick={(e) => { e.stopPropagation(); setColorPickerFolder(prev => prev === node.fullPath ? null : node.fullPath); }}
+              title="Change folder color"
+              className="flex-shrink-0 mx-1 p-1 rounded-full hover:ring-2 hover:ring-zinc-600 transition-all"
+            >
+              <span className={cn('block w-2.5 h-2.5 rounded-full', resolveFolderColor(node.fullPath))} />
+            </button>
+          )}
+
           <button
             onClick={() => { setActiveFolder(node.fullPath); setActiveTagFilter(null); }}
             className={cn(
-              'flex-1 flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-base text-left transition-colors min-w-0',
+              'flex-1 flex items-center gap-2.5 px-2 py-2 rounded-lg text-base text-left transition-colors min-w-0',
               activeFolder === node.fullPath
                 ? (theme !== 'light' ? 'bg-purple-500/10 text-purple-300' : 'bg-purple-50 text-purple-700')
                 : cn(textBody, theme !== 'light' ? 'hover:bg-zinc-800/60' : 'hover:bg-zinc-50')
             )}
           >
-            <span className={cn('w-2.5 h-2.5 rounded-full flex-shrink-0', folderColor(node.fullPath))} />
             <span className="truncate flex-1">{node.name}</span>
             <span className={cn('text-xs flex-shrink-0', textMuted)}>{countForFolderPath(node.fullPath)}</span>
           </button>
+
+          {/* Delete — its own permanently-visible button now, instead of an
+              absolutely-positioned X that only appeared on hover directly
+              on top of the note-count number (illegible, looked like "×0").
+              Kept at reduced opacity by default so it doesn't compete with
+              the folder name, but it's always there and always clickable,
+              not a hover-only affordance. */}
           {!isDefault && (
             <button
               onClick={() => setFolderPendingDelete(node.fullPath)}
               title="Delete folder"
-              className={cn('absolute right-1 p-1.5 rounded-md opacity-0 group-hover/folder:opacity-100 transition-opacity', textMuted, 'hover:text-rose-400')}
+              className="flex-shrink-0 p-1.5 rounded-md text-rose-400/60 hover:text-rose-400 hover:bg-rose-500/10 transition-colors"
             >
-              <X className="w-3.5 h-3.5" />
+              <Trash2 className="w-3.5 h-3.5" />
             </button>
+          )}
+
+          {colorPickerFolder === node.fullPath && (
+            <div
+              className={cn(
+                'absolute left-7 top-full mt-1 z-30 flex items-center gap-1.5 p-2 rounded-lg border shadow-xl',
+                theme !== 'light' ? 'bg-zinc-900 border-zinc-800' : 'bg-white border-zinc-200'
+              )}
+            >
+              {NOTEBOOK_COVER_COLORS.map(c => (
+                <button
+                  key={c}
+                  type="button"
+                  title={c}
+                  onClick={() => { handleSetNotebookFolderColor(node.fullPath, c); setColorPickerFolder(null); }}
+                  className={cn(
+                    'w-5 h-5 rounded-full flex-shrink-0 transition-transform',
+                    FOLDER_COLOR_DOT_BY_ID[c],
+                    notebookFolderColors[node.fullPath] === c ? 'ring-2 ring-offset-1 ring-purple-400 scale-110' : 'hover:scale-110'
+                  )}
+                />
+              ))}
+              <span className={cn('w-px h-4 mx-0.5', theme !== 'light' ? 'bg-zinc-800' : 'bg-zinc-200')} />
+              <button
+                type="button"
+                title="Reset to automatic color"
+                onClick={() => { handleSetNotebookFolderColor(node.fullPath, undefined); setColorPickerFolder(null); }}
+                className={cn('p-1 rounded-md transition-colors', textMuted, 'hover:text-zinc-200')}
+              >
+                <X className="w-3.5 h-3.5" />
+              </button>
+            </div>
           )}
         </div>
         {hasChildren && !collapsed && node.children.map(child => renderFolderNode(child, depth + 1))}
@@ -799,15 +872,38 @@ export function NotebookScreen() {
         <div className={cn('flex flex-col min-h-0 border-b lg:border-b-0 lg:border-r', border)}>
           <div className={cn('p-3.5 border-b', border)}>
             {isAddingFolder ? (
-              <input
-                autoFocus
-                value={newFolderName}
-                onChange={(e) => setNewFolderName(e.target.value)}
-                onKeyDown={(e) => { if (e.key === 'Enter') submitNewFolder(); if (e.key === 'Escape') { setIsAddingFolder(false); setNewFolderName(''); } }}
-                onBlur={submitNewFolder}
-                placeholder="Folder name, or Parent/Child"
-                className={cn('w-full px-3 py-2 rounded-lg text-sm border outline-none', theme !== 'light' ? 'bg-zinc-800 border-zinc-700 text-white placeholder-zinc-500' : 'bg-zinc-50 border-zinc-200 text-zinc-900 placeholder-zinc-400')}
-              />
+              <div className="space-y-2">
+                <input
+                  autoFocus
+                  value={newFolderName}
+                  onChange={(e) => setNewFolderName(e.target.value)}
+                  onKeyDown={(e) => { if (e.key === 'Enter') submitNewFolder(); if (e.key === 'Escape') { setIsAddingFolder(false); setNewFolderName(''); setNewFolderColor(null); } }}
+                  onBlur={submitNewFolder}
+                  placeholder="Folder name, or Parent/Child"
+                  className={cn('w-full px-3 py-2 rounded-lg text-sm border outline-none', theme !== 'light' ? 'bg-zinc-800 border-zinc-700 text-white placeholder-zinc-500' : 'bg-zinc-50 border-zinc-200 text-zinc-900 placeholder-zinc-400')}
+                />
+                {/* Color swatches — mousedown is prevented so clicking one
+                    doesn't blur the name input above and prematurely submit
+                    the folder via its onBlur handler. Leaving no swatch
+                    selected keeps the old automatic hash-based color, so
+                    picking one is optional, not required. */}
+                <div className="flex items-center gap-1.5 px-0.5">
+                  {NOTEBOOK_COVER_COLORS.map(c => (
+                    <button
+                      key={c}
+                      type="button"
+                      title={c}
+                      onMouseDown={(e) => e.preventDefault()}
+                      onClick={() => setNewFolderColor(prev => prev === c ? null : c)}
+                      className={cn(
+                        'w-5 h-5 rounded-full flex-shrink-0 transition-transform',
+                        FOLDER_COLOR_DOT_BY_ID[c],
+                        newFolderColor === c ? 'ring-2 ring-offset-1 ring-purple-400 scale-110' : 'opacity-70 hover:opacity-100'
+                      )}
+                    />
+                  ))}
+                </div>
+              </div>
             ) : (
               <button
                 onClick={() => setIsAddingFolder(true)}
