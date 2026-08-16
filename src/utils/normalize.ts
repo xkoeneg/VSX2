@@ -4,6 +4,7 @@ import type {
   TradeImage, TimeframeChart, Account, Trade, RulePillar, Rule, CustomPillar, StrategyStep, Strategy,
   ChatMessage, MarketNotice, WikiEntry, TagColor, StoredData, NotebookEntry,
 } from '../types';
+import { NOTEBOOK_COVER_COLORS } from '../types';
 import { DEFAULT_TAG_COLOR, TAG_COLOR_PALETTE } from '../constants/tagColors';
 import { EMOTION_OPTIONS } from '../constants/trading';
 import { ACCOUNT_TYPES, SESSION_OPTIONS, TIMEFRAMES, TRADING_ACCOUNT_TYPES } from '../constants/trading';
@@ -317,5 +318,12 @@ export const migrateStoredData = (raw: any): StoredData => {
     notebookFolders: Array.isArray(data.notebookFolders)
       ? data.notebookFolders.filter((f: any) => typeof f === 'string' && f.trim())
       : [],
+    notebookFolderColors: (data.notebookFolderColors && typeof data.notebookFolderColors === 'object' && !Array.isArray(data.notebookFolderColors))
+      ? Object.fromEntries(
+          Object.entries(data.notebookFolderColors).filter(
+            ([k, v]) => typeof k === 'string' && typeof v === 'string' && (NOTEBOOK_COVER_COLORS as readonly string[]).includes(v)
+          )
+        )
+      : {},
   };
 };
