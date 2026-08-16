@@ -952,8 +952,8 @@ export function NotebookScreen() {
       >
         {/* ==== Folder rail ==== */}
         <div className={cn('relative flex flex-col min-h-0 rounded-xl border overflow-hidden lg:w-[248px] lg:flex-shrink-0', border, panelBg)}>
-          {isAddingFolder && (
-            <div className={cn('p-3.5 border-b', border)}>
+          <div className={cn('p-3.5 border-b', border)}>
+            {isAddingFolder ? (
               <div className="space-y-2">
                 <div className="flex items-center gap-1.5">
                   <input
@@ -1014,8 +1014,21 @@ export function NotebookScreen() {
                   ))}
                 </div>
               </div>
-            </div>
-          )}
+            ) : (
+              <button
+                onClick={() => setIsAddingFolder(true)}
+                className={cn(
+                  'w-full flex items-center justify-center gap-2 px-3 py-2.5 rounded-xl text-sm font-medium border transition-colors',
+                  theme !== 'light'
+                    ? 'bg-zinc-800/80 hover:bg-zinc-800 border-zinc-700/80 text-white'
+                    : 'bg-zinc-900 hover:bg-zinc-800 border-zinc-900 text-white'
+                )}
+              >
+                <FolderPlus className="w-4 h-4" />
+                Add folder
+              </button>
+            )}
+          </div>
 
           <div className="themed-scrollbar flex-1 min-h-0 overflow-y-auto p-2.5 pb-16">
             <p className={cn('text-xs font-semibold uppercase tracking-wider px-2.5 pt-1 pb-1.5', textMuted)}>Folders</p>
@@ -1051,14 +1064,12 @@ export function NotebookScreen() {
             {folderTree.map(node => renderFolderNode(node, 0))}
           </div>
 
-          {/* Recently Deleted — icon-only, bottom-left, mirroring the
-              add-folder button on the right so neither competes with the
-              folder list above. */}
+          {/* Recently Deleted — icon-only, bottom-right. */}
           <button
             onClick={() => { setActiveFolder(RECENTLY_DELETED); setActiveTagFilter(null); }}
             title="Recently Deleted"
             className={cn(
-              'absolute bottom-3 left-3 p-3 rounded-full shadow-lg transition-colors',
+              'absolute bottom-3 right-3 p-3 rounded-full shadow-lg transition-colors',
               isTrashView
                 ? 'bg-rose-600 hover:bg-rose-500 text-white'
                 : (theme !== 'light' ? 'bg-zinc-800/90 hover:bg-zinc-800 border border-zinc-700/80 text-white' : 'bg-zinc-900 hover:bg-zinc-800 text-white')
@@ -1066,23 +1077,6 @@ export function NotebookScreen() {
           >
             <Trash2 className="w-4 h-4" />
           </button>
-
-          {/* Floating add-folder button — bottom-right, icon-only, so it
-              doesn't compete with the folder list for attention up top. */}
-          {!isAddingFolder && (
-            <button
-              onClick={() => setIsAddingFolder(true)}
-              title="Add folder"
-              className={cn(
-                'absolute bottom-3 right-3 p-3 rounded-full shadow-lg transition-colors',
-                theme !== 'light'
-                  ? 'bg-zinc-800/90 hover:bg-zinc-800 border border-zinc-700/80 text-white'
-                  : 'bg-zinc-900 hover:bg-zinc-800 text-white'
-              )}
-            >
-              <FolderPlus className="w-4 h-4" />
-            </button>
-          )}
         </div>
 
         {/* ==== Notes + editor frame ==== */}
