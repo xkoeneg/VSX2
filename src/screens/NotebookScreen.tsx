@@ -39,6 +39,7 @@ import {
   ChevronDown,
   LayoutGrid,
   Rows3,
+  Image as ImageIcon,
 } from 'lucide-react';
 import { PageHeader } from '../components/shared/PageHeader';
 import type { NotebookEntry, NotebookTemplate } from '../types';
@@ -217,6 +218,7 @@ export function NotebookScreen() {
   const [wordCount, setWordCount] = useState(0);
 
   const bodyRef = useRef<HTMLDivElement>(null);
+  const imageInputRef = useRef<HTMLInputElement>(null);
   const saveTimeoutRef = useRef<number | undefined>(undefined);
   const pendingNewNoteRef = useRef(false);
   const loadedEntryIdRef = useRef<string | null>(null);
@@ -395,12 +397,84 @@ export function NotebookScreen() {
     exec('insertHTML', '<div class="notebook-checklist-item"><input type="checkbox" /><span>Checklist item</span></div><br>');
   };
 
+  // Images are inserted as a single "atomic" block: an outer
+  // contenteditable="false" wrapper around the <img>. A bare <img> dropped
+  // straight into a contentEditable div (which is what the browser's
+  // default paste behavior does) has no text node next to it, so the
+  // browser can't figure out where to put the caret around it — Backspace/
+  // Delete near it silently does nothing. Wrapping it as contenteditable
+  //="false" makes the browser treat the whole block as one selectable
+  // unit (same trick Notion/Google Docs use for embeds): click it to
+  // select, Backspace/Delete removes it in one step, and we also add a
+  // hover "x" button for an explicit, obvious way to remove it. The blank
+  // paragraph after it guarantees there's always somewhere for the caret
+  // to land so typing right after an image never gets stuck.
+  const insertImageBlock = (dataUrl: string) => {
+    exec(
+      'insertHTML',
+      `<div class="notebook-image-block" contenteditable="false"><img src="${dataUrl}" alt="" /><button type="button" class="notebook-image-delete" contenteditable="false" title="Remove image" aria-label="Remove image">&times;</button></div><p><br></p>`
+    );
+  };
+
+  const openImagePicker = () => {
+    saveSelection();
+    imageInputRef.current?.click();
+  };
+
+  const onImageFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onload = () => {
+        if (typeof reader.result === 'string') insertImageBlock(reader.result);
+      };
+      reader.readAsDataURL(file);
+    }
+    e.target.value = '';
+  };
+
+  // Pasting an image (screenshot, copied photo, etc.) inserts it as the
+  // same atomic block as the toolbar button, instead of letting the
+  // browser drop in a bare, undeletable <img>. Pasting anything else
+  // (text copied from Word, a webpage, etc.) is deliberately flattened to
+  // plain text — importing someone else's nested spans/styles is exactly
+  // what makes later editing (especially deleting) unpredictable.
+  const onBodyPaste = (e: React.ClipboardEvent<HTMLDivElement>) => {
+    const items = e.clipboardData?.items;
+    if (items) {
+      for (let i = 0; i < items.length; i++) {
+        const item = items[i];
+        if (item.type.startsWith('image/')) {
+          e.preventDefault();
+          const file = item.getAsFile();
+          if (file) {
+            const reader = new FileReader();
+            reader.onload = () => {
+              if (typeof reader.result === 'string') insertImageBlock(reader.result);
+            };
+            reader.readAsDataURL(file);
+          }
+          return;
+        }
+      }
+    }
+    e.preventDefault();
+    const text = e.clipboardData?.getData('text/plain') ?? '';
+    if (text) exec('insertText', text);
+  };
+
   // Keeps the `checked` DOM attribute (not just the live property) in sync
   // after a click, since innerHTML serialization — what we persist to
   // scheduleSave — only reflects attributes, not the live `.checked`
   // property.
   const onBodyClick = (e: React.MouseEvent<HTMLDivElement>) => {
     const target = e.target as HTMLElement;
+    if (target.closest('.notebook-image-delete')) {
+      e.preventDefault();
+      target.closest('.notebook-image-block')?.remove();
+      onBodyInput();
+      return;
+    }
     if (target.tagName === 'INPUT' && (target as HTMLInputElement).type === 'checkbox') {
       window.setTimeout(() => {
         const input = target as HTMLInputElement;
@@ -572,6 +646,44 @@ export function NotebookScreen() {
       <PageHeader
         title="Notebook"
         description="Your mindset notes, affirmations, and personal reflections"
+        actions={
+          <div className="relative flex items-center">
+            <button
+              type="button"
+              onClick={() => createNote()}
+              className="flex items-center gap-2 px-3 sm:px-4 py-2 bg-zinc-800 hover:bg-zinc-700 text-white rounded-lg text-sm transition-colors"
+            >
+              <Plus className="w-4 h-4" />
+              <span className="hidden sm:inline">New Note</span>
+            </button>
+            <button
+              onClick={() => setShowTemplateMenu(v => !v)}
+              title="New from template"
+              className={cn(
+                'flex items-center justify-center w-9 h-9 ml-1.5 rounded-lg border transition-colors flex-shrink-0',
+                theme !== 'light'
+                  ? 'bg-zinc-800 border-zinc-700 text-zinc-300 hover:bg-zinc-700'
+                  : 'bg-zinc-100 border-zinc-200 text-zinc-700 hover:bg-zinc-200'
+              )}
+            >
+              <ChevronDown className="w-3.5 h-3.5" />
+            </button>
+            {showTemplateMenu && (
+              <div className={cn('absolute right-0 top-full mt-1.5 w-60 rounded-lg border shadow-xl z-20 py-1.5', theme !== 'light' ? 'bg-zinc-900 border-zinc-800' : 'bg-white border-zinc-200')}>
+                {NOTEBOOK_TEMPLATES.map(t => (
+                  <button
+                    key={t.id}
+                    onClick={() => createNote(t)}
+                    className={cn('w-full text-left px-3.5 py-2 transition-colors', theme !== 'light' ? 'hover:bg-zinc-800' : 'hover:bg-zinc-50')}
+                  >
+                    <p className={cn('text-sm font-medium', theme !== 'light' ? 'text-white' : 'text-zinc-900')}>{t.name}</p>
+                    <p className={cn('text-xs', textMuted)}>{t.description}</p>
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+        }
       />
 
       {/* ---- Search + filter row ---- */}
@@ -728,36 +840,9 @@ export function NotebookScreen() {
               </div>
             ) : (
               <>
-                <div className="relative flex items-center">
-                  <button
-                    onClick={() => createNote()}
-                    className={cn('flex items-center gap-2 text-sm font-medium transition-colors', theme !== 'light' ? 'text-zinc-300 hover:text-white' : 'text-zinc-700 hover:text-zinc-900')}
-                  >
-                    <Plus className="w-4 h-4" />
-                    New note
-                  </button>
-                  <button
-                    onClick={() => setShowTemplateMenu(v => !v)}
-                    title="New from template"
-                    className={cn('p-1.5 ml-0.5 rounded-md transition-colors', textMuted, 'hover:text-zinc-200')}
-                  >
-                    <ChevronDown className="w-3.5 h-3.5" />
-                  </button>
-                  {showTemplateMenu && (
-                    <div className={cn('absolute left-0 top-full mt-1 w-60 rounded-lg border shadow-xl z-20 py-1.5', theme !== 'light' ? 'bg-zinc-900 border-zinc-800' : 'bg-white border-zinc-200')}>
-                      {NOTEBOOK_TEMPLATES.map(t => (
-                        <button
-                          key={t.id}
-                          onClick={() => createNote(t)}
-                          className={cn('w-full text-left px-3.5 py-2 transition-colors', theme !== 'light' ? 'hover:bg-zinc-800' : 'hover:bg-zinc-50')}
-                        >
-                          <p className={cn('text-sm font-medium', theme !== 'light' ? 'text-white' : 'text-zinc-900')}>{t.name}</p>
-                          <p className={cn('text-xs', textMuted)}>{t.description}</p>
-                        </button>
-                      ))}
-                    </div>
-                  )}
-                </div>
+                <span className={cn('text-sm font-medium truncate', textBody)}>
+                  {activeFolder === ALL_NOTES ? 'All Notes' : activeFolder === FAVORITES ? 'Favorites' : activeFolder}
+                </span>
                 <div className="flex items-center gap-1">
                   <button
                     onClick={() => setSelectMode(v => !v)}
@@ -1162,6 +1247,17 @@ export function NotebookScreen() {
                   className={cn('p-2 rounded-md transition-colors', textMuted, 'hover:text-zinc-200', theme !== 'light' ? 'hover:bg-zinc-800' : 'hover:bg-zinc-100')}>
                   <Link2 className="w-4 h-4" />
                 </button>
+                <button onMouseDown={(e) => e.preventDefault()} onClick={openImagePicker} title="Insert image"
+                  className={cn('p-2 rounded-md transition-colors', textMuted, 'hover:text-zinc-200', theme !== 'light' ? 'hover:bg-zinc-800' : 'hover:bg-zinc-100')}>
+                  <ImageIcon className="w-4 h-4" />
+                </button>
+                <input
+                  ref={imageInputRef}
+                  type="file"
+                  accept="image/*"
+                  onChange={onImageFileChange}
+                  className="hidden"
+                />
                 <div className={cn('w-px h-5 mx-1', theme !== 'light' ? 'bg-zinc-800' : 'bg-zinc-200')} />
                 <button onMouseDown={(e) => e.preventDefault()} onClick={() => exec('undo')} title="Undo"
                   className={cn('p-2 rounded-md transition-colors', textMuted, 'hover:text-zinc-200', theme !== 'light' ? 'hover:bg-zinc-800' : 'hover:bg-zinc-100')}>
@@ -1184,6 +1280,7 @@ export function NotebookScreen() {
                   onBlur={onBodyBlur}
                   onClick={onBodyClick}
                   onKeyDown={onBodyKeyDown}
+                  onPaste={onBodyPaste}
                   onMouseUp={saveSelection}
                   onKeyUp={saveSelection}
                   data-placeholder="Write your note... (Ctrl/Cmd+B/I/U, Ctrl/Cmd+S to save)"
@@ -1242,6 +1339,42 @@ export function NotebookScreen() {
         .notebook-editable ul { list-style: disc; padding-left: 1.25rem; }
         .notebook-editable ol { list-style: decimal; padding-left: 1.25rem; }
         .notebook-editable img { max-width: 100%; height: auto; border-radius: 0.5rem; }
+        .notebook-editable .notebook-image-block {
+          position: relative;
+          display: block;
+          max-width: 100%;
+          margin: 0.6rem 0;
+          line-height: 0;
+        }
+        .notebook-editable .notebook-image-block img {
+          display: block;
+          max-width: 100%;
+          border-radius: 0.6rem;
+        }
+        .notebook-editable .notebook-image-block .notebook-image-delete {
+          position: absolute;
+          top: 8px;
+          right: 8px;
+          width: 26px;
+          height: 26px;
+          border-radius: 9999px;
+          border: none;
+          background: rgba(0,0,0,0.65);
+          color: #fff;
+          font-size: 16px;
+          line-height: 1;
+          cursor: pointer;
+          opacity: 0;
+          transition: opacity 0.15s ease;
+        }
+        .notebook-editable .notebook-image-block:hover .notebook-image-delete,
+        .notebook-editable .notebook-image-block:focus .notebook-image-delete {
+          opacity: 1;
+        }
+        .notebook-editable .notebook-image-block::selection,
+        .notebook-editable .notebook-image-block *::selection {
+          background: transparent;
+        }
         .notebook-editable a { color: ${theme !== 'light' ? '#c4b5fd' : '#7c3aed'}; text-decoration: underline; }
         .notebook-editable h1 { font-size: 1.6rem; font-weight: 700; margin: 0.75rem 0; }
         .notebook-editable h2 { font-size: 1.35rem; font-weight: 700; margin: 0.6rem 0; }
