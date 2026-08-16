@@ -790,32 +790,35 @@ export function NotebookScreen() {
           {colorPickerFolder === node.fullPath && (
             <div
               className={cn(
-                'absolute left-7 top-full mt-1 z-30 flex items-center gap-1.5 p-2 rounded-lg border shadow-xl',
+                'absolute left-7 top-full mt-1 z-30 w-36 p-2 rounded-lg border shadow-xl',
                 theme !== 'light' ? 'bg-zinc-900 border-zinc-800' : 'bg-white border-zinc-200'
               )}
             >
-              {NOTEBOOK_COVER_COLORS.map(c => (
+              <div className="grid grid-cols-4 gap-1.5">
+                {NOTEBOOK_COVER_COLORS.map(c => (
+                  <button
+                    key={c}
+                    type="button"
+                    title={c}
+                    onClick={() => { handleSetNotebookFolderColor(node.fullPath, c); setColorPickerFolder(null); }}
+                    className={cn(
+                      'w-5 h-5 rounded-full flex-shrink-0 transition-transform',
+                      FOLDER_COLOR_DOT_BY_ID[c],
+                      notebookFolderColors[node.fullPath] === c ? 'ring-2 ring-offset-1 ring-purple-400 scale-110' : 'hover:scale-110'
+                    )}
+                  />
+                ))}
+              </div>
+              <div className={cn('flex items-center justify-center mt-1.5 pt-1.5 border-t', theme !== 'light' ? 'border-zinc-800' : 'border-zinc-200')}>
                 <button
-                  key={c}
                   type="button"
-                  title={c}
-                  onClick={() => { handleSetNotebookFolderColor(node.fullPath, c); setColorPickerFolder(null); }}
-                  className={cn(
-                    'w-5 h-5 rounded-full flex-shrink-0 transition-transform',
-                    FOLDER_COLOR_DOT_BY_ID[c],
-                    notebookFolderColors[node.fullPath] === c ? 'ring-2 ring-offset-1 ring-purple-400 scale-110' : 'hover:scale-110'
-                  )}
-                />
-              ))}
-              <span className={cn('w-px h-4 mx-0.5', theme !== 'light' ? 'bg-zinc-800' : 'bg-zinc-200')} />
-              <button
-                type="button"
-                title="Reset to automatic color"
-                onClick={() => { handleSetNotebookFolderColor(node.fullPath, undefined); setColorPickerFolder(null); }}
-                className={cn('p-1 rounded-md transition-colors', textMuted, 'hover:text-zinc-200')}
-              >
-                <X className="w-3.5 h-3.5" />
-              </button>
+                  title="Reset to automatic color"
+                  onClick={() => { handleSetNotebookFolderColor(node.fullPath, undefined); setColorPickerFolder(null); }}
+                  className={cn('p-1 rounded-md transition-colors', textMuted, 'hover:text-zinc-200')}
+                >
+                  <X className="w-3.5 h-3.5" />
+                </button>
+              </div>
             </div>
           )}
         </div>
