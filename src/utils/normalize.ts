@@ -315,9 +315,13 @@ export const migrateStoredData = (raw: any): StoredData => {
       : EMOTION_OPTIONS.map(name => ({ id: generateId(), name, color: 'purple' as TagColor })),
     customSymbols: Array.isArray(data.customSymbols) ? data.customSymbols.filter((s: any) => typeof s === 'string') : [],
     customPillars: Array.isArray(data.customPillars) ? data.customPillars.map(normalizeCustomPillar) : [],
+    // A missing field (fresh install / pre-existing backup from before
+    // folders had a UI) seeds the two starter folders as a friendly
+    // default. An explicit array — even an empty one, meaning the user
+    // deleted every folder — is respected as-is and never reseeded.
     notebookFolders: Array.isArray(data.notebookFolders)
       ? data.notebookFolders.filter((f: any) => typeof f === 'string' && f.trim())
-      : [],
+      : ['Mindset', 'Daily Reflections'],
     notebookFolderColors: (data.notebookFolderColors && typeof data.notebookFolderColors === 'object' && !Array.isArray(data.notebookFolderColors))
       ? Object.entries(data.notebookFolderColors).reduce<Record<string, string>>((acc, [k, v]) => {
           if (typeof k === 'string' && typeof v === 'string' && (NOTEBOOK_COVER_COLORS as readonly string[]).includes(v)) {
