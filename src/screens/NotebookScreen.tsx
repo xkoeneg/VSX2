@@ -533,7 +533,7 @@ export function NotebookScreen() {
     scheduleSave({ body: html });
     setWordCount(countWords(html));
   };
-  const onBodyBlur = () => flushSave({ body: bodyRef.current?.innerHTML ?? '' });
+  const onBodyBlur = () => { cleanupEmptyTypingMarkers(); flushSave({ body: bodyRef.current?.innerHTML ?? '' }); };
 
   // Selection is lost the instant focus leaves the contentEditable div
   // (opening a <select>, clicking a color swatch, etc.), which breaks
@@ -564,29 +564,90 @@ export function NotebookScreen() {
     if (url) exec('createLink', url);
   };
 
-  // execCommand('fontSize') only understands the legacy HTML levels 1–7,
-  // not real point/pixel values. The standard workaround: apply level 7
-  // (the only one guaranteed to produce a distinguishable, easy-to-select
-  // wrapper), then immediately swap that wrapper's "size" attribute for a
-  // real inline font-size in px. Selection is restored the same way exec()
-  // does it, since fontSize needs a live selection to wrap.
-  const applyFontSize = (px: number) => {
-    bodyRef.current?.focus();
+  // Applies a font-family/font-size to the current selection without the
+  // "bug" of execCommand's legacy behavior (which sometimes restyled the
+  // whole block or dropped the change entirely, especially with a
+  // collapsed caret). Two distinct cases, handled explicitly:
+  //  - Text highlighted: wrap just that range in a <span style="...">, so
+  //    only the highlighted text changes.
+  //  - No highlight (just a caret): insert an empty marker span carrying
+  //    the style and park the caret inside it. Nothing already on the
+  //    page is touched — only text typed AFTER this point lands inside
+  //    that span and inherits the style. If the user hasn't typed
+  //    anything into it by the time they click away, the empty marker is
+  //    stripped on blur so it doesn't leave invisible clutter behind.
+  const TYPING_MARKER_CHAR = '\u200B';
+  const applyInlineStyle = (styleProp: 'fontFamily' | 'fontSize', cssValue: string) => {
+    const editor = bodyRef.current;
+    if (!editor) return;
+    editor.focus();
+
     const sel = window.getSelection();
     if (savedRangeRef.current && sel) {
       sel.removeAllRanges();
       sel.addRange(savedRangeRef.current);
     }
-    document.execCommand('fontSize', false, '7');
-    if (bodyRef.current) {
-      bodyRef.current.querySelectorAll('font[size="7"]').forEach((el) => {
-        const span = el as HTMLElement;
-        span.removeAttribute('size');
-        span.style.fontSize = `${px}px`;
-      });
+    if (!sel || sel.rangeCount === 0) return;
+    const range = sel.getRangeAt(0);
+    if (!editor.contains(range.commonAncestorContainer)) return;
+
+    if (range.collapsed) {
+      // Reuse the marker we're already sitting in (e.g. picking font
+      // family then size before typing anything) instead of nesting a
+      // second empty span inside the first.
+      const anchorNode = sel.anchorNode;
+      const anchorEl = (anchorNode instanceof HTMLElement ? anchorNode : anchorNode?.parentElement) ?? null;
+      let marker = anchorEl?.dataset.typingMarker === '1' ? (anchorEl as HTMLSpanElement) : null;
+
+      if (!marker) {
+        marker = document.createElement('span');
+        marker.dataset.typingMarker = '1';
+        marker.textContent = TYPING_MARKER_CHAR;
+        range.insertNode(marker);
+      }
+      marker.style[styleProp] = cssValue;
+
+      const newRange = document.createRange();
+      const textNode = marker.firstChild;
+      if (textNode) newRange.setStart(textNode, textNode.textContent?.length ?? 0);
+      else newRange.setStart(marker, 0);
+      newRange.collapse(true);
+      sel.removeAllRanges();
+      sel.addRange(newRange);
+      savedRangeRef.current = newRange.cloneRange();
+    } else {
+      // Highlighted text — wrap only the selected range, the same way it
+      // would look if you selected text in any other editor and changed
+      // its font. extractContents/insertNode handles selections that
+      // cross multiple existing tags (bold, links, etc.) cleanly.
+      const span = document.createElement('span');
+      span.style[styleProp] = cssValue;
+      span.appendChild(range.extractContents());
+      range.insertNode(span);
+
+      const newRange = document.createRange();
+      newRange.selectNodeContents(span);
+      sel.removeAllRanges();
+      sel.addRange(newRange);
+      savedRangeRef.current = newRange.cloneRange();
     }
+
     onBodyInput();
   };
+
+  // Removes typing-marker spans that never received any typed text (the
+  // user changed font/size, then clicked away without typing), so they
+  // don't linger as invisible empty tags in the saved HTML.
+  const cleanupEmptyTypingMarkers = () => {
+    const editor = bodyRef.current;
+    if (!editor) return;
+    editor.querySelectorAll<HTMLElement>('span[data-typing-marker="1"]').forEach((el) => {
+      if (el.textContent === TYPING_MARKER_CHAR) el.remove();
+    });
+  };
+
+  const applyFontSize = (px: number) => applyInlineStyle('fontSize', `${px}px`);
+  const applyFontFamily = (family: string) => applyInlineStyle('fontFamily', family);
 
   // Real interactive checklist item — a native checkbox inside the
   // contentEditable div (clicking it toggles natively; CSS handles the
@@ -1814,7 +1875,7 @@ export function NotebookScreen() {
                           <button
                             key={value}
                             onMouseDown={(e) => { e.preventDefault(); }}
-                            onClick={() => { exec('fontName', value); setSelectedFontFamilyLabel(label); setShowFontFamilyMenu(false); }}
+                            onClick={() => { applyFontFamily(value); setSelectedFontFamilyLabel(label); setShowFontFamilyMenu(false); }}
                             style={{ fontFamily: value }}
                             className={cn('w-full px-3.5 py-2 text-sm text-left transition-colors', textBody, theme !== 'light' ? 'hover:bg-zinc-800' : 'hover:bg-zinc-50')}
                           >
