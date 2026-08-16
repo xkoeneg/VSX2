@@ -243,7 +243,7 @@ export interface TagColorStyle {
 
 export type SessionOption = 'NYC' | 'London' | 'Asia' | 'Pre-market Open';
 
-export type ViewType = 'dashboard' | 'trades' | 'discipline' | 'lifeDiscipline' | 'playbook' | 'notices' | 'wiki' | 'calendar';
+export type ViewType = 'dashboard' | 'trades' | 'discipline' | 'lifeDiscipline' | 'playbook' | 'notices' | 'wiki' | 'calendar' | 'notebook';
 
 export type GalleryView = 'list' | 'preview' | 'gallery';
 
