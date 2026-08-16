@@ -202,12 +202,13 @@ const buildFolderTree = (folders: string[]): FolderNode[] => {
 export function NotebookScreen() {
   const {
     theme, notebookEntries, notebookEntriesLoading, notebookFolders, notebookFolderColors,
+    notebookDeletedFolders,
     handleAddNotebookEntry, handleUpdateNotebookEntry, handleToggleNotebookEntryPin,
     handleToggleNotebookEntryFavorite, handleDuplicateNotebookEntry,
     handleBulkMoveNotebookEntries, handleBulkSoftDeleteNotebookEntries, handleEmptyNotebookTrash,
     handleSoftDeleteNotebookEntry, handleRestoreNotebookEntry, handlePermanentDeleteNotebookEntry,
     handleAddNotebookFolder, handleDeleteNotebookFolder, handleSetNotebookFolderColor,
-    handleReorderNotebookFolder,
+    handleReorderNotebookFolder, handleRestoreNotebookFolder, handlePermanentDeleteNotebookFolder,
   } = useAppContext();
 
   // ---- Local screen state ----
@@ -224,6 +225,11 @@ export function NotebookScreen() {
   const [newFolderColor, setNewFolderColor] = useState<string | null>(null);
   const [colorPickerFolder, setColorPickerFolder] = useState<string | null>(null);
   const [folderPendingDelete, setFolderPendingDelete] = useState<string | null>(null);
+  // Clicking a trashed folder in Recently Deleted doesn't navigate straight
+  // into it — its notes are soft-deleted too, so viewing them means
+  // restoring first. This holds the folder name pending that confirmation.
+  const [folderPendingRestore, setFolderPendingRestore] = useState<string | null>(null);
+  const [deletedFolderPendingPermanentDelete, setDeletedFolderPendingPermanentDelete] = useState<string | null>(null);
   const [draggedFolder, setDraggedFolder] = useState<string | null>(null);
   const [dragOverFolder, setDragOverFolder] = useState<string | null>(null);
   const [entryPendingDelete, setEntryPendingDelete] = useState<NotebookEntry | null>(null);
@@ -267,7 +273,11 @@ export function NotebookScreen() {
 
   const visibleEntries = useMemo(() => {
     const pool = isTrashView
-      ? deletedEntries
+      // Notes whose folder is itself in the trash are represented by that
+      // folder's row (see the "Deleted folders" section above the list)
+      // rather than listed flat here too — avoids showing the same note
+      // twice and matches "restore the folder to see them" behavior.
+      ? deletedEntries.filter(e => !notebookDeletedFolders.some(f => f.name === e.folder))
       : isFavoritesView
         ? liveEntries.filter(e => e.favorite)
         : activeFolder === ALL_NOTES
@@ -288,7 +298,7 @@ export function NotebookScreen() {
       if (sortMode === 'created') return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
       return new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime();
     });
-  }, [activeFolder, isTrashView, isFavoritesView, liveEntries, deletedEntries, search, activeTagFilter, sortMode]);
+  }, [activeFolder, isTrashView, isFavoritesView, liveEntries, deletedEntries, notebookDeletedFolders, search, activeTagFilter, sortMode]);
 
   const selectedEntry = useMemo(
     () => notebookEntries.find(e => e.id === selectedEntryId) ?? null,
@@ -1047,7 +1057,7 @@ export function NotebookScreen() {
             {isTrashView ? (
               <div className="flex items-center justify-between w-full">
                 <span className={cn('text-sm font-medium', textMuted)}>Recently Deleted</span>
-                {deletedEntries.length > 0 && (
+                {(deletedEntries.length > 0 || notebookDeletedFolders.length > 0) && (
                   <button onClick={() => setConfirmEmptyTrash(true)} className="text-sm font-medium text-rose-400 hover:underline">
                     Empty Trash
                   </button>
@@ -1123,15 +1133,53 @@ export function NotebookScreen() {
           )}
 
           <div className="themed-scrollbar flex-1 min-h-0 overflow-y-auto">
+            {/* Trashed folders — shown above the trashed notes themselves.
+                Clicking one doesn't jump straight to its notes (they're
+                soft-deleted right along with the folder); it asks to
+                restore first via folderPendingRestore below. */}
+            {isTrashView && notebookDeletedFolders.length > 0 && (
+              <div className={cn('p-2.5 border-b', border)}>
+                <p className={cn('text-xs font-semibold uppercase tracking-wider px-1.5 pb-1.5', textMuted)}>Deleted folders</p>
+                <div className="space-y-0.5">
+                  {notebookDeletedFolders.map(f => {
+                    const count = deletedEntries.filter(e => e.folder === f.name).length;
+                    const colorClass = f.color ? FOLDER_COLOR_DOT_BY_ID[f.color] : folderColor(f.name);
+                    return (
+                      <div key={f.name} className="group/trashfolder relative flex items-center gap-1">
+                        <button
+                          onClick={() => setFolderPendingRestore(f.name)}
+                          title="View this folder's notes (restores it)"
+                          className={cn('flex-1 flex items-center gap-2.5 text-left text-sm min-w-0 rounded-lg px-1.5 py-2 transition-colors', textBody, theme !== 'light' ? 'hover:bg-zinc-800/60' : 'hover:bg-zinc-50')}
+                        >
+                          <Folder className={cn('w-4 h-4 flex-shrink-0', toTextColorClass(colorClass))} fill="currentColor" fillOpacity={0.18} />
+                          <span className="truncate flex-1">{f.name}</span>
+                          <span className={cn('text-xs flex-shrink-0', textMuted)}>{count}</span>
+                        </button>
+                        <button
+                          onClick={() => setDeletedFolderPendingPermanentDelete(f.name)}
+                          title="Delete folder forever"
+                          className="flex-shrink-0 p-1.5 rounded-md text-rose-400/70 hover:text-rose-400 hover:bg-rose-500/10 transition-colors opacity-0 group-hover/trashfolder:opacity-100 focus:opacity-100"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
             {notebookEntriesLoading ? (
               <p className={cn('text-sm text-center py-12', textMuted)}>Loading your notes...</p>
             ) : visibleEntries.length === 0 ? (
-              <div className="text-center py-12 px-5">
-                <StickyNote className={cn('w-7 h-7 mx-auto mb-2', theme !== 'light' ? 'text-zinc-700' : 'text-zinc-300')} />
-                <p className={cn('text-sm', textMuted)}>
-                  {isTrashView ? 'Recently Deleted is empty.' : isFavoritesView ? 'No favorites yet.' : 'No notes here yet.'}
-                </p>
-              </div>
+              isTrashView && notebookDeletedFolders.length > 0 ? null : (
+                <div className="text-center py-12 px-5">
+                  <StickyNote className={cn('w-7 h-7 mx-auto mb-2', theme !== 'light' ? 'text-zinc-700' : 'text-zinc-300')} />
+                  <p className={cn('text-sm', textMuted)}>
+                    {isTrashView ? 'Recently Deleted is empty.' : isFavoritesView ? 'No favorites yet.' : 'No notes here yet.'}
+                  </p>
+                </div>
+              )
             ) : viewMode === 'grid' && !isTrashView ? (
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 p-2.5">
                 {visibleEntries.map(entry => {
@@ -1622,7 +1670,7 @@ export function NotebookScreen() {
           <div className={cn('rounded-xl max-w-sm w-full border p-6', theme !== 'light' ? 'bg-zinc-900 border-zinc-800' : 'bg-white border-zinc-200')} onClick={(e) => e.stopPropagation()}>
             <h3 className={cn('text-base font-semibold mb-2', theme !== 'light' ? 'text-white' : 'text-zinc-900')}>Delete "{folderPendingDelete}"?</h3>
             <p className="text-sm text-zinc-500 mb-4 leading-relaxed">
-              Notes in this folder won't be deleted — they'll move to Uncategorized. Sub-folders aren't deleted automatically.
+              This folder and its notes will move to Recently Deleted together — you can restore them from there, or they'll be permanently removed after 30 days. Sub-folders aren't deleted automatically.
             </p>
             <div className="flex items-center justify-end gap-2.5">
               <button onClick={() => setFolderPendingDelete(null)} className={cn('px-4 py-2 rounded-lg text-sm', theme !== 'light' ? 'bg-zinc-800 hover:bg-zinc-700 text-zinc-300' : 'bg-zinc-100 hover:bg-zinc-200 text-zinc-700')}>
@@ -1630,6 +1678,57 @@ export function NotebookScreen() {
               </button>
               <button onClick={confirmDeleteFolder} className="px-4 py-2 rounded-lg text-sm font-medium bg-rose-600 hover:bg-rose-500 text-white">
                 Delete Folder
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ---- Restore folder confirm (viewing a trashed folder's notes) ---- */}
+      {folderPendingRestore && (
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-[70] flex items-center justify-center p-5" onClick={() => setFolderPendingRestore(null)}>
+          <div className={cn('rounded-xl max-w-sm w-full border p-6', theme !== 'light' ? 'bg-zinc-900 border-zinc-800' : 'bg-white border-zinc-200')} onClick={(e) => e.stopPropagation()}>
+            <h3 className={cn('text-base font-semibold mb-2', theme !== 'light' ? 'text-white' : 'text-zinc-900')}>Restore "{folderPendingRestore}"?</h3>
+            <p className="text-sm text-zinc-500 mb-4 leading-relaxed">
+              This folder is in Recently Deleted, so its notes are too — restore it to bring the folder and its notes back and open it.
+            </p>
+            <div className="flex items-center justify-end gap-2.5">
+              <button onClick={() => setFolderPendingRestore(null)} className={cn('px-4 py-2 rounded-lg text-sm', theme !== 'light' ? 'bg-zinc-800 hover:bg-zinc-700 text-zinc-300' : 'bg-zinc-100 hover:bg-zinc-200 text-zinc-700')}>
+                Cancel
+              </button>
+              <button
+                onClick={() => {
+                  handleRestoreNotebookFolder(folderPendingRestore);
+                  setActiveFolder(folderPendingRestore);
+                  setActiveTagFilter(null);
+                  setFolderPendingRestore(null);
+                }}
+                className="px-4 py-2 rounded-lg text-sm font-medium bg-purple-600 hover:bg-purple-500 text-white"
+              >
+                Restore & Open
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ---- Permanently delete a trashed folder (+ its still-trashed notes) ---- */}
+      {deletedFolderPendingPermanentDelete && (
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-[70] flex items-center justify-center p-5" onClick={() => setDeletedFolderPendingPermanentDelete(null)}>
+          <div className={cn('rounded-xl max-w-sm w-full border p-6', theme !== 'light' ? 'bg-zinc-900 border-zinc-800' : 'bg-white border-zinc-200')} onClick={(e) => e.stopPropagation()}>
+            <h3 className={cn('text-base font-semibold mb-2', theme !== 'light' ? 'text-white' : 'text-zinc-900')}>Delete "{deletedFolderPendingPermanentDelete}" forever?</h3>
+            <p className="text-sm text-zinc-500 mb-4 leading-relaxed">
+              This permanently deletes this folder and every note still in it. This can't be undone.
+            </p>
+            <div className="flex items-center justify-end gap-2.5">
+              <button onClick={() => setDeletedFolderPendingPermanentDelete(null)} className={cn('px-4 py-2 rounded-lg text-sm', theme !== 'light' ? 'bg-zinc-800 hover:bg-zinc-700 text-zinc-300' : 'bg-zinc-100 hover:bg-zinc-200 text-zinc-700')}>
+                Cancel
+              </button>
+              <button
+                onClick={() => { handlePermanentDeleteNotebookFolder(deletedFolderPendingPermanentDelete); setDeletedFolderPendingPermanentDelete(null); }}
+                className="px-4 py-2 rounded-lg text-sm font-medium bg-rose-600 hover:bg-rose-500 text-white"
+              >
+                Delete Forever
               </button>
             </div>
           </div>
@@ -1665,7 +1764,8 @@ export function NotebookScreen() {
           <div className={cn('rounded-xl max-w-sm w-full border p-6', theme !== 'light' ? 'bg-zinc-900 border-zinc-800' : 'bg-white border-zinc-200')} onClick={(e) => e.stopPropagation()}>
             <h3 className={cn('text-base font-semibold mb-2', theme !== 'light' ? 'text-white' : 'text-zinc-900')}>Empty trash?</h3>
             <p className="text-sm text-zinc-500 mb-4 leading-relaxed">
-              This permanently deletes all {deletedEntries.length} note{deletedEntries.length === 1 ? '' : 's'} in Recently Deleted. This can't be undone.
+              This permanently deletes all {deletedEntries.length} note{deletedEntries.length === 1 ? '' : 's'}
+              {notebookDeletedFolders.length > 0 && <> and {notebookDeletedFolders.length} folder{notebookDeletedFolders.length === 1 ? '' : 's'}</>} in Recently Deleted. This can't be undone.
             </p>
             <div className="flex items-center justify-end gap-2.5">
               <button onClick={() => setConfirmEmptyTrash(false)} className={cn('px-4 py-2 rounded-lg text-sm', theme !== 'light' ? 'bg-zinc-800 hover:bg-zinc-700 text-zinc-300' : 'bg-zinc-100 hover:bg-zinc-200 text-zinc-700')}>
