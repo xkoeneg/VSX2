@@ -274,6 +274,12 @@ export function NotebookScreen() {
   // it through a portal with fixed coordinates escapes that clipping.
   const [styleMenuPos, setStyleMenuPos] = useState({ top: 0, left: 0 });
   const styleButtonRef = useRef<HTMLButtonElement>(null);
+  const [showFontFamilyMenu, setShowFontFamilyMenu] = useState(false);
+  const [fontFamilyMenuPos, setFontFamilyMenuPos] = useState({ top: 0, left: 0 });
+  const fontFamilyButtonRef = useRef<HTMLButtonElement>(null);
+  const [showFontSizeMenu, setShowFontSizeMenu] = useState(false);
+  const [fontSizeMenuPos, setFontSizeMenuPos] = useState({ top: 0, left: 0 });
+  const fontSizeButtonRef = useRef<HTMLButtonElement>(null);
   const [colorPickerPos, setColorPickerPos] = useState({ top: 0, left: 0 });
   const [richColorMenu, setRichColorMenu] = useState<null | 'text' | 'highlight'>(null);
   const [richColorMenuPos, setRichColorMenuPos] = useState({ top: 0, left: 0 });
@@ -552,6 +558,30 @@ export function NotebookScreen() {
   const insertLink = () => {
     const url = window.prompt('Link URL');
     if (url) exec('createLink', url);
+  };
+
+  // execCommand('fontSize') only understands the legacy HTML levels 1–7,
+  // not real point/pixel values. The standard workaround: apply level 7
+  // (the only one guaranteed to produce a distinguishable, easy-to-select
+  // wrapper), then immediately swap that wrapper's "size" attribute for a
+  // real inline font-size in px. Selection is restored the same way exec()
+  // does it, since fontSize needs a live selection to wrap.
+  const applyFontSize = (px: number) => {
+    bodyRef.current?.focus();
+    const sel = window.getSelection();
+    if (savedRangeRef.current && sel) {
+      sel.removeAllRanges();
+      sel.addRange(savedRangeRef.current);
+    }
+    document.execCommand('fontSize', false, '7');
+    if (bodyRef.current) {
+      bodyRef.current.querySelectorAll('font[size="7"]').forEach((el) => {
+        const span = el as HTMLElement;
+        span.removeAttribute('size');
+        span.style.fontSize = `${px}px`;
+      });
+    }
+    onBodyInput();
   };
 
   // Real interactive checklist item — a native checkbox inside the
@@ -1733,6 +1763,98 @@ export function NotebookScreen() {
                             className={cn('w-full px-3.5 py-2 text-sm text-left transition-colors', textBody, theme !== 'light' ? 'hover:bg-zinc-800' : 'hover:bg-zinc-50')}
                           >
                             {label}
+                          </button>
+                        ))}
+                      </div>
+                    </>,
+                    document.body
+                  )}
+                </div>
+                <div className="relative flex-shrink-0">
+                  <button
+                    ref={fontFamilyButtonRef}
+                    type="button"
+                    onMouseDown={(e) => { e.preventDefault(); saveSelection(); }}
+                    onClick={() => {
+                      if (!showFontFamilyMenu) {
+                        const rect = fontFamilyButtonRef.current?.getBoundingClientRect();
+                        if (rect) setFontFamilyMenuPos({ top: rect.bottom + 6, left: rect.left });
+                      }
+                      setShowFontFamilyMenu(v => !v);
+                    }}
+                    title="Font"
+                    className={cn('flex items-center gap-1 text-sm bg-transparent border rounded-md pl-2.5 pr-1.5 py-1.5 outline-none cursor-pointer', border, textMuted)}
+                  >
+                    Font
+                    <ChevronDown className="w-3.5 h-3.5" />
+                  </button>
+                  {showFontFamilyMenu && createPortal(
+                    <>
+                      <div className="fixed inset-0 z-20" onClick={() => setShowFontFamilyMenu(false)} />
+                      <div
+                        style={{ position: 'fixed', top: fontFamilyMenuPos.top, left: fontFamilyMenuPos.left }}
+                        className={cn('w-48 rounded-lg border shadow-xl z-30 py-1.5 max-h-72 overflow-y-auto', theme !== 'light' ? 'bg-zinc-900 border-zinc-800' : 'bg-white border-zinc-200')}
+                      >
+                        {[
+                          { value: 'sans-serif', label: 'Default' },
+                          { value: 'Arial', label: 'Arial' },
+                          { value: 'Helvetica', label: 'Helvetica' },
+                          { value: 'Georgia', label: 'Georgia' },
+                          { value: '\'Times New Roman\'', label: 'Times New Roman' },
+                          { value: '\'Courier New\'', label: 'Courier New' },
+                          { value: 'Verdana', label: 'Verdana' },
+                          { value: 'Tahoma', label: 'Tahoma' },
+                          { value: '\'Trebuchet MS\'', label: 'Trebuchet MS' },
+                          { value: '\'Comic Sans MS\'', label: 'Comic Sans MS' },
+                        ].map(({ value, label }) => (
+                          <button
+                            key={value}
+                            onMouseDown={(e) => { e.preventDefault(); }}
+                            onClick={() => { exec('fontName', value); setShowFontFamilyMenu(false); }}
+                            style={{ fontFamily: value }}
+                            className={cn('w-full px-3.5 py-2 text-sm text-left transition-colors', textBody, theme !== 'light' ? 'hover:bg-zinc-800' : 'hover:bg-zinc-50')}
+                          >
+                            {label}
+                          </button>
+                        ))}
+                      </div>
+                    </>,
+                    document.body
+                  )}
+                </div>
+                <div className="relative flex-shrink-0">
+                  <button
+                    ref={fontSizeButtonRef}
+                    type="button"
+                    onMouseDown={(e) => { e.preventDefault(); saveSelection(); }}
+                    onClick={() => {
+                      if (!showFontSizeMenu) {
+                        const rect = fontSizeButtonRef.current?.getBoundingClientRect();
+                        if (rect) setFontSizeMenuPos({ top: rect.bottom + 6, left: rect.left });
+                      }
+                      setShowFontSizeMenu(v => !v);
+                    }}
+                    title="Font size"
+                    className={cn('flex items-center gap-1 text-sm bg-transparent border rounded-md pl-2.5 pr-1.5 py-1.5 outline-none cursor-pointer', border, textMuted)}
+                  >
+                    Size
+                    <ChevronDown className="w-3.5 h-3.5" />
+                  </button>
+                  {showFontSizeMenu && createPortal(
+                    <>
+                      <div className="fixed inset-0 z-20" onClick={() => setShowFontSizeMenu(false)} />
+                      <div
+                        style={{ position: 'fixed', top: fontSizeMenuPos.top, left: fontSizeMenuPos.left }}
+                        className={cn('w-24 rounded-lg border shadow-xl z-30 py-1.5 max-h-72 overflow-y-auto', theme !== 'light' ? 'bg-zinc-900 border-zinc-800' : 'bg-white border-zinc-200')}
+                      >
+                        {[10, 12, 14, 16, 18, 20, 24, 28, 32, 36, 48, 64].map((px) => (
+                          <button
+                            key={px}
+                            onMouseDown={(e) => { e.preventDefault(); }}
+                            onClick={() => { applyFontSize(px); setShowFontSizeMenu(false); }}
+                            className={cn('w-full px-3.5 py-2 text-sm text-left transition-colors', textBody, theme !== 'light' ? 'hover:bg-zinc-800' : 'hover:bg-zinc-50')}
+                          >
+                            {px}
                           </button>
                         ))}
                       </div>
