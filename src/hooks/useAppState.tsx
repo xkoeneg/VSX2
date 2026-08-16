@@ -4502,12 +4502,48 @@ Return ONLY a JSON object — no markdown, no code fences, no commentary — wit
     e.target.value = '';
   };
 
-  // 2. TRADES ONLY EXPORT — just the trade records (Entry, Exit, Pair,
-  // R:R, PnL, Date, Status, Account), for spreadsheet analysis or sharing
-  // with someone else. Deliberately excludes discipline logs, habits, and
-  // full system configuration. Available as .csv (for Excel/Sheets) or
-  // .json (for re-importing into other tools).
+  // 2. TRADES ONLY EXPORT — two genuinely different formats behind one
+  // button, because "trades only" means something different depending on
+  // what the file is FOR:
+  //
+  //   .csv  — a flattened, human-readable spreadsheet view (Date, Account,
+  //           Pair, Entry, Exit, R:R, PnL, Status) for Excel/Sheets
+  //           analysis or sharing. Screenshots/notes/setups/timeframes
+  //           can't live in a spreadsheet cell usefully, so this format
+  //           never carries them — by nature, not by omission. Re-importing
+  //           this can only ever reconstruct a basic trade.
+  //
+  //   .json — a TRUE 1:1 backup, scoped to just trades + the accounts they
+  //           belong to. Every field survives untouched: screenshots,
+  //           notes, setups, mistakes, session, timeframe charts, all of
+  //           it — same normalizeTrade/normalizeAccount shape Full System
+  //           Backup uses, just without rules/notices/wiki/discipline hub.
+  //           Re-importing this restores trades exactly as they were.
   const exportTradesOnly = async (format: 'csv' | 'json') => {
+    const defaultDate = new Date().toISOString().split('T')[0];
+
+    if (format === 'json') {
+      // Full-fidelity — only the accounts actually referenced by these
+      // trades, so the file stays self-contained without dragging in
+      // every account on the user's books.
+      const referencedAccountIds = new Set(trades.map(t => t.accountId));
+      const referencedAccounts = accounts.filter(a => referencedAccountIds.has(a.id));
+      const payload = {
+        version: DATA_SCHEMA_VERSION,
+        exportedAt: new Date().toISOString(),
+        scope: 'trades-only' as const,
+        accounts: referencedAccounts,
+        trades,
+      };
+      const jsonString = JSON.stringify(payload, null, 2);
+      await saveStringAsFile(jsonString, `vsx_trades_${defaultDate}.json`, 'application/json', 'VSX Trades Export (Full)');
+      return;
+    }
+
+    // CSV — deliberately the lightweight spreadsheet view. Quote every
+    // field and escape embedded quotes/commas/newlines so symbols, etc.
+    // always round-trip cleanly as text, even though the deep fields
+    // can't come along.
     const accountNameById = new Map(accounts.map(a => [a.id, a.name]));
     const rows = trades.map(t => {
       const riskReward = t.riskAmount ? t.profitLoss / t.riskAmount : null;
@@ -4523,17 +4559,6 @@ Return ONLY a JSON object — no markdown, no code fences, no commentary — wit
         Status: status,
       };
     });
-
-    const defaultDate = new Date().toISOString().split('T')[0];
-
-    if (format === 'json') {
-      const jsonString = JSON.stringify(rows, null, 2);
-      await saveStringAsFile(jsonString, `vsx_trades_${defaultDate}.json`, 'application/json', 'VSX Trades Export');
-      return;
-    }
-
-    // CSV — quote every field and escape embedded quotes/commas/newlines so
-    // symbols, notes-free numeric fields, etc. always round-trip cleanly.
     const headers = ['Date', 'Account', 'Pair', 'Entry', 'Exit', 'R:R', 'PnL', 'Status'];
     const escapeCsvCell = (value: unknown) => `"${String(value).replace(/"/g, '""')}"`;
     const csvLines = [
@@ -4541,7 +4566,219 @@ Return ONLY a JSON object — no markdown, no code fences, no commentary — wit
       ...rows.map(row => headers.map(h => escapeCsvCell((row as Record<string, unknown>)[h])).join(',')),
     ];
     const csvString = csvLines.join('\r\n');
-    await saveStringAsFile(csvString, `vsx_trades_${defaultDate}.csv`, 'text/csv', 'VSX Trades Export');
+    await saveStringAsFile(csvString, `vsx_trades_${defaultDate}.csv`, 'text/csv', 'VSX Trades Export (Spreadsheet)');
+  };
+
+  // 2b. TRADES ONLY IMPORT — the counterpart to exportTradesOnly above.
+  // Branches on what the file actually contains:
+  //   - Full-fidelity JSON (scope: 'trades-only') → true 1:1 restore of
+  //     just trades + their accounts, upserted by id (safe to re-import).
+  //   - Lightweight CSV, or an older flat-row JSON → basic reconstruction
+  //     only, since that format never captured the deep fields.
+  //
+  // Account matching for the lightweight path: that export only ever
+  // stored the account's NAME, not its id, so a matching account is
+  // looked up by name (case-insensitive). If nothing matches, a new
+  // placeholder account is created with that name so the trade has
+  // somewhere valid to attach to, rather than being silently dropped.
+  const parseTradesOnlyCsv = (csvText: string): Record<string, string>[] => {
+    // Minimal CSV parser matching exportTradesOnly's own quoting rules
+    // (every field wrapped in "…", embedded quotes doubled) — handles
+    // quoted commas/newlines within a field, which a naive split(',')
+    // would break on.
+    const rows: string[][] = [];
+    let row: string[] = [];
+    let field = '';
+    let inQuotes = false;
+    for (let i = 0; i < csvText.length; i++) {
+      const ch = csvText[i];
+      if (inQuotes) {
+        if (ch === '"') {
+          if (csvText[i + 1] === '"') { field += '"'; i++; }
+          else { inQuotes = false; }
+        } else {
+          field += ch;
+        }
+      } else if (ch === '"') {
+        inQuotes = true;
+      } else if (ch === ',') {
+        row.push(field); field = '';
+      } else if (ch === '\r') {
+        // skip — paired \n below handles the line break
+      } else if (ch === '\n') {
+        row.push(field); field = '';
+        rows.push(row); row = [];
+      } else {
+        field += ch;
+      }
+    }
+    if (field.length > 0 || row.length > 0) { row.push(field); rows.push(row); }
+
+    if (rows.length < 1) return [];
+    const headers = rows[0];
+    return rows.slice(1)
+      .filter(r => r.some(cell => cell.trim() !== ''))
+      .map(r => Object.fromEntries(headers.map((h, idx) => [h, r[idx] ?? ''])));
+  };
+
+  const importTradesOnly = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = async (event) => {
+      try {
+        const text = event.target?.result as string;
+        const isJson = file.name.toLowerCase().endsWith('.json');
+        const parsed: any = isJson ? JSON.parse(text) : null;
+
+        // ---- PATH A: full-fidelity JSON (scope: 'trades-only') ----
+        // Real Trade/Account objects, same shape Full System Backup uses.
+        // Restored with UPSERT semantics (by id) rather than always
+        // appending — re-importing the same file is safe and just
+        // overwrites the same trades with themselves instead of
+        // duplicating them, matching what "1:1 restore" should mean.
+        if (parsed && typeof parsed === 'object' && !Array.isArray(parsed) && Array.isArray(parsed.trades)) {
+          const restoredAccounts = Array.isArray(parsed.accounts) ? parsed.accounts.map(normalizeAccount) : [];
+          const restoredTrades = normalizeTrades(parsed.trades);
+
+          const accountIds = new Set(accounts.map(a => a.id));
+          const newAccounts = restoredAccounts.filter((a: Account) => !accountIds.has(a.id));
+          const updatedAccountIds = new Set(restoredAccounts.map((a: Account) => a.id));
+
+          const tradeIds = new Set(trades.map(t => t.id));
+          const newTrades = restoredTrades.filter(t => !tradeIds.has(t.id));
+          const updatedTrades = restoredTrades.filter(t => tradeIds.has(t.id));
+          const updatedTradeIds = new Set(updatedTrades.map(t => t.id));
+
+          setAccounts(prev => [
+            ...prev.map(a => updatedAccountIds.has(a.id) ? restoredAccounts.find((r: Account) => r.id === a.id)! : a),
+            ...newAccounts,
+          ]);
+          setTrades(prev => [
+            ...prev.map(t => updatedTradeIds.has(t.id) ? restoredTrades.find(r => r.id === t.id)! : t),
+            ...newTrades,
+          ]);
+
+          if (userId) {
+            try {
+              if (newAccounts.length > 0) {
+                const { error } = await supabase.from('accounts').insert(
+                  newAccounts.map((a: Account) => ({ id: a.id, user_id: userId, data: a }))
+                );
+                if (error) throw error;
+              }
+              for (const a of restoredAccounts.filter((acc: Account) => updatedAccountIds.has(acc.id) && accountIds.has(acc.id))) {
+                const { error } = await supabase.from('accounts').update({ data: a }).eq('id', a.id).eq('user_id', userId);
+                if (error) throw error;
+              }
+              if (newTrades.length > 0) {
+                const { error } = await supabase.from('trades').insert(
+                  newTrades.map(t => ({ id: t.id, user_id: userId, account_id: t.accountId, data: t }))
+                );
+                if (error) throw error;
+              }
+              for (const t of updatedTrades) {
+                const { error } = await supabase.from('trades').update({ data: t, account_id: t.accountId }).eq('id', t.id).eq('user_id', userId);
+                if (error) throw error;
+              }
+            } catch (err) {
+              console.error('Failed to sync imported trades to Supabase:', err);
+              alert('Trades restored locally, but failed to sync to your account — check your connection and try again.');
+              return;
+            }
+          }
+
+          alert(`Restored ${restoredTrades.length} trade${restoredTrades.length === 1 ? '' : 's'} (${newTrades.length} new, ${updatedTrades.length} updated) with full detail — screenshots, notes, setups, and everything else included.`);
+          return;
+        }
+
+        // ---- PATH B: lightweight CSV, or an older flat-array JSON export
+        // from before the full-fidelity format existed ----
+        // Reconstructs BASIC trades only — the exported file never
+        // captured screenshots, notes, setups, session, or timeframe
+        // charts, so none of it can come back through this path.
+        const parsedRows: any[] = isJson ? parsed : parseTradesOnlyCsv(text);
+
+        if (!Array.isArray(parsedRows) || parsedRows.length === 0) {
+          alert('No trade rows found in this file. Make sure it\'s a file exported from "Trades Only Export".');
+          return;
+        }
+
+        // Resolve/create accounts by name first, so every row below has a
+        // real accountId to attach to.
+        const nameToAccount = new Map(accounts.map(a => [a.name.trim().toLowerCase(), a]));
+        const newAccounts: Account[] = [];
+        const resolveAccountId = (rawName: string): string => {
+          const name = (rawName || 'Unknown').trim() || 'Unknown';
+          const key = name.toLowerCase();
+          const existing = nameToAccount.get(key);
+          if (existing) return existing.id;
+          const alreadyQueued = newAccounts.find(a => a.name.toLowerCase() === key);
+          if (alreadyQueued) return alreadyQueued.id;
+          const created = normalizeAccount({ name });
+          newAccounts.push(created);
+          nameToAccount.set(key, created);
+          return created.id;
+        };
+
+        const rawTrades = parsedRows.map(row => {
+          const entry = parseFloat(row['Entry']);
+          const exit = parseFloat(row['Exit']);
+          const pnl = parseFloat(row['PnL']);
+          const rr = parseFloat(row['R:R']);
+          const riskAmount = !isNaN(rr) && rr !== 0 && !isNaN(pnl) ? Math.abs(pnl / rr) : 0;
+          const date = typeof row['Date'] === 'string' && row['Date'] ? row['Date'] : new Date().toISOString().split('T')[0];
+          return {
+            accountId: resolveAccountId(row['Account']),
+            symbol: row['Pair'] || '',
+            entryPrice: isNaN(entry) ? 0 : entry,
+            exitPrice: isNaN(exit) ? undefined : exit,
+            profitLoss: isNaN(pnl) ? 0 : pnl,
+            riskAmount,
+            date,
+            timestamp: new Date(date).toISOString(),
+          };
+        });
+
+        const normalizedNewTrades = normalizeTrades(rawTrades).map(t => ({
+          ...t,
+          // normalizeTrades numbers a batch starting at 1 — offset by
+          // however many trades already exist so imported trades don't
+          // collide with/duplicate existing #1, #2, #3...
+          absoluteTradeNumber: t.absoluteTradeNumber + trades.length,
+        }));
+
+        if (newAccounts.length > 0) setAccounts(prev => [...prev, ...newAccounts]);
+        setTrades(prev => [...prev, ...normalizedNewTrades]);
+
+        if (userId) {
+          try {
+            if (newAccounts.length > 0) {
+              const { error: accErr } = await supabase.from('accounts').insert(
+                newAccounts.map(a => ({ id: a.id, user_id: userId, data: a }))
+              );
+              if (accErr) throw accErr;
+            }
+            const { error: tradeErr } = await supabase.from('trades').insert(
+              normalizedNewTrades.map(t => ({ id: t.id, user_id: userId, account_id: t.accountId, data: t }))
+            );
+            if (tradeErr) throw tradeErr;
+          } catch (err) {
+            console.error('Failed to sync imported trades to Supabase:', err);
+            alert('Trades imported locally, but failed to sync to your account — check your connection and try again.');
+          }
+        }
+
+        const acctNote = newAccounts.length > 0 ? ` (created ${newAccounts.length} new account${newAccounts.length > 1 ? 's' : ''}: ${newAccounts.map(a => a.name).join(', ')})` : '';
+        alert(`Imported ${normalizedNewTrades.length} basic trade${normalizedNewTrades.length === 1 ? '' : 's'}${acctNote}. Note: this file didn't have screenshots, notes, setups, or session data to begin with — export as .json going forward for a full 1:1 restore.`);
+      } catch (err) {
+        console.error('Failed to parse trades-only file:', err);
+        alert('Failed to parse this file. Make sure it\'s a .csv or .json file exported from "Trades Only Export".');
+      }
+    };
+    reader.readAsText(file);
+    e.target.value = '';
   };
 
   // 3. FULL SYSTEM RESET — wipes every feature (Trades, Accounts, Rules
@@ -5231,6 +5468,7 @@ Return ONLY a JSON object — no markdown, no code fences, no commentary — wit
     exportBackup,
     importBackup,
     exportTradesOnly,
+    importTradesOnly,
     handleFullSystemReset,
     session,
     authLoading,
