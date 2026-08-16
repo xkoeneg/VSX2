@@ -16,6 +16,8 @@ import {
   Bold,
   Italic,
   Underline,
+  Strikethrough,
+  Quote,
   AlignLeft,
   AlignCenter,
   AlignRight,
@@ -26,9 +28,21 @@ import {
   Undo2,
   Redo2,
   ArrowUpDown,
+  Star,
+  Copy,
+  Download,
+  Printer,
+  Bell,
+  CheckSquare,
+  Square,
+  ChevronRight,
+  ChevronDown,
+  LayoutGrid,
+  Rows3,
 } from 'lucide-react';
 import { PageHeader } from '../components/shared/PageHeader';
-import type { NotebookEntry } from '../types';
+import type { NotebookEntry, NotebookTemplate } from '../types';
+import { NOTEBOOK_COVER_COLORS } from '../types';
 import { cn } from '../utils/format';
 import { useAppContext } from '../context/AppContext';
 
@@ -36,6 +50,7 @@ import { useAppContext } from '../context/AppContext';
 // user-created one since folder names are validated/trimmed on create
 // (see handleAddNotebookFolder).
 const ALL_NOTES = '__all_notes__';
+const FAVORITES = '__favorites__';
 const RECENTLY_DELETED = '__recently_deleted__';
 
 // Stable color per folder name (hashed), so a folder's swatch never
@@ -49,6 +64,38 @@ const folderColor = (name: string) => {
   for (let i = 0; i < name.length; i++) hash = (hash * 31 + name.charCodeAt(i)) >>> 0;
   return FOLDER_COLORS[hash % FOLDER_COLORS.length];
 };
+
+// Static Tailwind class map for note cover colors — kept as literal
+// strings (not built with template literals) so Tailwind's JIT scanner
+// picks them all up at build time.
+const COVER_COLOR_CLASSES: Record<string, { dot: string; bar: string; text: string; bgSoft: string }> = {
+  purple: { dot: 'bg-purple-500', bar: 'bg-purple-500', text: 'text-purple-400', bgSoft: 'bg-purple-500/10' },
+  blue: { dot: 'bg-blue-500', bar: 'bg-blue-500', text: 'text-blue-400', bgSoft: 'bg-blue-500/10' },
+  emerald: { dot: 'bg-emerald-500', bar: 'bg-emerald-500', text: 'text-emerald-400', bgSoft: 'bg-emerald-500/10' },
+  pink: { dot: 'bg-pink-500', bar: 'bg-pink-500', text: 'text-pink-400', bgSoft: 'bg-pink-500/10' },
+  amber: { dot: 'bg-amber-500', bar: 'bg-amber-500', text: 'text-amber-400', bgSoft: 'bg-amber-500/10' },
+  rose: { dot: 'bg-rose-500', bar: 'bg-rose-500', text: 'text-rose-400', bgSoft: 'bg-rose-500/10' },
+  cyan: { dot: 'bg-cyan-500', bar: 'bg-cyan-500', text: 'text-cyan-400', bgSoft: 'bg-cyan-500/10' },
+  indigo: { dot: 'bg-indigo-500', bar: 'bg-indigo-500', text: 'text-indigo-400', bgSoft: 'bg-indigo-500/10' },
+};
+
+// Built-in starting points for "New note ▾". Purely UI-side content — no
+// data-model change, they just seed the contentEditable body on create.
+const NOTEBOOK_TEMPLATES: NotebookTemplate[] = [
+  { id: 'blank', name: 'Blank note', description: 'Start from scratch', bodyHtml: '' },
+  {
+    id: 'daily-reflection', name: 'Daily Reflection', description: 'End-of-day trading reflection',
+    bodyHtml: '<h3>What went well today?</h3><p><br></p><h3>What could improve?</h3><p><br></p><h3>Emotional state</h3><p><br></p>',
+  },
+  {
+    id: 'gratitude', name: 'Gratitude List', description: '3 things you\u2019re grateful for',
+    bodyHtml: '<h3>Gratitude</h3><ol><li><br></li><li><br></li><li><br></li></ol>',
+  },
+  {
+    id: 'trade-postmortem', name: 'Trade Post-Mortem', description: 'Break down a specific trade',
+    bodyHtml: '<h3>Setup</h3><p><br></p><h3>What I did right</h3><p><br></p><h3>What I did wrong</h3><p><br></p><h3>Lesson</h3><p><br></p>',
+  },
+];
 
 // ----------------------------------------------------------------------------
 // Body storage: `NotebookEntry.body` is just a `string` (no schema change),
@@ -69,6 +116,11 @@ const toEditableHtml = (body: string) =>
 const stripHtml = (html: string) =>
   html.replace(/<[^>]*>/g, ' ').replace(/&nbsp;/g, ' ').replace(/\s+/g, ' ').trim();
 
+const countWords = (html: string) => {
+  const t = stripHtml(html).trim();
+  return t ? t.split(/\s+/).length : 0;
+};
+
 const formatNoteHeading = (entry: NotebookEntry) => {
   if (entry.title.trim()) return entry.title;
   return new Date(entry.createdAt).toLocaleDateString(undefined, {
@@ -84,10 +136,56 @@ const formatFullDateTime = (iso: string) => new Date(iso).toLocaleString(undefin
   month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit',
 });
 
+// `datetime-local` inputs need "YYYY-MM-DDTHH:mm" in LOCAL time, not the
+// ISO string's UTC representation.
+const toDatetimeLocalValue = (iso?: string) => {
+  if (!iso) return '';
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return '';
+  const pad = (n: number) => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+};
+
+// ----------------------------------------------------------------------------
+// Nested folders: a folder "name" may contain '/' (e.g. "Trading/Setups"),
+// which we render as a collapsible tree. This is purely a display-layer
+// parse of the existing flat `notebookFolders: string[]` — no data-model
+// change, so no migration. Selecting a parent node shows its own notes
+// PLUS every descendant's (see visibleEntries below).
+// ----------------------------------------------------------------------------
+interface FolderNode {
+  name: string;
+  fullPath: string;
+  children: FolderNode[];
+}
+
+const buildFolderTree = (folders: string[]): FolderNode[] => {
+  const root: FolderNode[] = [];
+  const map = new Map<string, FolderNode>();
+  folders.forEach(full => {
+    const parts = full.split('/').map(p => p.trim()).filter(Boolean);
+    let path = '';
+    let siblings = root;
+    parts.forEach(part => {
+      path = path ? `${path}/${part}` : part;
+      let node = map.get(path);
+      if (!node) {
+        node = { name: part, fullPath: path, children: [] };
+        map.set(path, node);
+        siblings.push(node);
+      }
+      siblings = node.children;
+    });
+  });
+  return root;
+};
+
 export function NotebookScreen() {
   const {
     theme, notebookEntries, notebookEntriesLoading, notebookFolders,
     handleAddNotebookEntry, handleUpdateNotebookEntry, handleToggleNotebookEntryPin,
+    handleToggleNotebookEntryFavorite, handleDuplicateNotebookEntry,
+    handleBulkMoveNotebookEntries, handleBulkSoftDeleteNotebookEntries, handleEmptyNotebookTrash,
     handleSoftDeleteNotebookEntry, handleRestoreNotebookEntry, handlePermanentDeleteNotebookEntry,
     handleAddNotebookFolder, handleDeleteNotebookFolder,
   } = useAppContext();
@@ -98,26 +196,36 @@ export function NotebookScreen() {
   const [search, setSearch] = useState('');
   const [showFilter, setShowFilter] = useState(false);
   const [activeTagFilter, setActiveTagFilter] = useState<string | null>(null);
-  const [sortByTitle, setSortByTitle] = useState(false);
+  const [sortMode, setSortMode] = useState<'updated' | 'title' | 'created'>('updated');
+  const [viewMode, setViewMode] = useState<'list' | 'grid'>('list');
 
   const [isAddingFolder, setIsAddingFolder] = useState(false);
   const [newFolderName, setNewFolderName] = useState('');
   const [folderPendingDelete, setFolderPendingDelete] = useState<string | null>(null);
   const [entryPendingDelete, setEntryPendingDelete] = useState<NotebookEntry | null>(null);
+  const [confirmEmptyTrash, setConfirmEmptyTrash] = useState(false);
+  const [collapsedFolders, setCollapsedFolders] = useState<Set<string>>(new Set());
+
+  const [selectMode, setSelectMode] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [showTemplateMenu, setShowTemplateMenu] = useState(false);
 
   const [titleDraft, setTitleDraft] = useState('');
   const [tagInput, setTagInput] = useState('');
   const [showTagSuggestions, setShowTagSuggestions] = useState(false);
   const [showMoreMenu, setShowMoreMenu] = useState(false);
+  const [wordCount, setWordCount] = useState(0);
 
   const bodyRef = useRef<HTMLDivElement>(null);
   const saveTimeoutRef = useRef<number | undefined>(undefined);
   const pendingNewNoteRef = useRef(false);
   const loadedEntryIdRef = useRef<string | null>(null);
+  const savedRangeRef = useRef<Range | null>(null);
 
   const liveEntries = useMemo(() => notebookEntries.filter(e => !e.isDeleted), [notebookEntries]);
   const deletedEntries = useMemo(() => notebookEntries.filter(e => e.isDeleted), [notebookEntries]);
   const isTrashView = activeFolder === RECENTLY_DELETED;
+  const isFavoritesView = activeFolder === FAVORITES;
 
   const allTags = useMemo(() => {
     const set = new Set<string>();
@@ -125,24 +233,37 @@ export function NotebookScreen() {
     return Array.from(set).sort((a, b) => a.localeCompare(b));
   }, [liveEntries]);
 
+  const folderTree = useMemo(() => buildFolderTree(notebookFolders), [notebookFolders]);
+
+  const countForFolderPath = useCallback(
+    (path: string) => liveEntries.filter(e => e.folder === path || e.folder.startsWith(`${path}/`)).length,
+    [liveEntries]
+  );
+
   const visibleEntries = useMemo(() => {
     const pool = isTrashView
       ? deletedEntries
-      : activeFolder === ALL_NOTES
-        ? liveEntries
-        : liveEntries.filter(e => e.folder === activeFolder);
+      : isFavoritesView
+        ? liveEntries.filter(e => e.favorite)
+        : activeFolder === ALL_NOTES
+          ? liveEntries
+          : liveEntries.filter(e => e.folder === activeFolder || e.folder.startsWith(`${activeFolder}/`));
     const q = search.trim().toLowerCase();
     const filtered = pool.filter(e => {
-      const matchesSearch = !q || e.title.toLowerCase().includes(q) || stripHtml(e.body).toLowerCase().includes(q);
+      const matchesSearch = !q
+        || e.title.toLowerCase().includes(q)
+        || stripHtml(e.body).toLowerCase().includes(q)
+        || e.tags.some(t => t.toLowerCase().includes(q));
       const matchesTag = !activeTagFilter || e.tags.includes(activeTagFilter);
       return matchesSearch && matchesTag;
     });
     return filtered.sort((a, b) => {
       if (!isTrashView && a.pinned !== b.pinned) return a.pinned ? -1 : 1;
-      if (sortByTitle) return formatNoteHeading(a).localeCompare(formatNoteHeading(b));
+      if (sortMode === 'title') return formatNoteHeading(a).localeCompare(formatNoteHeading(b));
+      if (sortMode === 'created') return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
       return new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime();
     });
-  }, [activeFolder, isTrashView, liveEntries, deletedEntries, search, activeTagFilter, sortByTitle]);
+  }, [activeFolder, isTrashView, isFavoritesView, liveEntries, deletedEntries, search, activeTagFilter, sortMode]);
 
   const selectedEntry = useMemo(
     () => notebookEntries.find(e => e.id === selectedEntryId) ?? null,
@@ -156,6 +277,13 @@ export function NotebookScreen() {
     setSelectedEntryId(visibleEntries[0]?.id ?? null);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeFolder, isTrashView, visibleEntries.map(e => e.id).join(',')]);
+
+  // Leaving multi-select mode (or switching where you're looking) drops any
+  // in-progress selection rather than leaving stale ids selected.
+  useEffect(() => {
+    setSelectMode(false);
+    setSelectedIds(new Set());
+  }, [activeFolder]);
 
   // Auto-select a just-created note once it lands in notebookEntries — the
   // add handler updates local state synchronously (see useAppState.tsx), so
@@ -177,10 +305,11 @@ export function NotebookScreen() {
     loadedEntryIdRef.current = selectedEntry.id;
     setTitleDraft(selectedEntry.title);
     if (bodyRef.current) bodyRef.current.innerHTML = toEditableHtml(selectedEntry.body);
+    setWordCount(countWords(selectedEntry.body));
     setTagInput('');
   }, [selectedEntry]);
 
-  const scheduleSave = useCallback((patch: Partial<Pick<NotebookEntry, 'title' | 'body' | 'folder' | 'tags'>>) => {
+  const scheduleSave = useCallback((patch: Partial<Pick<NotebookEntry, 'title' | 'body' | 'folder' | 'tags' | 'color' | 'reminderAt'>>) => {
     if (!selectedEntryId) return;
     if (saveTimeoutRef.current) window.clearTimeout(saveTimeoutRef.current);
     saveTimeoutRef.current = window.setTimeout(() => {
@@ -188,18 +317,32 @@ export function NotebookScreen() {
     }, 500);
   }, [selectedEntryId, handleUpdateNotebookEntry]);
 
-  const flushSave = useCallback((patch: Partial<Pick<NotebookEntry, 'title' | 'body' | 'folder' | 'tags'>>) => {
+  const flushSave = useCallback((patch: Partial<Pick<NotebookEntry, 'title' | 'body' | 'folder' | 'tags' | 'color' | 'reminderAt'>>) => {
     if (!selectedEntryId) return;
     if (saveTimeoutRef.current) window.clearTimeout(saveTimeoutRef.current);
     handleUpdateNotebookEntry(selectedEntryId, patch);
   }, [selectedEntryId, handleUpdateNotebookEntry]);
 
+  // Cmd/Ctrl+S forces an immediate save (overriding the debounce) instead of
+  // letting the browser's "Save page" dialog pop up.
+  useEffect(() => {
+    const onKeyDown = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 's' && selectedEntryId) {
+        e.preventDefault();
+        flushSave({ title: titleDraft, body: bodyRef.current?.innerHTML ?? '' });
+      }
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [selectedEntryId, titleDraft, flushSave]);
+
   // ---- New note / selection ----
-  const createNote = () => {
-    const folder = !isTrashView && activeFolder !== ALL_NOTES ? activeFolder : (notebookFolders[0] ?? '');
+  const createNote = (template?: NotebookTemplate) => {
+    const folder = !isTrashView && activeFolder !== ALL_NOTES && activeFolder !== FAVORITES ? activeFolder : (notebookFolders[0] ?? '');
     pendingNewNoteRef.current = true;
-    handleAddNotebookEntry({ title: '', body: '', folder, tags: [] });
-    if (isTrashView) setActiveFolder(ALL_NOTES);
+    handleAddNotebookEntry({ title: '', body: template?.bodyHtml ?? '', folder, tags: [] });
+    if (isTrashView || isFavoritesView) setActiveFolder(ALL_NOTES);
+    setShowTemplateMenu(false);
   };
 
   // ---- Title / body editing ----
@@ -210,12 +353,32 @@ export function NotebookScreen() {
   const onTitleBlur = () => flushSave({ title: titleDraft });
 
   const onBodyInput = () => {
-    scheduleSave({ body: bodyRef.current?.innerHTML ?? '' });
+    const html = bodyRef.current?.innerHTML ?? '';
+    scheduleSave({ body: html });
+    setWordCount(countWords(html));
   };
   const onBodyBlur = () => flushSave({ body: bodyRef.current?.innerHTML ?? '' });
 
+  // Selection is lost the instant focus leaves the contentEditable div
+  // (opening a <select>, clicking a color swatch, etc.), which breaks
+  // execCommand-based toolbar actions. We snapshot the last real selection
+  // on every mouseup/keyup inside the editor and restore it right before
+  // running a command, so toolbar controls work no matter what stole focus
+  // in between.
+  const saveSelection = () => {
+    const sel = window.getSelection();
+    if (sel && sel.rangeCount > 0 && bodyRef.current?.contains(sel.anchorNode)) {
+      savedRangeRef.current = sel.getRangeAt(0).cloneRange();
+    }
+  };
+
   const exec = (command: string, value?: string) => {
     bodyRef.current?.focus();
+    const sel = window.getSelection();
+    if (savedRangeRef.current && sel) {
+      sel.removeAllRanges();
+      sel.addRange(savedRangeRef.current);
+    }
     document.execCommand(command, false, value);
     onBodyInput();
   };
@@ -225,8 +388,34 @@ export function NotebookScreen() {
     if (url) exec('createLink', url);
   };
 
+  // Real interactive checklist item — a native checkbox inside the
+  // contentEditable div (clicking it toggles natively; CSS handles the
+  // strikethrough via :checked, see the <style> block below).
   const insertChecklistItem = () => {
-    exec('insertHTML', '☐ ');
+    exec('insertHTML', '<div class="notebook-checklist-item"><input type="checkbox" /><span>Checklist item</span></div><br>');
+  };
+
+  // Keeps the `checked` DOM attribute (not just the live property) in sync
+  // after a click, since innerHTML serialization — what we persist to
+  // scheduleSave — only reflects attributes, not the live `.checked`
+  // property.
+  const onBodyClick = (e: React.MouseEvent<HTMLDivElement>) => {
+    const target = e.target as HTMLElement;
+    if (target.tagName === 'INPUT' && (target as HTMLInputElement).type === 'checkbox') {
+      window.setTimeout(() => {
+        const input = target as HTMLInputElement;
+        if (input.checked) input.setAttribute('checked', ''); else input.removeAttribute('checked');
+        onBodyInput();
+      }, 0);
+    }
+  };
+
+  const onBodyKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
+    if (!(e.metaKey || e.ctrlKey)) return;
+    const key = e.key.toLowerCase();
+    if (key === 'b') { e.preventDefault(); exec('bold'); }
+    else if (key === 'i') { e.preventDefault(); exec('italic'); }
+    else if (key === 'u') { e.preventDefault(); exec('underline'); }
   };
 
   // ---- Tags ----
@@ -240,6 +429,51 @@ export function NotebookScreen() {
   const removeTag = (tag: string) => {
     if (!selectedEntry) return;
     flushSave({ tags: selectedEntry.tags.filter(t => t !== tag) });
+  };
+
+  // ---- Export / print / duplicate ----
+  const exportNote = () => {
+    if (!selectedEntry) return;
+    const text = `${formatNoteHeading(selectedEntry)}\n\n${stripHtml(selectedEntry.body)}`;
+    const blob = new Blob([text], { type: 'text/plain;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${formatNoteHeading(selectedEntry).replace(/[^\w\-]+/g, '_') || 'note'}.txt`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+    setShowMoreMenu(false);
+  };
+
+  const printNote = () => {
+    if (!selectedEntry) return;
+    const w = window.open('', '_blank');
+    if (!w) return;
+    const title = formatNoteHeading(selectedEntry);
+    w.document.write(`<!doctype html><html><head><title>${title}</title><meta charset="utf-8" />` +
+      '<style>body{font-family:sans-serif;max-width:700px;margin:2rem auto;line-height:1.6;} h1{margin-bottom:0.25rem;}</style>' +
+      `</head><body><h1>${title}</h1>${selectedEntry.body}</body></html>`);
+    w.document.close();
+    w.focus();
+    w.print();
+    setShowMoreMenu(false);
+  };
+
+  const duplicateNote = () => {
+    if (!selectedEntry) return;
+    handleDuplicateNotebookEntry(selectedEntry.id);
+    setShowMoreMenu(false);
+  };
+
+  // ---- Bulk selection ----
+  const toggleSelect = (id: string) => {
+    setSelectedIds(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
   };
 
   // ---- Folder management ----
@@ -264,6 +498,59 @@ export function NotebookScreen() {
   const textMuted = theme !== 'light' ? 'text-zinc-500' : 'text-zinc-400';
   const textBody = theme !== 'light' ? 'text-zinc-300' : 'text-zinc-700';
 
+  const sortLabel = sortMode === 'updated' ? 'Last updated' : sortMode === 'title' ? 'Title' : 'Date created';
+  const cycleSort = () => setSortMode(m => (m === 'updated' ? 'title' : m === 'title' ? 'created' : 'updated'));
+
+  const renderFolderNode = (node: FolderNode, depth: number): React.ReactNode => {
+    const isDefault = node.fullPath === 'Mindset' || node.fullPath === 'Daily Reflections';
+    const hasChildren = node.children.length > 0;
+    const collapsed = collapsedFolders.has(node.fullPath);
+    return (
+      <div key={node.fullPath}>
+        <div className="group/folder relative flex items-center">
+          {hasChildren ? (
+            <button
+              onClick={() => setCollapsedFolders(prev => {
+                const next = new Set(prev);
+                if (next.has(node.fullPath)) next.delete(node.fullPath); else next.add(node.fullPath);
+                return next;
+              })}
+              style={{ marginLeft: depth * 10 }}
+              className={cn('p-0.5 rounded flex-shrink-0', textMuted, 'hover:text-zinc-200')}
+            >
+              {collapsed ? <ChevronRight className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
+            </button>
+          ) : (
+            <span style={{ marginLeft: depth * 10 + 14 }} />
+          )}
+          <button
+            onClick={() => { setActiveFolder(node.fullPath); setActiveTagFilter(null); }}
+            className={cn(
+              'flex-1 flex items-center gap-2 px-2 py-1.5 rounded-lg text-sm text-left transition-colors min-w-0',
+              activeFolder === node.fullPath
+                ? (theme !== 'light' ? 'bg-purple-500/10 text-purple-300' : 'bg-purple-50 text-purple-700')
+                : cn(textBody, theme !== 'light' ? 'hover:bg-zinc-800/60' : 'hover:bg-zinc-50')
+            )}
+          >
+            <span className={cn('w-2 h-2 rounded-full flex-shrink-0', folderColor(node.fullPath))} />
+            <span className="truncate flex-1">{node.name}</span>
+            <span className={cn('text-[10px] flex-shrink-0', textMuted)}>{countForFolderPath(node.fullPath)}</span>
+          </button>
+          {!isDefault && (
+            <button
+              onClick={() => setFolderPendingDelete(node.fullPath)}
+              title="Delete folder"
+              className={cn('absolute right-1 p-1 rounded-md opacity-0 group-hover/folder:opacity-100 transition-opacity', textMuted, 'hover:text-rose-400')}
+            >
+              <X className="w-3 h-3" />
+            </button>
+          )}
+        </div>
+        {hasChildren && !collapsed && node.children.map(child => renderFolderNode(child, depth + 1))}
+      </div>
+    );
+  };
+
   return (
     <div className="space-y-4 min-w-0">
       <PageHeader
@@ -278,7 +565,7 @@ export function NotebookScreen() {
           <input
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search notes"
+            placeholder="Search notes and tags"
             className={cn('w-full pl-9 pr-3 py-2 rounded-lg text-sm border outline-none', panelBg, border, theme !== 'light' ? 'text-white placeholder-zinc-500 focus:border-zinc-600' : 'text-zinc-900 placeholder-zinc-400 focus:border-zinc-300')}
           />
         </div>
@@ -337,7 +624,7 @@ export function NotebookScreen() {
                 onChange={(e) => setNewFolderName(e.target.value)}
                 onKeyDown={(e) => { if (e.key === 'Enter') submitNewFolder(); if (e.key === 'Escape') { setIsAddingFolder(false); setNewFolderName(''); } }}
                 onBlur={submitNewFolder}
-                placeholder="Folder name"
+                placeholder="Folder name, or Parent/Child"
                 className={cn('w-full px-2.5 py-1.5 rounded-lg text-xs border outline-none', theme !== 'light' ? 'bg-zinc-800 border-zinc-700 text-white placeholder-zinc-500' : 'bg-zinc-50 border-zinc-200 text-zinc-900 placeholder-zinc-400')}
               />
             ) : (
@@ -368,36 +655,21 @@ export function NotebookScreen() {
               <span className={cn('text-[10px]', textMuted)}>{liveEntries.length}</span>
             </button>
 
-            {notebookFolders.map(folder => {
-              const count = liveEntries.filter(e => e.folder === folder).length;
-              const isDefault = folder === 'Mindset' || folder === 'Daily Reflections';
-              return (
-                <div key={folder} className="group/folder relative flex items-center">
-                  <button
-                    onClick={() => { setActiveFolder(folder); setActiveTagFilter(null); }}
-                    className={cn(
-                      'flex-1 flex items-center gap-2 px-2 py-1.5 rounded-lg text-sm text-left transition-colors min-w-0',
-                      activeFolder === folder
-                        ? (theme !== 'light' ? 'bg-purple-500/10 text-purple-300' : 'bg-purple-50 text-purple-700')
-                        : cn(textBody, theme !== 'light' ? 'hover:bg-zinc-800/60' : 'hover:bg-zinc-50')
-                    )}
-                  >
-                    <span className={cn('w-2 h-2 rounded-full flex-shrink-0', folderColor(folder))} />
-                    <span className="truncate flex-1">{folder}</span>
-                    <span className={cn('text-[10px] flex-shrink-0', textMuted)}>{count}</span>
-                  </button>
-                  {!isDefault && (
-                    <button
-                      onClick={() => setFolderPendingDelete(folder)}
-                      title="Delete folder"
-                      className={cn('absolute right-1 p-1 rounded-md opacity-0 group-hover/folder:opacity-100 transition-opacity', textMuted, 'hover:text-rose-400')}
-                    >
-                      <X className="w-3 h-3" />
-                    </button>
-                  )}
-                </div>
-              );
-            })}
+            <button
+              onClick={() => { setActiveFolder(FAVORITES); setActiveTagFilter(null); }}
+              className={cn(
+                'w-full flex items-center gap-2 px-2 py-1.5 rounded-lg text-sm text-left transition-colors',
+                isFavoritesView
+                  ? (theme !== 'light' ? 'bg-purple-500/10 text-purple-300' : 'bg-purple-50 text-purple-700')
+                  : cn(textBody, theme !== 'light' ? 'hover:bg-zinc-800/60' : 'hover:bg-zinc-50')
+              )}
+            >
+              <Star className="w-3.5 h-3.5 flex-shrink-0" />
+              <span className="flex-1 truncate">Favorites</span>
+              <span className={cn('text-[10px]', textMuted)}>{liveEntries.filter(e => e.favorite).length}</span>
+            </button>
+
+            {folderTree.map(node => renderFolderNode(node, 0))}
 
             <div className={cn('my-2 border-t', border)} />
 
@@ -421,24 +693,109 @@ export function NotebookScreen() {
         <div className={cn('flex flex-col border-b lg:border-b-0 lg:border-r', border)}>
           <div className={cn('flex items-center justify-between gap-2 p-3 border-b', border)}>
             {isTrashView ? (
-              <span className={cn('text-xs font-medium', textMuted)}>Recently Deleted</span>
+              <div className="flex items-center justify-between w-full">
+                <span className={cn('text-xs font-medium', textMuted)}>Recently Deleted</span>
+                {deletedEntries.length > 0 && (
+                  <button onClick={() => setConfirmEmptyTrash(true)} className="text-[11px] font-medium text-rose-400 hover:underline">
+                    Empty Trash
+                  </button>
+                )}
+              </div>
             ) : (
-              <button
-                onClick={createNote}
-                className={cn('flex items-center gap-1.5 text-xs font-medium transition-colors', theme !== 'light' ? 'text-zinc-300 hover:text-white' : 'text-zinc-700 hover:text-zinc-900')}
-              >
-                <Plus className="w-3.5 h-3.5" />
-                New note
-              </button>
+              <>
+                <div className="relative flex items-center">
+                  <button
+                    onClick={() => createNote()}
+                    className={cn('flex items-center gap-1.5 text-xs font-medium transition-colors', theme !== 'light' ? 'text-zinc-300 hover:text-white' : 'text-zinc-700 hover:text-zinc-900')}
+                  >
+                    <Plus className="w-3.5 h-3.5" />
+                    New note
+                  </button>
+                  <button
+                    onClick={() => setShowTemplateMenu(v => !v)}
+                    title="New from template"
+                    className={cn('p-1 ml-0.5 rounded-md transition-colors', textMuted, 'hover:text-zinc-200')}
+                  >
+                    <ChevronDown className="w-3 h-3" />
+                  </button>
+                  {showTemplateMenu && (
+                    <div className={cn('absolute left-0 top-full mt-1 w-56 rounded-lg border shadow-xl z-20 py-1', theme !== 'light' ? 'bg-zinc-900 border-zinc-800' : 'bg-white border-zinc-200')}>
+                      {NOTEBOOK_TEMPLATES.map(t => (
+                        <button
+                          key={t.id}
+                          onClick={() => createNote(t)}
+                          className={cn('w-full text-left px-3 py-1.5 transition-colors', theme !== 'light' ? 'hover:bg-zinc-800' : 'hover:bg-zinc-50')}
+                        >
+                          <p className={cn('text-xs font-medium', theme !== 'light' ? 'text-white' : 'text-zinc-900')}>{t.name}</p>
+                          <p className={cn('text-[10px]', textMuted)}>{t.description}</p>
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+                <div className="flex items-center gap-0.5">
+                  <button
+                    onClick={() => setSelectMode(v => !v)}
+                    title="Select notes"
+                    className={cn('p-1 rounded-md transition-colors', selectMode ? 'text-purple-400' : cn(textMuted, 'hover:text-zinc-200'))}
+                  >
+                    <CheckSquare className="w-3.5 h-3.5" />
+                  </button>
+                  <button
+                    onClick={() => setViewMode(v => v === 'list' ? 'grid' : 'list')}
+                    title={viewMode === 'list' ? 'Grid view' : 'List view'}
+                    className={cn('p-1 rounded-md transition-colors', textMuted, 'hover:text-zinc-200')}
+                  >
+                    {viewMode === 'list' ? <LayoutGrid className="w-3.5 h-3.5" /> : <Rows3 className="w-3.5 h-3.5" />}
+                  </button>
+                  <button
+                    onClick={cycleSort}
+                    title={`Sort: ${sortLabel}`}
+                    className={cn('p-1 rounded-md transition-colors', textMuted, 'hover:text-zinc-200')}
+                  >
+                    <ArrowUpDown className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+              </>
             )}
-            <button
-              onClick={() => setSortByTitle(v => !v)}
-              title={sortByTitle ? 'Sort by title' : 'Sort by last updated'}
-              className={cn('p-1 rounded-md transition-colors', textMuted, 'hover:text-zinc-200')}
-            >
-              <ArrowUpDown className="w-3.5 h-3.5" />
-            </button>
           </div>
+
+          {selectMode && !isTrashView && (
+            <div className={cn('flex items-center justify-between gap-2 px-3 py-2 border-b', border, theme !== 'light' ? 'bg-zinc-800/40' : 'bg-zinc-50')}>
+              <span className={cn('text-[11px]', textMuted)}>{selectedIds.size} selected</span>
+              <div className="flex items-center gap-1.5">
+                <select
+                  onChange={(e) => {
+                    if (e.target.value && selectedIds.size > 0) {
+                      handleBulkMoveNotebookEntries(Array.from(selectedIds), e.target.value === '__uncategorized__' ? '' : e.target.value);
+                      setSelectedIds(new Set());
+                    }
+                    e.target.value = '';
+                  }}
+                  defaultValue=""
+                  disabled={selectedIds.size === 0}
+                  className={cn('text-[11px] border rounded-md px-1.5 py-1 outline-none bg-transparent disabled:opacity-40', border, textMuted)}
+                >
+                  <option value="" disabled>Move to&hellip;</option>
+                  <option value="__uncategorized__">Uncategorized</option>
+                  {notebookFolders.map(f => <option key={f} value={f}>{f}</option>)}
+                </select>
+                <button
+                  onClick={() => { handleBulkSoftDeleteNotebookEntries(Array.from(selectedIds)); setSelectedIds(new Set()); }}
+                  disabled={selectedIds.size === 0}
+                  className="text-[11px] font-medium text-rose-400 px-2 py-1 rounded-md hover:bg-rose-500/10 disabled:opacity-40 transition-colors"
+                >
+                  Delete
+                </button>
+                <button
+                  onClick={() => { setSelectMode(false); setSelectedIds(new Set()); }}
+                  className={cn('text-[11px] px-2 py-1 rounded-md transition-colors', textMuted, 'hover:text-zinc-200')}
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          )}
 
           <div className="flex-1 overflow-y-auto">
             {notebookEntriesLoading ? (
@@ -447,31 +804,85 @@ export function NotebookScreen() {
               <div className="text-center py-10 px-4">
                 <StickyNote className={cn('w-6 h-6 mx-auto mb-2', theme !== 'light' ? 'text-zinc-700' : 'text-zinc-300')} />
                 <p className={cn('text-xs', textMuted)}>
-                  {isTrashView ? 'Recently Deleted is empty.' : 'No notes here yet.'}
+                  {isTrashView ? 'Recently Deleted is empty.' : isFavoritesView ? 'No favorites yet.' : 'No notes here yet.'}
                 </p>
               </div>
+            ) : viewMode === 'grid' && !isTrashView ? (
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 p-2">
+                {visibleEntries.map(entry => {
+                  const cc = entry.color ? COVER_COLOR_CLASSES[entry.color] : null;
+                  return (
+                    <button
+                      key={entry.id}
+                      onClick={() => selectMode ? toggleSelect(entry.id) : setSelectedEntryId(entry.id)}
+                      className={cn(
+                        'text-left p-3 rounded-lg border flex flex-col gap-1 min-h-[92px] transition-colors',
+                        border,
+                        selectedEntryId === entry.id && !selectMode
+                          ? (theme !== 'light' ? 'bg-zinc-800/70' : 'bg-zinc-100')
+                          : (theme !== 'light' ? 'hover:bg-zinc-800/40' : 'hover:bg-zinc-50'),
+                        cc?.bgSoft
+                      )}
+                    >
+                      <div className="flex items-center gap-1.5">
+                        {selectMode && (selectedIds.has(entry.id) ? <CheckSquare className="w-3 h-3 text-purple-400 flex-shrink-0" /> : <Square className={cn('w-3 h-3 flex-shrink-0', textMuted)} />)}
+                        {entry.pinned && <Pin className="w-2.5 h-2.5 text-amber-400 flex-shrink-0" />}
+                        {entry.favorite && <Star className="w-2.5 h-2.5 text-amber-400 fill-amber-400 flex-shrink-0" />}
+                        <p className={cn('text-sm font-semibold truncate flex-1', theme !== 'light' ? 'text-white' : 'text-zinc-900')}>
+                          {formatNoteHeading(entry)}
+                        </p>
+                      </div>
+                      <p className={cn('text-[11px] truncate', textMuted)}>{stripHtml(entry.body) || 'Empty note'}</p>
+                      <p className={cn('text-[10px] mt-auto', textMuted)}>{formatShortDate(entry.updatedAt)}</p>
+                    </button>
+                  );
+                })}
+              </div>
             ) : (
-              visibleEntries.map(entry => (
-                <button
-                  key={entry.id}
-                  onClick={() => setSelectedEntryId(entry.id)}
-                  className={cn(
-                    'w-full text-left px-3.5 py-3 border-b transition-colors',
-                    border,
-                    selectedEntryId === entry.id
-                      ? (theme !== 'light' ? 'bg-zinc-800/70' : 'bg-zinc-100')
-                      : (theme !== 'light' ? 'hover:bg-zinc-800/40' : 'hover:bg-zinc-50')
-                  )}
-                >
-                  <div className="flex items-center gap-1.5 mb-0.5">
-                    {entry.pinned && !isTrashView && <Pin className="w-2.5 h-2.5 text-amber-400 flex-shrink-0" />}
-                    <p className={cn('text-sm font-semibold truncate', theme !== 'light' ? 'text-white' : 'text-zinc-900')}>
-                      {formatNoteHeading(entry)}
-                    </p>
+              visibleEntries.map(entry => {
+                const cc = entry.color ? COVER_COLOR_CLASSES[entry.color] : null;
+                const overdue = !!entry.reminderAt && new Date(entry.reminderAt).getTime() < Date.now();
+                return (
+                  <div
+                    key={entry.id}
+                    className={cn(
+                      'flex items-stretch border-b transition-colors',
+                      border,
+                      selectedEntryId === entry.id && !selectMode
+                        ? (theme !== 'light' ? 'bg-zinc-800/70' : 'bg-zinc-100')
+                        : (theme !== 'light' ? 'hover:bg-zinc-800/40' : 'hover:bg-zinc-50')
+                    )}
+                  >
+                    {selectMode && !isTrashView && (
+                      <button onClick={() => toggleSelect(entry.id)} className="flex items-center pl-3.5 flex-shrink-0">
+                        {selectedIds.has(entry.id) ? <CheckSquare className="w-3.5 h-3.5 text-purple-400" /> : <Square className={cn('w-3.5 h-3.5', textMuted)} />}
+                      </button>
+                    )}
+                    {cc && <span className={cn('w-1 flex-shrink-0', cc.bar)} />}
+                    <button
+                      onClick={() => selectMode && !isTrashView ? toggleSelect(entry.id) : setSelectedEntryId(entry.id)}
+                      className="flex-1 text-left px-3.5 py-3 min-w-0"
+                    >
+                      <div className="flex items-center gap-1.5 mb-0.5">
+                        {entry.pinned && !isTrashView && <Pin className="w-2.5 h-2.5 text-amber-400 flex-shrink-0" />}
+                        {entry.favorite && !isTrashView && <Star className="w-2.5 h-2.5 text-amber-400 fill-amber-400 flex-shrink-0" />}
+                        <p className={cn('text-sm font-semibold truncate', theme !== 'light' ? 'text-white' : 'text-zinc-900')}>
+                          {formatNoteHeading(entry)}
+                        </p>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <p className={cn('text-[11px]', textMuted)}>{formatShortDate(entry.updatedAt)}</p>
+                        {entry.reminderAt && !isTrashView && (
+                          <span className={cn('flex items-center gap-0.5 text-[10px]', overdue ? 'text-rose-400' : textMuted)}>
+                            <Bell className="w-2.5 h-2.5" />
+                            {formatShortDate(entry.reminderAt)}
+                          </span>
+                        )}
+                      </div>
+                    </button>
                   </div>
-                  <p className={cn('text-[11px]', textMuted)}>{formatShortDate(entry.updatedAt)}</p>
-                </button>
-              ))
+                );
+              })
             )}
           </div>
         </div>
@@ -509,6 +920,11 @@ export function NotebookScreen() {
                 </div>
               </div>
               <div className="flex-1 overflow-y-auto p-5">
+                {selectedEntry.deletedAt && (
+                  <p className={cn('text-[11px] mb-3', textMuted)}>
+                    Deleted {formatFullDateTime(selectedEntry.deletedAt)} &middot; auto-purges 30 days after deletion
+                  </p>
+                )}
                 <p className={cn('text-sm leading-relaxed whitespace-pre-wrap', textBody)}>
                   {stripHtml(selectedEntry.body) || <span className="italic opacity-60">Empty note</span>}
                 </p>
@@ -516,6 +932,7 @@ export function NotebookScreen() {
             </div>
           ) : (
             <div className="flex flex-col h-full min-w-0">
+              {selectedEntry.color && <div className={cn('h-1 flex-shrink-0', COVER_COLOR_CLASSES[selectedEntry.color]?.bar)} />}
               {/* Title + meta + more menu */}
               <div className={cn('px-5 pt-4 pb-3 border-b', border)}>
                 <div className="flex items-start justify-between gap-3">
@@ -534,7 +951,7 @@ export function NotebookScreen() {
                       <MoreHorizontal className="w-4 h-4" />
                     </button>
                     {showMoreMenu && (
-                      <div className={cn('absolute right-0 mt-1 w-40 rounded-lg border shadow-xl z-20 py-1', theme !== 'light' ? 'bg-zinc-900 border-zinc-800' : 'bg-white border-zinc-200')}>
+                      <div className={cn('absolute right-0 mt-1 w-60 rounded-lg border shadow-xl z-20 py-1', theme !== 'light' ? 'bg-zinc-900 border-zinc-800' : 'bg-white border-zinc-200')}>
                         <button
                           onClick={() => { handleToggleNotebookEntryPin(selectedEntry.id); setShowMoreMenu(false); }}
                           className={cn('w-full flex items-center gap-2 px-3 py-1.5 text-xs text-left transition-colors', textBody, theme !== 'light' ? 'hover:bg-zinc-800' : 'hover:bg-zinc-50')}
@@ -542,6 +959,77 @@ export function NotebookScreen() {
                           {selectedEntry.pinned ? <PinOff className="w-3.5 h-3.5" /> : <Pin className="w-3.5 h-3.5" />}
                           {selectedEntry.pinned ? 'Unpin note' : 'Pin note'}
                         </button>
+                        <button
+                          onClick={() => { handleToggleNotebookEntryFavorite(selectedEntry.id); setShowMoreMenu(false); }}
+                          className={cn('w-full flex items-center gap-2 px-3 py-1.5 text-xs text-left transition-colors', textBody, theme !== 'light' ? 'hover:bg-zinc-800' : 'hover:bg-zinc-50')}
+                        >
+                          <Star className={cn('w-3.5 h-3.5', selectedEntry.favorite && 'fill-amber-400 text-amber-400')} />
+                          {selectedEntry.favorite ? 'Remove from favorites' : 'Add to favorites'}
+                        </button>
+                        <button
+                          onClick={duplicateNote}
+                          className={cn('w-full flex items-center gap-2 px-3 py-1.5 text-xs text-left transition-colors', textBody, theme !== 'light' ? 'hover:bg-zinc-800' : 'hover:bg-zinc-50')}
+                        >
+                          <Copy className="w-3.5 h-3.5" />
+                          Duplicate note
+                        </button>
+                        <button
+                          onClick={exportNote}
+                          className={cn('w-full flex items-center gap-2 px-3 py-1.5 text-xs text-left transition-colors', textBody, theme !== 'light' ? 'hover:bg-zinc-800' : 'hover:bg-zinc-50')}
+                        >
+                          <Download className="w-3.5 h-3.5" />
+                          Export as .txt
+                        </button>
+                        <button
+                          onClick={printNote}
+                          className={cn('w-full flex items-center gap-2 px-3 py-1.5 text-xs text-left transition-colors', textBody, theme !== 'light' ? 'hover:bg-zinc-800' : 'hover:bg-zinc-50')}
+                        >
+                          <Printer className="w-3.5 h-3.5" />
+                          Print note
+                        </button>
+
+                        <div className={cn('my-1 border-t', border)} />
+
+                        <div className="px-3 py-1.5">
+                          <p className={cn('text-[10px] font-semibold uppercase tracking-wider mb-1.5', textMuted)}>Cover color</p>
+                          <div className="flex items-center gap-1.5 flex-wrap">
+                            <button
+                              onClick={() => flushSave({ color: undefined })}
+                              title="No color"
+                              className={cn('w-4 h-4 rounded-full border flex items-center justify-center', border, !selectedEntry.color && 'ring-2 ring-offset-1 ring-purple-400')}
+                            >
+                              <X className={cn('w-2.5 h-2.5', textMuted)} />
+                            </button>
+                            {NOTEBOOK_COVER_COLORS.map(c => (
+                              <button
+                                key={c}
+                                onClick={() => flushSave({ color: c })}
+                                title={c}
+                                className={cn('w-4 h-4 rounded-full', COVER_COLOR_CLASSES[c].dot, selectedEntry.color === c && 'ring-2 ring-offset-1 ring-purple-400')}
+                              />
+                            ))}
+                          </div>
+                        </div>
+
+                        <div className="px-3 py-1.5">
+                          <p className={cn('text-[10px] font-semibold uppercase tracking-wider mb-1.5', textMuted)}>Reminder</p>
+                          <div className="flex items-center gap-1.5">
+                            <input
+                              type="datetime-local"
+                              value={toDatetimeLocalValue(selectedEntry.reminderAt)}
+                              onChange={(e) => flushSave({ reminderAt: e.target.value ? new Date(e.target.value).toISOString() : undefined })}
+                              className={cn('flex-1 min-w-0 text-[11px] border rounded-md px-1.5 py-1 outline-none bg-transparent', border, textBody)}
+                            />
+                            {selectedEntry.reminderAt && (
+                              <button onClick={() => flushSave({ reminderAt: undefined })} title="Clear reminder" className={cn(textMuted, 'hover:text-rose-400')}>
+                                <X className="w-3.5 h-3.5" />
+                              </button>
+                            )}
+                          </div>
+                        </div>
+
+                        <div className={cn('my-1 border-t', border)} />
+
                         <button
                           onClick={() => { handleSoftDeleteNotebookEntry(selectedEntry.id); setShowMoreMenu(false); }}
                           className="w-full flex items-center gap-2 px-3 py-1.5 text-xs text-left text-rose-400 hover:bg-zinc-800 transition-colors"
@@ -553,7 +1041,7 @@ export function NotebookScreen() {
                     )}
                   </div>
                 </div>
-                <div className="flex items-center gap-3 mt-1">
+                <div className="flex items-center gap-3 mt-1 flex-wrap">
                   <p className={cn('text-[11px]', textMuted)}>
                     Created {formatFullDateTime(selectedEntry.createdAt)} &middot; Last updated {formatFullDateTime(selectedEntry.updatedAt)}
                   </p>
@@ -566,47 +1054,86 @@ export function NotebookScreen() {
                       <option key={folder} value={folder} className={theme !== 'light' ? 'bg-zinc-900' : 'bg-white'}>{folder}</option>
                     ))}
                   </select>
+                  {selectedEntry.reminderAt && (
+                    <span className={cn('flex items-center gap-1 text-[11px]', new Date(selectedEntry.reminderAt).getTime() < Date.now() ? 'text-rose-400' : textMuted)}>
+                      <Bell className="w-3 h-3" />
+                      {formatFullDateTime(selectedEntry.reminderAt)}
+                    </span>
+                  )}
                 </div>
               </div>
 
               {/* Formatting toolbar */}
               <div className={cn('flex items-center gap-0.5 px-4 py-1.5 border-b overflow-x-auto', border)}>
+                <select
+                  onMouseDown={saveSelection}
+                  onChange={(e) => { const v = e.target.value; if (v) exec('formatBlock', v); e.target.value = ''; }}
+                  defaultValue=""
+                  title="Text style"
+                  className={cn('text-[11px] bg-transparent border rounded-md pl-1.5 pr-1 py-1 outline-none cursor-pointer flex-shrink-0', border, textMuted)}
+                >
+                  <option value="" disabled>Style</option>
+                  <option value="P">Paragraph</option>
+                  <option value="H1">Heading 1</option>
+                  <option value="H2">Heading 2</option>
+                  <option value="H3">Heading 3</option>
+                </select>
+                <div className={cn('w-px h-4 mx-1', theme !== 'light' ? 'bg-zinc-800' : 'bg-zinc-200')} />
                 {[
                   { icon: Bold, cmd: 'bold', title: 'Bold' },
                   { icon: Italic, cmd: 'italic', title: 'Italic' },
                   { icon: Underline, cmd: 'underline', title: 'Underline' },
+                  { icon: Strikethrough, cmd: 'strikeThrough', title: 'Strikethrough' },
                 ].map(({ icon: Icon, cmd, title }) => (
-                  <button key={cmd} onMouseDown={(e) => e.preventDefault()} onClick={() => exec(cmd)} title={title}
+                  <button key={cmd} onMouseDown={(e) => { e.preventDefault(); saveSelection(); }} onClick={() => exec(cmd)} title={title}
                     className={cn('p-1.5 rounded-md transition-colors', textMuted, 'hover:text-zinc-200', theme !== 'light' ? 'hover:bg-zinc-800' : 'hover:bg-zinc-100')}>
                     <Icon className="w-3.5 h-3.5" />
                   </button>
                 ))}
+                <input
+                  type="color"
+                  title="Text color"
+                  onMouseDown={saveSelection}
+                  onChange={(e) => exec('foreColor', e.target.value)}
+                  className="w-5 h-5 rounded cursor-pointer border-0 bg-transparent p-0 flex-shrink-0"
+                />
+                <input
+                  type="color"
+                  title="Highlight color"
+                  onMouseDown={saveSelection}
+                  onChange={(e) => exec('hiliteColor', e.target.value)}
+                  className="w-5 h-5 rounded cursor-pointer border-0 bg-transparent p-0 flex-shrink-0"
+                />
                 <div className={cn('w-px h-4 mx-1', theme !== 'light' ? 'bg-zinc-800' : 'bg-zinc-200')} />
                 {[
                   { icon: AlignLeft, cmd: 'justifyLeft', title: 'Align left' },
                   { icon: AlignCenter, cmd: 'justifyCenter', title: 'Align center' },
                   { icon: AlignRight, cmd: 'justifyRight', title: 'Align right' },
                 ].map(({ icon: Icon, cmd, title }) => (
-                  <button key={cmd} onMouseDown={(e) => e.preventDefault()} onClick={() => exec(cmd)} title={title}
+                  <button key={cmd} onMouseDown={(e) => { e.preventDefault(); saveSelection(); }} onClick={() => exec(cmd)} title={title}
                     className={cn('p-1.5 rounded-md transition-colors', textMuted, 'hover:text-zinc-200', theme !== 'light' ? 'hover:bg-zinc-800' : 'hover:bg-zinc-100')}>
                     <Icon className="w-3.5 h-3.5" />
                   </button>
                 ))}
                 <div className={cn('w-px h-4 mx-1', theme !== 'light' ? 'bg-zinc-800' : 'bg-zinc-200')} />
-                <button onMouseDown={(e) => e.preventDefault()} onClick={() => exec('insertUnorderedList')} title="Bulleted list"
+                <button onMouseDown={(e) => { e.preventDefault(); saveSelection(); }} onClick={() => exec('insertUnorderedList')} title="Bulleted list"
                   className={cn('p-1.5 rounded-md transition-colors', textMuted, 'hover:text-zinc-200', theme !== 'light' ? 'hover:bg-zinc-800' : 'hover:bg-zinc-100')}>
                   <List className="w-3.5 h-3.5" />
                 </button>
-                <button onMouseDown={(e) => e.preventDefault()} onClick={() => exec('insertOrderedList')} title="Numbered list"
+                <button onMouseDown={(e) => { e.preventDefault(); saveSelection(); }} onClick={() => exec('insertOrderedList')} title="Numbered list"
                   className={cn('p-1.5 rounded-md transition-colors', textMuted, 'hover:text-zinc-200', theme !== 'light' ? 'hover:bg-zinc-800' : 'hover:bg-zinc-100')}>
                   <ListOrdered className="w-3.5 h-3.5" />
                 </button>
-                <button onMouseDown={(e) => e.preventDefault()} onClick={insertChecklistItem} title="Checklist item"
+                <button onMouseDown={(e) => { e.preventDefault(); saveSelection(); }} onClick={insertChecklistItem} title="Checklist item"
                   className={cn('p-1.5 rounded-md transition-colors', textMuted, 'hover:text-zinc-200', theme !== 'light' ? 'hover:bg-zinc-800' : 'hover:bg-zinc-100')}>
                   <ListChecks className="w-3.5 h-3.5" />
                 </button>
+                <button onMouseDown={(e) => { e.preventDefault(); saveSelection(); }} onClick={() => exec('formatBlock', 'BLOCKQUOTE')} title="Quote"
+                  className={cn('p-1.5 rounded-md transition-colors', textMuted, 'hover:text-zinc-200', theme !== 'light' ? 'hover:bg-zinc-800' : 'hover:bg-zinc-100')}>
+                  <Quote className="w-3.5 h-3.5" />
+                </button>
                 <div className={cn('w-px h-4 mx-1', theme !== 'light' ? 'bg-zinc-800' : 'bg-zinc-200')} />
-                <button onMouseDown={(e) => e.preventDefault()} onClick={insertLink} title="Insert link"
+                <button onMouseDown={(e) => { e.preventDefault(); saveSelection(); }} onClick={insertLink} title="Insert link"
                   className={cn('p-1.5 rounded-md transition-colors', textMuted, 'hover:text-zinc-200', theme !== 'light' ? 'hover:bg-zinc-800' : 'hover:bg-zinc-100')}>
                   <Link2 className="w-3.5 h-3.5" />
                 </button>
@@ -619,6 +1146,7 @@ export function NotebookScreen() {
                   className={cn('p-1.5 rounded-md transition-colors', textMuted, 'hover:text-zinc-200', theme !== 'light' ? 'hover:bg-zinc-800' : 'hover:bg-zinc-100')}>
                   <Redo2 className="w-3.5 h-3.5" />
                 </button>
+                <span className={cn('ml-auto text-[10px] flex-shrink-0 pl-3 whitespace-nowrap', textMuted)}>{wordCount} {wordCount === 1 ? 'word' : 'words'}</span>
               </div>
 
               {/* Body */}
@@ -629,7 +1157,11 @@ export function NotebookScreen() {
                   suppressContentEditableWarning
                   onInput={onBodyInput}
                   onBlur={onBodyBlur}
-                  data-placeholder="Write your note..."
+                  onClick={onBodyClick}
+                  onKeyDown={onBodyKeyDown}
+                  onMouseUp={saveSelection}
+                  onKeyUp={saveSelection}
+                  data-placeholder="Write your note... (Ctrl/Cmd+B/I/U, Ctrl/Cmd+S to save)"
                   className={cn(
                     'notebook-editable min-h-[200px] text-sm leading-relaxed outline-none',
                     textBody
@@ -685,6 +1217,29 @@ export function NotebookScreen() {
         .notebook-editable ul { list-style: disc; padding-left: 1.25rem; }
         .notebook-editable ol { list-style: decimal; padding-left: 1.25rem; }
         .notebook-editable a { color: ${theme !== 'light' ? '#c4b5fd' : '#7c3aed'}; text-decoration: underline; }
+        .notebook-editable h1 { font-size: 1.4rem; font-weight: 700; margin: 0.6rem 0; }
+        .notebook-editable h2 { font-size: 1.2rem; font-weight: 700; margin: 0.5rem 0; }
+        .notebook-editable h3 { font-size: 1.05rem; font-weight: 600; margin: 0.4rem 0; }
+        .notebook-editable blockquote {
+          border-left: 3px solid ${theme !== 'light' ? '#a78bfa' : '#7c3aed'};
+          padding-left: 0.75rem;
+          margin: 0.5rem 0;
+          opacity: 0.85;
+        }
+        .notebook-editable .notebook-checklist-item {
+          display: flex;
+          align-items: flex-start;
+          gap: 6px;
+          margin: 2px 0;
+        }
+        .notebook-editable .notebook-checklist-item input[type="checkbox"] {
+          margin-top: 3px;
+          cursor: pointer;
+        }
+        .notebook-editable .notebook-checklist-item input[type="checkbox"]:checked + span {
+          text-decoration: line-through;
+          opacity: 0.6;
+        }
       `}</style>
 
       {/* ---- Delete folder confirm ---- */}
@@ -693,7 +1248,7 @@ export function NotebookScreen() {
           <div className={cn('rounded-xl max-w-sm w-full border p-5', theme !== 'light' ? 'bg-zinc-900 border-zinc-800' : 'bg-white border-zinc-200')} onClick={(e) => e.stopPropagation()}>
             <h3 className={cn('text-sm font-semibold mb-2', theme !== 'light' ? 'text-white' : 'text-zinc-900')}>Delete "{folderPendingDelete}"?</h3>
             <p className="text-xs text-zinc-500 mb-4 leading-relaxed">
-              Notes in this folder won't be deleted — they'll move to Uncategorized.
+              Notes in this folder won't be deleted — they'll move to Uncategorized. Sub-folders aren't deleted automatically.
             </p>
             <div className="flex items-center justify-end gap-2">
               <button onClick={() => setFolderPendingDelete(null)} className={cn('px-3.5 py-1.5 rounded-lg text-xs', theme !== 'light' ? 'bg-zinc-800 hover:bg-zinc-700 text-zinc-300' : 'bg-zinc-100 hover:bg-zinc-200 text-zinc-700')}>
@@ -724,6 +1279,29 @@ export function NotebookScreen() {
                 className="px-3.5 py-1.5 rounded-lg text-xs font-medium bg-rose-600 hover:bg-rose-500 text-white"
               >
                 Delete Forever
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ---- Empty trash confirm ---- */}
+      {confirmEmptyTrash && (
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-[70] flex items-center justify-center p-4" onClick={() => setConfirmEmptyTrash(false)}>
+          <div className={cn('rounded-xl max-w-sm w-full border p-5', theme !== 'light' ? 'bg-zinc-900 border-zinc-800' : 'bg-white border-zinc-200')} onClick={(e) => e.stopPropagation()}>
+            <h3 className={cn('text-sm font-semibold mb-2', theme !== 'light' ? 'text-white' : 'text-zinc-900')}>Empty trash?</h3>
+            <p className="text-xs text-zinc-500 mb-4 leading-relaxed">
+              This permanently deletes all {deletedEntries.length} note{deletedEntries.length === 1 ? '' : 's'} in Recently Deleted. This can't be undone.
+            </p>
+            <div className="flex items-center justify-end gap-2">
+              <button onClick={() => setConfirmEmptyTrash(false)} className={cn('px-3.5 py-1.5 rounded-lg text-xs', theme !== 'light' ? 'bg-zinc-800 hover:bg-zinc-700 text-zinc-300' : 'bg-zinc-100 hover:bg-zinc-200 text-zinc-700')}>
+                Cancel
+              </button>
+              <button
+                onClick={() => { handleEmptyNotebookTrash(); setConfirmEmptyTrash(false); }}
+                className="px-3.5 py-1.5 rounded-lg text-xs font-medium bg-rose-600 hover:bg-rose-500 text-white"
+              >
+                Empty Trash
               </button>
             </div>
           </div>
