@@ -1,9 +1,8 @@
 import type React from 'react';
-import { useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   Plus,
   X,
-  Edit2,
   Trash2,
   Pin,
   PinOff,
@@ -12,30 +11,77 @@ import {
   FolderPlus,
   Folder,
   RotateCcw,
-  Tag as TagIcon,
+  Filter,
+  MoreHorizontal,
+  Bold,
+  Italic,
+  Underline,
+  AlignLeft,
+  AlignCenter,
+  AlignRight,
+  List,
+  ListOrdered,
+  ListChecks,
+  Link2,
+  Undo2,
+  Redo2,
+  ArrowUpDown,
 } from 'lucide-react';
 import { PageHeader } from '../components/shared/PageHeader';
 import type { NotebookEntry } from '../types';
 import { cn } from '../utils/format';
 import { useAppContext } from '../context/AppContext';
 
-// Sentinel folder id for the "Recently Deleted" view — not a real folder
-// name, never collides with a user-created one since folder names are
-// validated/trimmed on create (see handleAddNotebookFolder).
+// Sentinel folder ids — not real folder names, never collide with a
+// user-created one since folder names are validated/trimmed on create
+// (see handleAddNotebookFolder).
+const ALL_NOTES = '__all_notes__';
 const RECENTLY_DELETED = '__recently_deleted__';
 
-type NotebookDraft = {
-  title: string;
-  body: string;
-  folder: string;
-  tags: string[];
+// Stable color per folder name (hashed), so a folder's swatch never
+// changes across reloads even though we don't persist a color field.
+const FOLDER_COLORS = [
+  'bg-purple-500', 'bg-blue-500', 'bg-emerald-500', 'bg-pink-500',
+  'bg-amber-500', 'bg-rose-500', 'bg-cyan-500', 'bg-indigo-500',
+];
+const folderColor = (name: string) => {
+  let hash = 0;
+  for (let i = 0; i < name.length; i++) hash = (hash * 31 + name.charCodeAt(i)) >>> 0;
+  return FOLDER_COLORS[hash % FOLDER_COLORS.length];
 };
 
-const emptyDraft = (defaultFolder: string): NotebookDraft => ({
-  title: '',
-  body: '',
-  folder: defaultFolder,
-  tags: [],
+// ----------------------------------------------------------------------------
+// Body storage: `NotebookEntry.body` is just a `string` (no schema change),
+// but this screen now treats it as a small HTML fragment produced by the
+// rich-text toolbar below (execCommand on a contentEditable div — no new
+// dependency). Notes saved by the OLD plain-textarea composer are still
+// plain text, so anything without HTML tags is escaped + newline-converted
+// the first time it's loaded here, and rendered/searched via stripHtml.
+// ----------------------------------------------------------------------------
+const looksLikeHtml = (s: string) => /<[a-z][\s\S]*>/i.test(s);
+
+const escapeHtml = (s: string) =>
+  s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+
+const toEditableHtml = (body: string) =>
+  looksLikeHtml(body) ? body : escapeHtml(body).replace(/\n/g, '<br>');
+
+const stripHtml = (html: string) =>
+  html.replace(/<[^>]*>/g, ' ').replace(/&nbsp;/g, ' ').replace(/\s+/g, ' ').trim();
+
+const formatNoteHeading = (entry: NotebookEntry) => {
+  if (entry.title.trim()) return entry.title;
+  return new Date(entry.createdAt).toLocaleDateString(undefined, {
+    weekday: 'short', month: 'short', day: 'numeric', year: 'numeric',
+  });
+};
+
+const formatShortDate = (iso: string) => new Date(iso).toLocaleDateString(undefined, {
+  month: '2-digit', day: '2-digit', year: 'numeric',
+});
+
+const formatFullDateTime = (iso: string) => new Date(iso).toLocaleString(undefined, {
+  month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit',
 });
 
 export function NotebookScreen() {
@@ -46,25 +92,32 @@ export function NotebookScreen() {
     handleAddNotebookFolder, handleDeleteNotebookFolder,
   } = useAppContext();
 
-  // ---- Local screen state (scoped here, not global context — this is a
-  // read/compose-focused screen with no cross-screen dependencies, same
-  // rationale as the previewNotice state in NoticesScreen) ----
-  const [activeFolder, setActiveFolder] = useState<string>(notebookFolders[0] ?? RECENTLY_DELETED);
+  // ---- Local screen state ----
+  const [activeFolder, setActiveFolder] = useState<string>(ALL_NOTES);
+  const [selectedEntryId, setSelectedEntryId] = useState<string | null>(null);
   const [search, setSearch] = useState('');
+  const [showFilter, setShowFilter] = useState(false);
   const [activeTagFilter, setActiveTagFilter] = useState<string | null>(null);
-
-  const [isComposerOpen, setIsComposerOpen] = useState(false);
-  const [editingId, setEditingId] = useState<string | null>(null);
-  const [draft, setDraft] = useState<NotebookDraft>(emptyDraft(notebookFolders[0] ?? ''));
-  const [tagInput, setTagInput] = useState('');
+  const [sortByTitle, setSortByTitle] = useState(false);
 
   const [isAddingFolder, setIsAddingFolder] = useState(false);
   const [newFolderName, setNewFolderName] = useState('');
   const [folderPendingDelete, setFolderPendingDelete] = useState<string | null>(null);
   const [entryPendingDelete, setEntryPendingDelete] = useState<NotebookEntry | null>(null);
 
+  const [titleDraft, setTitleDraft] = useState('');
+  const [tagInput, setTagInput] = useState('');
+  const [showTagSuggestions, setShowTagSuggestions] = useState(false);
+  const [showMoreMenu, setShowMoreMenu] = useState(false);
+
+  const bodyRef = useRef<HTMLDivElement>(null);
+  const saveTimeoutRef = useRef<number | undefined>(undefined);
+  const pendingNewNoteRef = useRef(false);
+  const loadedEntryIdRef = useRef<string | null>(null);
+
   const liveEntries = useMemo(() => notebookEntries.filter(e => !e.isDeleted), [notebookEntries]);
   const deletedEntries = useMemo(() => notebookEntries.filter(e => e.isDeleted), [notebookEntries]);
+  const isTrashView = activeFolder === RECENTLY_DELETED;
 
   const allTags = useMemo(() => {
     const set = new Set<string>();
@@ -73,63 +126,120 @@ export function NotebookScreen() {
   }, [liveEntries]);
 
   const visibleEntries = useMemo(() => {
-    const pool = activeFolder === RECENTLY_DELETED ? deletedEntries : liveEntries.filter(e => e.folder === activeFolder);
+    const pool = isTrashView
+      ? deletedEntries
+      : activeFolder === ALL_NOTES
+        ? liveEntries
+        : liveEntries.filter(e => e.folder === activeFolder);
     const q = search.trim().toLowerCase();
     const filtered = pool.filter(e => {
-      const matchesSearch = !q || e.title.toLowerCase().includes(q) || e.body.toLowerCase().includes(q);
+      const matchesSearch = !q || e.title.toLowerCase().includes(q) || stripHtml(e.body).toLowerCase().includes(q);
       const matchesTag = !activeTagFilter || e.tags.includes(activeTagFilter);
       return matchesSearch && matchesTag;
     });
-    // Pinned first, then most recently updated.
     return filtered.sort((a, b) => {
-      if (a.pinned !== b.pinned) return a.pinned ? -1 : 1;
+      if (!isTrashView && a.pinned !== b.pinned) return a.pinned ? -1 : 1;
+      if (sortByTitle) return formatNoteHeading(a).localeCompare(formatNoteHeading(b));
       return new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime();
     });
-  }, [activeFolder, liveEntries, deletedEntries, search, activeTagFilter]);
+  }, [activeFolder, isTrashView, liveEntries, deletedEntries, search, activeTagFilter, sortByTitle]);
 
-  const isTrashView = activeFolder === RECENTLY_DELETED;
+  const selectedEntry = useMemo(
+    () => notebookEntries.find(e => e.id === selectedEntryId) ?? null,
+    [notebookEntries, selectedEntryId]
+  );
 
-  // ---- Composer (add/edit) ----
-  const openAddComposer = () => {
-    setEditingId(null);
-    setDraft(emptyDraft(isTrashView ? (notebookFolders[0] ?? '') : activeFolder));
+  // Keep selection valid as the visible list changes (folder switch, delete,
+  // search, etc.) — fall back to the first visible note, or none.
+  useEffect(() => {
+    if (selectedEntryId && visibleEntries.some(e => e.id === selectedEntryId)) return;
+    setSelectedEntryId(visibleEntries[0]?.id ?? null);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeFolder, isTrashView, visibleEntries.map(e => e.id).join(',')]);
+
+  // Auto-select a just-created note once it lands in notebookEntries — the
+  // add handler updates local state synchronously (see useAppState.tsx), so
+  // the newest-by-createdAt entry after a pending create is the new one.
+  useEffect(() => {
+    if (!pendingNewNoteRef.current) return;
+    const newest = [...notebookEntries].sort(
+      (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+    )[0];
+    if (newest) setSelectedEntryId(newest.id);
+    pendingNewNoteRef.current = false;
+  }, [notebookEntries]);
+
+  // Load the selected entry into the editor whenever selection changes —
+  // NOT on every keystroke, so the contentEditable's cursor never jumps.
+  useEffect(() => {
+    if (!selectedEntry) { loadedEntryIdRef.current = null; return; }
+    if (loadedEntryIdRef.current === selectedEntry.id) return;
+    loadedEntryIdRef.current = selectedEntry.id;
+    setTitleDraft(selectedEntry.title);
+    if (bodyRef.current) bodyRef.current.innerHTML = toEditableHtml(selectedEntry.body);
     setTagInput('');
-    setIsComposerOpen(true);
+  }, [selectedEntry]);
+
+  const scheduleSave = useCallback((patch: Partial<Pick<NotebookEntry, 'title' | 'body' | 'folder' | 'tags'>>) => {
+    if (!selectedEntryId) return;
+    if (saveTimeoutRef.current) window.clearTimeout(saveTimeoutRef.current);
+    saveTimeoutRef.current = window.setTimeout(() => {
+      handleUpdateNotebookEntry(selectedEntryId, patch);
+    }, 500);
+  }, [selectedEntryId, handleUpdateNotebookEntry]);
+
+  const flushSave = useCallback((patch: Partial<Pick<NotebookEntry, 'title' | 'body' | 'folder' | 'tags'>>) => {
+    if (!selectedEntryId) return;
+    if (saveTimeoutRef.current) window.clearTimeout(saveTimeoutRef.current);
+    handleUpdateNotebookEntry(selectedEntryId, patch);
+  }, [selectedEntryId, handleUpdateNotebookEntry]);
+
+  // ---- New note / selection ----
+  const createNote = () => {
+    const folder = !isTrashView && activeFolder !== ALL_NOTES ? activeFolder : (notebookFolders[0] ?? '');
+    pendingNewNoteRef.current = true;
+    handleAddNotebookEntry({ title: '', body: '', folder, tags: [] });
+    if (isTrashView) setActiveFolder(ALL_NOTES);
   };
 
-  const openEditComposer = (entry: NotebookEntry) => {
-    setEditingId(entry.id);
-    setDraft({ title: entry.title, body: entry.body, folder: entry.folder, tags: entry.tags });
+  // ---- Title / body editing ----
+  const onTitleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setTitleDraft(e.target.value);
+    scheduleSave({ title: e.target.value });
+  };
+  const onTitleBlur = () => flushSave({ title: titleDraft });
+
+  const onBodyInput = () => {
+    scheduleSave({ body: bodyRef.current?.innerHTML ?? '' });
+  };
+  const onBodyBlur = () => flushSave({ body: bodyRef.current?.innerHTML ?? '' });
+
+  const exec = (command: string, value?: string) => {
+    bodyRef.current?.focus();
+    document.execCommand(command, false, value);
+    onBodyInput();
+  };
+
+  const insertLink = () => {
+    const url = window.prompt('Link URL');
+    if (url) exec('createLink', url);
+  };
+
+  const insertChecklistItem = () => {
+    exec('insertHTML', '☐ ');
+  };
+
+  // ---- Tags ----
+  const commitTag = (tag?: string) => {
+    const trimmed = (tag ?? tagInput).trim();
+    if (!selectedEntry || !trimmed || selectedEntry.tags.includes(trimmed)) { setTagInput(''); return; }
+    flushSave({ tags: [...selectedEntry.tags, trimmed] });
     setTagInput('');
-    setIsComposerOpen(true);
+    setShowTagSuggestions(false);
   };
-
-  const closeComposer = () => {
-    setIsComposerOpen(false);
-    setEditingId(null);
-  };
-
-  const commitTagInput = () => {
-    const trimmed = tagInput.trim();
-    if (trimmed && !draft.tags.includes(trimmed)) {
-      setDraft(prev => ({ ...prev, tags: [...prev.tags, trimmed] }));
-    }
-    setTagInput('');
-  };
-
-  const removeDraftTag = (tag: string) => {
-    setDraft(prev => ({ ...prev, tags: prev.tags.filter(t => t !== tag) }));
-  };
-
-  const saveDraft = () => {
-    const payload = { title: draft.title.trim(), body: draft.body.trim(), folder: draft.folder, tags: draft.tags };
-    if (!payload.body && !payload.title) return;
-    if (editingId) {
-      handleUpdateNotebookEntry(editingId, payload);
-    } else {
-      handleAddNotebookEntry(payload);
-    }
-    closeComposer();
+  const removeTag = (tag: string) => {
+    if (!selectedEntry) return;
+    flushSave({ tags: selectedEntry.tags.filter(t => t !== tag) });
   };
 
   // ---- Folder management ----
@@ -142,152 +252,85 @@ export function NotebookScreen() {
 
   const confirmDeleteFolder = () => {
     if (!folderPendingDelete) return;
-    if (activeFolder === folderPendingDelete) setActiveFolder(notebookFolders[0] ?? RECENTLY_DELETED);
+    if (activeFolder === folderPendingDelete) setActiveFolder(ALL_NOTES);
     handleDeleteNotebookFolder(folderPendingDelete);
     setFolderPendingDelete(null);
   };
 
-  // ---- Card ----
-  const renderCard = (entry: NotebookEntry) => (
-    <div
-      key={entry.id}
-      className={cn(
-        'group relative rounded-xl border p-4 flex flex-col gap-2.5 transition-all hover:-translate-y-0.5',
-        theme !== 'light' ? 'bg-zinc-900/50 border-zinc-800 hover:border-zinc-700' : 'bg-white border-zinc-200 hover:border-zinc-300 hover:shadow-md',
-        entry.pinned && (theme !== 'light' ? 'border-amber-500/40' : 'border-amber-400/60')
-      )}
-    >
-      {entry.pinned && !isTrashView && (
-        <div className="absolute top-0 inset-x-0 h-0.5 bg-amber-500/70 rounded-t-xl" />
-      )}
+  const suggestibleTags = allTags.filter(t => !selectedEntry?.tags.includes(t) && t.toLowerCase().includes(tagInput.toLowerCase()));
 
-      <div className="absolute top-2.5 right-2.5 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-        {isTrashView ? (
-          <>
-            <button
-              onClick={() => handleRestoreNotebookEntry(entry.id)}
-              title="Restore"
-              className={cn('p-1.5 rounded-md transition-colors', theme !== 'light' ? 'text-zinc-400 hover:text-emerald-400 hover:bg-zinc-800' : 'text-zinc-500 hover:text-emerald-600 hover:bg-zinc-100')}
-            >
-              <RotateCcw className="w-3.5 h-3.5" />
-            </button>
-            <button
-              onClick={() => setEntryPendingDelete(entry)}
-              title="Delete forever"
-              className={cn('p-1.5 rounded-md transition-colors', theme !== 'light' ? 'text-zinc-400 hover:text-rose-400 hover:bg-zinc-800' : 'text-zinc-500 hover:text-rose-600 hover:bg-zinc-100')}
-            >
-              <Trash2 className="w-3.5 h-3.5" />
-            </button>
-          </>
-        ) : (
-          <>
-            <button
-              onClick={() => handleToggleNotebookEntryPin(entry.id)}
-              title={entry.pinned ? 'Unpin' : 'Pin'}
-              className={cn('p-1.5 rounded-md transition-colors', theme !== 'light' ? 'text-zinc-400 hover:text-amber-400 hover:bg-zinc-800' : 'text-zinc-500 hover:text-amber-600 hover:bg-zinc-100')}
-            >
-              {entry.pinned ? <PinOff className="w-3.5 h-3.5" /> : <Pin className="w-3.5 h-3.5" />}
-            </button>
-            <button
-              onClick={() => openEditComposer(entry)}
-              title="Edit"
-              className={cn('p-1.5 rounded-md transition-colors', theme !== 'light' ? 'text-zinc-400 hover:text-white hover:bg-zinc-800' : 'text-zinc-500 hover:text-zinc-900 hover:bg-zinc-100')}
-            >
-              <Edit2 className="w-3.5 h-3.5" />
-            </button>
-            <button
-              onClick={() => handleSoftDeleteNotebookEntry(entry.id)}
-              title="Delete"
-              className={cn('p-1.5 rounded-md transition-colors', theme !== 'light' ? 'text-zinc-400 hover:text-rose-400 hover:bg-zinc-800' : 'text-zinc-500 hover:text-rose-600 hover:bg-zinc-100')}
-            >
-              <Trash2 className="w-3.5 h-3.5" />
-            </button>
-          </>
-        )}
-      </div>
-
-      <div className="pr-14">
-        {entry.title ? (
-          <h3 className={cn('text-sm font-semibold leading-snug line-clamp-1', theme !== 'light' ? 'text-white' : 'text-zinc-900')}>{entry.title}</h3>
-        ) : (
-          <h3 className={cn('text-sm font-semibold italic leading-snug', theme !== 'light' ? 'text-zinc-600' : 'text-zinc-400')}>Untitled</h3>
-        )}
-      </div>
-
-      <p className={cn('text-xs leading-relaxed line-clamp-4 whitespace-pre-wrap', theme !== 'light' ? 'text-zinc-400' : 'text-zinc-600')}>
-        {entry.body || <span className="italic">Empty note</span>}
-      </p>
-
-      <div className="flex items-center justify-between gap-2 mt-1">
-        <div className="flex flex-wrap gap-1 min-h-[19px]">
-          {entry.tags.map(tag => (
-            <span key={tag} className={cn('px-1.5 py-0.5 rounded-full text-[9px] font-semibold border', theme !== 'light' ? 'bg-purple-500/10 text-purple-400 border-purple-500/30' : 'bg-purple-50 text-purple-600 border-purple-200')}>
-              {tag}
-            </span>
-          ))}
-        </div>
-        <span className={cn('text-[10px] flex-shrink-0', theme !== 'light' ? 'text-zinc-600' : 'text-zinc-400')}>
-          {new Date(entry.updatedAt).toLocaleDateString()}
-        </span>
-      </div>
-    </div>
-  );
+  const border = theme !== 'light' ? 'border-zinc-800' : 'border-zinc-200';
+  const panelBg = theme !== 'light' ? 'bg-zinc-900/50' : 'bg-white';
+  const textMuted = theme !== 'light' ? 'text-zinc-500' : 'text-zinc-400';
+  const textBody = theme !== 'light' ? 'text-zinc-300' : 'text-zinc-700';
 
   return (
-    <div className="space-y-6 min-w-0">
+    <div className="space-y-4 min-w-0">
       <PageHeader
         title="Notebook"
         description="Your mindset notes, affirmations, and personal reflections"
-        actions={
-          <button
-            onClick={openAddComposer}
-            className={cn(
-              'flex items-center gap-2 px-4 py-2 rounded-lg text-sm transition-colors flex-shrink-0',
-              theme !== 'light' ? 'bg-zinc-800 hover:bg-zinc-700 text-white' : 'bg-zinc-900 hover:bg-zinc-800 text-white'
-            )}
-          >
-            <Plus className="w-4 h-4" />
-            <span>New Note</span>
-          </button>
-        }
       />
 
-      <div className="grid grid-cols-1 lg:grid-cols-[240px_1fr] gap-6 items-start">
-        {/* ---- Folder rail ---- */}
-        <div className={cn('rounded-xl border p-3 flex flex-col gap-1', theme !== 'light' ? 'bg-zinc-900/50 border-zinc-800' : 'bg-white border-zinc-200')}>
-          {notebookFolders.map(folder => {
-            const count = liveEntries.filter(e => e.folder === folder).length;
-            const isDefault = folder === 'Mindset' || folder === 'Daily Reflections';
-            return (
-              <div key={folder} className="group/folder relative flex items-center">
-                <button
-                  onClick={() => { setActiveFolder(folder); setActiveTagFilter(null); }}
-                  className={cn(
-                    'flex-1 flex items-center gap-2 px-2.5 py-2 rounded-lg text-sm transition-colors text-left min-w-0',
-                    activeFolder === folder
-                      ? (theme !== 'light' ? 'bg-purple-500/10 text-purple-300' : 'bg-purple-50 text-purple-700')
-                      : (theme !== 'light' ? 'text-zinc-400 hover:text-white hover:bg-zinc-800/50' : 'text-zinc-600 hover:text-zinc-900 hover:bg-zinc-50')
-                  )}
-                >
-                  <Folder className="w-3.5 h-3.5 flex-shrink-0" />
-                  <span className="truncate flex-1">{folder}</span>
-                  <span className={cn('text-[10px] flex-shrink-0', theme !== 'light' ? 'text-zinc-600' : 'text-zinc-400')}>{count}</span>
+      {/* ---- Search + filter row ---- */}
+      <div className="flex items-center gap-2">
+        <div className="relative flex-1 max-w-md">
+          <Search className={cn('absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5', textMuted)} />
+          <input
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Search notes"
+            className={cn('w-full pl-9 pr-3 py-2 rounded-lg text-sm border outline-none', panelBg, border, theme !== 'light' ? 'text-white placeholder-zinc-500 focus:border-zinc-600' : 'text-zinc-900 placeholder-zinc-400 focus:border-zinc-300')}
+          />
+        </div>
+        <div className="relative">
+          <button
+            onClick={() => setShowFilter(v => !v)}
+            title="Filter by tag"
+            className={cn('p-2 rounded-lg border transition-colors', panelBg, border, activeTagFilter ? 'text-purple-400 border-purple-500/40' : cn(textMuted, 'hover:text-zinc-200'))}
+          >
+            <Filter className="w-3.5 h-3.5" />
+          </button>
+          {showFilter && (
+            <div className={cn('absolute right-0 mt-1.5 w-52 rounded-lg border shadow-xl z-20 p-2', theme !== 'light' ? 'bg-zinc-900 border-zinc-800' : 'bg-white border-zinc-200')}>
+              <p className={cn('text-[10px] font-semibold uppercase tracking-wider px-1.5 pb-1.5', textMuted)}>Filter by tag</p>
+              {allTags.length === 0 ? (
+                <p className={cn('text-xs px-1.5 py-1', textMuted)}>No tags yet</p>
+              ) : (
+                <div className="max-h-48 overflow-y-auto flex flex-col gap-0.5">
+                  {allTags.map(tag => (
+                    <button
+                      key={tag}
+                      onClick={() => { setActiveTagFilter(prev => prev === tag ? null : tag); setShowFilter(false); }}
+                      className={cn(
+                        'text-left px-1.5 py-1 rounded-md text-xs transition-colors',
+                        activeTagFilter === tag
+                          ? (theme !== 'light' ? 'bg-purple-500/15 text-purple-300' : 'bg-purple-50 text-purple-700')
+                          : cn(textBody, theme !== 'light' ? 'hover:bg-zinc-800' : 'hover:bg-zinc-50')
+                      )}
+                    >
+                      {tag}
+                    </button>
+                  ))}
+                </div>
+              )}
+              {activeTagFilter && (
+                <button onClick={() => { setActiveTagFilter(null); setShowFilter(false); }} className="w-full text-left px-1.5 py-1 mt-1 rounded-md text-xs text-rose-400 hover:bg-zinc-800">
+                  Clear filter
                 </button>
-                {!isDefault && (
-                  <button
-                    onClick={() => setFolderPendingDelete(folder)}
-                    title="Delete folder"
-                    className={cn('absolute right-1 p-1 rounded-md opacity-0 group-hover/folder:opacity-100 transition-opacity', theme !== 'light' ? 'text-zinc-500 hover:text-rose-400 hover:bg-zinc-800' : 'text-zinc-400 hover:text-rose-600 hover:bg-zinc-100')}
-                  >
-                    <X className="w-3 h-3" />
-                  </button>
-                )}
-              </div>
-            );
-          })}
+              )}
+            </div>
+          )}
+        </div>
+      </div>
 
-          {isAddingFolder ? (
-            <div className="flex items-center gap-1.5 px-1 py-1">
+      {/* ---- 3-pane layout ---- */}
+      <div className={cn('grid grid-cols-1 lg:grid-cols-[220px_280px_1fr] gap-0 rounded-xl border overflow-hidden', border, panelBg)}
+        style={{ minHeight: '70vh' }}
+      >
+        {/* ==== Folder rail ==== */}
+        <div className={cn('flex flex-col border-b lg:border-b-0 lg:border-r', border)}>
+          <div className={cn('p-3 border-b', border)}>
+            {isAddingFolder ? (
               <input
                 autoFocus
                 value={newFolderName}
@@ -295,208 +338,354 @@ export function NotebookScreen() {
                 onKeyDown={(e) => { if (e.key === 'Enter') submitNewFolder(); if (e.key === 'Escape') { setIsAddingFolder(false); setNewFolderName(''); } }}
                 onBlur={submitNewFolder}
                 placeholder="Folder name"
-                className={cn('flex-1 min-w-0 px-2 py-1.5 rounded-lg text-xs border outline-none', theme !== 'light' ? 'bg-zinc-800 border-zinc-700 text-white placeholder-zinc-500' : 'bg-zinc-50 border-zinc-200 text-zinc-900 placeholder-zinc-400')}
+                className={cn('w-full px-2.5 py-1.5 rounded-lg text-xs border outline-none', theme !== 'light' ? 'bg-zinc-800 border-zinc-700 text-white placeholder-zinc-500' : 'bg-zinc-50 border-zinc-200 text-zinc-900 placeholder-zinc-400')}
               />
-            </div>
-          ) : (
-            <button
-              onClick={() => setIsAddingFolder(true)}
-              className={cn('flex items-center gap-2 px-2.5 py-2 rounded-lg text-xs transition-colors', theme !== 'light' ? 'text-zinc-500 hover:text-zinc-300 hover:bg-zinc-800/50' : 'text-zinc-500 hover:text-zinc-700 hover:bg-zinc-50')}
-            >
-              <FolderPlus className="w-3.5 h-3.5" />
-              New Folder
-            </button>
-          )}
-
-          <div className={cn('my-1 border-t', theme !== 'light' ? 'border-zinc-800' : 'border-zinc-200')} />
-
-          <button
-            onClick={() => { setActiveFolder(RECENTLY_DELETED); setActiveTagFilter(null); }}
-            className={cn(
-              'flex items-center gap-2 px-2.5 py-2 rounded-lg text-sm transition-colors text-left',
-              activeFolder === RECENTLY_DELETED
-                ? (theme !== 'light' ? 'bg-rose-500/10 text-rose-300' : 'bg-rose-50 text-rose-700')
-                : (theme !== 'light' ? 'text-zinc-400 hover:text-white hover:bg-zinc-800/50' : 'text-zinc-600 hover:text-zinc-900 hover:bg-zinc-50')
+            ) : (
+              <button
+                onClick={() => setIsAddingFolder(true)}
+                className={cn('w-full flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium transition-colors', theme !== 'light' ? 'text-zinc-300 hover:bg-zinc-800' : 'text-zinc-700 hover:bg-zinc-50')}
+              >
+                <FolderPlus className="w-3.5 h-3.5" />
+                Add folder
+              </button>
             )}
-          >
-            <Trash2 className="w-3.5 h-3.5 flex-shrink-0" />
-            <span className="truncate flex-1">Recently Deleted</span>
-            <span className={cn('text-[10px]', theme !== 'light' ? 'text-zinc-600' : 'text-zinc-400')}>{deletedEntries.length}</span>
-          </button>
+          </div>
+
+          <div className="flex-1 overflow-y-auto p-2">
+            <p className={cn('text-[10px] font-semibold uppercase tracking-wider px-2 pt-1 pb-1.5', textMuted)}>Folders</p>
+
+            <button
+              onClick={() => { setActiveFolder(ALL_NOTES); setActiveTagFilter(null); }}
+              className={cn(
+                'w-full flex items-center gap-2 px-2 py-1.5 rounded-lg text-sm text-left transition-colors',
+                activeFolder === ALL_NOTES
+                  ? (theme !== 'light' ? 'bg-purple-500/10 text-purple-300' : 'bg-purple-50 text-purple-700')
+                  : cn(textBody, theme !== 'light' ? 'hover:bg-zinc-800/60' : 'hover:bg-zinc-50')
+              )}
+            >
+              <StickyNote className="w-3.5 h-3.5 flex-shrink-0" />
+              <span className="flex-1 truncate">All notes</span>
+              <span className={cn('text-[10px]', textMuted)}>{liveEntries.length}</span>
+            </button>
+
+            {notebookFolders.map(folder => {
+              const count = liveEntries.filter(e => e.folder === folder).length;
+              const isDefault = folder === 'Mindset' || folder === 'Daily Reflections';
+              return (
+                <div key={folder} className="group/folder relative flex items-center">
+                  <button
+                    onClick={() => { setActiveFolder(folder); setActiveTagFilter(null); }}
+                    className={cn(
+                      'flex-1 flex items-center gap-2 px-2 py-1.5 rounded-lg text-sm text-left transition-colors min-w-0',
+                      activeFolder === folder
+                        ? (theme !== 'light' ? 'bg-purple-500/10 text-purple-300' : 'bg-purple-50 text-purple-700')
+                        : cn(textBody, theme !== 'light' ? 'hover:bg-zinc-800/60' : 'hover:bg-zinc-50')
+                    )}
+                  >
+                    <span className={cn('w-2 h-2 rounded-full flex-shrink-0', folderColor(folder))} />
+                    <span className="truncate flex-1">{folder}</span>
+                    <span className={cn('text-[10px] flex-shrink-0', textMuted)}>{count}</span>
+                  </button>
+                  {!isDefault && (
+                    <button
+                      onClick={() => setFolderPendingDelete(folder)}
+                      title="Delete folder"
+                      className={cn('absolute right-1 p-1 rounded-md opacity-0 group-hover/folder:opacity-100 transition-opacity', textMuted, 'hover:text-rose-400')}
+                    >
+                      <X className="w-3 h-3" />
+                    </button>
+                  )}
+                </div>
+              );
+            })}
+
+            <div className={cn('my-2 border-t', border)} />
+
+            <button
+              onClick={() => { setActiveFolder(RECENTLY_DELETED); setActiveTagFilter(null); }}
+              className={cn(
+                'w-full flex items-center gap-2 px-2 py-1.5 rounded-lg text-sm text-left transition-colors',
+                isTrashView
+                  ? (theme !== 'light' ? 'bg-rose-500/10 text-rose-300' : 'bg-rose-50 text-rose-700')
+                  : cn(textBody, theme !== 'light' ? 'hover:bg-zinc-800/60' : 'hover:bg-zinc-50')
+              )}
+            >
+              <Trash2 className="w-3.5 h-3.5 flex-shrink-0" />
+              <span className="flex-1 truncate">Recently Deleted</span>
+              <span className={cn('text-[10px]', textMuted)}>{deletedEntries.length}</span>
+            </button>
+          </div>
         </div>
 
-        {/* ---- Note list ---- */}
-        <div className="min-w-0 space-y-4">
-          {!isTrashView && (
-            <div className="flex flex-col sm:flex-row gap-2">
-              <div className="relative flex-1">
-                <Search className={cn('absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5', theme !== 'light' ? 'text-zinc-500' : 'text-zinc-400')} />
-                <input
-                  value={search}
-                  onChange={(e) => setSearch(e.target.value)}
-                  placeholder="Search notes..."
-                  className={cn('w-full pl-9 pr-3 py-2 rounded-lg text-sm border outline-none', theme !== 'light' ? 'bg-zinc-900/50 border-zinc-800 text-white placeholder-zinc-500 focus:border-zinc-700' : 'bg-white border-zinc-200 text-zinc-900 placeholder-zinc-400 focus:border-zinc-300')}
-                />
-              </div>
-              {allTags.length > 0 && (
-                <div className="flex items-center gap-1.5 flex-wrap">
-                  {allTags.map(tag => (
-                    <button
-                      key={tag}
-                      onClick={() => setActiveTagFilter(prev => prev === tag ? null : tag)}
-                      className={cn(
-                        'flex items-center gap-1 px-2 py-1 rounded-full text-[10px] font-semibold border transition-colors',
-                        activeTagFilter === tag
-                          ? (theme !== 'light' ? 'bg-purple-500/20 text-purple-300 border-purple-500/50' : 'bg-purple-100 text-purple-700 border-purple-300')
-                          : (theme !== 'light' ? 'bg-zinc-900/50 text-zinc-500 border-zinc-800 hover:text-zinc-300' : 'bg-white text-zinc-500 border-zinc-200 hover:text-zinc-700')
-                      )}
-                    >
-                      <TagIcon className="w-2.5 h-2.5" />
-                      {tag}
-                    </button>
-                  ))}
-                </div>
-              )}
-            </div>
-          )}
+        {/* ==== Note list ==== */}
+        <div className={cn('flex flex-col border-b lg:border-b-0 lg:border-r', border)}>
+          <div className={cn('flex items-center justify-between gap-2 p-3 border-b', border)}>
+            {isTrashView ? (
+              <span className={cn('text-xs font-medium', textMuted)}>Recently Deleted</span>
+            ) : (
+              <button
+                onClick={createNote}
+                className={cn('flex items-center gap-1.5 text-xs font-medium transition-colors', theme !== 'light' ? 'text-zinc-300 hover:text-white' : 'text-zinc-700 hover:text-zinc-900')}
+              >
+                <Plus className="w-3.5 h-3.5" />
+                New note
+              </button>
+            )}
+            <button
+              onClick={() => setSortByTitle(v => !v)}
+              title={sortByTitle ? 'Sort by title' : 'Sort by last updated'}
+              className={cn('p-1 rounded-md transition-colors', textMuted, 'hover:text-zinc-200')}
+            >
+              <ArrowUpDown className="w-3.5 h-3.5" />
+            </button>
+          </div>
 
-          {notebookEntriesLoading ? (
-            <div className={cn('text-center py-16 rounded-xl border border-dashed', theme !== 'light' ? 'border-zinc-800 bg-zinc-900/30' : 'border-zinc-300 bg-zinc-50')}>
-              <p className="text-zinc-500 text-sm">Loading your notes...</p>
+          <div className="flex-1 overflow-y-auto">
+            {notebookEntriesLoading ? (
+              <p className={cn('text-xs text-center py-10', textMuted)}>Loading your notes...</p>
+            ) : visibleEntries.length === 0 ? (
+              <div className="text-center py-10 px-4">
+                <StickyNote className={cn('w-6 h-6 mx-auto mb-2', theme !== 'light' ? 'text-zinc-700' : 'text-zinc-300')} />
+                <p className={cn('text-xs', textMuted)}>
+                  {isTrashView ? 'Recently Deleted is empty.' : 'No notes here yet.'}
+                </p>
+              </div>
+            ) : (
+              visibleEntries.map(entry => (
+                <button
+                  key={entry.id}
+                  onClick={() => setSelectedEntryId(entry.id)}
+                  className={cn(
+                    'w-full text-left px-3.5 py-3 border-b transition-colors',
+                    border,
+                    selectedEntryId === entry.id
+                      ? (theme !== 'light' ? 'bg-zinc-800/70' : 'bg-zinc-100')
+                      : (theme !== 'light' ? 'hover:bg-zinc-800/40' : 'hover:bg-zinc-50')
+                  )}
+                >
+                  <div className="flex items-center gap-1.5 mb-0.5">
+                    {entry.pinned && !isTrashView && <Pin className="w-2.5 h-2.5 text-amber-400 flex-shrink-0" />}
+                    <p className={cn('text-sm font-semibold truncate', theme !== 'light' ? 'text-white' : 'text-zinc-900')}>
+                      {formatNoteHeading(entry)}
+                    </p>
+                  </div>
+                  <p className={cn('text-[11px]', textMuted)}>{formatShortDate(entry.updatedAt)}</p>
+                </button>
+              ))
+            )}
+          </div>
+        </div>
+
+        {/* ==== Editor / detail pane ==== */}
+        <div className="flex flex-col min-w-0">
+          {!selectedEntry ? (
+            <div className="flex-1 flex flex-col items-center justify-center gap-2 p-8">
+              <StickyNote className={cn('w-8 h-8', theme !== 'light' ? 'text-zinc-700' : 'text-zinc-300')} />
+              <p className={cn('text-sm', textMuted)}>
+                {isTrashView ? 'Nothing selected' : 'Select a note, or create a new one'}
+              </p>
             </div>
-          ) : visibleEntries.length > 0 ? (
-            <div className="grid gap-3 grid-cols-1 sm:grid-cols-2 xl:grid-cols-3">
-              {visibleEntries.map(renderCard)}
+          ) : isTrashView ? (
+            <div className="flex flex-col h-full">
+              <div className={cn('flex items-center justify-between gap-3 px-5 py-4 border-b', border)}>
+                <h2 className={cn('text-lg font-semibold truncate', theme !== 'light' ? 'text-white' : 'text-zinc-900')}>
+                  {formatNoteHeading(selectedEntry)}
+                </h2>
+                <div className="flex items-center gap-1.5 flex-shrink-0">
+                  <button
+                    onClick={() => handleRestoreNotebookEntry(selectedEntry.id)}
+                    className={cn('flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors', theme !== 'light' ? 'bg-zinc-800 hover:bg-zinc-700 text-zinc-200' : 'bg-zinc-100 hover:bg-zinc-200 text-zinc-700')}
+                  >
+                    <RotateCcw className="w-3.5 h-3.5" />
+                    Restore
+                  </button>
+                  <button
+                    onClick={() => setEntryPendingDelete(selectedEntry)}
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-rose-600 hover:bg-rose-500 text-white transition-colors"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                    Delete forever
+                  </button>
+                </div>
+              </div>
+              <div className="flex-1 overflow-y-auto p-5">
+                <p className={cn('text-sm leading-relaxed whitespace-pre-wrap', textBody)}>
+                  {stripHtml(selectedEntry.body) || <span className="italic opacity-60">Empty note</span>}
+                </p>
+              </div>
             </div>
           ) : (
-            <div className={cn('text-center py-16 rounded-xl border border-dashed', theme !== 'light' ? 'border-zinc-800 bg-zinc-900/30' : 'border-zinc-300 bg-zinc-50')}>
-              <StickyNote className={cn('w-8 h-8 mx-auto mb-3', theme !== 'light' ? 'text-zinc-700' : 'text-zinc-300')} />
-              {isTrashView ? (
-                <p className="text-zinc-500 text-sm">Recently Deleted is empty.</p>
-              ) : (
-                <>
-                  <p className="text-zinc-500 text-sm mb-3">
-                    {liveEntries.some(e => e.folder === activeFolder) ? 'No matches for these filters' : `No notes in ${activeFolder} yet`}
+            <div className="flex flex-col h-full min-w-0">
+              {/* Title + meta + more menu */}
+              <div className={cn('px-5 pt-4 pb-3 border-b', border)}>
+                <div className="flex items-start justify-between gap-3">
+                  <input
+                    value={titleDraft}
+                    onChange={onTitleChange}
+                    onBlur={onTitleBlur}
+                    placeholder="Untitled"
+                    className={cn('flex-1 min-w-0 bg-transparent outline-none text-lg font-semibold', theme !== 'light' ? 'text-white placeholder-zinc-600' : 'text-zinc-900 placeholder-zinc-300')}
+                  />
+                  <div className="relative flex-shrink-0">
+                    <button
+                      onClick={() => setShowMoreMenu(v => !v)}
+                      className={cn('p-1.5 rounded-md transition-colors', textMuted, 'hover:text-zinc-200')}
+                    >
+                      <MoreHorizontal className="w-4 h-4" />
+                    </button>
+                    {showMoreMenu && (
+                      <div className={cn('absolute right-0 mt-1 w-40 rounded-lg border shadow-xl z-20 py-1', theme !== 'light' ? 'bg-zinc-900 border-zinc-800' : 'bg-white border-zinc-200')}>
+                        <button
+                          onClick={() => { handleToggleNotebookEntryPin(selectedEntry.id); setShowMoreMenu(false); }}
+                          className={cn('w-full flex items-center gap-2 px-3 py-1.5 text-xs text-left transition-colors', textBody, theme !== 'light' ? 'hover:bg-zinc-800' : 'hover:bg-zinc-50')}
+                        >
+                          {selectedEntry.pinned ? <PinOff className="w-3.5 h-3.5" /> : <Pin className="w-3.5 h-3.5" />}
+                          {selectedEntry.pinned ? 'Unpin note' : 'Pin note'}
+                        </button>
+                        <button
+                          onClick={() => { handleSoftDeleteNotebookEntry(selectedEntry.id); setShowMoreMenu(false); }}
+                          className="w-full flex items-center gap-2 px-3 py-1.5 text-xs text-left text-rose-400 hover:bg-zinc-800 transition-colors"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                          Delete note
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                </div>
+                <div className="flex items-center gap-3 mt-1">
+                  <p className={cn('text-[11px]', textMuted)}>
+                    Created {formatFullDateTime(selectedEntry.createdAt)} &middot; Last updated {formatFullDateTime(selectedEntry.updatedAt)}
                   </p>
-                  <button
-                    onClick={openAddComposer}
-                    className={cn('inline-flex items-center gap-1.5 text-xs transition-colors', theme !== 'light' ? 'text-zinc-400 hover:text-zinc-200' : 'text-zinc-500 hover:text-zinc-800')}
+                  <select
+                    value={selectedEntry.folder}
+                    onChange={(e) => flushSave({ folder: e.target.value })}
+                    className={cn('text-[11px] bg-transparent outline-none border-none cursor-pointer', textMuted, 'hover:text-zinc-300')}
                   >
-                    <Plus className="w-3.5 h-3.5" />
-                    Add Note
+                    {notebookFolders.map(folder => (
+                      <option key={folder} value={folder} className={theme !== 'light' ? 'bg-zinc-900' : 'bg-white'}>{folder}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              {/* Formatting toolbar */}
+              <div className={cn('flex items-center gap-0.5 px-4 py-1.5 border-b overflow-x-auto', border)}>
+                {[
+                  { icon: Bold, cmd: 'bold', title: 'Bold' },
+                  { icon: Italic, cmd: 'italic', title: 'Italic' },
+                  { icon: Underline, cmd: 'underline', title: 'Underline' },
+                ].map(({ icon: Icon, cmd, title }) => (
+                  <button key={cmd} onMouseDown={(e) => e.preventDefault()} onClick={() => exec(cmd)} title={title}
+                    className={cn('p-1.5 rounded-md transition-colors', textMuted, 'hover:text-zinc-200', theme !== 'light' ? 'hover:bg-zinc-800' : 'hover:bg-zinc-100')}>
+                    <Icon className="w-3.5 h-3.5" />
                   </button>
-                </>
-              )}
+                ))}
+                <div className={cn('w-px h-4 mx-1', theme !== 'light' ? 'bg-zinc-800' : 'bg-zinc-200')} />
+                {[
+                  { icon: AlignLeft, cmd: 'justifyLeft', title: 'Align left' },
+                  { icon: AlignCenter, cmd: 'justifyCenter', title: 'Align center' },
+                  { icon: AlignRight, cmd: 'justifyRight', title: 'Align right' },
+                ].map(({ icon: Icon, cmd, title }) => (
+                  <button key={cmd} onMouseDown={(e) => e.preventDefault()} onClick={() => exec(cmd)} title={title}
+                    className={cn('p-1.5 rounded-md transition-colors', textMuted, 'hover:text-zinc-200', theme !== 'light' ? 'hover:bg-zinc-800' : 'hover:bg-zinc-100')}>
+                    <Icon className="w-3.5 h-3.5" />
+                  </button>
+                ))}
+                <div className={cn('w-px h-4 mx-1', theme !== 'light' ? 'bg-zinc-800' : 'bg-zinc-200')} />
+                <button onMouseDown={(e) => e.preventDefault()} onClick={() => exec('insertUnorderedList')} title="Bulleted list"
+                  className={cn('p-1.5 rounded-md transition-colors', textMuted, 'hover:text-zinc-200', theme !== 'light' ? 'hover:bg-zinc-800' : 'hover:bg-zinc-100')}>
+                  <List className="w-3.5 h-3.5" />
+                </button>
+                <button onMouseDown={(e) => e.preventDefault()} onClick={() => exec('insertOrderedList')} title="Numbered list"
+                  className={cn('p-1.5 rounded-md transition-colors', textMuted, 'hover:text-zinc-200', theme !== 'light' ? 'hover:bg-zinc-800' : 'hover:bg-zinc-100')}>
+                  <ListOrdered className="w-3.5 h-3.5" />
+                </button>
+                <button onMouseDown={(e) => e.preventDefault()} onClick={insertChecklistItem} title="Checklist item"
+                  className={cn('p-1.5 rounded-md transition-colors', textMuted, 'hover:text-zinc-200', theme !== 'light' ? 'hover:bg-zinc-800' : 'hover:bg-zinc-100')}>
+                  <ListChecks className="w-3.5 h-3.5" />
+                </button>
+                <div className={cn('w-px h-4 mx-1', theme !== 'light' ? 'bg-zinc-800' : 'bg-zinc-200')} />
+                <button onMouseDown={(e) => e.preventDefault()} onClick={insertLink} title="Insert link"
+                  className={cn('p-1.5 rounded-md transition-colors', textMuted, 'hover:text-zinc-200', theme !== 'light' ? 'hover:bg-zinc-800' : 'hover:bg-zinc-100')}>
+                  <Link2 className="w-3.5 h-3.5" />
+                </button>
+                <div className={cn('w-px h-4 mx-1', theme !== 'light' ? 'bg-zinc-800' : 'bg-zinc-200')} />
+                <button onMouseDown={(e) => e.preventDefault()} onClick={() => exec('undo')} title="Undo"
+                  className={cn('p-1.5 rounded-md transition-colors', textMuted, 'hover:text-zinc-200', theme !== 'light' ? 'hover:bg-zinc-800' : 'hover:bg-zinc-100')}>
+                  <Undo2 className="w-3.5 h-3.5" />
+                </button>
+                <button onMouseDown={(e) => e.preventDefault()} onClick={() => exec('redo')} title="Redo"
+                  className={cn('p-1.5 rounded-md transition-colors', textMuted, 'hover:text-zinc-200', theme !== 'light' ? 'hover:bg-zinc-800' : 'hover:bg-zinc-100')}>
+                  <Redo2 className="w-3.5 h-3.5" />
+                </button>
+              </div>
+
+              {/* Body */}
+              <div className="flex-1 overflow-y-auto px-5 py-4">
+                <div
+                  ref={bodyRef}
+                  contentEditable
+                  suppressContentEditableWarning
+                  onInput={onBodyInput}
+                  onBlur={onBodyBlur}
+                  data-placeholder="Write your note..."
+                  className={cn(
+                    'notebook-editable min-h-[200px] text-sm leading-relaxed outline-none',
+                    textBody
+                  )}
+                />
+              </div>
+
+              {/* Tags */}
+              <div className={cn('flex flex-wrap items-center gap-1.5 px-5 py-3 border-t', border)}>
+                {selectedEntry.tags.map(tag => (
+                  <span key={tag} className={cn('flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold border', theme !== 'light' ? 'bg-purple-500/10 text-purple-400 border-purple-500/30' : 'bg-purple-50 text-purple-600 border-purple-200')}>
+                    {tag}
+                    <button onClick={() => removeTag(tag)} className="hover:text-rose-400 transition-colors">
+                      <X className="w-2.5 h-2.5" />
+                    </button>
+                  </span>
+                ))}
+                <div className="relative">
+                  <input
+                    value={tagInput}
+                    onChange={(e) => { setTagInput(e.target.value); setShowTagSuggestions(true); }}
+                    onFocus={() => setShowTagSuggestions(true)}
+                    onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); commitTag(); } if (e.key === 'Escape') setShowTagSuggestions(false); }}
+                    onBlur={() => window.setTimeout(() => setShowTagSuggestions(false), 120)}
+                    placeholder="Add tag"
+                    className={cn('px-2 py-1 rounded-full text-[11px] border outline-none w-24 focus:w-36 transition-all', theme !== 'light' ? 'bg-zinc-800 border-zinc-700 text-white placeholder-zinc-500 focus:border-zinc-600' : 'bg-zinc-50 border-zinc-200 text-zinc-900 placeholder-zinc-400 focus:border-zinc-300')}
+                  />
+                  {showTagSuggestions && suggestibleTags.length > 0 && (
+                    <div className={cn('absolute bottom-full left-0 mb-1.5 w-40 rounded-lg border shadow-xl z-20 py-1 max-h-40 overflow-y-auto', theme !== 'light' ? 'bg-zinc-900 border-zinc-800' : 'bg-white border-zinc-200')}>
+                      {suggestibleTags.map(tag => (
+                        <button
+                          key={tag}
+                          onMouseDown={(e) => { e.preventDefault(); commitTag(tag); }}
+                          className={cn('w-full text-left px-3 py-1 text-xs transition-colors', textBody, theme !== 'light' ? 'hover:bg-zinc-800' : 'hover:bg-zinc-50')}
+                        >
+                          {tag}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
             </div>
           )}
         </div>
       </div>
 
-      {/* ---- Composer modal (add/edit) ---- */}
-      {isComposerOpen && (
-        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-[60] flex items-start justify-center overflow-y-auto p-4 py-8" onClick={closeComposer}>
-          <div
-            className={cn('rounded-xl max-w-lg w-full border overflow-hidden', theme !== 'light' ? 'bg-zinc-900 border-zinc-800' : 'bg-white border-zinc-200')}
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className={cn('flex items-center justify-between px-5 py-4 border-b', theme !== 'light' ? 'border-zinc-800' : 'border-zinc-200')}>
-              <h2 className={cn('text-sm font-semibold', theme !== 'light' ? 'text-white' : 'text-zinc-900')}>
-                {editingId ? 'Edit Note' : 'New Note'}
-              </h2>
-              <button onClick={closeComposer} className="p-1 text-zinc-400 hover:text-white transition-colors">
-                <X className="w-4 h-4" />
-              </button>
-            </div>
-
-            <div className="p-5 space-y-4">
-              <input
-                value={draft.title}
-                onChange={(e) => setDraft(prev => ({ ...prev, title: e.target.value }))}
-                placeholder="Title (optional)"
-                className={cn('w-full px-3 py-2 rounded-lg text-sm border outline-none font-medium', theme !== 'light' ? 'bg-zinc-800 border-zinc-700 text-white placeholder-zinc-500 focus:border-zinc-600' : 'bg-zinc-50 border-zinc-200 text-zinc-900 placeholder-zinc-400 focus:border-zinc-300')}
-              />
-
-              <textarea
-                value={draft.body}
-                onChange={(e) => setDraft(prev => ({ ...prev, body: e.target.value }))}
-                placeholder="Write your note..."
-                rows={7}
-                className={cn('w-full px-3 py-2 rounded-lg text-sm border outline-none resize-none leading-relaxed', theme !== 'light' ? 'bg-zinc-800 border-zinc-700 text-white placeholder-zinc-500 focus:border-zinc-600' : 'bg-zinc-50 border-zinc-200 text-zinc-900 placeholder-zinc-400 focus:border-zinc-300')}
-              />
-
-              <div>
-                <label className={cn('text-[11px] font-semibold uppercase tracking-wider mb-1.5 block', theme !== 'light' ? 'text-zinc-400' : 'text-zinc-500')}>Folder</label>
-                <select
-                  value={draft.folder}
-                  onChange={(e) => setDraft(prev => ({ ...prev, folder: e.target.value }))}
-                  className={cn('w-full px-3 py-2 rounded-lg text-sm border outline-none', theme !== 'light' ? 'bg-zinc-800 border-zinc-700 text-white focus:border-zinc-600' : 'bg-zinc-50 border-zinc-200 text-zinc-900 focus:border-zinc-300')}
-                >
-                  {notebookFolders.map(folder => (
-                    <option key={folder} value={folder}>{folder}</option>
-                  ))}
-                </select>
-              </div>
-
-              <div>
-                <label className={cn('text-[11px] font-semibold uppercase tracking-wider mb-1.5 block', theme !== 'light' ? 'text-zinc-400' : 'text-zinc-500')}>Tags</label>
-                <div className="flex flex-wrap gap-1.5 mb-2">
-                  {draft.tags.map(tag => (
-                    <span key={tag} className={cn('flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold border', theme !== 'light' ? 'bg-purple-500/10 text-purple-400 border-purple-500/30' : 'bg-purple-50 text-purple-600 border-purple-200')}>
-                      {tag}
-                      <button onClick={() => removeDraftTag(tag)} className="hover:text-rose-400 transition-colors">
-                        <X className="w-2.5 h-2.5" />
-                      </button>
-                    </span>
-                  ))}
-                </div>
-                <input
-                  value={tagInput}
-                  onChange={(e) => setTagInput(e.target.value)}
-                  onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); commitTagInput(); } }}
-                  onBlur={commitTagInput}
-                  placeholder="Add a tag, press Enter"
-                  className={cn('w-full px-3 py-2 rounded-lg text-xs border outline-none', theme !== 'light' ? 'bg-zinc-800 border-zinc-700 text-white placeholder-zinc-500 focus:border-zinc-600' : 'bg-zinc-50 border-zinc-200 text-zinc-900 placeholder-zinc-400 focus:border-zinc-300')}
-                />
-              </div>
-
-              <div className="flex items-center justify-between gap-2 pt-1">
-                <label className="flex items-center gap-2 text-xs cursor-pointer select-none">
-                  <input
-                    type="checkbox"
-                    checked={editingId ? (notebookEntries.find(e => e.id === editingId)?.pinned ?? false) : false}
-                    onChange={() => editingId && handleToggleNotebookEntryPin(editingId)}
-                    disabled={!editingId}
-                    className="w-3.5 h-3.5 rounded accent-amber-500"
-                  />
-                  <span className={cn(theme !== 'light' ? 'text-zinc-400' : 'text-zinc-600', !editingId && 'opacity-40')}>
-                    Pinned {!editingId && '(save note first)'}
-                  </span>
-                </label>
-                <div className="flex items-center gap-2">
-                  <button
-                    onClick={closeComposer}
-                    className={cn('px-4 py-2 rounded-lg text-sm transition-colors', theme !== 'light' ? 'bg-zinc-800 hover:bg-zinc-700 text-zinc-300' : 'bg-zinc-100 hover:bg-zinc-200 text-zinc-700')}
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    onClick={saveDraft}
-                    disabled={!draft.title.trim() && !draft.body.trim()}
-                    className={cn(
-                      'px-4 py-2 rounded-lg text-sm font-medium transition-colors',
-                      (!draft.title.trim() && !draft.body.trim())
-                        ? 'bg-zinc-800 text-zinc-600 cursor-not-allowed'
-                        : (theme !== 'light' ? 'bg-white text-zinc-900 hover:bg-zinc-200' : 'bg-zinc-900 text-white hover:bg-zinc-800')
-                    )}
-                  >
-                    {editingId ? 'Save Changes' : 'Add Note'}
-                  </button>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
+      <style>{`
+        .notebook-editable:empty::before {
+          content: attr(data-placeholder);
+          color: ${theme !== 'light' ? '#71717a' : '#a1a1aa'};
+        }
+        .notebook-editable ul { list-style: disc; padding-left: 1.25rem; }
+        .notebook-editable ol { list-style: decimal; padding-left: 1.25rem; }
+        .notebook-editable a { color: ${theme !== 'light' ? '#c4b5fd' : '#7c3aed'}; text-decoration: underline; }
+      `}</style>
 
       {/* ---- Delete folder confirm ---- */}
       {folderPendingDelete && (
