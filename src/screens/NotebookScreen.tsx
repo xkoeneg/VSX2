@@ -1030,7 +1030,7 @@ export function NotebookScreen() {
             )}
           </div>
 
-          <div className="themed-scrollbar flex-1 min-h-0 overflow-y-auto p-2.5 pb-16">
+          <div className="themed-scrollbar flex-1 min-h-0 overflow-y-auto p-2.5">
             <p className={cn('text-xs font-semibold uppercase tracking-wider px-2.5 pt-1 pb-1.5', textMuted)}>Folders</p>
 
             <button
@@ -1062,21 +1062,23 @@ export function NotebookScreen() {
             </button>
 
             {folderTree.map(node => renderFolderNode(node, 0))}
-          </div>
 
-          {/* Recently Deleted — icon-only, bottom-right. */}
-          <button
-            onClick={() => { setActiveFolder(RECENTLY_DELETED); setActiveTagFilter(null); }}
-            title="Recently Deleted"
-            className={cn(
-              'absolute bottom-3 right-3 p-3 rounded-full shadow-lg transition-colors',
-              isTrashView
-                ? 'bg-rose-600 hover:bg-rose-500 text-white'
-                : (theme !== 'light' ? 'bg-zinc-800/90 hover:bg-zinc-800 border border-zinc-700/80 text-white' : 'bg-zinc-900 hover:bg-zinc-800 text-white')
-            )}
-          >
-            <Trash2 className="w-4 h-4" />
-          </button>
+            <div className={cn('my-2 border-t', border)} />
+
+            <button
+              onClick={() => { setActiveFolder(RECENTLY_DELETED); setActiveTagFilter(null); }}
+              className={cn(
+                'w-full flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-base text-left transition-colors',
+                isTrashView
+                  ? (theme !== 'light' ? 'bg-rose-500/10 text-rose-300' : 'bg-rose-50 text-rose-700')
+                  : cn(textBody, theme !== 'light' ? 'hover:bg-zinc-800/60' : 'hover:bg-zinc-50')
+              )}
+            >
+              <Trash2 className="w-4 h-4 flex-shrink-0" />
+              <span className="flex-1 truncate">Recently Deleted</span>
+              <span className={cn('text-xs', textMuted)}>{deletedEntries.length}</span>
+            </button>
+          </div>
         </div>
 
         {/* ==== Notes + editor frame ==== */}
