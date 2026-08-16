@@ -883,7 +883,7 @@ export function NotebookScreen() {
 
   return (
     <div
-      className="flex flex-col h-full min-h-0 min-w-0 space-y-6"
+      className="flex flex-col h-full min-h-0 min-w-0 overflow-hidden space-y-6"
       style={theme !== 'light'
         ? { ['--scrollbar-thumb' as any]: 'rgba(161,161,170,0.35)', ['--scrollbar-thumb-hover' as any]: 'rgba(161,161,170,0.55)', ['--scrollbar-track' as any]: 'transparent' }
         : { ['--scrollbar-thumb' as any]: 'rgba(113,113,122,0.3)', ['--scrollbar-thumb-hover' as any]: 'rgba(113,113,122,0.5)', ['--scrollbar-track' as any]: 'transparent' }}
@@ -1021,7 +1021,7 @@ export function NotebookScreen() {
           and no fixed-vh guess that's wrong on short/tall screens.
           Below lg the three panes stack vertically instead, so a min-height
           is used there and the page itself scrolls. */}
-      <div className={cn('flex flex-col lg:flex-row gap-3 min-h-[75vh] lg:h-auto lg:flex-1 lg:min-h-0')}
+      <div className={cn('flex flex-col lg:flex-row gap-3 min-h-[75vh] lg:h-auto lg:flex-1 lg:min-h-0 lg:overflow-hidden')}
       >
         {/* ==== Folder rail ==== */}
         <div className={cn('relative flex flex-col min-h-0 h-full rounded-xl border overflow-hidden lg:w-[248px] lg:flex-shrink-0', border, panelBg)}>
@@ -1162,7 +1162,7 @@ export function NotebookScreen() {
         {/* ==== Notes + editor frame ==== */}
         <div className={cn('grid grid-cols-1 lg:grid-cols-[320px_1fr] gap-0 rounded-xl border overflow-hidden min-h-0 flex-1', border, panelBg)}>
         {/* ==== Note list ==== */}
-        <div className={cn('flex flex-col min-h-0 h-full border-b lg:border-b-0 lg:border-r', border)}>
+        <div className={cn('flex flex-col min-h-0 h-full overflow-hidden border-b lg:border-b-0 lg:border-r', border)}>
           <div className={cn('flex items-center justify-between gap-2.5 p-3.5 border-b', border)}>
             {isTrashView ? (
               <div className="flex items-center justify-between w-full">
@@ -1438,7 +1438,7 @@ export function NotebookScreen() {
         </div>
 
         {/* ==== Editor / detail pane ==== */}
-        <div className="flex flex-col min-h-0 h-full min-w-0">
+        <div className="flex flex-col min-h-0 h-full min-w-0 overflow-hidden">
           {!selectedEntry ? (
             <div className="flex-1 flex flex-col items-center justify-center gap-2.5 p-8">
               <StickyNote className={cn('w-9 h-9', theme !== 'light' ? 'text-zinc-700' : 'text-zinc-300')} />
@@ -1447,7 +1447,7 @@ export function NotebookScreen() {
               </p>
             </div>
           ) : isTrashView ? (
-            <div className="flex flex-col min-h-0 h-full">
+            <div className="flex flex-col min-h-0 h-full overflow-hidden">
               <div className={cn('flex items-center justify-between gap-3.5 px-6 py-5 border-b', border)}>
                 <h2 className={cn('text-xl font-semibold truncate', theme !== 'light' ? 'text-white' : 'text-zinc-900')}>
                   {formatNoteHeading(selectedEntry)}
@@ -1481,7 +1481,7 @@ export function NotebookScreen() {
               </div>
             </div>
           ) : (
-            <div className="flex flex-col min-h-0 h-full min-w-0">
+            <div className="flex flex-col min-h-0 h-full min-w-0 overflow-hidden">
               {selectedEntry.color && <div className={cn('h-1 flex-shrink-0', COVER_COLOR_CLASSES[selectedEntry.color]?.bar)} />}
               {/* Title + meta + more menu */}
               <div className={cn('px-6 pt-4 pb-3 border-b', border)}>
