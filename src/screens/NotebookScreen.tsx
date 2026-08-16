@@ -252,6 +252,7 @@ export function NotebookScreen() {
   const [dragOverFolder, setDragOverFolder] = useState<string | null>(null);
   const [entryPendingDelete, setEntryPendingDelete] = useState<NotebookEntry | null>(null);
   const [confirmEmptyTrash, setConfirmEmptyTrash] = useState(false);
+  const [confirmBulkDelete, setConfirmBulkDelete] = useState(false);
   const [collapsedFolders, setCollapsedFolders] = useState<Set<string>>(new Set());
 
   const [selectMode, setSelectMode] = useState(false);
@@ -1181,7 +1182,7 @@ export function NotebookScreen() {
                 </div>
                 <span className={cn('w-px h-4', theme !== 'light' ? 'bg-zinc-800' : 'bg-zinc-200')} />
                 <button
-                  onClick={() => { handleBulkSoftDeleteNotebookEntries(Array.from(selectedIds)); setSelectedIds(new Set()); }}
+                  onClick={() => setConfirmBulkDelete(true)}
                   disabled={selectedIds.size === 0}
                   title="Delete"
                   className="flex items-center justify-center w-8 h-8 rounded-full text-rose-400 hover:bg-rose-500/10 disabled:opacity-30 disabled:pointer-events-none transition-colors"
@@ -1862,6 +1863,35 @@ export function NotebookScreen() {
                 className="px-4 py-2 rounded-lg text-sm font-medium bg-rose-600 hover:bg-rose-500 text-white"
               >
                 Empty Trash
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ---- Bulk delete (select mode) confirm ---- */}
+      {confirmBulkDelete && (
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-[70] flex items-center justify-center p-5" onClick={() => setConfirmBulkDelete(false)}>
+          <div className={cn('rounded-xl max-w-sm w-full border p-6', theme !== 'light' ? 'bg-zinc-900 border-zinc-800' : 'bg-white border-zinc-200')} onClick={(e) => e.stopPropagation()}>
+            <h3 className={cn('text-base font-semibold mb-2', theme !== 'light' ? 'text-white' : 'text-zinc-900')}>
+              Delete {selectedIds.size} note{selectedIds.size === 1 ? '' : 's'}?
+            </h3>
+            <p className="text-sm text-zinc-500 mb-4 leading-relaxed">
+              {selectedIds.size === 1 ? 'This note' : `These ${selectedIds.size} notes`} will be moved to Recently Deleted, where you can restore {selectedIds.size === 1 ? 'it' : 'them'} later.
+            </p>
+            <div className="flex items-center justify-end gap-2.5">
+              <button onClick={() => setConfirmBulkDelete(false)} className={cn('px-4 py-2 rounded-lg text-sm', theme !== 'light' ? 'bg-zinc-800 hover:bg-zinc-700 text-zinc-300' : 'bg-zinc-100 hover:bg-zinc-200 text-zinc-700')}>
+                Cancel
+              </button>
+              <button
+                onClick={() => {
+                  handleBulkSoftDeleteNotebookEntries(Array.from(selectedIds));
+                  setSelectedIds(new Set());
+                  setConfirmBulkDelete(false);
+                }}
+                className="px-4 py-2 rounded-lg text-sm font-medium bg-rose-600 hover:bg-rose-500 text-white"
+              >
+                Delete
               </button>
             </div>
           </div>
