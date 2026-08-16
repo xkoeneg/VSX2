@@ -254,6 +254,8 @@ export function NotebookScreen() {
   const [confirmEmptyTrash, setConfirmEmptyTrash] = useState(false);
   const [confirmBulkDelete, setConfirmBulkDelete] = useState(false);
   const [entryPendingTrash, setEntryPendingTrash] = useState<NotebookEntry | null>(null);
+  const [showStyleMenu, setShowStyleMenu] = useState(false);
+  const [showEntryFolderMenu, setShowEntryFolderMenu] = useState(false);
   const [collapsedFolders, setCollapsedFolders] = useState<Set<string>>(new Set());
 
   const [selectMode, setSelectMode] = useState(false);
@@ -1506,15 +1508,49 @@ export function NotebookScreen() {
                   <p className={cn('text-sm', textMuted)}>
                     Created {formatFullDateTime(selectedEntry.createdAt)} &middot; Last updated {formatFullDateTime(selectedEntry.updatedAt)}
                   </p>
-                  <select
-                    value={selectedEntry.folder}
-                    onChange={(e) => flushSave({ folder: e.target.value })}
-                    className={cn('text-sm bg-transparent outline-none border-none cursor-pointer', textMuted, 'hover:text-zinc-300')}
-                  >
-                    {notebookFolders.map(folder => (
-                      <option key={folder} value={folder} className={theme !== 'light' ? 'bg-zinc-900' : 'bg-white'}>{folder}</option>
-                    ))}
-                  </select>
+                  <div className="relative">
+                    <button
+                      type="button"
+                      onClick={() => setShowEntryFolderMenu(v => !v)}
+                      className={cn('flex items-center gap-1 text-sm transition-colors', textMuted, 'hover:text-zinc-300')}
+                    >
+                      {selectedEntry.folder || 'Uncategorized'}
+                      <ChevronDown className="w-3.5 h-3.5" />
+                    </button>
+                    {showEntryFolderMenu && (
+                      <div className={cn('absolute left-0 top-full mt-1.5 w-52 rounded-lg border shadow-xl z-20 py-1.5', theme !== 'light' ? 'bg-zinc-900 border-zinc-800' : 'bg-white border-zinc-200')}>
+                        <div className="themed-scrollbar max-h-56 overflow-y-auto">
+                          <button
+                            onClick={() => { flushSave({ folder: '' }); setShowEntryFolderMenu(false); }}
+                            className={cn(
+                              'w-full flex items-center gap-2.5 px-3.5 py-2 text-sm text-left transition-colors',
+                              !selectedEntry.folder
+                                ? (theme !== 'light' ? 'bg-purple-500/15 text-purple-300' : 'bg-purple-50 text-purple-700')
+                                : cn(textBody, theme !== 'light' ? 'hover:bg-zinc-800' : 'hover:bg-zinc-50')
+                            )}
+                          >
+                            <Folder className="w-4 h-4 flex-shrink-0" />
+                            <span className="truncate">Uncategorized</span>
+                          </button>
+                          {notebookFolders.map(folder => (
+                            <button
+                              key={folder}
+                              onClick={() => { flushSave({ folder }); setShowEntryFolderMenu(false); }}
+                              className={cn(
+                                'w-full flex items-center gap-2.5 px-3.5 py-2 text-sm text-left transition-colors',
+                                folder === selectedEntry.folder
+                                  ? (theme !== 'light' ? 'bg-purple-500/15 text-purple-300' : 'bg-purple-50 text-purple-700')
+                                  : cn(textBody, theme !== 'light' ? 'hover:bg-zinc-800' : 'hover:bg-zinc-50')
+                              )}
+                            >
+                              <Folder className="w-4 h-4 flex-shrink-0" />
+                              <span className="truncate">{folder}</span>
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
                   {selectedEntry.reminderAt && (
                     <span className={cn('flex items-center gap-1.5 text-sm', new Date(selectedEntry.reminderAt).getTime() < Date.now() ? 'text-rose-400' : textMuted)}>
                       <Bell className="w-3.5 h-3.5" />
@@ -1526,19 +1562,37 @@ export function NotebookScreen() {
 
               {/* Formatting toolbar */}
               <div className={cn('flex items-center gap-1 px-5 py-2 border-b overflow-x-auto', border)}>
-                <select
-                  onMouseDown={saveSelection}
-                  onChange={(e) => { const v = e.target.value; if (v) exec('formatBlock', v); e.target.value = ''; }}
-                  defaultValue=""
-                  title="Text style"
-                  className={cn('text-sm bg-transparent border rounded-md pl-1.5 pr-1 py-1.5 outline-none cursor-pointer flex-shrink-0', border, textMuted)}
-                >
-                  <option value="" disabled>Style</option>
-                  <option value="P">Paragraph</option>
-                  <option value="H1">Heading 1</option>
-                  <option value="H2">Heading 2</option>
-                  <option value="H3">Heading 3</option>
-                </select>
+                <div className="relative flex-shrink-0">
+                  <button
+                    type="button"
+                    onMouseDown={(e) => { e.preventDefault(); saveSelection(); }}
+                    onClick={() => setShowStyleMenu(v => !v)}
+                    title="Text style"
+                    className={cn('flex items-center gap-1 text-sm bg-transparent border rounded-md pl-2.5 pr-1.5 py-1.5 outline-none cursor-pointer', border, textMuted)}
+                  >
+                    Style
+                    <ChevronDown className="w-3.5 h-3.5" />
+                  </button>
+                  {showStyleMenu && (
+                    <div className={cn('absolute left-0 top-full mt-1.5 w-40 rounded-lg border shadow-xl z-20 py-1.5', theme !== 'light' ? 'bg-zinc-900 border-zinc-800' : 'bg-white border-zinc-200')}>
+                      {[
+                        { value: 'P', label: 'Paragraph' },
+                        { value: 'H1', label: 'Heading 1' },
+                        { value: 'H2', label: 'Heading 2' },
+                        { value: 'H3', label: 'Heading 3' },
+                      ].map(({ value, label }) => (
+                        <button
+                          key={value}
+                          onMouseDown={(e) => { e.preventDefault(); }}
+                          onClick={() => { exec('formatBlock', value); setShowStyleMenu(false); }}
+                          className={cn('w-full px-3.5 py-2 text-sm text-left transition-colors', textBody, theme !== 'light' ? 'hover:bg-zinc-800' : 'hover:bg-zinc-50')}
+                        >
+                          {label}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
                 <div className={cn('w-px h-5 mx-1', theme !== 'light' ? 'bg-zinc-800' : 'bg-zinc-200')} />
                 {[
                   { icon: Bold, cmd: 'bold', title: 'Bold' },
