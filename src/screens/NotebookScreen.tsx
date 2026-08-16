@@ -74,6 +74,16 @@ const FOLDER_COLOR_DOT_BY_ID: Record<string, string> = {
   amber: 'bg-amber-500', rose: 'bg-rose-500', cyan: 'bg-cyan-500', indigo: 'bg-indigo-500',
 };
 
+// Static Tailwind class map so the JIT scanner picks up every `text-*-500`
+// class at build time (a computed `bg-x-500`.replace('bg-','text-') string
+// wouldn't be statically discoverable). Used to tint the per-folder Folder
+// icon with the same color as its bg-*-500 dot class.
+const FOLDER_COLOR_TEXT_BY_BG: Record<string, string> = {
+  'bg-purple-500': 'text-purple-500', 'bg-blue-500': 'text-blue-500', 'bg-emerald-500': 'text-emerald-500', 'bg-pink-500': 'text-pink-500',
+  'bg-amber-500': 'text-amber-500', 'bg-rose-500': 'text-rose-500', 'bg-cyan-500': 'text-cyan-500', 'bg-indigo-500': 'text-indigo-500',
+};
+const toTextColorClass = (bgClass: string) => FOLDER_COLOR_TEXT_BY_BG[bgClass] ?? 'text-zinc-400';
+
 // Static Tailwind class map for note cover colors — kept as literal
 // strings (not built with template literals) so Tailwind's JIT scanner
 // picks them all up at build time.
@@ -680,17 +690,17 @@ export function NotebookScreen() {
             <span style={{ marginLeft: depth * 10 + 14 }} />
           )}
 
-          {/* Color dot — its own button (not nested inside the folder-select
-              button below, since a <button> can't contain another <button>)
-              so every folder can be recolored after creation, not just at
-              creation. */}
+          {/* Folder icon, tinted per-folder — its own button (not nested
+              inside the folder-select button below, since a <button> can't
+              contain another <button>) so every folder can be recolored
+              after creation, not just at creation. */}
           <button
             type="button"
             onClick={(e) => { e.stopPropagation(); setColorPickerFolder(prev => prev === node.fullPath ? null : node.fullPath); }}
             title="Change folder color"
-            className="flex-shrink-0 mx-1 p-1 rounded-full hover:ring-2 hover:ring-zinc-600 transition-all"
+            className="flex-shrink-0 mx-1 p-1 rounded-md hover:ring-2 hover:ring-zinc-600 transition-all"
           >
-            <span className={cn('block w-2.5 h-2.5 rounded-full', resolveFolderColor(node.fullPath))} />
+            <Folder className={cn('w-4 h-4', toTextColorClass(resolveFolderColor(node.fullPath)))} fill="currentColor" fillOpacity={0.18} />
           </button>
 
           <button
