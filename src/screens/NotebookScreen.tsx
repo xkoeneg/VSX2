@@ -41,6 +41,8 @@ import {
   LayoutGrid,
   Rows3,
   Image as ImageIcon,
+  Palette,
+  Highlighter,
 } from 'lucide-react';
 import { PageHeader } from '../components/shared/PageHeader';
 import type { NotebookEntry, NotebookTemplate } from '../types';
@@ -54,6 +56,16 @@ import { useAppContext } from '../context/AppContext';
 const ALL_NOTES = '__all_notes__';
 const FAVORITES = '__favorites__';
 const RECENTLY_DELETED = '__recently_deleted__';
+
+// Flat 16-color palette for the custom text/highlight color pickers —
+// replaces the native <input type="color"> OS picker with something that
+// matches the app's own dark theme.
+const RICH_TEXT_COLOR_SWATCHES = [
+  '#FFFFFF', '#000000', '#EF4444', '#F97316',
+  '#F59E0B', '#EAB308', '#84CC16', '#22C55E',
+  '#10B981', '#14B8A6', '#06B6D4', '#0EA5E9',
+  '#3B82F6', '#6366F1', '#A855F7', '#EC4899',
+];
 
 // Stable color per folder name (hashed), so a folder's swatch never
 // changes across reloads even though we don't persist a color field.
@@ -263,6 +275,8 @@ export function NotebookScreen() {
   const [styleMenuPos, setStyleMenuPos] = useState({ top: 0, left: 0 });
   const styleButtonRef = useRef<HTMLButtonElement>(null);
   const [colorPickerPos, setColorPickerPos] = useState({ top: 0, left: 0 });
+  const [richColorMenu, setRichColorMenu] = useState<null | 'text' | 'highlight'>(null);
+  const [richColorMenuPos, setRichColorMenuPos] = useState({ top: 0, left: 0 });
   const [showEntryFolderMenu, setShowEntryFolderMenu] = useState(false);
   const [collapsedFolders, setCollapsedFolders] = useState<Set<string>>(new Set());
 
@@ -1673,20 +1687,84 @@ export function NotebookScreen() {
                     <Icon className="w-4 h-4" />
                   </button>
                 ))}
-                <input
-                  type="color"
+                <button
+                  type="button"
+                  onMouseDown={(e) => { e.preventDefault(); saveSelection(); }}
+                  onClick={(e) => {
+                    if (richColorMenu !== 'text') {
+                      const rect = e.currentTarget.getBoundingClientRect();
+                      setRichColorMenuPos({ top: rect.bottom + 6, left: rect.left });
+                    }
+                    setRichColorMenu(v => v === 'text' ? null : 'text');
+                  }}
                   title="Text color"
-                  onMouseDown={saveSelection}
-                  onChange={(e) => exec('foreColor', e.target.value)}
-                  className="w-6 h-6 rounded cursor-pointer border-0 bg-transparent p-0 flex-shrink-0"
-                />
-                <input
-                  type="color"
+                  className={cn('p-2 rounded-md transition-colors', textMuted, 'hover:text-zinc-200', theme !== 'light' ? 'hover:bg-zinc-800' : 'hover:bg-zinc-100')}
+                >
+                  <Palette className="w-4 h-4" />
+                </button>
+                <button
+                  type="button"
+                  onMouseDown={(e) => { e.preventDefault(); saveSelection(); }}
+                  onClick={(e) => {
+                    if (richColorMenu !== 'highlight') {
+                      const rect = e.currentTarget.getBoundingClientRect();
+                      setRichColorMenuPos({ top: rect.bottom + 6, left: rect.left });
+                    }
+                    setRichColorMenu(v => v === 'highlight' ? null : 'highlight');
+                  }}
                   title="Highlight color"
-                  onMouseDown={saveSelection}
-                  onChange={(e) => exec('hiliteColor', e.target.value)}
-                  className="w-6 h-6 rounded cursor-pointer border-0 bg-transparent p-0 flex-shrink-0"
-                />
+                  className={cn('p-2 rounded-md transition-colors', textMuted, 'hover:text-zinc-200', theme !== 'light' ? 'hover:bg-zinc-800' : 'hover:bg-zinc-100')}
+                >
+                  <Highlighter className="w-4 h-4" />
+                </button>
+                {richColorMenu && createPortal(
+                  <>
+                    {/* Click-away catcher — sits under the menu, above
+                        everything else, so a click outside closes it
+                        without needing a document-level listener. */}
+                    <div className="fixed inset-0 z-20" onClick={() => setRichColorMenu(null)} />
+                    <div
+                      style={{ position: 'fixed', top: richColorMenuPos.top, left: richColorMenuPos.left }}
+                      className={cn(
+                        'w-44 p-2.5 rounded-lg border shadow-xl z-30',
+                        theme !== 'light' ? 'bg-zinc-900 border-zinc-800' : 'bg-white border-zinc-200'
+                      )}
+                    >
+                      <div className="grid grid-cols-4 gap-1.5">
+                        {RICH_TEXT_COLOR_SWATCHES.map(hex => (
+                          <button
+                            key={hex}
+                            type="button"
+                            title={hex}
+                            onClick={() => { exec(richColorMenu === 'text' ? 'foreColor' : 'hiliteColor', hex); setRichColorMenu(null); }}
+                            style={{ backgroundColor: hex }}
+                            className={cn('w-6 h-6 rounded-full flex-shrink-0 hover:scale-110 transition-transform border', theme !== 'light' ? 'border-black/10' : 'border-black/5')}
+                          />
+                        ))}
+                        {/* Reset — clears back to the note's normal text
+                            color, or removes the highlight entirely, so
+                            after trying a few colors you can always undo
+                            it from the same grid instead of hunting for a
+                            separate control. */}
+                        <button
+                          type="button"
+                          title={richColorMenu === 'text' ? 'Reset text color' : 'Remove highlight'}
+                          onClick={() => {
+                            exec(richColorMenu === 'text' ? 'foreColor' : 'hiliteColor', richColorMenu === 'text' ? (theme !== 'light' ? '#e4e4e7' : '#18181b') : 'transparent');
+                            setRichColorMenu(null);
+                          }}
+                          className={cn(
+                            'w-6 h-6 rounded-full flex-shrink-0 flex items-center justify-center border-2 border-dashed hover:scale-110 transition-transform',
+                            theme !== 'light' ? 'border-zinc-600' : 'border-zinc-300'
+                          )}
+                        >
+                          <X className={cn('w-3 h-3', textMuted)} />
+                        </button>
+                      </div>
+                    </div>
+                  </>,
+                  document.body
+                )}
                 <div className={cn('w-px h-5 mx-1', theme !== 'light' ? 'bg-zinc-800' : 'bg-zinc-200')} />
                 {[
                   { icon: AlignLeft, cmd: 'justifyLeft', title: 'Align left' },
