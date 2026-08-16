@@ -293,6 +293,11 @@ export function SettingsModal() {
     const [resetConfirmText, setResetConfirmText] = useState('');
     const [isResettingSystem, setIsResettingSystem] = useState(false);
     const [resetErrorMessage, setResetErrorMessage] = useState<string | null>(null);
+    // Small popover that sits next to the warning button on the Data
+    // Backup tab — a deliberate extra step before the real (typed
+    // "CONFIRM") modal, so a stray click can't get anywhere close to
+    // actually wiping data.
+    const [showResetBubble, setShowResetBubble] = useState(false);
 
     const handleConfirmReset = async () => {
       if (resetConfirmText !== 'CONFIRM' || isResettingSystem) return;
@@ -437,7 +442,7 @@ export function SettingsModal() {
 
           {/* TAB 2: Data Backup */}
           {settingsModalTab === 'backup' && (
-            <div className="flex flex-col gap-3">
+            <div className="flex flex-col gap-3 relative">
               {/* OPTION 1 (default/primary): Full System Backup & Restore */}
               <div className="px-4 py-3.5 rounded-xl bg-zinc-800/50 border border-zinc-700/80">
                 <div className="flex items-center gap-2 mb-0.5">
@@ -522,31 +527,57 @@ export function SettingsModal() {
                   Importing a .json exported here restores trades exactly, screenshots and all. Importing a .csv (or an older trades .json) can only rebuild the basics — Date, Account, Pair, Entry, Exit, R:R, PnL, Status — since that's all a spreadsheet format can hold.
                 </p>
               </div>
+
+              {/* Danger Zone — moved off Appearance & Privacy entirely and
+                  tucked into Data Backup only, as a small warning icon
+                  button rather than a full always-visible block, so it
+                  can't be reached/clicked by accident. Clicking it opens a
+                  small popover right next to the button (not the real
+                  confirmation modal yet) — a deliberate two-step reveal
+                  before the actual typed-"CONFIRM" modal further below. */}
+              <div className="flex justify-end pt-1">
+                <div className="relative">
+                  <button
+                    type="button"
+                    onClick={() => setShowResetBubble(v => !v)}
+                    aria-label="Danger Zone"
+                    title="Danger Zone"
+                    className="flex items-center justify-center w-9 h-9 rounded-full bg-rose-950/30 border border-rose-900/50 text-rose-400 hover:bg-rose-950/50 hover:border-rose-700 transition-all"
+                  >
+                    <AlertTriangle className="w-4 h-4" />
+                  </button>
+
+                  {showResetBubble && (
+                    <>
+                      {/* Invisible click-outside catcher — sits below the
+                          bubble but above everything else in the modal. */}
+                      <div className="fixed inset-0 z-[55]" onClick={() => setShowResetBubble(false)} />
+                      <div
+                        className="absolute z-[56] bottom-full right-0 mb-2 w-64 p-3.5 rounded-xl bg-zinc-900 border border-rose-900/50 shadow-2xl"
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        <p className="text-xs font-medium text-rose-300 mb-1.5">Danger Zone</p>
+                        <p className="text-[11px] text-zinc-500 mb-3 leading-relaxed">
+                          Permanently erase every trade, account, discipline log, and wiki entry. Export a backup first if you want to keep a copy.
+                        </p>
+                        <button
+                          onClick={() => { setShowResetBubble(false); setResetConfirmText(''); setShowResetConfirm(true); }}
+                          className="w-full flex items-center justify-center gap-2 px-3 py-2 rounded-lg text-xs font-medium bg-transparent border border-rose-800/60 text-rose-400 hover:bg-rose-950/30 hover:border-rose-700 transition-all"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                          Reset All Journal Data
+                        </button>
+                        {/* Little pointer/tail so the popover visibly
+                            anchors to the button below it. */}
+                        <div className="absolute -bottom-1.5 right-3 w-3 h-3 bg-zinc-900 border-r border-b border-rose-900/50 rotate-45" />
+                      </div>
+                    </>
+                  )}
+                </div>
+              </div>
             </div>
 
           )}
-
-          {/* Danger Zone — always visible at the bottom, regardless of tab */}
-          <div className="mt-5 pt-4 border-t border-zinc-800">
-            <div className="px-4 py-3.5 rounded-xl bg-rose-950/10 border border-rose-900/40">
-              <div className="flex items-center gap-3 mb-2">
-                <div className="w-9 h-9 rounded-lg bg-rose-950/30 flex items-center justify-center flex-shrink-0">
-                  <AlertTriangle className="w-4 h-4 text-rose-400" />
-                </div>
-                <p className="text-sm font-medium text-rose-300">Danger Zone</p>
-              </div>
-              <p className="text-xs text-zinc-500 mb-3 leading-relaxed">
-                Permanently erase every trade, account, discipline log, and wiki entry from this device. This cannot be undone — export a backup first if you want to keep a copy.
-              </p>
-              <button
-                onClick={() => { setResetConfirmText(''); setShowResetConfirm(true); }}
-                className="w-full flex items-center justify-center gap-2 px-3 py-2 rounded-lg text-sm font-medium bg-transparent border border-rose-800/60 text-rose-400 hover:bg-rose-950/30 hover:border-rose-700 transition-all"
-              >
-                <Trash2 className="w-4 h-4" />
-                Reset All Journal Data
-              </button>
-            </div>
-          </div>
         </div>
       </ModalBackdrop>
 
