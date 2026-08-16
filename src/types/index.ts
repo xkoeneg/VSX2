@@ -420,6 +420,13 @@ export interface StoredData {
   // they live in their own `notebook_entries` table, loaded/saved the same
   // way `accounts`/`trades` are (see useAppState.tsx).
   notebookFolders: string[];
+  // Maps a folder name -> one of NOTEBOOK_COVER_COLORS, for folders whose
+  // color was explicitly chosen (at creation, or changed later) rather than
+  // left to the deterministic name-hash fallback the UI uses otherwise.
+  // Keyed by folder name so it naturally survives folder renames-by-delete
+  // (a renamed folder is just a new name, which falls back to the hash
+  // color again unless re-chosen — acceptable since renames aren't common).
+  notebookFolderColors: Record<string, string>;
 }
 
 export interface ParsedMTTrade {
