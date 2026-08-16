@@ -1678,11 +1678,11 @@ export function NotebookScreen() {
                   </div>
                 </div>
                 <div className="flex items-center gap-3.5 mt-1 flex-wrap">
-                  <p className={cn('text-sm', textMuted)}>
+                  <p className={cn('text-xs', textMuted)}>
                     Created {formatFullDateTime(selectedEntry.createdAt)} &middot; Last updated {formatFullDateTime(selectedEntry.updatedAt)}
                   </p>
                   {selectedEntry.reminderAt && (
-                    <span className={cn('flex items-center gap-1.5 text-sm', new Date(selectedEntry.reminderAt).getTime() < Date.now() ? 'text-rose-400' : textMuted)}>
+                    <span className={cn('flex items-center gap-1.5 text-xs', new Date(selectedEntry.reminderAt).getTime() < Date.now() ? 'text-rose-400' : textMuted)}>
                       <Bell className="w-3.5 h-3.5" />
                       {formatFullDateTime(selectedEntry.reminderAt)}
                     </span>
