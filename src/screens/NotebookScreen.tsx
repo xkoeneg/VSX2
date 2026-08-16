@@ -338,6 +338,37 @@ export function NotebookScreen() {
     return () => window.removeEventListener('keydown', onKeyDown);
   }, [selectedEntryId, titleDraft, flushSave]);
 
+  // Without this, a pending debounced save (scheduleSave's 500ms timer) is
+  // simply thrown away the instant the tab closes, refreshes, or the app
+  // backgrounds — setTimeout never gets to fire once the page is gone. That
+  // silently dropped whatever was typed in roughly the last half-second
+  // before a refresh, which is exactly the "I typed a note and it's gone
+  // after refresh" symptom. `visibilitychange`->hidden fires reliably on
+  // refresh/close/tab-switch/backgrounding (including mobile), and fires
+  // *before* the page is torn down, giving the flush's Supabase request a
+  // real chance to complete — unlike `beforeunload`, which we also attach
+  // as a last-resort backup but where in-flight requests are more likely to
+  // get cut off.
+  useEffect(() => {
+    const flushPending = () => {
+      if (!selectedEntryId || saveTimeoutRef.current === undefined) return;
+      window.clearTimeout(saveTimeoutRef.current);
+      saveTimeoutRef.current = undefined;
+      flushSave({ title: titleDraft, body: bodyRef.current?.innerHTML ?? '' });
+    };
+    const onVisibilityChange = () => {
+      if (document.visibilityState === 'hidden') flushPending();
+    };
+    document.addEventListener('visibilitychange', onVisibilityChange);
+    window.addEventListener('beforeunload', flushPending);
+    window.addEventListener('pagehide', flushPending);
+    return () => {
+      document.removeEventListener('visibilitychange', onVisibilityChange);
+      window.removeEventListener('beforeunload', flushPending);
+      window.removeEventListener('pagehide', flushPending);
+    };
+  }, [selectedEntryId, titleDraft, flushSave]);
+
   // ---- New note / selection ----
   const createNote = (template?: NotebookTemplate) => {
     const folder = !isTrashView && activeFolder !== ALL_NOTES && activeFolder !== FAVORITES ? activeFolder : (notebookFolders[0] ?? '');
