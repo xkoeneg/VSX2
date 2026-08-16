@@ -714,31 +714,34 @@ export function NotebookScreen() {
           {isDraggable && (
             <span
               title="Drag to reorder"
-              className={cn('flex-shrink-0 -ml-0.5 cursor-grab active:cursor-grabbing opacity-0 group-hover/folder:opacity-40 hover:!opacity-90 transition-opacity', textMuted)}
+              className={cn('absolute left-0.5 top-1/2 -translate-y-1/2 cursor-grab active:cursor-grabbing opacity-0 group-hover/folder:opacity-40 hover:!opacity-90 transition-opacity', textMuted)}
               style={{ marginLeft: depth * 10 }}
             >
               <svg width="10" height="14" viewBox="0 0 10 14" fill="currentColor"><circle cx="2.5" cy="2.5" r="1.4" /><circle cx="7.5" cy="2.5" r="1.4" /><circle cx="2.5" cy="7" r="1.4" /><circle cx="7.5" cy="7" r="1.4" /><circle cx="2.5" cy="11.5" r="1.4" /><circle cx="7.5" cy="11.5" r="1.4" /></svg>
             </span>
           )}
 
-          {/* Fixed-width leading slot for the collapse chevron (or nothing,
-              for leaf folders) — keeps the folder icon that follows at the
-              same x position either way, instead of leaf rows pushing it
-              further right than parent rows. */}
-          <div style={{ marginLeft: depth * 10 }} className="w-4 h-4 flex-shrink-0 flex items-center justify-center">
-            {hasChildren && (
-              <button
-                onClick={() => setCollapsedFolders(prev => {
-                  const next = new Set(prev);
-                  if (next.has(node.fullPath)) next.delete(node.fullPath); else next.add(node.fullPath);
-                  return next;
-                })}
-                className={cn('rounded', textMuted, 'hover:text-zinc-200')}
-              >
-                {collapsed ? <ChevronRight className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
-              </button>
-            )}
-          </div>
+          {/* Fixed-width leading slot for the collapse chevron — only
+              reserved when there's actually a chevron to show (has
+              children) or when nested (depth indent). Top-level leaf
+              folders skip it entirely so their icon sits flush left,
+              lined up with the All notes / Favorites icons above. */}
+          {(hasChildren || depth > 0) && (
+            <div style={{ marginLeft: depth * 10 }} className="w-4 h-4 flex-shrink-0 flex items-center justify-center">
+              {hasChildren && (
+                <button
+                  onClick={() => setCollapsedFolders(prev => {
+                    const next = new Set(prev);
+                    if (next.has(node.fullPath)) next.delete(node.fullPath); else next.add(node.fullPath);
+                    return next;
+                  })}
+                  className={cn('rounded', textMuted, 'hover:text-zinc-200')}
+                >
+                  {collapsed ? <ChevronRight className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
+                </button>
+              )}
+            </div>
+          )}
 
           {/* Folder icon, tinted per-folder — its own button (not nested
               inside the folder-select button below, since a <button> can't
@@ -748,7 +751,7 @@ export function NotebookScreen() {
             type="button"
             onClick={(e) => { e.stopPropagation(); setColorPickerFolder(prev => prev === node.fullPath ? null : node.fullPath); }}
             title="Change folder color"
-            className="flex-shrink-0 p-1 rounded-md hover:ring-2 hover:ring-zinc-600 transition-all"
+            className="flex-shrink-0 -ml-1 p-1 rounded-md hover:ring-2 hover:ring-zinc-600 transition-all"
           >
             <Folder className={cn('w-4 h-4', toTextColorClass(resolveFolderColor(node.fullPath)))} fill="currentColor" fillOpacity={0.18} />
           </button>
@@ -764,9 +767,13 @@ export function NotebookScreen() {
               changes width on hover — the count fades out and the trash
               icon fades in on top of the exact same spot, instead of the
               delete button appearing as extra width next to the count
-              (which pushed the number left and made rows misalign). */}
-          <div className="relative flex-shrink-0 w-7 h-7 flex items-center justify-center">
-            <span className={cn('absolute text-xs transition-opacity duration-150', textMuted, 'group-hover/folder:opacity-0')}>
+              (which pushed the number left and made rows misalign).
+              Right-aligned (not centered) so the digits themselves land
+              flush against the row's right padding — same anchor point
+              the All notes / Favorites counts use — instead of sitting
+              centered in the middle of this wider box. */}
+          <div className="relative flex-shrink-0 w-7 h-7 flex items-center justify-end">
+            <span className={cn('absolute right-0 text-xs transition-opacity duration-150', textMuted, 'group-hover/folder:opacity-0')}>
               {countForFolderPath(node.fullPath)}
             </span>
             <button
