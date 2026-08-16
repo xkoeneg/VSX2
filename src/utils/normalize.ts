@@ -2,7 +2,7 @@ import { generateId } from './id';
 import { WIKI_CATEGORIES } from '../types';
 import type {
   TradeImage, TimeframeChart, Account, Trade, RulePillar, Rule, CustomPillar, StrategyStep, Strategy,
-  ChatMessage, MarketNotice, WikiEntry, TagColor, StoredData,
+  ChatMessage, MarketNotice, WikiEntry, TagColor, StoredData, NotebookEntry,
 } from '../types';
 import { DEFAULT_TAG_COLOR, TAG_COLOR_PALETTE } from '../constants/tagColors';
 import { EMOTION_OPTIONS } from '../constants/trading';
@@ -267,6 +267,26 @@ export const normalizeNamedItem = (item: any, defaultColor: TagColor = DEFAULT_T
 });
 
 
+// Notebook entries are loaded one row at a time (own Supabase table, not
+// part of the journal_data blob — see useAppState.tsx), but each row's
+// `data` jsonb still needs the same defensive rebuild every other persisted
+// type gets here, since Supabase data should never be trusted blindly.
+export const normalizeNotebookEntry = (e: any): NotebookEntry => {
+  const createdAt = typeof e?.createdAt === 'string' ? e.createdAt : new Date().toISOString();
+  return {
+    id: typeof e?.id === 'string' ? e.id : generateId(),
+    title: normalizeStringField(e?.title),
+    body: normalizeStringField(e?.body),
+    folder: normalizeStringField(e?.folder),
+    tags: Array.isArray(e?.tags) ? e.tags.filter((t: any) => typeof t === 'string' && t.trim()) : [],
+    pinned: typeof e?.pinned === 'boolean' ? e.pinned : false,
+    isDeleted: typeof e?.isDeleted === 'boolean' ? e.isDeleted : false,
+    deletedAt: typeof e?.deletedAt === 'string' ? e.deletedAt : undefined,
+    createdAt,
+    updatedAt: typeof e?.updatedAt === 'string' ? e.updatedAt : createdAt,
+  };
+};
+
 export const migrateStoredData = (raw: any): StoredData => {
   const data = raw && typeof raw === 'object' ? raw : {};
   return {
@@ -291,5 +311,8 @@ export const migrateStoredData = (raw: any): StoredData => {
       : EMOTION_OPTIONS.map(name => ({ id: generateId(), name, color: 'purple' as TagColor })),
     customSymbols: Array.isArray(data.customSymbols) ? data.customSymbols.filter((s: any) => typeof s === 'string') : [],
     customPillars: Array.isArray(data.customPillars) ? data.customPillars.map(normalizeCustomPillar) : [],
+    notebookFolders: Array.isArray(data.notebookFolders)
+      ? data.notebookFolders.filter((f: any) => typeof f === 'string' && f.trim())
+      : [],
   };
 };
