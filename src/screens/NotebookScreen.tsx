@@ -883,7 +883,7 @@ export function NotebookScreen() {
 
   return (
     <div
-      className="space-y-6 min-w-0"
+      className="flex flex-col h-full min-h-0 min-w-0 space-y-6"
       style={theme !== 'light'
         ? { ['--scrollbar-thumb' as any]: 'rgba(161,161,170,0.35)', ['--scrollbar-thumb-hover' as any]: 'rgba(161,161,170,0.55)', ['--scrollbar-track' as any]: 'transparent' }
         : { ['--scrollbar-thumb' as any]: 'rgba(113,113,122,0.3)', ['--scrollbar-thumb-hover' as any]: 'rgba(113,113,122,0.5)', ['--scrollbar-track' as any]: 'transparent' }}
