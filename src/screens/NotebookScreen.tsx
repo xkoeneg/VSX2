@@ -1,5 +1,5 @@
 import type React from 'react';
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import {
   Plus,
@@ -294,6 +294,8 @@ export function NotebookScreen() {
   const [wordCount, setWordCount] = useState(0);
 
   const bodyRef = useRef<HTMLDivElement>(null);
+  const rootRef = useRef<HTMLDivElement>(null);
+  const [frameHeight, setFrameHeight] = useState<number | null>(null);
   const moreMenuRef = useRef<HTMLDivElement>(null);
   const imageInputRef = useRef<HTMLInputElement>(null);
   const saveTimeoutRef = useRef<number | undefined>(undefined);
@@ -434,6 +436,40 @@ export function NotebookScreen() {
     document.addEventListener('mousedown', onMouseDown);
     return () => document.removeEventListener('mousedown', onMouseDown);
   }, [showMoreMenu, showEntryFolderMenu]);
+
+  // `h-full` on the page frame only works if some ancestor above this
+  // component actually has a resolved (non-auto) height — otherwise it's a
+  // no-op and the frame just grows with note content, dragging the whole
+  // page down and forcing an outer scrollbar instead of scrolling inside
+  // the note editor. Rather than depend on an ancestor we don't control
+  // (or hardcode a "header is always N px" guess that breaks the moment
+  // that changes), measure this frame's actual distance from the top of
+  // the viewport and size it to exactly fill what's left. That gives every
+  // `flex-1 min-h-0 overflow-y-auto` region below a real, fixed height to
+  // clip against no matter how long a note gets. Re-measured on resize (and
+  // via ResizeObserver on the frame's own position, since a sidebar
+  // collapse/theme change can shift its top offset without a window resize
+  // event firing).
+  useLayoutEffect(() => {
+    const LG_BREAKPOINT = 1024; // Tailwind's `lg` — below this the panes
+    // stack vertically and the page is meant to scroll normally, so the
+    // frame should NOT be height-clamped there; only measure/clamp at lg+.
+    const measure = () => {
+      if (!rootRef.current) return;
+      if (window.innerWidth < LG_BREAKPOINT) { setFrameHeight(null); return; }
+      const top = rootRef.current.getBoundingClientRect().top;
+      const bottomGutter = 24; // matches the page shell's outer bottom padding
+      setFrameHeight(Math.max(320, window.innerHeight - top - bottomGutter));
+    };
+    measure();
+    window.addEventListener('resize', measure);
+    const ro = new ResizeObserver(measure);
+    if (rootRef.current) ro.observe(rootRef.current);
+    return () => {
+      window.removeEventListener('resize', measure);
+      ro.disconnect();
+    };
+  }, []);
 
   // Without this, a pending debounced save (scheduleSave's 500ms timer) is
   // simply thrown away the instant the tab closes, refreshes, or the app
@@ -883,10 +919,14 @@ export function NotebookScreen() {
 
   return (
     <div
-      className="flex flex-col h-full min-h-0 min-w-0 overflow-hidden space-y-6"
-      style={theme !== 'light'
-        ? { ['--scrollbar-thumb' as any]: 'rgba(161,161,170,0.35)', ['--scrollbar-thumb-hover' as any]: 'rgba(161,161,170,0.55)', ['--scrollbar-track' as any]: 'transparent' }
-        : { ['--scrollbar-thumb' as any]: 'rgba(113,113,122,0.3)', ['--scrollbar-thumb-hover' as any]: 'rgba(113,113,122,0.5)', ['--scrollbar-track' as any]: 'transparent' }}
+      ref={rootRef}
+      className="flex flex-col min-h-0 min-w-0 lg:overflow-hidden space-y-6"
+      style={{
+        height: frameHeight !== null ? `${frameHeight}px` : undefined,
+        ...(theme !== 'light'
+          ? { ['--scrollbar-thumb' as any]: 'rgba(161,161,170,0.35)', ['--scrollbar-thumb-hover' as any]: 'rgba(161,161,170,0.55)', ['--scrollbar-track' as any]: 'transparent' }
+          : { ['--scrollbar-thumb' as any]: 'rgba(113,113,122,0.3)', ['--scrollbar-thumb-hover' as any]: 'rgba(113,113,122,0.5)', ['--scrollbar-track' as any]: 'transparent' }),
+      }}
     >
       <PageHeader
         title="Notebook"
