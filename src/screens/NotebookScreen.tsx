@@ -454,7 +454,29 @@ export function NotebookScreen() {
     if (loadedEntryIdRef.current === selectedEntry.id) return;
     loadedEntryIdRef.current = selectedEntry.id;
     setTitleDraft(selectedEntry.title);
-    if (bodyRef.current) bodyRef.current.innerHTML = toEditableHtml(selectedEntry.body);
+    if (bodyRef.current) {
+      bodyRef.current.innerHTML = toEditableHtml(selectedEntry.body);
+      // If the note's last saved content is inside a font-size/font-family
+      // <span> (e.g. it ends with text typed at size 64), the caret you get
+      // from clicking at the end of the note — or from the browser just
+      // placing it there on its own — lands INSIDE that span, not after
+      // it. Typing then keeps inheriting that leftover size/font no matter
+      // what the toolbar shows, because the toolbar label is just a
+      // display value; it isn't what the browser actually checks. A
+      // trailing plain paragraph with no styled span gives the caret a
+      // genuinely clean spot to land in, so typing at the end of a
+      // reloaded note actually uses the reset default instead of quietly
+      // continuing whatever formatting was last used before the refresh.
+      const editor = bodyRef.current;
+      const last = editor.lastElementChild;
+      const lastIsPlainEmptyBlock =
+        last && (last.tagName === 'P' || last.tagName === 'DIV') &&
+        !last.querySelector('span[style]') &&
+        (last.innerHTML === '<br>' || last.textContent === '');
+      if (!lastIsPlainEmptyBlock) {
+        editor.insertAdjacentHTML('beforeend', '<p><br></p>');
+      }
+    }
     setWordCount(countWords(selectedEntry.body));
     setTagInput('');
     // Every note starts from the same known formatting baseline — Paragraph
