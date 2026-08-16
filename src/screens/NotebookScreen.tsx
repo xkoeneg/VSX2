@@ -287,7 +287,9 @@ export function NotebookScreen() {
 
   const [titleDraft, setTitleDraft] = useState('');
   const [tagInput, setTagInput] = useState('');
+  const [showTagInput, setShowTagInput] = useState(false);
   const [showTagSuggestions, setShowTagSuggestions] = useState(false);
+  const tagInputRef = useRef<HTMLInputElement>(null);
   const [showMoreMenu, setShowMoreMenu] = useState(false);
   const [wordCount, setWordCount] = useState(0);
 
@@ -1874,15 +1876,36 @@ export function NotebookScreen() {
                   </span>
                 ))}
                 <div className="relative">
-                  <input
-                    value={tagInput}
-                    onChange={(e) => { setTagInput(e.target.value); setShowTagSuggestions(true); }}
-                    onFocus={() => setShowTagSuggestions(true)}
-                    onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); commitTag(); } if (e.key === 'Escape') setShowTagSuggestions(false); }}
-                    onBlur={() => window.setTimeout(() => setShowTagSuggestions(false), 120)}
-                    placeholder="Add tag"
-                    className={cn('px-2.5 py-1.5 rounded-full text-sm border outline-none w-28 focus:w-40 transition-all', theme !== 'light' ? 'bg-zinc-800 border-zinc-700 text-white placeholder-zinc-500 focus:border-zinc-600' : 'bg-zinc-50 border-zinc-200 text-zinc-900 placeholder-zinc-400 focus:border-zinc-300')}
-                  />
+                  {showTagInput ? (
+                    <input
+                      ref={tagInputRef}
+                      value={tagInput}
+                      onChange={(e) => { setTagInput(e.target.value); setShowTagSuggestions(true); }}
+                      onFocus={() => setShowTagSuggestions(true)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') { e.preventDefault(); commitTag(); }
+                        if (e.key === 'Escape') { setShowTagSuggestions(false); setShowTagInput(false); }
+                      }}
+                      onBlur={() => window.setTimeout(() => {
+                        setShowTagSuggestions(false);
+                        setShowTagInput(false);
+                      }, 120)}
+                      placeholder="Add tag"
+                      className={cn('px-2.5 py-1 rounded-full text-xs font-semibold border outline-none w-28 focus:w-40 transition-all', theme !== 'light' ? 'bg-zinc-800 border-zinc-700 text-white placeholder-zinc-500 focus:border-zinc-600' : 'bg-zinc-50 border-zinc-200 text-zinc-900 placeholder-zinc-400 focus:border-zinc-300')}
+                    />
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => { setShowTagInput(true); window.setTimeout(() => tagInputRef.current?.focus(), 0); }}
+                      className={cn(
+                        'flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold border border-dashed transition-colors',
+                        theme !== 'light' ? 'border-zinc-700 text-zinc-500 hover:text-zinc-300 hover:border-zinc-600' : 'border-zinc-300 text-zinc-500 hover:text-zinc-700 hover:border-zinc-400'
+                      )}
+                    >
+                      <Plus className="w-3 h-3" />
+                      Add tag
+                    </button>
+                  )}
                   {showTagSuggestions && suggestibleTags.length > 0 && (
                     <div className={cn('themed-scrollbar absolute bottom-full left-0 mb-1.5 w-44 rounded-lg border shadow-xl z-20 py-1.5 max-h-40 overflow-y-auto', theme !== 'light' ? 'bg-zinc-900 border-zinc-800' : 'bg-white border-zinc-200')}>
                       {suggestibleTags.map(tag => (
