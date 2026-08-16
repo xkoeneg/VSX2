@@ -161,7 +161,42 @@ const escapeHtml = (s: string) =>
   s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 
 const toEditableHtml = (body: string) =>
-  looksLikeHtml(body) ? body : escapeHtml(body).replace(/\n/g, '<br>');
+  normalizeLegacyFormatting(looksLikeHtml(body) ? body : escapeHtml(body).replace(/\n/g, '<br>'));
+
+// Old notes (saved before the font-size toolbar was rewritten to use plain
+// px <span>s — see applyFontSize below) or anything ever pasted with rich
+// formatting can carry legacy <font size="1..7" face="..."> tags. Browsers
+// map those 7 legacy levels to their own keyword scale (xx-small, small,
+// medium, large, ...), which is wildly non-linear — adjacent levels can
+// look nearly identical or jump enormously, and "face" pulls in whatever
+// font the browser has for that name, unrelated to the app's own font.
+// That's exactly the "10 is tiny, then it's suddenly huge" / "wrong font"
+// symptom. Rather than trying to guess a px equivalent for each legacy
+// level (which would just be swapping one arbitrary scale for another),
+// unwrap <font> tags entirely and drop any font-size that isn't a plain
+// px value, so broken formatting falls back to the same clean default
+// (Paragraph / Default font / 14px) every single note already uses — and
+// stays fixed, since the cleaned-up HTML is what gets saved back.
+const normalizeLegacyFormatting = (html: string): string => {
+  if (!html || !looksLikeHtml(html)) return html;
+  const container = document.createElement('div');
+  container.innerHTML = html;
+  container.querySelectorAll('font').forEach(node => {
+    const parent = node.parentNode;
+    if (!parent) return;
+    while (node.firstChild) parent.insertBefore(node.firstChild, node);
+    parent.removeChild(node);
+  });
+  container.querySelectorAll('[style]').forEach(node => {
+    const el = node as HTMLElement;
+    const fs = el.style.fontSize;
+    if (fs && !/^\d+(\.\d+)?px$/.test(fs)) {
+      el.style.removeProperty('font-size');
+      if (!el.getAttribute('style')?.trim()) el.removeAttribute('style');
+    }
+  });
+  return container.innerHTML;
+};
 
 const stripHtml = (html: string) =>
   html.replace(/<[^>]*>/g, ' ').replace(/&nbsp;/g, ' ').replace(/\s+/g, ' ').trim();
@@ -2229,9 +2264,9 @@ export function NotebookScreen() {
           background: transparent;
         }
         .notebook-editable a { color: ${theme !== 'light' ? '#c4b5fd' : '#7c3aed'}; text-decoration: underline; }
-        .notebook-editable h1 { font-size: 1.6rem; font-weight: 700; margin: 0.75rem 0; }
-        .notebook-editable h2 { font-size: 1.35rem; font-weight: 700; margin: 0.6rem 0; }
-        .notebook-editable h3 { font-size: 1.15rem; font-weight: 600; margin: 0.5rem 0; }
+        .notebook-editable h1 { font-size: 1.6em; font-weight: 700; margin: 0.75rem 0; }
+        .notebook-editable h2 { font-size: 1.35em; font-weight: 700; margin: 0.6rem 0; }
+        .notebook-editable h3 { font-size: 1.15em; font-weight: 600; margin: 0.5rem 0; }
         .notebook-editable blockquote {
           border-left: 3px solid ${theme !== 'light' ? '#a78bfa' : '#7c3aed'};
           padding-left: 0.875rem;
