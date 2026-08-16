@@ -216,12 +216,31 @@ type StandardConceptSeed = {
 const STANDARD_TRADING_CONCEPTS = standardTradingConceptsSeed as StandardConceptSeed[];
 
 // ----------------------------------------------------------------------------
-// Notebook — default folders. A couple of sensible built-ins, always
-// present, merged ahead of whatever custom folders the user has added
-// (`notebookFolders` in journal_data). Not persisted themselves — they're
-// implicit, so removing/renaming them here doesn't require a migration.
+// Notebook — starter folders. "Mindset" and "Daily Reflections" are just a
+// couple of sensible suggestions seeded into `notebookFolders` the first
+// time a user's journal_data has no folders field at all (see
+// migrateStoredData in normalize.ts). From that point on they're ordinary,
+// persisted, renamable/deletable/reorderable entries in the same flat
+// list as any folder the user creates — nothing here treats them as
+// special or protects them from deletion.
 // ----------------------------------------------------------------------------
-const DEFAULT_NOTEBOOK_FOLDERS = ['Mindset', 'Daily Reflections'] as const;
+
+// Reorders the flat `notebookFolders` list by moving the dragged folder's
+// entire subtree (itself + any "dragged/child" descendants, wherever they
+// sit in the array) to sit immediately before the target folder's first
+// appearance. Purely an array reorder — the tree shown in the sidebar is
+// just built from array order (see buildFolderTree in NotebookScreen), so
+// this is enough to let drag-and-drop reorder top-level folders.
+const reorderNotebookFolders = (folders: string[], draggedRoot: string, targetRoot: string): string[] => {
+  if (draggedRoot === targetRoot) return folders;
+  const belongsTo = (f: string, root: string) => f === root || f.startsWith(`${root}/`);
+  const draggedGroup = folders.filter(f => belongsTo(f, draggedRoot));
+  if (draggedGroup.length === 0) return folders;
+  const rest = folders.filter(f => !belongsTo(f, draggedRoot));
+  const targetIndex = rest.findIndex(f => belongsTo(f, targetRoot));
+  if (targetIndex === -1) return folders;
+  return [...rest.slice(0, targetIndex), ...draggedGroup, ...rest.slice(targetIndex)];
+};
 
 // ============================================================================
 // useAppState — the entire journal's state + business logic.
@@ -1490,21 +1509,22 @@ export function useAppState() {
   // table — adding one just appends to the small persisted string list, and
   // the existing journal_data debounced writer picks up the change
   // automatically via its effect dependency array.
-  const notebookFoldersWithDefaults = useMemo(() => {
-    const custom = notebookFolders.filter(f => !(DEFAULT_NOTEBOOK_FOLDERS as readonly string[]).includes(f));
-    return [...DEFAULT_NOTEBOOK_FOLDERS, ...custom];
-  }, [notebookFolders]);
-
   const handleAddNotebookFolder = useCallback((name: string, color?: string) => {
     const trimmed = name.trim();
     if (!trimmed) return;
     setNotebookFolders(prev => {
-      if (prev.includes(trimmed) || (DEFAULT_NOTEBOOK_FOLDERS as readonly string[]).includes(trimmed)) return prev;
+      if (prev.includes(trimmed)) return prev;
       return [...prev, trimmed];
     });
     if (color) {
       setNotebookFolderColors(prev => ({ ...prev, [trimmed]: color }));
     }
+  }, []);
+
+  // Drag-and-drop reorder from the sidebar — drops `draggedName` immediately
+  // before `targetName`'s current position. See reorderNotebookFolders above.
+  const handleReorderNotebookFolder = useCallback((draggedName: string, targetName: string) => {
+    setNotebookFolders(prev => reorderNotebookFolders(prev, draggedName, targetName));
   }, []);
 
   // Recolors a folder after the fact (not just at creation) — same
@@ -1523,7 +1543,6 @@ export function useAppState() {
   }, []);
 
   const handleDeleteNotebookFolder = useCallback((name: string) => {
-    if ((DEFAULT_NOTEBOOK_FOLDERS as readonly string[]).includes(name)) return; // default folders aren't removable
     setNotebookFolders(prev => prev.filter(f => f !== name));
     setNotebookFolderColors(prev => {
       if (!(name in prev)) return prev;
@@ -5416,9 +5435,10 @@ Return ONLY a JSON object — no markdown, no code fences, no commentary — wit
     // ---- Notebook ----
     notebookEntries,
     notebookEntriesLoading,
-    notebookFolders: notebookFoldersWithDefaults,
+    notebookFolders,
     notebookFolderColors,
     handleSetNotebookFolderColor,
+    handleReorderNotebookFolder,
     handleAddNotebookEntry,
     handleUpdateNotebookEntry,
     handleToggleNotebookEntryPin,
