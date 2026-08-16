@@ -102,7 +102,7 @@ import {
   CustomPillar, TradeImage, TimeframeChart, StrategyStep, ChatMessage, RoutineCategory, RoutineItem,
   ChallengeConfig, ChallengePreset, EconomicEvent, ParsedMTTrade, ViewType, GalleryView, TradeFilter,
   TradeSortField, SortOrder, PillarsPerRow, NoticeType, SessionOption, WikiCategory, RulePillar,
-  RuleAccentColor, StoredData, NotebookEntry,
+  RuleAccentColor, StoredData, NotebookEntry, DeletedNotebookFolder,
 } from '../types';
 import {
   WIKI_CATEGORIES,
@@ -606,6 +606,9 @@ export function useAppState() {
   // deterministic name-hash color in the UI, so this only needs to hold the
   // folders someone actually picked a color for.
   const [notebookFolderColors, setNotebookFolderColors] = useState<Record<string, string>>({});
+  // Folders sitting in "Recently Deleted" — see DeletedNotebookFolder in
+  // ../types for why this exists as a separate list from notebookFolders.
+  const [notebookDeletedFolders, setNotebookDeletedFolders] = useState<DeletedNotebookFolder[]>([]);
   const [notebookEntries, setNotebookEntries] = useState<NotebookEntry[]>([]);
   // True while the initial Supabase fetch for notebook entries is in
   // flight — mirrors accountsTradesLoading's purpose for this table.
@@ -1097,6 +1100,7 @@ export function useAppState() {
       setCustomPillars(migrated.customPillars);
       setNotebookFolders(migrated.notebookFolders);
       setNotebookFolderColors(migrated.notebookFolderColors);
+      setNotebookDeletedFolders(migrated.notebookDeletedFolders);
     } catch (e) {
       console.error('Failed to load journal data from Supabase:', e);
       showTradeImportToast('error', 'Failed to load your Playbook/Notices/Wiki/Tags — check your connection and reload.');
@@ -1117,7 +1121,7 @@ export function useAppState() {
   // saved server-side before it's even been fetched.
   useEffect(() => {
     if (!userId || !hasLoadedJournalDataRef.current) return;
-    const payload = { rules, strategies, notices, wikiEntries, setupTypes, confluences, mistakesList, emotionsList, customSymbols, customPillars, notebookFolders, notebookFolderColors };
+    const payload = { rules, strategies, notices, wikiEntries, setupTypes, confluences, mistakesList, emotionsList, customSymbols, customPillars, notebookFolders, notebookFolderColors, notebookDeletedFolders };
     writeJournalData(
       async () => {
         const { error } = await supabase
@@ -1130,7 +1134,7 @@ export function useAppState() {
         showTradeImportToast('error', 'Failed to save your changes — they may not sync to other devices. Check your connection.');
       }
     );
-  }, [userId, rules, strategies, notices, wikiEntries, setupTypes, confluences, mistakesList, emotionsList, customSymbols, customPillars, notebookFolders, notebookFolderColors, writeJournalData]);
+  }, [userId, rules, strategies, notices, wikiEntries, setupTypes, confluences, mistakesList, emotionsList, customSymbols, customPillars, notebookFolders, notebookFolderColors, notebookDeletedFolders, writeJournalData]);
 
   // ==========================================================================
   // Accounts & Trades: Supabase (per-user, synced across devices)
@@ -1431,8 +1435,11 @@ export function useAppState() {
     });
   }, [userId]);
 
-  // Permanently deletes every entry currently in "Recently Deleted".
+  // Permanently deletes every entry currently in "Recently Deleted", plus
+  // every folder sitting in the trash alongside them (their notes are
+  // already covered by the entries wipe below since they're all isDeleted).
   const handleEmptyNotebookTrash = useCallback(() => {
+    setNotebookDeletedFolders([]);
     setNotebookEntries(prev => {
       const toDelete = prev.filter(e => e.isDeleted);
       if (toDelete.length > 0 && userId) {
@@ -1543,36 +1550,98 @@ export function useAppState() {
   }, []);
 
   const handleDeleteNotebookFolder = useCallback((name: string) => {
+    const now = new Date().toISOString();
+    const color = notebookFolderColors[name];
     setNotebookFolders(prev => prev.filter(f => f !== name));
     setNotebookFolderColors(prev => {
       if (!(name in prev)) return prev;
       const { [name]: _omit, ...rest } = prev;
       return rest;
     });
-    // Entries that were in the deleted folder fall back to uncategorized
-    // rather than pointing at a folder that no longer exists. Each entry is
-    // its own Supabase row, so the reset has to be pushed per-entry, not
-    // just via the journal_data blob (which only holds the folder names).
+    // The folder itself moves to "Recently Deleted" — its color is
+    // captured here since the live notebookFolderColors map above just
+    // lost its entry for this (now inactive) name.
+    setNotebookDeletedFolders(prev => prev.some(f => f.name === name) ? prev : [...prev, { name, color, deletedAt: now }]);
+    // Entries that were directly in this folder move to Recently Deleted
+    // together with it (soft delete, same as handleSoftDeleteNotebookEntry)
+    // instead of falling back to Uncategorized — restoring the folder
+    // brings them back too (see handleRestoreNotebookFolder below).
     setNotebookEntries(prev => {
-      const affected = prev.filter(e => e.folder === name);
-      const updated = prev.map(e => e.folder === name ? { ...e, folder: '', updatedAt: new Date().toISOString() } : e);
-      if (affected.length > 0) {
+      const affected = prev.filter(e => e.folder === name && !e.isDeleted);
+      if (affected.length === 0) return prev;
+      const updated = prev.map(e => e.folder === name && !e.isDeleted ? { ...e, isDeleted: true, deletedAt: now, pinned: false } : e);
+      if (userId) {
+        affected.forEach(e => {
+          const updatedEntry = updated.find(u => u.id === e.id)!;
+          supabase.from('notebook_entries').update({ data: updatedEntry }).eq('id', e.id).eq('user_id', userId).then(({ error }) => {
+            if (error) {
+              console.error('Failed to soft-delete notebook entries after folder deletion in Supabase:', error);
+              showTradeImportToast('error', 'Failed to move some notes to Recently Deleted — they may reappear on reload.');
+            }
+          });
+        });
+      } else {
+        console.error('Cannot update notebook entries in Supabase: no authenticated user id.');
+        showTradeImportToast('error', 'Not signed in — these note changes were NOT saved and will be lost on refresh.');
+      }
+      return updated;
+    });
+  }, [userId, notebookFolderColors]);
+
+  // Brings a trashed folder (and every entry that was soft-deleted along
+  // with it) back to the active list. Entries an individual user already
+  // restored one-by-one, or permanently deleted, are left alone — this
+  // only touches entries still marked isDeleted with folder === name.
+  const handleRestoreNotebookFolder = useCallback((name: string) => {
+    const trashedColor = notebookDeletedFolders.find(f => f.name === name)?.color;
+    setNotebookDeletedFolders(prev => prev.filter(f => f.name !== name));
+    setNotebookFolders(prev => prev.includes(name) ? prev : [...prev, name]);
+    if (trashedColor) {
+      setNotebookFolderColors(prev => ({ ...prev, [name]: trashedColor }));
+    }
+    const now = new Date().toISOString();
+    setNotebookEntries(prev => {
+      const affected = prev.filter(e => e.folder === name && e.isDeleted);
+      if (affected.length === 0) return prev;
+      const updated = prev.map(e => e.folder === name && e.isDeleted ? { ...e, isDeleted: false, deletedAt: undefined, updatedAt: now } : e);
+      if (userId) {
+        affected.forEach(e => {
+          const updatedEntry = updated.find(u => u.id === e.id)!;
+          supabase.from('notebook_entries').update({ data: updatedEntry }).eq('id', e.id).eq('user_id', userId).then(({ error }) => {
+            if (error) {
+              console.error('Failed to restore notebook entries with Supabase:', error);
+              showTradeImportToast('error', 'Failed to restore some notes on the server — they may still show as deleted on reload.');
+            }
+          });
+        });
+      } else {
+        console.error('Cannot update notebook entries in Supabase: no authenticated user id.');
+        showTradeImportToast('error', 'Not signed in — this restore was NOT saved and will be lost on refresh.');
+      }
+      return updated;
+    });
+  }, [userId, notebookDeletedFolders]);
+
+  // Permanently removes a single trashed folder and whatever of its notes
+  // are still sitting in Recently Deleted (mirrors handlePermanentDeleteNotebookEntry,
+  // just scoped to a whole folder instead of one note).
+  const handlePermanentDeleteNotebookFolder = useCallback((name: string) => {
+    setNotebookDeletedFolders(prev => prev.filter(f => f.name !== name));
+    setNotebookEntries(prev => {
+      const toDelete = prev.filter(e => e.folder === name && e.isDeleted);
+      if (toDelete.length > 0) {
         if (userId) {
-          affected.forEach(e => {
-            const updatedEntry = updated.find(u => u.id === e.id)!;
-            supabase.from('notebook_entries').update({ data: updatedEntry }).eq('id', e.id).eq('user_id', userId).then(({ error }) => {
-              if (error) {
-                console.error('Failed to update notebook entry after folder deletion in Supabase:', error);
-                showTradeImportToast('error', 'Failed to move some notes out of the deleted folder — they may reappear on reload.');
-              }
+          toDelete.forEach(e => {
+            supabase.from('notebook_entries').delete().eq('id', e.id).eq('user_id', userId).then(({ error }) => {
+              if (error) console.error('Failed to permanently delete notebook entry from Supabase:', error);
             });
           });
         } else {
-          console.error('Cannot update notebook entries in Supabase: no authenticated user id.');
-          showTradeImportToast('error', 'Not signed in — these note changes were NOT saved and will be lost on refresh.');
+          console.error('Cannot delete notebook entries from Supabase: no authenticated user id.');
+          showTradeImportToast('error', 'Not signed in — these notes were only removed locally and may reappear on reload.');
         }
       }
-      return updated;
+      return prev.filter(e => !(e.folder === name && e.isDeleted));
     });
   }, [userId]);
 
@@ -1924,6 +1993,7 @@ export function useAppState() {
       setCustomSymbols([]);
       setNotebookFolders([]);
       setNotebookFolderColors({});
+      setNotebookDeletedFolders([]);
       setJournalDataLoading(true);
       hasLoadedJournalDataRef.current = false;
 
@@ -4780,6 +4850,7 @@ Return ONLY a JSON object — no markdown, no code fences, no commentary — wit
       notebookEntries,
       notebookFolders,
       notebookFolderColors,
+      notebookDeletedFolders,
       lifeDisciplineData: buildLifeDisciplineSnapshot(),
       appPreferencesData: buildAppPreferencesSnapshot(),
     };
@@ -4828,6 +4899,9 @@ Return ONLY a JSON object — no markdown, no code fences, no commentary — wit
             ? raw.notebookFolderColors
             : null;
         if (restoredNotebookFolderColors) setNotebookFolderColors(restoredNotebookFolderColors);
+        const restoredNotebookDeletedFolders: DeletedNotebookFolder[] | null =
+          Array.isArray(raw.notebookDeletedFolders) ? migrated.notebookDeletedFolders : null;
+        if (restoredNotebookDeletedFolders) setNotebookDeletedFolders(restoredNotebookDeletedFolders);
 
         // Everything now lives in Supabase (accounts/trades, journal data,
         // and preferences), so a full restore replaces this user's
@@ -4866,6 +4940,7 @@ Return ONLY a JSON object — no markdown, no code fences, no commentary — wit
                 customSymbols: migrated.customSymbols,
                 ...(restoredNotebookFolders ? { notebookFolders: restoredNotebookFolders } : {}),
                 ...(restoredNotebookFolderColors ? { notebookFolderColors: restoredNotebookFolderColors } : {}),
+                ...(restoredNotebookDeletedFolders ? { notebookDeletedFolders: restoredNotebookDeletedFolders } : {}),
               },
             }, { onConflict: 'user_id' });
             if (journalErr) throw journalErr;
@@ -5327,6 +5402,7 @@ Return ONLY a JSON object — no markdown, no code fences, no commentary — wit
     setNotebookEntries([]);
     setNotebookFolders([]);
     setNotebookFolderColors({});
+    setNotebookDeletedFolders([]);
 
     // Journal Data: Rules/Playbook, Notices, Wiki, Tags
     setRules([]);
@@ -5437,8 +5513,11 @@ Return ONLY a JSON object — no markdown, no code fences, no commentary — wit
     notebookEntriesLoading,
     notebookFolders,
     notebookFolderColors,
+    notebookDeletedFolders,
     handleSetNotebookFolderColor,
     handleReorderNotebookFolder,
+    handleRestoreNotebookFolder,
+    handlePermanentDeleteNotebookFolder,
     handleAddNotebookEntry,
     handleUpdateNotebookEntry,
     handleToggleNotebookEntryPin,
