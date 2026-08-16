@@ -612,48 +612,16 @@ export function NotebookScreen() {
     }
   };
 
-  const exec = (command: string, value?: string) => {
-    bodyRef.current?.focus();
-    const sel = window.getSelection();
-    if (savedRangeRef.current && sel) {
-      sel.removeAllRanges();
-      sel.addRange(savedRangeRef.current);
-    }
-    document.execCommand(command, false, value);
-    onBodyInput();
-  };
-
-  const insertLink = () => {
-    const url = window.prompt('Link URL');
-    if (url) exec('createLink', url);
-  };
-
-  // Font family: same native execCommand mechanism Bold/Italic/Underline
-  // already use above — the browser itself keeps the caret "inside" the
-  // formatting it just applied when nothing is highlighted (so only text
-  // typed afterward picks it up), and wraps only the highlighted range
-  // when something is selected. No custom DOM surgery needed here; that's
-  // what caused the earlier bug where a whole block got restyled.
-  const applyFontFamily = (family: string) => exec('fontName', family);
-
-  // Font size: execCommand('fontSize') only understands legacy levels
-  // 1–7, not real px values, and relies on the browser's own undocumented
-  // choice of *where* and *whether* to wrap a <font> tag for that level —
-  // which is exactly why this kept being flaky (worked for some sizes/
-  // selections, silently did nothing for others, especially larger
-  // values). This version doesn't touch execCommand at all: it inserts
-  // the <span style="font-size:Npx"> itself, directly, so the outcome is
-  // the same 100% of the time regardless of which size or browser.
-  const applyFontSize = (px: number) => {
+  // Restores the last saved caret/selection into a Range that's guaranteed
+  // to still be inside the editor, falling back to the end of the note if
+  // the saved one went stale (e.g. its nodes got replaced by a prior edit).
+  // Shared by every "wrap the current selection in a styled <span>" action
+  // below, so they all recover from a stale selection the same way.
+  const getEditableRange = (): Range | null => {
     const editor = bodyRef.current;
-    if (!editor) return;
-    editor.focus();
+    if (!editor) return null;
     const sel = window.getSelection();
-    if (!sel) return;
-
-    // Restore the saved caret/selection, but only if it's still valid —
-    // its nodes can go stale after a prior size change replaced them.
-    // Fall back to the end of the note instead of throwing/no-op'ing.
+    if (!sel) return null;
     let range: Range;
     const saved = savedRangeRef.current;
     if (saved && saved.startContainer.isConnected && saved.endContainer.isConnected) {
@@ -675,15 +643,36 @@ export function NotebookScreen() {
       sel.removeAllRanges();
       sel.addRange(range);
     }
-    if (!editor.contains(range.commonAncestorContainer)) return;
+    if (!editor.contains(range.commonAncestorContainer)) return null;
+    return range;
+  };
+
+  // Wraps the current selection (or, if nothing's highlighted, plants a
+  // marker at the caret so only text typed afterward is affected) in a
+  // <span> carrying one inline style property. Used directly by real DOM
+  // manipulation instead of execCommand, because execCommand('fontName')
+  // and ('fontSize') both go through the browser's legacy <font> element,
+  // whose "size" and "face" attributes only understand a handful of fixed
+  // legacy keywords/levels — NOT arbitrary px values or CSS keywords like
+  // "inherit". Asking a <font face="..."> for "inherit" doesn't inherit
+  // anything; the browser treats "inherit" as if it were a literal
+  // (nonexistent) font name, fails to find it, and silently falls back to
+  // its own generic default — a different, wrong font, not the real one.
+  // Writing directly to a <span>'s inline style sidesteps all of that:
+  // whatever we set is exactly what renders, every time.
+  const wrapSelectionWithStyle = (styleProp: 'fontSize' | 'fontFamily', value: string) => {
+    const editor = bodyRef.current;
+    if (!editor) return;
+    editor.focus();
+    const range = getEditableRange();
+    if (!range) return;
+    const sel = window.getSelection();
+    if (!sel) return;
 
     const span = document.createElement('span');
-    span.style.fontSize = `${px}px`;
+    span.style[styleProp] = value;
 
     if (range.collapsed) {
-      // No highlight — nothing already on the page should change. Insert
-      // an empty marker at the caret and land the cursor inside it, so
-      // only text typed AFTER this point inherits the size.
       span.appendChild(document.createTextNode('\u200B'));
       range.insertNode(span);
       const newRange = document.createRange();
@@ -693,7 +682,6 @@ export function NotebookScreen() {
       sel.addRange(newRange);
       savedRangeRef.current = newRange.cloneRange();
     } else {
-      // Highlighted text — wrap exactly what was selected, nothing more.
       span.appendChild(range.extractContents());
       range.insertNode(span);
       const newRange = document.createRange();
@@ -705,6 +693,40 @@ export function NotebookScreen() {
 
     onBodyInput();
   };
+
+  const exec = (command: string, value?: string) => {
+    bodyRef.current?.focus();
+    const sel = window.getSelection();
+    if (savedRangeRef.current && sel) {
+      sel.removeAllRanges();
+      sel.addRange(savedRangeRef.current);
+    }
+    document.execCommand(command, false, value);
+    onBodyInput();
+  };
+
+  const insertLink = () => {
+    const url = window.prompt('Link URL');
+    if (url) exec('createLink', url);
+  };
+
+  // Font family: goes through wrapSelectionWithStyle, same as font size —
+  // NOT execCommand('fontName'), which relies on the legacy <font face>
+  // attribute. That's what made picking "Default" (family: 'inherit')
+  // produce yet another wrong font instead of actually reverting to the
+  // app's real default: `<font face="inherit">` isn't valid, so the
+  // browser silently substituted its own fallback. A real inline
+  // `style="font-family: inherit"` on a <span>, by contrast, is completely
+  // valid CSS and does exactly what it says.
+  const applyFontFamily = (family: string) => wrapSelectionWithStyle('fontFamily', family);
+
+  // Font size: same span-insertion approach — execCommand('fontSize') only
+  // understands legacy levels 1–7, not real px values, and relies on the
+  // browser's own undocumented choice of *where* and *whether* to wrap a
+  // <font> tag for that level — which is exactly why this kept being
+  // flaky (worked for some sizes/selections, silently did nothing for
+  // others, especially larger values).
+  const applyFontSize = (px: number) => wrapSelectionWithStyle('fontSize', `${px}px`);
 
   // Real interactive checklist item — a native checkbox inside the
   // contentEditable div (clicking it toggles natively; CSS handles the
