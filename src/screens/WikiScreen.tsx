@@ -556,19 +556,19 @@ export function WikiScreen() {
                 <h2 className={cn('text-lg font-bold leading-tight truncate', theme !== 'light' ? 'text-white' : 'text-zinc-900')}>{entry.title}</h2>
                 {code && <span className="font-mono text-xs text-zinc-500 tracking-wider flex-shrink-0">{code}</span>}
               </div>
+            </div>
+            {/* Category badge + session badge + action icons are one grouped
+                unit pinned to the right edge — category sits left-of the
+                session badge (its natural reading order: "what kind of
+                concept" then "when to use it"), and the icons trail after
+                both. Title block stays flex-1 on the left so this group
+                doesn't have to fight it for space. */}
+            <div className="flex items-center gap-3 flex-shrink-0">
               {entry.category && (
-                <span className={cn('text-xs px-2.5 py-1 rounded-full font-semibold whitespace-nowrap', style.badge, style.glow)}>
+                <span className={cn('text-xs px-2.5 py-1 rounded-full font-semibold whitespace-nowrap flex-shrink-0', style.badge, style.glow)}>
                   {entry.category}
                 </span>
               )}
-            </div>
-            {/* Session badge + action icons are grouped together as one unit
-                pinned to the right edge, instead of the badge floating in a
-                middle column. `entry.category` stays with the title on the
-                left; the title block is `flex-1` so it eats the leftover
-                space and the right group just hugs the edge — matches "badge
-                on the right" instead of center-balanced. */}
-            <div className="flex items-center gap-3 flex-shrink-0">
               {entry.bestSession && (
                 <span className="inline-flex items-center gap-1 text-xs px-2.5 py-1 rounded-full bg-amber-500/10 text-amber-500 border border-amber-500/20 font-semibold min-w-0 max-w-[320px]">
                   <Compass className="w-3 h-3 flex-shrink-0" />
@@ -847,7 +847,7 @@ export function WikiScreen() {
           )}>
             <div className={cn(
               'w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0',
-              theme !== 'light' ? 'bg-sky-500/10 text-sky-400' : 'bg-sky-50 text-sky-600'
+              theme !== 'light' ? 'bg-emerald-500/10 text-emerald-400' : 'bg-emerald-50 text-emerald-600'
             )}>
               <BookOpen className="w-5 h-5" />
             </div>
@@ -949,12 +949,15 @@ export function WikiScreen() {
                       onClick={() => setActiveCategory(cat)}
                       className={cn(
                         'inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium border transition-colors flex-shrink-0',
+                        // Selected state is always Discipline-Tracker emerald now,
+                        // regardless of the category's own accent color — that
+                        // accent (style.active) only shows up via the dot below
+                        // while inactive. Matches the emerald-400/500 used for
+                        // "Rules Followed" etc. on the Discipline Tracker.
                         isActive
-                          ? (style
-                              ? style.active
-                              : (theme !== 'light'
-                                  ? 'bg-sky-500/15 text-sky-300 border-sky-500/40'
-                                  : 'bg-sky-100 text-sky-700 border-sky-300'))
+                          ? (theme !== 'light'
+                              ? 'bg-emerald-500/15 text-emerald-300 border-emerald-500/40'
+                              : 'bg-emerald-100 text-emerald-700 border-emerald-300')
                           : (theme !== 'light'
                               ? 'bg-white/[0.04] border-white/[0.06] text-zinc-400 hover:bg-white/[0.07] hover:text-zinc-200'
                               : 'bg-zinc-100 border-zinc-200 text-zinc-500 hover:bg-zinc-200/70 hover:text-zinc-700')
@@ -967,7 +970,9 @@ export function WikiScreen() {
                           spacing stays consistent. */}
                       <span className={cn(
                         'w-1.5 h-1.5 rounded-full flex-shrink-0',
-                        style ? style.dot : (theme !== 'light' ? 'bg-zinc-500' : 'bg-zinc-400')
+                        isActive
+                          ? 'bg-emerald-400'
+                          : (style ? style.dot : (theme !== 'light' ? 'bg-zinc-500' : 'bg-zinc-400'))
                       )} />
                       <span className="whitespace-nowrap">
                         {cat} <span className={isActive ? 'opacity-70' : 'opacity-50'}>({count})</span>
