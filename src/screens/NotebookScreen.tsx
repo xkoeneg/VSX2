@@ -689,9 +689,15 @@ export function NotebookScreen() {
       <div key={node.fullPath}>
         <div
           className={cn(
-            'group/folder relative flex items-center gap-0.5 rounded-lg transition-opacity',
+            'group/folder relative flex items-center gap-1 rounded-lg pl-2.5 pr-2 py-1 transition-colors',
             isBeingDragged && 'opacity-40',
-            isDragOverTarget && (theme !== 'light' ? 'ring-1 ring-purple-500/50' : 'ring-1 ring-purple-400/60')
+            isDragOverTarget && (theme !== 'light' ? 'ring-1 ring-purple-500/50' : 'ring-1 ring-purple-400/60'),
+            // Selection tint now lives on the whole row (icon included),
+            // not just the name text, so the folder icon is highlighted
+            // too when active instead of looking unselected next to it.
+            activeFolder === node.fullPath
+              ? toFolderSelectedClass(resolveFolderColor(node.fullPath), theme)
+              : cn(textBody, theme !== 'light' ? 'hover:bg-zinc-50' : 'hover:bg-zinc-800/60')
           )}
           draggable={isDraggable}
           onDragStart={isDraggable ? (e) => { setDraggedFolder(node.fullPath); e.dataTransfer.effectAllowed = 'move'; } : undefined}
@@ -714,21 +720,25 @@ export function NotebookScreen() {
               <svg width="10" height="14" viewBox="0 0 10 14" fill="currentColor"><circle cx="2.5" cy="2.5" r="1.4" /><circle cx="7.5" cy="2.5" r="1.4" /><circle cx="2.5" cy="7" r="1.4" /><circle cx="7.5" cy="7" r="1.4" /><circle cx="2.5" cy="11.5" r="1.4" /><circle cx="7.5" cy="11.5" r="1.4" /></svg>
             </span>
           )}
-          {hasChildren ? (
-            <button
-              onClick={() => setCollapsedFolders(prev => {
-                const next = new Set(prev);
-                if (next.has(node.fullPath)) next.delete(node.fullPath); else next.add(node.fullPath);
-                return next;
-              })}
-              style={{ marginLeft: depth * 10 }}
-              className={cn('p-1 rounded flex-shrink-0', textMuted, 'hover:text-zinc-200')}
-            >
-              {collapsed ? <ChevronRight className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
-            </button>
-          ) : (
-            <span style={{ marginLeft: depth * 10 + 14 }} />
-          )}
+
+          {/* Fixed-width leading slot for the collapse chevron (or nothing,
+              for leaf folders) — keeps the folder icon that follows at the
+              same x position either way, instead of leaf rows pushing it
+              further right than parent rows. */}
+          <div style={{ marginLeft: depth * 10 }} className="w-4 h-4 flex-shrink-0 flex items-center justify-center">
+            {hasChildren && (
+              <button
+                onClick={() => setCollapsedFolders(prev => {
+                  const next = new Set(prev);
+                  if (next.has(node.fullPath)) next.delete(node.fullPath); else next.add(node.fullPath);
+                  return next;
+                })}
+                className={cn('rounded', textMuted, 'hover:text-zinc-200')}
+              >
+                {collapsed ? <ChevronRight className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
+              </button>
+            )}
+          </div>
 
           {/* Folder icon, tinted per-folder — its own button (not nested
               inside the folder-select button below, since a <button> can't
@@ -738,19 +748,14 @@ export function NotebookScreen() {
             type="button"
             onClick={(e) => { e.stopPropagation(); setColorPickerFolder(prev => prev === node.fullPath ? null : node.fullPath); }}
             title="Change folder color"
-            className="flex-shrink-0 mx-1 p-1 rounded-md hover:ring-2 hover:ring-zinc-600 transition-all"
+            className="flex-shrink-0 p-1 rounded-md hover:ring-2 hover:ring-zinc-600 transition-all"
           >
             <Folder className={cn('w-4 h-4', toTextColorClass(resolveFolderColor(node.fullPath)))} fill="currentColor" fillOpacity={0.18} />
           </button>
 
           <button
             onClick={() => { setActiveFolder(node.fullPath); setActiveTagFilter(null); }}
-            className={cn(
-              'flex-1 flex items-center gap-2.5 px-2 py-2 rounded-lg text-base text-left transition-colors min-w-0',
-              activeFolder === node.fullPath
-                ? toFolderSelectedClass(resolveFolderColor(node.fullPath), theme)
-                : cn(textBody, theme !== 'light' ? 'hover:bg-zinc-800/60' : 'hover:bg-zinc-50')
-            )}
+            className="flex-1 flex items-center px-1.5 py-1 text-base text-left min-w-0"
           >
             <span className="truncate flex-1">{node.name}</span>
           </button>
