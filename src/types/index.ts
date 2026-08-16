@@ -397,6 +397,19 @@ export interface NotebookTemplate {
   bodyHtml: string;
 }
 
+// A folder that's been deleted but is still sitting in "Recently Deleted"
+// (see NotebookScreen's trash view). Deleting a folder soft-deletes it AND
+// every entry that was directly in it (see handleDeleteNotebookFolder in
+// useAppState.tsx) — restoring the folder restores those entries too.
+// `color` is captured at delete time so it renders the same way once
+// restored, even though the live notebookFolderColors map no longer has
+// an entry for this (now inactive) folder name.
+export interface DeletedNotebookFolder {
+  name: string;
+  color?: string;
+  deletedAt: string;
+}
+
 export interface StoredData {
   version: number;
   accounts: Account[];
@@ -427,6 +440,10 @@ export interface StoredData {
   // (a renamed folder is just a new name, which falls back to the hash
   // color again unless re-chosen — acceptable since renames aren't common).
   notebookFolderColors: Record<string, string>;
+  // Folders currently sitting in "Recently Deleted" (see
+  // DeletedNotebookFolder above). Small config-like list, same reasoning
+  // as notebookFolders for living in this blob rather than its own table.
+  notebookDeletedFolders: DeletedNotebookFolder[];
 }
 
 export interface ParsedMTTrade {
