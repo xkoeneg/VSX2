@@ -272,7 +272,11 @@ export function NotebookScreen() {
   // the actual note content never drift into an inconsistent "whatever the
   // browser felt like" state. Paragraph / Default font / 14px.
   const DEFAULT_STYLE_LABEL = 'Paragraph';
-  const DEFAULT_FONT_FAMILY_VALUE = 'sans-serif';
+  // 'inherit' (not the generic CSS keyword 'sans-serif') so "Default" means
+  // exactly what it says: whatever font the rest of the app already uses,
+  // not the browser's own fallback sans-serif — which looked like a
+  // different, mismatched font next to everything else on the page.
+  const DEFAULT_FONT_FAMILY_VALUE = 'inherit';
   const DEFAULT_FONT_FAMILY_LABEL = 'Default';
   const DEFAULT_FONT_SIZE = 14;
 
@@ -1879,7 +1883,7 @@ export function NotebookScreen() {
                         className={cn('w-48 rounded-lg border shadow-xl z-30 py-1.5 max-h-72 overflow-y-auto', theme !== 'light' ? 'bg-zinc-900 border-zinc-800' : 'bg-white border-zinc-200')}
                       >
                         {[
-                          { value: 'sans-serif', label: 'Default' },
+                          { value: 'inherit', label: 'Default' },
                           { value: 'Arial', label: 'Arial' },
                           { value: 'Helvetica', label: 'Helvetica' },
                           { value: 'Georgia', label: 'Georgia' },
