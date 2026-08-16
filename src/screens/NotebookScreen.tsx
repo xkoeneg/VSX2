@@ -1945,8 +1945,10 @@ export function NotebookScreen() {
                       type="button"
                       onClick={() => { setShowTagInput(true); window.setTimeout(() => tagInputRef.current?.focus(), 0); }}
                       className={cn(
-                        'flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold border border-dashed transition-colors',
-                        theme !== 'light' ? 'border-zinc-700 text-zinc-500 hover:text-zinc-300 hover:border-zinc-600' : 'border-zinc-300 text-zinc-500 hover:text-zinc-700 hover:border-zinc-400'
+                        'flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold border transition-colors',
+                        theme !== 'light'
+                          ? 'bg-zinc-800 border-zinc-700 text-zinc-400 hover:bg-purple-500/10 hover:border-purple-500/30 hover:text-purple-400'
+                          : 'bg-white border-zinc-200 text-zinc-500 hover:bg-purple-50 hover:border-purple-200 hover:text-purple-600'
                       )}
                     >
                       <Plus className="w-3 h-3" />
