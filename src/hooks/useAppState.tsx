@@ -1201,7 +1201,24 @@ export function useAppState() {
         .select('id, data')
         .eq('user_id', uid);
       if (error) throw error;
-      setNotebookEntries((rows || []).map(r => normalizeNotebookEntry({ ...(r.data as any), id: r.id })));
+      const normalized = (rows || []).map(r => normalizeNotebookEntry({ ...(r.data as any), id: r.id }));
+
+      // Auto-purge: entries in "Recently Deleted" for 30+ days are removed
+      // for good, same as most note apps' trash retention window. Runs
+      // quietly (no toast) — this is routine housekeeping, not a
+      // user-triggered action, so a failure here just means it retries
+      // next load rather than something worth interrupting the user for.
+      const purgeCutoff = Date.now() - 30 * 24 * 60 * 60 * 1000;
+      const toPurge = normalized.filter(e => e.isDeleted && e.deletedAt && new Date(e.deletedAt).getTime() < purgeCutoff);
+      if (toPurge.length > 0) {
+        toPurge.forEach(e => {
+          supabase.from('notebook_entries').delete().eq('id', e.id).eq('user_id', uid).then(({ error: purgeError }) => {
+            if (purgeError) console.error('Failed to auto-purge notebook entry from Supabase:', purgeError);
+          });
+        });
+      }
+      const purgeIds = new Set(toPurge.map(e => e.id));
+      setNotebookEntries(normalized.filter(e => !purgeIds.has(e.id)));
     } catch (e) {
       console.error('Failed to load notebook entries from Supabase:', e);
       showTradeImportToast('error', 'Failed to load your Notebook — check your connection and reload.');
@@ -1219,7 +1236,7 @@ export function useAppState() {
   // update + fire-and-forget Supabase call scoped to user_id, with an
   // explicit toast (not a silent no-op) if there's no authenticated user or
   // the write fails, so data loss is never invisible.
-  const handleAddNotebookEntry = useCallback((entry: { title: string; body: string; folder: string; tags: string[] }) => {
+  const handleAddNotebookEntry = useCallback((entry: { title: string; body: string; folder: string; tags: string[]; color?: string }) => {
     const now = new Date().toISOString();
     const newEntry: NotebookEntry = {
       id: generateId(),
@@ -1228,6 +1245,8 @@ export function useAppState() {
       folder: entry.folder,
       tags: entry.tags,
       pinned: false,
+      favorite: false,
+      color: entry.color,
       isDeleted: false,
       createdAt: now,
       updatedAt: now,
@@ -1247,7 +1266,7 @@ export function useAppState() {
     return newEntry;
   }, [userId]);
 
-  const handleUpdateNotebookEntry = useCallback((id: string, updates: Partial<Pick<NotebookEntry, 'title' | 'body' | 'folder' | 'tags'>>) => {
+  const handleUpdateNotebookEntry = useCallback((id: string, updates: Partial<Pick<NotebookEntry, 'title' | 'body' | 'folder' | 'tags' | 'color' | 'reminderAt'>>) => {
     setNotebookEntries(prev => {
       const existing = prev.find(e => e.id === id);
       if (!existing) return prev;
@@ -1284,6 +1303,121 @@ export function useAppState() {
         showTradeImportToast('error', 'Not signed in — this change was NOT saved and will be lost on refresh.');
       }
       return prev.map(e => e.id === id ? updated : e);
+    });
+  }, [userId]);
+
+  // Same shape as handleToggleNotebookEntryPin, but a separate boolean —
+  // Favorites get their own view in the folder rail, independent of pin
+  // (which only affects sort order within whatever view is active).
+  const handleToggleNotebookEntryFavorite = useCallback((id: string) => {
+    setNotebookEntries(prev => {
+      const existing = prev.find(e => e.id === id);
+      if (!existing) return prev;
+      const updated: NotebookEntry = { ...existing, favorite: !existing.favorite, updatedAt: new Date().toISOString() };
+      if (userId) {
+        supabase.from('notebook_entries').update({ data: updated }).eq('id', id).eq('user_id', userId).then(({ error }) => {
+          if (error) {
+            console.error('Failed to update notebook entry favorite in Supabase:', error);
+            showTradeImportToast('error', 'Failed to save favorite change — it may not sync to other devices.');
+          }
+        });
+      } else {
+        console.error('Cannot update notebook entry in Supabase: no authenticated user id.');
+        showTradeImportToast('error', 'Not signed in — this change was NOT saved and will be lost on refresh.');
+      }
+      return prev.map(e => e.id === id ? updated : e);
+    });
+  }, [userId]);
+
+  // Creates a fresh entry as a copy of an existing one (new id/timestamps,
+  // never pinned/favorited/deleted, "(Copy)" appended to a non-empty
+  // title) — a plain insert, same path as handleAddNotebookEntry.
+  const handleDuplicateNotebookEntry = useCallback((id: string) => {
+    setNotebookEntries(prev => {
+      const existing = prev.find(e => e.id === id);
+      if (!existing) return prev;
+      const now = new Date().toISOString();
+      const copy: NotebookEntry = {
+        ...existing,
+        id: generateId(),
+        title: existing.title.trim() ? `${existing.title} (Copy)` : '',
+        pinned: false,
+        favorite: false,
+        isDeleted: false,
+        deletedAt: undefined,
+        createdAt: now,
+        updatedAt: now,
+      };
+      if (userId) {
+        supabase.from('notebook_entries').insert({ id: copy.id, user_id: userId, data: copy }).then(({ error }) => {
+          if (error) {
+            console.error('Failed to save duplicated notebook entry to Supabase:', error);
+            showTradeImportToast('error', 'Failed to save the duplicated note — it may not appear on other devices.');
+          }
+        });
+      } else {
+        console.error('Cannot save notebook entry to Supabase: no authenticated user id.');
+        showTradeImportToast('error', 'Not signed in — this note was NOT saved and will be lost on refresh.');
+      }
+      return [...prev, copy];
+    });
+  }, [userId]);
+
+  // ---- Notebook: bulk actions (multi-select in the note list) ----
+  const handleBulkMoveNotebookEntries = useCallback((ids: string[], folder: string) => {
+    setNotebookEntries(prev => {
+      const idSet = new Set(ids);
+      const now = new Date().toISOString();
+      const updated = prev.map(e => idSet.has(e.id) ? { ...e, folder, updatedAt: now } : e);
+      if (userId) {
+        updated.filter(e => idSet.has(e.id)).forEach(e => {
+          supabase.from('notebook_entries').update({ data: e }).eq('id', e.id).eq('user_id', userId).then(({ error }) => {
+            if (error) {
+              console.error('Failed to bulk-move notebook entry in Supabase:', error);
+              showTradeImportToast('error', 'Failed to move some notes — they may not sync to other devices.');
+            }
+          });
+        });
+      } else {
+        showTradeImportToast('error', 'Not signed in — these note changes were NOT saved and will be lost on refresh.');
+      }
+      return updated;
+    });
+  }, [userId]);
+
+  const handleBulkSoftDeleteNotebookEntries = useCallback((ids: string[]) => {
+    setNotebookEntries(prev => {
+      const idSet = new Set(ids);
+      const now = new Date().toISOString();
+      const updated = prev.map(e => idSet.has(e.id) ? { ...e, isDeleted: true, deletedAt: now, pinned: false } : e);
+      if (userId) {
+        updated.filter(e => idSet.has(e.id)).forEach(e => {
+          supabase.from('notebook_entries').update({ data: e }).eq('id', e.id).eq('user_id', userId).then(({ error }) => {
+            if (error) {
+              console.error('Failed to bulk-delete notebook entry in Supabase:', error);
+              showTradeImportToast('error', 'Failed to delete some notes on the server — they may reappear on reload.');
+            }
+          });
+        });
+      } else {
+        showTradeImportToast('error', 'Not signed in — these notes were only removed locally and may reappear on reload.');
+      }
+      return updated;
+    });
+  }, [userId]);
+
+  // Permanently deletes every entry currently in "Recently Deleted".
+  const handleEmptyNotebookTrash = useCallback(() => {
+    setNotebookEntries(prev => {
+      const toDelete = prev.filter(e => e.isDeleted);
+      if (toDelete.length > 0 && userId) {
+        toDelete.forEach(e => {
+          supabase.from('notebook_entries').delete().eq('id', e.id).eq('user_id', userId).then(({ error }) => {
+            if (error) console.error('Failed to permanently delete notebook entry from Supabase:', error);
+          });
+        });
+      }
+      return prev.filter(e => !e.isDeleted);
     });
   }, [userId]);
 
@@ -5248,6 +5382,11 @@ Return ONLY a JSON object — no markdown, no code fences, no commentary — wit
     handleAddNotebookEntry,
     handleUpdateNotebookEntry,
     handleToggleNotebookEntryPin,
+    handleToggleNotebookEntryFavorite,
+    handleDuplicateNotebookEntry,
+    handleBulkMoveNotebookEntries,
+    handleBulkSoftDeleteNotebookEntries,
+    handleEmptyNotebookTrash,
     handleSoftDeleteNotebookEntry,
     handleRestoreNotebookEntry,
     handlePermanentDeleteNotebookEntry,
