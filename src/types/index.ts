@@ -360,16 +360,41 @@ export interface NotebookEntry {
   body: string;
   // '' means "no folder" / uncategorized — still shows up in an "All
   // Notes"-style view, just not under any named folder.
+  // A '/' inside a folder name denotes nesting (e.g. "Trading/Setups"),
+  // rendered as a collapsible tree in the folder rail. Plain string, no
+  // separate tree structure, so this needs zero migration.
   folder: string;
   tags: string[];
   pinned: boolean;
+  // Distinct from `pinned` (which just sorts to the top of the current
+  // list) — favorites get their own dedicated view in the folder rail.
+  favorite: boolean;
+  // Optional cover accent — one of NOTEBOOK_COVER_COLORS (see below).
+  // Shows as a colored strip on the note-list row and the editor header.
+  color?: string;
+  // Optional reminder timestamp; entries with a reminder in the past show
+  // an "overdue" badge, upcoming ones show the date, until cleared.
+  reminderAt?: string;
   // Soft-delete: moves the entry to "Recently Deleted" instead of removing
-  // it immediately. deletedAt lets the UI (part 2 session) show "deleted
-  // 3 days ago" and/or auto-purge after a retention window.
+  // it immediately. deletedAt lets the UI show "deleted 3 days ago" and
+  // drives auto-purge after a 30-day retention window.
   isDeleted: boolean;
   deletedAt?: string;
   createdAt: string;
   updatedAt: string;
+}
+
+export const NOTEBOOK_COVER_COLORS = [
+  'purple', 'blue', 'emerald', 'pink', 'amber', 'rose', 'cyan', 'indigo',
+] as const;
+export type NotebookCoverColor = typeof NOTEBOOK_COVER_COLORS[number];
+
+export interface NotebookTemplate {
+  id: string;
+  name: string;
+  description: string;
+  // Rendered straight into the contentEditable body on note creation.
+  bodyHtml: string;
 }
 
 export interface StoredData {
