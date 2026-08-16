@@ -573,40 +573,98 @@ export function NotebookScreen() {
   const applyFontFamily = (family: string) => exec('fontName', family);
 
   // Font size: execCommand's 'fontSize' only understands legacy levels
-  // 1–7, not real px values, so we still need a two-step trick — but we
-  // lean on the exact same browser mechanism as fontName/bold above
-  // rather than manual Range insertion. execCommand('fontSize', '7')
-  // wraps only the intended text (or, with a collapsed caret, marks just
-  // the spot to keep typing from) using the browser's own selection
-  // logic — proven reliable, since it's what Bold/Italic already use.
-  // We then swap the resulting <font size="7"> tag for a real
-  // <span style="font-size:Npx">, and explicitly re-point the selection
-  // into the replacement so a collapsed caret keeps typing inside it.
+  // 1–7, not real px values, so we still need a two-step trick — apply
+  // level 7 (letting the browser's own selection logic decide the scope,
+  // same as fontName/bold above), then swap the resulting <font size="7">
+  // for a real <span style="font-size:Npx">.
+  //
+  // Two bugs lived in the previous version of this function:
+  //  1. The check that re-pointed the cursor into the new span was
+  //     `sel.rangeCount === 0`, which is never true — we'd just restored
+  //     the selection two lines above, so it was always 1. The cursor
+  //     was left wherever the browser happened to put it (sometimes the
+  //     very end of the note), which is why typing afterward could land
+  //     in the wrong place, or previously-typed text appeared to "jump".
+  //  2. If the saved selection pointed at a node that had since been
+  //     replaced by a *previous* size change, `sel.addRange(...)` threw
+  //     silently — which aborted the whole function before it reached
+  //     `onBodyInput()`, so every size click after that first glitch
+  //     appeared to do nothing at all ("all sizes stop working").
   const applyFontSize = (px: number) => {
     const editor = bodyRef.current;
     if (!editor) return;
     editor.focus();
     const sel = window.getSelection();
-    if (savedRangeRef.current && sel) {
+    if (!sel) return;
+
+    // Restore the saved caret/selection, but only if it's still valid —
+    // its nodes can go stale after a prior size change replaced them.
+    // Fall back to the end of the note instead of throwing/no-op'ing.
+    let range: Range;
+    const saved = savedRangeRef.current;
+    if (saved && saved.startContainer.isConnected && saved.endContainer.isConnected) {
+      try {
+        sel.removeAllRanges();
+        sel.addRange(saved);
+        range = sel.getRangeAt(0);
+      } catch {
+        range = document.createRange();
+        range.selectNodeContents(editor);
+        range.collapse(false);
+        sel.removeAllRanges();
+        sel.addRange(range);
+      }
+    } else {
+      range = document.createRange();
+      range.selectNodeContents(editor);
+      range.collapse(false);
       sel.removeAllRanges();
-      sel.addRange(savedRangeRef.current);
+      sel.addRange(range);
     }
+
+    const wasCollapsed = range.collapsed;
+    const originalRange = range.cloneRange();
+
     document.execCommand('fontSize', false, '7');
 
+    // A selection that crossed existing bold/link/etc. nodes can come
+    // back as more than one <font> tag — replace every one of them.
+    const spans: HTMLElement[] = [];
     editor.querySelectorAll('font[size="7"]').forEach((fontEl) => {
       const span = document.createElement('span');
       span.style.fontSize = `${px}px`;
       while (fontEl.firstChild) span.appendChild(fontEl.firstChild);
       fontEl.replaceWith(span);
-
-      if (sel && sel.rangeCount === 0) {
-        const r = document.createRange();
-        r.selectNodeContents(span);
-        r.collapse(false);
-        sel.addRange(r);
-        savedRangeRef.current = r.cloneRange();
-      }
+      spans.push(span);
     });
+
+    // Some browsers don't materialize any <font> tag for a plain caret
+    // with nothing highlighted — insert an empty marker ourselves so the
+    // size still applies to whatever gets typed next.
+    if (spans.length === 0 && wasCollapsed) {
+      const span = document.createElement('span');
+      span.style.fontSize = `${px}px`;
+      span.appendChild(document.createTextNode('\u200B'));
+      originalRange.insertNode(span);
+      spans.push(span);
+    }
+
+    if (spans.length > 0) {
+      const newRange = document.createRange();
+      if (wasCollapsed) {
+        // Land the cursor at the END of the new span — right after the
+        // text that was already there — so new typing continues forward
+        // from where the caret actually was, not from inside/around it.
+        newRange.selectNodeContents(spans[spans.length - 1]);
+        newRange.collapse(false);
+      } else {
+        newRange.setStartBefore(spans[0]);
+        newRange.setEndAfter(spans[spans.length - 1]);
+      }
+      sel.removeAllRanges();
+      sel.addRange(newRange);
+      savedRangeRef.current = newRange.cloneRange();
+    }
 
     onBodyInput();
   };
