@@ -84,6 +84,24 @@ const FOLDER_COLOR_TEXT_BY_BG: Record<string, string> = {
 };
 const toTextColorClass = (bgClass: string) => FOLDER_COLOR_TEXT_BY_BG[bgClass] ?? 'text-zinc-400';
 
+// Selected/active row tint per folder color, keyed by the same bg-*-500
+// string resolveFolderColor() returns — so a folder's highlight in the
+// sidebar matches its own icon color instead of always being purple.
+// Static literal map (not computed) so Tailwind's JIT scanner can find
+// every class at build time.
+const FOLDER_SELECTED_BY_BG: Record<string, { dark: string; light: string }> = {
+  'bg-purple-500': { dark: 'bg-purple-500/10 text-purple-300', light: 'bg-purple-50 text-purple-700' },
+  'bg-blue-500': { dark: 'bg-blue-500/10 text-blue-300', light: 'bg-blue-50 text-blue-700' },
+  'bg-emerald-500': { dark: 'bg-emerald-500/10 text-emerald-300', light: 'bg-emerald-50 text-emerald-700' },
+  'bg-pink-500': { dark: 'bg-pink-500/10 text-pink-300', light: 'bg-pink-50 text-pink-700' },
+  'bg-amber-500': { dark: 'bg-amber-500/10 text-amber-300', light: 'bg-amber-50 text-amber-700' },
+  'bg-rose-500': { dark: 'bg-rose-500/10 text-rose-300', light: 'bg-rose-50 text-rose-700' },
+  'bg-cyan-500': { dark: 'bg-cyan-500/10 text-cyan-300', light: 'bg-cyan-50 text-cyan-700' },
+  'bg-indigo-500': { dark: 'bg-indigo-500/10 text-indigo-300', light: 'bg-indigo-50 text-indigo-700' },
+};
+const toFolderSelectedClass = (bgClass: string, theme: string) =>
+  (FOLDER_SELECTED_BY_BG[bgClass] ?? FOLDER_SELECTED_BY_BG['bg-purple-500'])[theme !== 'light' ? 'dark' : 'light'];
+
 // Static Tailwind class map for note cover colors — kept as literal
 // strings (not built with template literals) so Tailwind's JIT scanner
 // picks them all up at build time.
@@ -719,7 +737,7 @@ export function NotebookScreen() {
             className={cn(
               'flex-1 flex items-center gap-2.5 px-2 py-2 rounded-lg text-base text-left transition-colors min-w-0',
               activeFolder === node.fullPath
-                ? (theme !== 'light' ? 'bg-purple-500/10 text-purple-300' : 'bg-purple-50 text-purple-700')
+                ? toFolderSelectedClass(resolveFolderColor(node.fullPath), theme)
                 : cn(textBody, theme !== 'light' ? 'hover:bg-zinc-800/60' : 'hover:bg-zinc-50')
             )}
           >
