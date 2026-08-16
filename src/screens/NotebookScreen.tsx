@@ -703,22 +703,26 @@ export function NotebookScreen() {
             )}
           >
             <span className="truncate flex-1">{node.name}</span>
-            <span className={cn('text-xs flex-shrink-0', textMuted)}>{countForFolderPath(node.fullPath)}</span>
           </button>
 
-          {/* Delete — a dedicated button (not an absolutely-positioned X
-              overlapping the note-count number, which was illegible and
-              looked like "×0"), but only shown on hover/focus of the row
-              so it doesn't sit there permanently next to every folder
-              name. Every folder is deletable, including the starter ones —
-              nothing here is "built in". */}
-          <button
-            onClick={() => setFolderPendingDelete(node.fullPath)}
-            title="Delete folder"
-            className="flex-shrink-0 p-1.5 rounded-md text-rose-400/70 hover:text-rose-400 hover:bg-rose-500/10 transition-colors opacity-0 group-hover/folder:opacity-100 focus:opacity-100"
-          >
-            <Trash2 className="w-3.5 h-3.5" />
-          </button>
+          {/* Count / delete share one fixed-size slot so the row never
+              changes width on hover — the count fades out and the trash
+              icon fades in on top of the exact same spot, instead of the
+              delete button appearing as extra width next to the count
+              (which pushed the number left and made rows misalign). */}
+          <div className="relative flex-shrink-0 w-7 h-7 flex items-center justify-center">
+            <span className={cn('absolute text-xs transition-opacity duration-150', textMuted, 'group-hover/folder:opacity-0')}>
+              {countForFolderPath(node.fullPath)}
+            </span>
+            <button
+              onClick={() => setFolderPendingDelete(node.fullPath)}
+              title="Delete folder"
+              className="absolute inset-0 flex items-center justify-center rounded-md text-rose-400/70 hover:text-rose-400 hover:bg-rose-500/10 transition-opacity duration-150 opacity-0 group-hover/folder:opacity-100 focus:opacity-100"
+            >
+              <Trash2 className="w-3.5 h-3.5" />
+            </button>
+          </div>
+
 
           {colorPickerFolder === node.fullPath && (
             <div
