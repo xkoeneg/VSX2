@@ -1007,9 +1007,9 @@ export function NotebookScreen() {
               <button
                 onClick={() => setIsAddingFolder(true)}
                 className={cn(
-                  'w-full flex items-center justify-center gap-2 px-3 py-2 rounded-lg text-sm font-medium border transition-colors',
+                  'w-full flex items-center justify-center gap-2 px-3 py-2.5 rounded-xl text-sm font-medium border transition-colors',
                   theme !== 'light'
-                    ? 'bg-zinc-800 hover:bg-zinc-700 border-zinc-700 text-white'
+                    ? 'bg-zinc-800/80 hover:bg-zinc-800 border-zinc-700/80 text-white'
                     : 'bg-zinc-900 hover:bg-zinc-800 border-zinc-900 text-white'
                 )}
               >
@@ -1084,30 +1084,35 @@ export function NotebookScreen() {
               </div>
             ) : (
               <>
-                <span className={cn('text-sm font-medium truncate', textBody)}>
+                <span className={cn('text-sm font-semibold truncate', theme !== 'light' ? 'text-white' : 'text-zinc-900')}>
                   {activeFolder === ALL_NOTES ? 'All Notes' : activeFolder === FAVORITES ? 'Favorites' : activeFolder}
                 </span>
-                <div className="flex items-center gap-1">
+                <div className={cn('flex items-center gap-0.5 rounded-full border p-0.5 flex-shrink-0', border, theme !== 'light' ? 'bg-zinc-900' : 'bg-white')}>
                   <button
                     onClick={() => setSelectMode(v => !v)}
                     title="Select notes"
-                    className={cn('p-1.5 rounded-md transition-colors', selectMode ? 'text-purple-400' : cn(textMuted, 'hover:text-zinc-200'))}
+                    className={cn(
+                      'flex items-center justify-center w-7 h-7 rounded-full transition-colors',
+                      selectMode
+                        ? 'bg-purple-500/15 text-purple-400'
+                        : cn(textMuted, theme !== 'light' ? 'hover:bg-zinc-800 hover:text-zinc-200' : 'hover:bg-zinc-100 hover:text-zinc-700')
+                    )}
                   >
-                    <CheckSquare className="w-4 h-4" />
+                    <CheckSquare className="w-3.5 h-3.5" />
                   </button>
                   <button
                     onClick={() => setViewMode(v => v === 'list' ? 'grid' : 'list')}
                     title={viewMode === 'list' ? 'Grid view' : 'List view'}
-                    className={cn('p-1.5 rounded-md transition-colors', textMuted, 'hover:text-zinc-200')}
+                    className={cn('flex items-center justify-center w-7 h-7 rounded-full transition-colors', textMuted, theme !== 'light' ? 'hover:bg-zinc-800 hover:text-zinc-200' : 'hover:bg-zinc-100 hover:text-zinc-700')}
                   >
-                    {viewMode === 'list' ? <LayoutGrid className="w-4 h-4" /> : <Rows3 className="w-4 h-4" />}
+                    {viewMode === 'list' ? <LayoutGrid className="w-3.5 h-3.5" /> : <Rows3 className="w-3.5 h-3.5" />}
                   </button>
                   <button
                     onClick={cycleSort}
                     title={`Sort: ${sortLabel}`}
-                    className={cn('p-1.5 rounded-md transition-colors', textMuted, 'hover:text-zinc-200')}
+                    className={cn('flex items-center justify-center w-7 h-7 rounded-full transition-colors', textMuted, theme !== 'light' ? 'hover:bg-zinc-800 hover:text-zinc-200' : 'hover:bg-zinc-100 hover:text-zinc-700')}
                   >
-                    <ArrowUpDown className="w-4 h-4" />
+                    <ArrowUpDown className="w-3.5 h-3.5" />
                   </button>
                 </div>
               </>
@@ -1247,16 +1252,19 @@ export function NotebookScreen() {
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 p-2.5">
                 {visibleEntries.map(entry => {
                   const cc = entry.color ? COVER_COLOR_CLASSES[entry.color] : null;
+                  const isSelected = selectedEntryId === entry.id && !selectMode;
                   return (
                     <button
                       key={entry.id}
                       onClick={() => selectMode ? toggleSelect(entry.id) : setSelectedEntryId(entry.id)}
                       className={cn(
-                        'text-left p-3.5 rounded-lg border flex flex-col gap-1.5 min-h-[112px] transition-colors',
-                        border,
-                        selectedEntryId === entry.id && !selectMode
-                          ? (theme !== 'light' ? 'bg-zinc-800/70' : 'bg-zinc-100')
-                          : (theme !== 'light' ? 'hover:bg-zinc-800/40' : 'hover:bg-zinc-50'),
+                        'text-left p-3.5 rounded-xl border flex flex-col gap-1.5 min-h-[112px] transition-all',
+                        isSelected
+                          ? (theme !== 'light' ? 'bg-purple-500/10 border-purple-500/40' : 'bg-purple-50 border-purple-200')
+                          : cn(
+                              theme !== 'light' ? 'bg-zinc-900/40 border-zinc-800/80' : 'bg-white border-zinc-200',
+                              theme !== 'light' ? 'hover:bg-zinc-800/50 hover:border-zinc-700' : 'hover:bg-zinc-50 hover:border-zinc-300'
+                            ),
                         cc?.bgSoft
                       )}
                     >
@@ -1269,24 +1277,30 @@ export function NotebookScreen() {
                         </p>
                       </div>
                       <p className={cn('text-sm truncate', textMuted)}>{stripHtml(entry.body) || 'Empty note'}</p>
-                      <p className={cn('text-xs mt-auto', textMuted)}>{formatShortDate(entry.updatedAt)}</p>
+                      <span className={cn('text-xs mt-auto w-fit px-1.5 py-0.5 rounded-md', theme !== 'light' ? 'bg-zinc-800/80 text-zinc-500' : 'bg-zinc-100 text-zinc-500')}>
+                        {formatShortDate(entry.updatedAt)}
+                      </span>
                     </button>
                   );
                 })}
               </div>
             ) : (
-              visibleEntries.map(entry => {
+              <div className="flex flex-col gap-2 p-2.5">
+              {visibleEntries.map(entry => {
                 const cc = entry.color ? COVER_COLOR_CLASSES[entry.color] : null;
                 const overdue = !!entry.reminderAt && new Date(entry.reminderAt).getTime() < Date.now();
+                const isSelected = selectedEntryId === entry.id && !selectMode;
                 return (
                   <div
                     key={entry.id}
                     className={cn(
-                      'flex items-stretch border-b transition-colors',
-                      border,
-                      selectedEntryId === entry.id && !selectMode
-                        ? (theme !== 'light' ? 'bg-zinc-800/70' : 'bg-zinc-100')
-                        : (theme !== 'light' ? 'hover:bg-zinc-800/40' : 'hover:bg-zinc-50')
+                      'group/note relative flex items-stretch rounded-xl border transition-all',
+                      isSelected
+                        ? (theme !== 'light' ? 'bg-purple-500/10 border-purple-500/40' : 'bg-purple-50 border-purple-200')
+                        : cn(
+                            theme !== 'light' ? 'bg-zinc-900/40 border-zinc-800/80' : 'bg-white border-zinc-200',
+                            theme !== 'light' ? 'hover:bg-zinc-800/50 hover:border-zinc-700' : 'hover:bg-zinc-50 hover:border-zinc-300'
+                          )
                     )}
                   >
                     {selectMode && !isTrashView && (
@@ -1294,23 +1308,30 @@ export function NotebookScreen() {
                         {selectedIds.has(entry.id) ? <CheckSquare className="w-4 h-4 text-purple-400" /> : <Square className={cn('w-4 h-4', textMuted)} />}
                       </button>
                     )}
-                    {cc && <span className={cn('w-1 flex-shrink-0', cc.bar)} />}
+                    {cc && <span className={cn('w-1 flex-shrink-0 rounded-l-xl', cc.bar)} />}
                     <button
                       onClick={() => selectMode && !isTrashView ? toggleSelect(entry.id) : setSelectedEntryId(entry.id)}
-                      className="flex-1 text-left px-4 py-3.5 min-w-0"
+                      className="flex-1 text-left px-4 py-3 min-w-0"
                     >
-                      <div className="flex items-center gap-2 mb-0.5">
+                      <div className="flex items-center gap-2 mb-1">
                         {entry.pinned && !isTrashView && <Pin className="w-3 h-3 text-amber-400 flex-shrink-0" />}
                         {entry.favorite && !isTrashView && <Star className="w-3 h-3 text-amber-400 fill-amber-400 flex-shrink-0" />}
                         <p className={cn('text-base font-semibold truncate', theme !== 'light' ? 'text-white' : 'text-zinc-900')}>
                           {formatNoteHeading(entry)}
                         </p>
                       </div>
-                      <p className={cn('text-sm truncate mb-0.5', textMuted)}>{stripHtml(entry.body) || 'Empty note'}</p>
-                      <div className="flex items-center gap-2.5">
-                        <p className={cn('text-sm', textMuted)}>{formatShortDate(entry.updatedAt)}</p>
+                      <p className={cn('text-sm truncate mb-2', textMuted)}>{stripHtml(entry.body) || 'Empty note'}</p>
+                      <div className="flex items-center gap-2">
+                        <span className={cn('text-xs px-1.5 py-0.5 rounded-md', theme !== 'light' ? 'bg-zinc-800/80 text-zinc-500' : 'bg-zinc-100 text-zinc-500')}>
+                          {formatShortDate(entry.updatedAt)}
+                        </span>
                         {entry.reminderAt && !isTrashView && (
-                          <span className={cn('flex items-center gap-1 text-xs', overdue ? 'text-rose-400' : textMuted)}>
+                          <span className={cn(
+                            'flex items-center gap-1 text-xs px-1.5 py-0.5 rounded-md',
+                            overdue
+                              ? 'bg-rose-500/15 text-rose-300'
+                              : (theme !== 'light' ? 'bg-zinc-800/80 text-zinc-500' : 'bg-zinc-100 text-zinc-500')
+                          )}>
                             <Bell className="w-3 h-3" />
                             {formatShortDate(entry.reminderAt)}
                           </span>
@@ -1319,7 +1340,8 @@ export function NotebookScreen() {
                     </button>
                   </div>
                 );
-              })
+              })}
+              </div>
             )}
           </div>
         </div>
