@@ -610,9 +610,18 @@ export function NotebookScreen() {
         </div>
       </div>
 
-      {/* ---- 3-pane layout ---- */}
-      <div className={cn('grid grid-cols-1 lg:grid-cols-[220px_280px_1fr] gap-0 rounded-xl border overflow-hidden', border, panelBg)}
-        style={{ minHeight: '70vh' }}
+      {/* ---- 3-pane layout ----
+          `lg:h-[70vh]` (not just min-h) is the fix here: below lg the three
+          panes stack vertically and the page itself scrolls, so a min-height
+          is fine. At lg+ they sit side-by-side as a fixed-height grid row —
+          each pane is a `flex flex-col` with an inner `flex-1 overflow-y-auto`
+          region (folder rail, note list, editor body) that's meant to scroll
+          on its own. That only works if this grid row has a bounded height;
+          with min-height alone the row had no ceiling, so a long note body
+          just kept growing the row (and the whole frame) instead of
+          scrolling internally. Capping it with h-[70vh] at lg gives the
+          flex-1 children something finite to fill and clip against. */}
+      <div className={cn('grid grid-cols-1 lg:grid-cols-[220px_280px_1fr] gap-0 rounded-xl border overflow-hidden min-h-[70vh] lg:h-[70vh]', border, panelBg)}
       >
         {/* ==== Folder rail ==== */}
         <div className={cn('flex flex-col border-b lg:border-b-0 lg:border-r', border)}>
