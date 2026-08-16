@@ -1096,9 +1096,9 @@ export function NotebookScreen() {
           </div>
 
           {selectMode && !isTrashView && (
-            <div className={cn('flex items-center justify-between gap-2.5 px-3.5 py-2.5 border-b', border, theme !== 'light' ? 'bg-zinc-800/40' : 'bg-zinc-50')}>
-              <span className={cn('text-sm', textMuted)}>{selectedIds.size} selected</span>
-              <div className="flex items-center gap-2">
+            <div className={cn('flex flex-wrap items-center justify-between gap-x-2 gap-y-1.5 px-3.5 py-2.5 border-b', border, theme !== 'light' ? 'bg-zinc-800/40' : 'bg-zinc-50')}>
+              <span className={cn('text-sm flex-shrink-0', textMuted)}>{selectedIds.size} selected</span>
+              <div className="flex items-center gap-1 flex-wrap justify-end">
                 <select
                   onChange={(e) => {
                     if (e.target.value && selectedIds.size > 0) {
@@ -1109,7 +1109,7 @@ export function NotebookScreen() {
                   }}
                   defaultValue=""
                   disabled={selectedIds.size === 0}
-                  className={cn('text-sm border rounded-md px-2 py-1.5 outline-none bg-transparent disabled:opacity-40', border, textMuted)}
+                  className={cn('text-sm border rounded-md px-1.5 py-1.5 outline-none bg-transparent disabled:opacity-40 min-w-0 max-w-[92px]', border, textMuted)}
                 >
                   <option value="" disabled>Move to&hellip;</option>
                   <option value="__uncategorized__">Uncategorized</option>
@@ -1118,13 +1118,13 @@ export function NotebookScreen() {
                 <button
                   onClick={() => { handleBulkSoftDeleteNotebookEntries(Array.from(selectedIds)); setSelectedIds(new Set()); }}
                   disabled={selectedIds.size === 0}
-                  className="text-sm font-medium text-rose-400 px-2.5 py-1.5 rounded-md hover:bg-rose-500/10 disabled:opacity-40 transition-colors"
+                  className="text-sm font-medium text-rose-400 px-2 py-1.5 rounded-md hover:bg-rose-500/10 disabled:opacity-40 transition-colors flex-shrink-0"
                 >
                   Delete
                 </button>
                 <button
                   onClick={() => { setSelectMode(false); setSelectedIds(new Set()); }}
-                  className={cn('text-sm px-2.5 py-1.5 rounded-md transition-colors', textMuted, 'hover:text-zinc-200')}
+                  className={cn('text-sm px-2 py-1.5 rounded-md transition-colors flex-shrink-0', textMuted, 'hover:text-zinc-200')}
                 >
                   Cancel
                 </button>
