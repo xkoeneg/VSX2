@@ -1,7 +1,6 @@
 import type React from 'react';
 import { useEffect, useMemo, useState } from 'react';
 import {
-  Eye,
   Lock,
   Loader2,
   AlertCircle,
@@ -95,9 +94,38 @@ type PreviewData = {
   trades: PreviewTrade[];
 };
 
+// 'investor' sees real dollars everywhere. 'friend' never sees a raw dollar
+// figure — only R-multiples (reward as a multiple of risk) and percentages,
+// so a shared friend link can't be used to back into account size. Resolved
+// server-side per session (see verify_viewer_access / redeem_preview_access
+// in sql/002_viewer_two_factor.sql) and threaded down as a prop; nothing
+// here re-derives it from data the client already has.
+type ViewMode = 'investor' | 'friend';
+
 function formatMoney(value: number): string {
   const sign = value < 0 ? '-' : '';
   return `${sign}$${Math.abs(value).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+}
+
+function formatR(value: number): string {
+  const sign = value >= 0 ? '+' : '';
+  return `${sign}${value.toFixed(2)}R`;
+}
+
+// Per-trade R-multiple: profit/loss expressed as a multiple of the amount
+// risked. null when the trade has no logged risk amount to divide by —
+// callers should fall back to a masked placeholder rather than 0, since 0R
+// would misleadingly read as a breakeven trade.
+function getTradeR(trade: PreviewTrade): number | null {
+  return trade.riskAmount && trade.riskAmount > 0 ? trade.profitLoss / trade.riskAmount : null;
+}
+
+// The single shared masking rule: investor mode always gets the real
+// dollar amount; friend mode gets the R-multiple (or a masked placeholder
+// if this particular trade has no risk amount logged), never the dollars.
+function formatPnl(viewMode: ViewMode, dollarValue: number, rMultiple: number | null): string {
+  if (viewMode === 'investor') return formatMoney(dollarValue);
+  return rMultiple !== null ? formatR(rMultiple) : '••••';
 }
 
 // Compact variant for tight mobile calendar cells — mirrors the main app's
@@ -110,6 +138,7 @@ function formatMoneyCompact(value: number): string {
   }
   return `${sign}$${abs.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`;
 }
+
 
 function formatDateLabel(iso: string): string {
   const d = new Date(iso);
@@ -180,15 +209,26 @@ interface TradeAnalyticsCardProps {
   };
   tradeFilter: PreviewTradeFilter;
   setTradeFilter: React.Dispatch<React.SetStateAction<PreviewTradeFilter>>;
+  viewMode: ViewMode;
 }
 
-function TradeAnalyticsCard({ trades, stats, tradeFilter, setTradeFilter }: TradeAnalyticsCardProps) {
+function TradeAnalyticsCard({ trades, stats, tradeFilter, setTradeFilter, viewMode }: TradeAnalyticsCardProps) {
   const total = trades.length;
   const wins = trades.filter(t => t.profitLoss >= 10).length;
   const losses = trades.filter(t => t.profitLoss <= -10).length;
   const breakeven = total - wins - losses;
   const netPnl = trades.reduce((sum, t) => sum + t.profitLoss, 0);
   const isNetPositive = netPnl >= 0;
+
+  // R-multiple equivalents of Net P&L / Avg Win / Avg Loss, for friend mode.
+  // Trades with no logged risk amount simply don't contribute an R value —
+  // there's no dollar amount to fall back to reveal.
+  const tradesWithR = trades.map(t => ({ trade: t, r: getTradeR(t) })).filter(x => x.r !== null) as { trade: PreviewTrade; r: number }[];
+  const netR = tradesWithR.reduce((sum, x) => sum + x.r, 0);
+  const winningR = tradesWithR.filter(x => x.trade.profitLoss > 0);
+  const losingR = tradesWithR.filter(x => x.trade.profitLoss < 0);
+  const avgWinR = winningR.length > 0 ? winningR.reduce((s, x) => s + x.r, 0) / winningR.length : 0;
+  const avgLossR = losingR.length > 0 ? Math.abs(losingR.reduce((s, x) => s + x.r, 0)) / losingR.length : 0;
 
   // Win Rate donut — single teal arc over a dark track, rounded cap,
   // starting at 12 o'clock and sweeping clockwise by win rate %.
@@ -213,9 +253,9 @@ function TradeAnalyticsCard({ trades, stats, tradeFilter, setTradeFilter }: Trad
             : <TrendingDown className="w-5 h-5 text-rose-500" />}
         </div>
         <div className="min-w-0">
-          <p className="text-[10px] text-zinc-500 font-semibold tracking-wider uppercase">Net P&amp;L</p>
+          <p className="text-[10px] text-zinc-500 font-semibold tracking-wider uppercase">{viewMode === 'investor' ? 'Net P&L' : 'Net R'}</p>
           <p className={cn("text-xl font-bold tabular-nums leading-tight", isNetPositive ? 'text-emerald-400' : 'text-rose-500')}>
-            {formatMoney(netPnl)}
+            {viewMode === 'investor' ? formatMoney(netPnl) : formatR(netR)}
           </p>
         </div>
       </div>
@@ -301,9 +341,19 @@ function TradeAnalyticsCard({ trades, stats, tradeFilter, setTradeFilter }: Trad
           <p className="text-[clamp(1rem,8cqw,1.25rem)] font-bold tabular-nums leading-tight text-white whitespace-nowrap">
             {total > 0 && isFinite(stats.profitFactor) ? stats.profitFactor.toFixed(2) : 'N/A'}
             <span className="text-[clamp(0.6rem,3cqw,0.75rem)] font-medium tabular-nums text-zinc-500 ml-1.5">
-              <span className="text-emerald-500">+{formatMoney(stats.avgWin)}</span>
-              <span className="mx-0.5">/</span>
-              <span className="text-rose-500">{formatMoney(-stats.avgLoss)}</span>
+              {viewMode === 'investor' ? (
+                <>
+                  <span className="text-emerald-500">+{formatMoney(stats.avgWin)}</span>
+                  <span className="mx-0.5">/</span>
+                  <span className="text-rose-500">{formatMoney(-stats.avgLoss)}</span>
+                </>
+              ) : (
+                <>
+                  <span className="text-emerald-500">+{avgWinR.toFixed(2)}R</span>
+                  <span className="mx-0.5">/</span>
+                  <span className="text-rose-500">-{avgLossR.toFixed(2)}R</span>
+                </>
+              )}
             </span>
           </p>
         </div>
@@ -339,9 +389,10 @@ interface PreviewFeaturedCardProps {
   account: PreviewAccount | undefined;
   displayNumber: number;
   onOpenDetail: (id: string) => void;
+  viewMode: ViewMode;
 }
 
-function PreviewFeaturedCard({ trade, account, displayNumber, onOpenDetail }: PreviewFeaturedCardProps) {
+function PreviewFeaturedCard({ trade, account, displayNumber, onOpenDetail, viewMode }: PreviewFeaturedCardProps) {
   const coverImage =
     trade.timeframes.find(tf => tf.name === 'Execution/Result')?.images[0]?.url ||
     trade.timeframes.flatMap(tf => tf.images)[0]?.url;
@@ -390,7 +441,7 @@ function PreviewFeaturedCard({ trade, account, displayNumber, onOpenDetail }: Pr
           <h4 className="font-semibold truncate tracking-tight text-sm min-w-0 text-white">{trade.symbol}</h4>
           <div className="flex items-center gap-1.5 flex-shrink-0">
             <span className={cn('text-sm font-mono font-bold tracking-tight whitespace-nowrap', isBreakeven ? 'text-zinc-300' : isWin ? 'text-green-300' : 'text-red-300')}>
-              {formatMoney(trade.profitLoss)}
+              {formatPnl(viewMode, trade.profitLoss, getTradeR(trade))}
             </span>
           </div>
         </div>
@@ -432,9 +483,10 @@ interface PreviewTradeRowProps {
   account: PreviewAccount | undefined;
   displayNumber: number;
   onOpenDetail: (id: string) => void;
+  viewMode: ViewMode;
 }
 
-function PreviewTradeRow({ trade, account, displayNumber, onOpenDetail }: PreviewTradeRowProps) {
+function PreviewTradeRow({ trade, account, displayNumber, onOpenDetail, viewMode }: PreviewTradeRowProps) {
   const isWin = trade.profitLoss >= 0;
   const isBreakeven = Math.abs(trade.profitLoss) < 10;
   const rowRR = trade.riskAmount && trade.riskAmount > 0 ? trade.profitLoss / trade.riskAmount : null;
@@ -463,7 +515,11 @@ function PreviewTradeRow({ trade, account, displayNumber, onOpenDetail }: Previe
       </td>
       <td className="px-3 py-2.5 text-sm text-zinc-400">{position}</td>
       <td className="px-3 py-2.5 text-sm font-mono text-right font-bold whitespace-nowrap">
-        <span className={isWin ? 'text-emerald-400' : 'text-rose-500'}>{formatMoney(trade.profitLoss)}</span>
+        {viewMode === 'investor' ? (
+          <span className={isWin ? 'text-emerald-400' : 'text-rose-500'}>{formatMoney(trade.profitLoss)}</span>
+        ) : (
+          <span className="text-zinc-600" title="Hidden in Friend View — see R Multiple">••••</span>
+        )}
       </td>
       <td className="px-3 py-2.5 text-xs font-medium text-right whitespace-nowrap">
         {rowRR !== null ? (
@@ -473,7 +529,9 @@ function PreviewTradeRow({ trade, account, displayNumber, onOpenDetail }: Previe
         ) : '-'}
       </td>
       <td className="px-3 py-2.5 text-sm text-zinc-400 text-right whitespace-nowrap">
-        {trade.riskAmount && trade.riskAmount > 0 ? formatMoney(trade.riskAmount) : '-'}
+        {viewMode === 'friend'
+          ? (trade.riskAmount && trade.riskAmount > 0 ? <span className="text-zinc-600">••••</span> : '-')
+          : (trade.riskAmount && trade.riskAmount > 0 ? formatMoney(trade.riskAmount) : '-')}
       </td>
       <td className="px-3 py-2.5 text-sm text-white font-semibold truncate max-w-[100px]">{trade.symbol}</td>
       <td className="px-3 py-2.5 text-sm text-zinc-400 truncate max-w-[120px]">{trade.setupTypes.join(', ') || '-'}</td>
@@ -484,115 +542,125 @@ function PreviewTradeRow({ trade, account, displayNumber, onOpenDetail }: Previe
 
 interface PreviewScreenProps {
   userId: string;
+  /** Short-lived, single-purpose token from LoginPage's "Have a Viewer
+   *  Passcode?" modal (`/preview/[id]?access_token=...`) — see
+   *  redeem_preview_access in sql/002_viewer_two_factor.sql. Two-factor
+   *  auth (passcode + master password, rate-limited server-side) already
+   *  happened on LoginPage; this screen's only job is to silently confirm
+   *  the token, never to re-prompt. null means someone landed on
+   *  /preview/[id] directly with no token — there's deliberately no
+   *  passcode form here anymore to fall back to (that was the double-modal
+   *  bug); they're sent back to sign in instead. */
+  accessToken: string | null;
   /** Called when the viewer clicks "Exit Preview" — App.tsx wires this to strip the /preview path. */
   onExit: () => void;
 }
 
-export function PreviewScreen({ userId, onExit }: PreviewScreenProps) {
-  const [passcode, setPasscode] = useState('');
-  const [isVerifying, setIsVerifying] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+type PreviewAuthStatus = 'redeeming' | 'ready' | 'expired' | 'error';
+
+export function PreviewScreen({ userId, accessToken, onExit }: PreviewScreenProps) {
+  const [status, setStatus] = useState<PreviewAuthStatus>('redeeming');
   const [data, setData] = useState<PreviewData | null>(null);
+  const [viewMode, setViewMode] = useState<ViewMode>('friend');
   const [openTradeId, setOpenTradeId] = useState<string | null>(null);
   const [monthCursor, setMonthCursor] = useState(() => {
     const now = new Date();
     return new Date(now.getFullYear(), now.getMonth(), 1);
   });
 
-  const handleUnlock = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!passcode.trim()) {
-      setError('Enter the viewer passcode.');
-      return;
-    }
-    setIsVerifying(true);
-    setError(null);
-    try {
-      const { data: rpcData, error: rpcError } = await supabase.rpc('get_preview_journal', {
-        p_user_id: userId,
-        p_passcode: passcode.trim(),
-      });
-      if (rpcError) throw rpcError;
-      if (!rpcData || rpcData.ok !== true) {
-        setError('Incorrect passcode, or this journal is not currently shared.');
-        setIsVerifying(false);
+  useEffect(() => {
+    let cancelled = false;
+
+    async function redeemAndLoad() {
+      if (!accessToken) {
+        setStatus('expired');
         return;
       }
-      // Same-day trade ordering now uses `startTime` (already returned by
-      // this RPC) as the tiebreaker — see sortedTrades below. `tradeNumber`
-      // and `createdAt` are still optional/best-effort on top of that; if
-      // `get_preview_journal` is ever updated to also select a real
-      // `trade_number` or `created_at` column, badges will prefer those
-      // automatically (see getDisplayNumber below).
-      setData({
-        profile: rpcData.profile,
-        accounts: rpcData.accounts || [],
-        trades: rpcData.trades || [],
-      });
-    } catch (err) {
-      console.error('Preview passcode verification failed', err);
-      setError('Something went wrong verifying that passcode. Please try again.');
-    } finally {
-      setIsVerifying(false);
-    }
-  };
+      setStatus('redeeming');
+      try {
+        // redeem_preview_access confirms the token server-side and, only on
+        // success, hands back which passcode it corresponds to — that's
+        // what lets this screen fetch the journal itself without ever
+        // showing the visitor a second passcode prompt.
+        const { data: redeemData, error: redeemError } = await supabase.rpc('redeem_preview_access', {
+          p_owner_id: userId,
+          p_access_token: accessToken,
+        });
+        if (redeemError) throw redeemError;
+        if (!redeemData?.valid || !redeemData?.passcode || !redeemData?.view_mode) {
+          if (!cancelled) setStatus('expired');
+          return;
+        }
 
-  // Locked gate — shown until a correct passcode has been verified server-side.
-  if (!data) {
+        const { data: rpcData, error: rpcError } = await supabase.rpc('get_preview_journal', {
+          p_user_id: userId,
+          p_passcode: redeemData.passcode,
+        });
+        if (rpcError) throw rpcError;
+        if (!rpcData || rpcData.ok !== true) {
+          if (!cancelled) setStatus('expired');
+          return;
+        }
+
+        if (cancelled) return;
+        // Same-day trade ordering uses `startTime` (already returned by
+        // this RPC) as the tiebreaker — see sortedTrades below. `tradeNumber`
+        // and `createdAt` are still optional/best-effort on top of that; if
+        // `get_preview_journal` is ever updated to also select a real
+        // `trade_number` or `created_at` column, badges will prefer those
+        // automatically (see getDisplayNumber below).
+        setData({
+          profile: rpcData.profile,
+          accounts: rpcData.accounts || [],
+          trades: rpcData.trades || [],
+        });
+        setViewMode(redeemData.view_mode === 'investor' ? 'investor' : 'friend');
+        setStatus('ready');
+      } catch (err) {
+        console.error('Preview access confirmation failed', err);
+        if (!cancelled) setStatus('error');
+      }
+    }
+
+    redeemAndLoad();
+    return () => {
+      cancelled = true;
+    };
+  }, [userId, accessToken]);
+
+  if (status === 'redeeming') {
+    return (
+      <div className="min-h-screen w-full flex items-center justify-center bg-[#0a0c0f] px-4">
+        <div className="flex flex-col items-center gap-3 text-zinc-500">
+          <Loader2 className="w-6 h-6 animate-spin" />
+          <p className="text-sm">Confirming access…</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (status === 'expired' || status === 'error') {
     return (
       <div className="min-h-screen w-full flex items-center justify-center bg-[#0a0c0f] px-4 py-10">
-        <div className="w-full max-w-sm bg-zinc-950/85 backdrop-blur-2xl border border-zinc-800/80 shadow-2xl rounded-2xl p-6 sm:p-7">
-          <div className="mb-6 text-center">
-            <div className="mx-auto mb-4 w-12 h-12 rounded-full bg-zinc-900 border border-zinc-800 flex items-center justify-center">
-              <Eye className="w-5 h-5 text-emerald-400" />
-            </div>
-            <h2 className="text-xl font-semibold tracking-tight text-white">Read-Only Preview</h2>
-            <p className="mt-1.5 text-sm text-zinc-500">
-              Enter the viewer passcode shared with you to view this trading journal.
-            </p>
+        <div className="w-full max-w-sm bg-zinc-950/85 backdrop-blur-2xl border border-zinc-800/80 shadow-2xl rounded-2xl p-6 sm:p-7 text-center">
+          <div className="mx-auto mb-4 w-12 h-12 rounded-full bg-zinc-900 border border-zinc-800 flex items-center justify-center">
+            <Lock className="w-5 h-5 text-zinc-500" />
           </div>
-
-          {error && (
-            <div className="mb-4 flex items-start gap-2 rounded-lg border border-red-900/50 bg-red-950/40 px-3 py-2.5 text-sm text-red-300">
-              <AlertCircle className="w-4 h-4 mt-0.5 flex-shrink-0" />
-              <span>{error}</span>
-            </div>
-          )}
-
-          <form onSubmit={handleUnlock} className="space-y-4">
-            <div>
-              <label htmlFor="preview-passcode" className="block text-xs font-medium text-zinc-400 mb-1.5">
-                Viewer Passcode
-              </label>
-              <div className="relative">
-                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-500" />
-                <input
-                  id="preview-passcode"
-                  type="text"
-                  autoComplete="off"
-                  autoFocus
-                  value={passcode}
-                  onChange={(e) => setPasscode(e.target.value.toUpperCase().slice(0, 16))}
-                  placeholder="e.g. 7K2QX9RT"
-                  className="w-full h-11 pl-9 pr-3.5 rounded-lg bg-[#15171b] border border-zinc-800 text-white text-[16px] font-mono tracking-widest placeholder:text-zinc-600 placeholder:tracking-normal placeholder:font-sans outline-none transition-colors focus:border-emerald-600/60"
-                />
-              </div>
-            </div>
-
-            <button
-              type="submit"
-              disabled={isVerifying}
-              className="w-full h-11 flex items-center justify-center gap-2 rounded-lg bg-zinc-100 text-zinc-900 text-sm font-medium hover:bg-emerald-500 hover:text-black transition-all duration-200 disabled:opacity-60 disabled:cursor-not-allowed"
-            >
-              {isVerifying && <Loader2 className="w-4 h-4 animate-spin" />}
-              {isVerifying ? 'Verifying…' : 'View Journal'}
-            </button>
-          </form>
-
+          <h2 className="text-xl font-semibold tracking-tight text-white">
+            {status === 'expired' ? 'Link expired or invalid' : 'Something went wrong'}
+          </h2>
+          <div className="mt-3 flex items-start gap-2 rounded-lg border border-red-900/50 bg-red-950/40 px-3 py-2.5 text-sm text-red-300 text-left">
+            <AlertCircle className="w-4 h-4 mt-0.5 flex-shrink-0" />
+            <span>
+              {status === 'expired'
+                ? 'This preview link is no longer valid. Ask the owner to resend it, or sign in again with the passcode and master password.'
+                : 'We had trouble confirming this link. Please try again.'}
+            </span>
+          </div>
           <button
             type="button"
             onClick={onExit}
-            className="w-full mt-4 flex items-center justify-center gap-1.5 text-xs text-zinc-500 hover:text-zinc-300 transition-colors"
+            className="w-full mt-5 h-11 flex items-center justify-center gap-1.5 rounded-lg bg-zinc-100 text-zinc-900 text-sm font-medium hover:bg-emerald-500 hover:text-black transition-all"
           >
             <ArrowLeft className="w-3.5 h-3.5" />
             Back to sign in
@@ -602,9 +670,12 @@ export function PreviewScreen({ userId, onExit }: PreviewScreenProps) {
     );
   }
 
+  if (!data) return null;
+
   return (
     <UnlockedPreview
       data={data}
+      viewMode={viewMode}
       onExit={onExit}
       openTradeId={openTradeId}
       setOpenTradeId={setOpenTradeId}
@@ -615,12 +686,13 @@ export function PreviewScreen({ userId, onExit }: PreviewScreenProps) {
 }
 
 // ----------------------------------------------------------------------------
-// Everything below only ever renders once a valid passcode has been verified
-// server-side for this userId.
+// Everything below only ever renders once a valid access token has been
+// confirmed server-side for this userId (see redeem_preview_access above).
 // ----------------------------------------------------------------------------
 
 function UnlockedPreview({
   data,
+  viewMode,
   onExit,
   openTradeId,
   setOpenTradeId,
@@ -628,6 +700,7 @@ function UnlockedPreview({
   setMonthCursor,
 }: {
   data: PreviewData;
+  viewMode: ViewMode;
   onExit: () => void;
   openTradeId: string | null;
   setOpenTradeId: (id: string | null) => void;
@@ -767,16 +840,26 @@ function UnlockedPreview({
   }, [tradeFilter, dbAccountFilter, dbSessionFilter, dbSearch]);
 
   const dailyStats = useMemo(() => {
-    const map = new Map<string, { pnl: number; trades: number }>();
+    // rSum/rCount let the calendar show a meaningful "total R for the day"
+    // in friend mode instead of a raw dollar figure — rCount only counts
+    // trades that actually had a risk amount logged, so a day with no
+    // risk-logged trades can fall back to a plain masked cell instead of a
+    // misleading 0R.
+    const map = new Map<string, { pnl: number; trades: number; rSum: number; rCount: number }>();
     for (const t of data.trades) {
       const key = t.date?.slice(0, 10);
       if (!key) continue;
+      const r = getTradeR(t);
       const existing = map.get(key);
       if (existing) {
         existing.pnl += t.profitLoss;
         existing.trades += 1;
+        if (r !== null) {
+          existing.rSum += r;
+          existing.rCount += 1;
+        }
       } else {
-        map.set(key, { pnl: t.profitLoss, trades: 1 });
+        map.set(key, { pnl: t.profitLoss, trades: 1, rSum: r ?? 0, rCount: r !== null ? 1 : 0 });
       }
     }
     return map;
@@ -796,6 +879,9 @@ function UnlockedPreview({
             <span className="truncate">
               Viewing <span className="font-semibold text-amber-100">{displayName}'s</span> Journal
               <span className="hidden sm:inline"> (Read-Only Mode)</span>
+            </span>
+            <span className="flex-shrink-0 px-1.5 py-0.5 rounded text-[10px] font-semibold uppercase tracking-wide bg-white/10 text-amber-100 border border-white/10">
+              {viewMode === 'investor' ? 'Investor View' : 'Friend View'}
             </span>
           </p>
           <button
@@ -829,7 +915,7 @@ function UnlockedPreview({
         </div>
 
         {/* Section 1: Performance Calendar (top) */}
-        <MonthCalendar monthCursor={monthCursor} setMonthCursor={setMonthCursor} dailyStats={dailyStats} />
+        <MonthCalendar monthCursor={monthCursor} setMonthCursor={setMonthCursor} dailyStats={dailyStats} viewMode={viewMode} />
 
         {/* Section 2: Analytics / stats cards (middle) — no edit actions
             anywhere on this screen. Ported from TradesScreen's header
@@ -841,6 +927,7 @@ function UnlockedPreview({
           stats={stats}
           tradeFilter={tradeFilter}
           setTradeFilter={setTradeFilter}
+          viewMode={viewMode}
         />
         {tradeFilter !== 'all' && (
           <div className="flex items-center gap-2 -mt-4">
@@ -948,6 +1035,7 @@ function UnlockedPreview({
                       account={trade.accountId ? accountsById.get(trade.accountId) : undefined}
                       displayNumber={getDisplayNumber(trade)}
                       onOpenDetail={setOpenTradeId}
+                      viewMode={viewMode}
                     />
                   ))}
                 </div>
@@ -986,6 +1074,7 @@ function UnlockedPreview({
                           account={trade.accountId ? accountsById.get(trade.accountId) : undefined}
                           displayNumber={getDisplayNumber(trade)}
                           onOpenDetail={setOpenTradeId}
+                          viewMode={viewMode}
                         />
                       ))}
                     </tbody>
@@ -1032,6 +1121,7 @@ function UnlockedPreview({
           trade={openTrade}
           accountName={openTrade.accountId ? accountsById.get(openTrade.accountId)?.name : undefined}
           onClose={() => setOpenTradeId(null)}
+          viewMode={viewMode}
         />
       )}
 
@@ -1052,10 +1142,12 @@ function MonthCalendar({
   monthCursor,
   setMonthCursor,
   dailyStats,
+  viewMode,
 }: {
   monthCursor: Date;
   setMonthCursor: React.Dispatch<React.SetStateAction<Date>>;
-  dailyStats: Map<string, { pnl: number; trades: number }>;
+  dailyStats: Map<string, { pnl: number; trades: number; rSum: number; rCount: number }>;
+  viewMode: ViewMode;
 }) {
   const monthNames = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
   const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
@@ -1067,18 +1159,18 @@ function MonthCalendar({
   const daysInMonth = new Date(year, month + 1, 0).getDate();
   const pad = (n: number) => String(n).padStart(2, '0');
 
-  type DayCell = { day: number | null; pnl: number; trades: number };
+  type DayCell = { day: number | null; pnl: number; trades: number; rSum: number; rCount: number };
 
   const paddedDays: DayCell[] = [
-    ...Array.from({ length: startWeekday }, (): DayCell => ({ day: null, pnl: 0, trades: 0 })),
+    ...Array.from({ length: startWeekday }, (): DayCell => ({ day: null, pnl: 0, trades: 0, rSum: 0, rCount: 0 })),
     ...Array.from({ length: daysInMonth }, (_, i): DayCell => {
       const day = i + 1;
       const key = `${year}-${pad(month + 1)}-${pad(day)}`;
       const stat = dailyStats.get(key);
-      return { day, pnl: stat?.pnl ?? 0, trades: stat?.trades ?? 0 };
+      return { day, pnl: stat?.pnl ?? 0, trades: stat?.trades ?? 0, rSum: stat?.rSum ?? 0, rCount: stat?.rCount ?? 0 };
     }),
   ];
-  while (paddedDays.length % 7 !== 0) paddedDays.push({ day: null, pnl: 0, trades: 0 });
+  while (paddedDays.length % 7 !== 0) paddedDays.push({ day: null, pnl: 0, trades: 0, rSum: 0, rCount: 0 });
   const weeks: DayCell[][] = [];
   for (let i = 0; i < paddedDays.length; i += 7) weeks.push(paddedDays.slice(i, i + 7));
 
@@ -1125,6 +1217,8 @@ function MonthCalendar({
             {weeks.map((week, wi) => {
               const weekRealDays = week.filter(d => d.day !== null);
               const weekPnl = weekRealDays.reduce((s, d) => s + d.pnl, 0);
+              const weekRSum = weekRealDays.reduce((s, d) => s + d.rSum, 0);
+              const weekRCount = weekRealDays.reduce((s, d) => s + d.rCount, 0);
               const weekTradingDays = weekRealDays.filter(d => d.trades > 0).length;
               const hasWeekData = weekTradingDays > 0;
               return (
@@ -1147,7 +1241,7 @@ function MonthCalendar({
                           {day.trades > 0 ? (
                             <div className="min-w-0">
                               <p className={cn('text-sm font-bold font-mono truncate', day.pnl > 0 ? 'text-emerald-400' : day.pnl < 0 ? 'text-rose-400' : 'text-zinc-300')}>
-                                {formatMoney(day.pnl)}
+                                {viewMode === 'investor' ? formatMoney(day.pnl) : (day.rCount > 0 ? formatR(day.rSum) : '—')}
                               </p>
                               <p className="text-[10px] text-zinc-500 mt-0.5">{day.trades} trade{day.trades !== 1 ? 's' : ''}</p>
                             </div>
@@ -1171,7 +1265,7 @@ function MonthCalendar({
                       <>
                         <p className="text-[9px] text-zinc-500 uppercase tracking-wider">Week {wi + 1}</p>
                         <p className={cn('text-sm font-bold font-mono truncate', weekPnl > 0 ? 'text-emerald-400' : weekPnl < 0 ? 'text-rose-400' : 'text-zinc-300')}>
-                          {formatMoney(weekPnl)}
+                          {viewMode === 'investor' ? formatMoney(weekPnl) : (weekRCount > 0 ? formatR(weekRSum) : '—')}
                         </p>
                         <p className="text-[10px] text-zinc-600">{weekTradingDays} day{weekTradingDays !== 1 ? 's' : ''}</p>
                       </>
@@ -1197,6 +1291,8 @@ function MonthCalendar({
             {weeks.map((week, wi) => {
               const weekRealDays = week.filter(d => d.day !== null);
               const weekPnl = weekRealDays.reduce((s, d) => s + d.pnl, 0);
+              const weekRSum = weekRealDays.reduce((s, d) => s + d.rSum, 0);
+              const weekRCount = weekRealDays.reduce((s, d) => s + d.rCount, 0);
               const weekTradingDays = weekRealDays.filter(d => d.trades > 0).length;
               const hasWeekData = weekTradingDays > 0;
               return (
@@ -1219,7 +1315,7 @@ function MonthCalendar({
                             <span className="text-[9px] text-zinc-500 font-medium">{day.day}</span>
                             {day.trades > 0 ? (
                               <p className={cn('text-[9px] font-bold font-mono truncate leading-tight', day.pnl > 0 ? 'text-emerald-400' : day.pnl < 0 ? 'text-rose-400' : 'text-zinc-300')}>
-                                {formatMoneyCompact(day.pnl)}
+                                {viewMode === 'investor' ? formatMoneyCompact(day.pnl) : (day.rCount > 0 ? formatR(day.rSum) : '—')}
                               </p>
                             ) : (
                               <span className="text-[9px] text-zinc-700">—</span>
@@ -1234,7 +1330,7 @@ function MonthCalendar({
                     <div className="flex items-center justify-between px-1 text-[10px]">
                       <span className="text-zinc-500">Week {wi + 1} · {weekTradingDays} day{weekTradingDays !== 1 ? 's' : ''}</span>
                       <span className={cn('font-mono font-semibold', weekPnl > 0 ? 'text-emerald-400' : weekPnl < 0 ? 'text-rose-400' : 'text-zinc-400')}>
-                        {formatMoney(weekPnl)}
+                        {viewMode === 'investor' ? formatMoney(weekPnl) : (weekRCount > 0 ? formatR(weekRSum) : '—')}
                       </span>
                     </div>
                   )}
@@ -1264,10 +1360,12 @@ function PreviewTradeDetail({
   trade,
   accountName,
   onClose,
+  viewMode,
 }: {
   trade: PreviewTrade;
   accountName?: string;
   onClose: () => void;
+  viewMode: ViewMode;
 }) {
   const execTf = trade.timeframes.find(tf => tf.name === 'Execution/Result');
   const executionImages = execTf?.images || [];
@@ -1308,7 +1406,7 @@ function PreviewTradeDetail({
           )}>
             <span className="text-sm text-zinc-400">P&L</span>
             <span className={cn('text-2xl font-bold', trade.profitLoss >= 0 ? 'text-emerald-400' : 'text-rose-400')}>
-              {formatMoney(trade.profitLoss)}
+              {formatPnl(viewMode, trade.profitLoss, tradeRR)}
             </span>
           </div>
 
@@ -1319,9 +1417,9 @@ function PreviewTradeDetail({
             <Field label="Take Profit" value={`${trade.takeProfit ?? '—'}${trade.tpPoints ? ` (${trade.tpPoints} pts)` : ''}`} />
           </div>
 
-          {(trade.riskAmount || tradeRR !== null) && (
+          {((viewMode === 'investor' && trade.riskAmount) || tradeRR !== null) && (
             <div className="flex flex-wrap gap-3">
-              {trade.riskAmount ? (
+              {viewMode === 'investor' && trade.riskAmount ? (
                 <div className="bg-zinc-800/50 rounded-lg p-3 inline-block">
                   <p className="text-xs text-zinc-500 mb-1">Risk Amount</p>
                   <p className="text-sm text-white font-medium">{formatMoney(trade.riskAmount)}</p>
