@@ -554,6 +554,11 @@ interface PreviewScreenProps {
 
 type PreviewAuthStatus = 'redeeming' | 'ready' | 'expired' | 'error';
 
+// How often an already-open /preview tab re-checks that the owner still
+// has the toggle on. 20s keeps "the owner flips it off" feeling immediate
+// without hammering the DB with a SECURITY DEFINER call.
+const PREVIEW_HEARTBEAT_MS = 20_000;
+
 export function PreviewScreen({ userId, accessToken, onExit }: PreviewScreenProps) {
   const [status, setStatus] = useState<PreviewAuthStatus>('redeeming');
   const [data, setData] = useState<PreviewData | null>(null);
@@ -622,6 +627,65 @@ export function PreviewScreen({ userId, accessToken, onExit }: PreviewScreenProp
       cancelled = true;
     };
   }, [userId, accessToken]);
+
+  // ----------------------------------------------------------------------
+  // Reactive session guard: redeem_preview_access (above) only runs once,
+  // on mount, so it can't see the owner toggling "Public / Viewer
+  // Passcodes" off *after* this tab already loaded. Poll a cheap
+  // check_preview_access heartbeat while the session is 'ready' — it
+  // re-checks profiles.public_preview_enabled every tick — and terminate
+  // the moment it comes back false, instead of leaving an already-open
+  // tab showing the dashboard until its 2-hour token TTL expires.
+  // ----------------------------------------------------------------------
+  useEffect(() => {
+    if (status !== 'ready' || !accessToken) return;
+    let cancelled = false;
+
+    async function checkStillAllowed() {
+      try {
+        const { data: stillAllowed, error } = await supabase.rpc('check_preview_access', {
+          p_owner_id: userId,
+          p_access_token: accessToken,
+        });
+        if (cancelled) return;
+        if (error) {
+          // Transient network/RPC error — don't boot the viewer over a
+          // single failed check; the next tick tries again.
+          console.error('Preview access heartbeat failed', error);
+          return;
+        }
+        if (stillAllowed !== true) {
+          // Owner turned preview off (or the session/token otherwise
+          // stopped being valid) while this tab was open. Flag it so
+          // LoginPage can explain why they landed back there, then leave
+          // immediately — no click required.
+          try {
+            sessionStorage.setItem('vsx-preview-revoked', '1');
+          } catch {
+            // best effort only
+          }
+          onExit();
+        }
+      } catch (err) {
+        if (!cancelled) console.error('Preview access heartbeat failed', err);
+      }
+    }
+
+    const intervalId = window.setInterval(checkStillAllowed, PREVIEW_HEARTBEAT_MS);
+    // Also re-check the instant the tab regains focus — covers the common
+    // case of the owner disabling it while this tab was backgrounded,
+    // without waiting up to a full interval.
+    const onVisibility = () => {
+      if (document.visibilityState === 'visible') checkStillAllowed();
+    };
+    document.addEventListener('visibilitychange', onVisibility);
+
+    return () => {
+      cancelled = true;
+      window.clearInterval(intervalId);
+      document.removeEventListener('visibilitychange', onVisibility);
+    };
+  }, [status, userId, accessToken, onExit]);
 
   if (status === 'redeeming') {
     return (
