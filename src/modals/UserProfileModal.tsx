@@ -731,41 +731,45 @@ export function UserProfileModal({ isOpen, onClose, authUser, onAuthUserChange, 
         </div>
 
         {/* Master password — the required second factor for both passcodes
-            above. Field is always empty on open; typing something new is
-            the only way to change it (see the RPC-based save in
-            handleSave), so leaving it blank on save just keeps the
-            existing password. */}
-        <div className="mb-5 pt-4 border-t border-zinc-800">
-          <div className="flex items-center gap-1.5 mb-1">
-            <KeyRound className="w-3.5 h-3.5 text-amber-400" />
-            <p className="text-sm font-medium text-white">Master Password</p>
+            above. Only relevant (and only shown) while Public / Viewer
+            Passcodes is on; with it off there's no preview to gate, so the
+            field would just be confusing clutter. Field is always empty on
+            open; typing something new is the only way to change it (see
+            the RPC-based save in handleSave), so leaving it blank on save
+            just keeps the existing password. */}
+        {publicPreviewEnabled && (
+          <div className="mb-5 pt-4 border-t border-zinc-800">
+            <div className="flex items-center gap-1.5 mb-1">
+              <KeyRound className="w-3.5 h-3.5 text-amber-400" />
+              <p className="text-sm font-medium text-white">Master Password</p>
+            </div>
+            <p className="text-xs text-zinc-500 mb-2">
+              Required in addition to whichever passcode is entered — without it, a passcode alone can't open the preview.
+            </p>
+            <div className="relative">
+              <input
+                type={showMasterPassword ? 'text' : 'password'}
+                autoComplete="new-password"
+                value={masterPasswordInput}
+                onChange={(e) => setMasterPasswordInput(e.target.value)}
+                placeholder={hasMasterPassword ? 'Currently set — enter to change' : 'e.g. MyJournal2026!'}
+                className="w-full bg-zinc-950 border border-zinc-800 rounded-lg pl-3 pr-10 py-2 text-sm text-white placeholder:text-zinc-600 focus:outline-none focus:border-emerald-600/60"
+              />
+              <button
+                type="button"
+                onClick={() => setShowMasterPassword(v => !v)}
+                aria-label={showMasterPassword ? 'Hide password' : 'Show password'}
+                className="absolute right-0 top-0 h-full w-10 flex items-center justify-center text-zinc-500 hover:text-zinc-300 transition-colors"
+              >
+                {showMasterPassword ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+              </button>
+            </div>
+            <div className="flex items-center gap-1.5 mt-1.5 text-[11px] text-zinc-500">
+              <ShieldCheck className="w-3 h-3 flex-shrink-0" />
+              <span>{hasMasterPassword ? 'A master password is set on this account.' : 'No master password set yet — required before sharing.'}</span>
+            </div>
           </div>
-          <p className="text-xs text-zinc-500 mb-2">
-            Required in addition to whichever passcode is entered — without it, a passcode alone can't open the preview.
-          </p>
-          <div className="relative">
-            <input
-              type={showMasterPassword ? 'text' : 'password'}
-              autoComplete="new-password"
-              value={masterPasswordInput}
-              onChange={(e) => setMasterPasswordInput(e.target.value)}
-              placeholder={hasMasterPassword ? 'Currently set — enter to change' : 'e.g. MyJournal2026!'}
-              className="w-full bg-zinc-950 border border-zinc-800 rounded-lg pl-3 pr-10 py-2 text-sm text-white placeholder:text-zinc-600 focus:outline-none focus:border-emerald-600/60"
-            />
-            <button
-              type="button"
-              onClick={() => setShowMasterPassword(v => !v)}
-              aria-label={showMasterPassword ? 'Hide password' : 'Show password'}
-              className="absolute right-0 top-0 h-full w-10 flex items-center justify-center text-zinc-500 hover:text-zinc-300 transition-colors"
-            >
-              {showMasterPassword ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
-            </button>
-          </div>
-          <div className="flex items-center gap-1.5 mt-1.5 text-[11px] text-zinc-500">
-            <ShieldCheck className="w-3 h-3 flex-shrink-0" />
-            <span>{hasMasterPassword ? 'A master password is set on this account.' : 'No master password set yet — required before sharing.'}</span>
-          </div>
-        </div>
+        )}
 
         {saveError && <p className="text-xs text-rose-400 mb-3">{saveError}</p>}
 
