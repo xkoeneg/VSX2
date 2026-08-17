@@ -937,6 +937,15 @@ function WarRoomBackdrop() {
         @media (prefers-reduced-motion: reduce) {
           .login-scatter-reveal, .login-scene-drift, .login-card-float { animation: none !important; opacity: 1; }
         }
+        /* Edge/IE renders its own built-in eye icon inside type="password"
+           inputs, which sits in the same right-aligned spot as our custom
+           Eye/EyeOff toggle button and shows up as a second icon stacked
+           on top of it. Chrome/Firefox don't add one, so this is a no-op
+           there — safe to apply globally rather than per-input. */
+        input[type="password"]::-ms-reveal,
+        input[type="password"]::-ms-clear {
+          display: none;
+        }
       `}</style>
     </div>
   );
