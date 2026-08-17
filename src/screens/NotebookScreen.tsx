@@ -43,6 +43,9 @@ import {
   Image as ImageIcon,
   Palette,
   Highlighter,
+  FileText,
+  Tag,
+  Clock,
 } from 'lucide-react';
 import { PageHeader } from '../components/shared/PageHeader';
 import type { NotebookEntry, NotebookTemplate } from '../types';
@@ -462,6 +465,16 @@ export function NotebookScreen() {
       return new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime();
     });
   }, [activeFolder, isTrashView, isFavoritesView, liveEntries, deletedEntries, notebookDeletedFolders, search, activeTagFilter, sortMode]);
+
+  // Powers the "Last Saved" quick-stat badge in the search/filter row: the
+  // most recently updated note currently in view (falling back to the
+  // whole live set if the current view is empty), so the badge reflects
+  // real save activity rather than a static label.
+  const lastSavedEntry = useMemo(() => {
+    const pool = visibleEntries.length ? visibleEntries : liveEntries;
+    if (!pool.length) return null;
+    return pool.reduce((latest, e) => (new Date(e.updatedAt) > new Date(latest.updatedAt) ? e : latest), pool[0]);
+  }, [visibleEntries, liveEntries]);
 
   const selectedEntry = useMemo(
     () => notebookEntries.find(e => e.id === selectedEntryId) ?? null,
@@ -1539,57 +1552,88 @@ export function NotebookScreen() {
         .themed-scrollbar::-webkit-scrollbar-thumb:hover { background-color: var(--scrollbar-thumb-hover); }
       `}</style>
 
-      {/* ---- Search + filter row ---- */}
-      <div className="flex items-center gap-2.5">
-        <div className="relative flex-1 max-w-md">
-          <Search className={cn('absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4', textMuted)} />
-          <input
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search notes and tags"
-            className={cn('w-full pl-10 pr-3.5 py-2.5 rounded-lg text-base border outline-none', panelBg, border, theme !== 'light' ? 'text-white placeholder-zinc-500 focus:border-zinc-600' : 'text-zinc-900 placeholder-zinc-400 focus:border-zinc-300')}
-          />
+      {/* ---- Search + filter row ----
+          Left group (search + filter) stays a fixed w-80 so it doesn't
+          stretch; `justify-between` pushes the quick-stats badges out to
+          fill what used to be dead space to the right of the filter icon,
+          giving the header a dashboard feel instead of empty air. */}
+      <div className="flex items-center justify-between gap-4 w-full">
+        <div className="flex items-center gap-2.5 w-80">
+          <div className="relative flex-1">
+            <Search className={cn('absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4', textMuted)} />
+            <input
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Search notes and tags"
+              className={cn('w-full pl-10 pr-3.5 py-2.5 rounded-lg text-base border outline-none', panelBg, border, theme !== 'light' ? 'text-white placeholder-zinc-500 focus:border-zinc-600' : 'text-zinc-900 placeholder-zinc-400 focus:border-zinc-300')}
+            />
+          </div>
+          <div className="relative">
+            <button
+              onClick={() => setShowFilter(v => !v)}
+              title="Filter by tag"
+              className={cn('p-2.5 rounded-lg border transition-colors', panelBg, border, activeTagFilter ? 'text-purple-400 border-purple-500/40' : cn(textMuted, 'hover:text-zinc-200'))}
+            >
+              <Filter className="w-4 h-4" />
+            </button>
+            {showFilter && (
+              <div className={cn('absolute right-0 mt-1.5 w-56 rounded-lg border shadow-xl z-20 p-2.5', theme !== 'light' ? 'bg-zinc-900 border-zinc-800' : 'bg-white border-zinc-200')}>
+                <p className={cn('text-xs font-semibold uppercase tracking-wider px-2 pb-1.5', textMuted)}>Filter by tag</p>
+                {allTags.length === 0 ? (
+                  <p className={cn('text-sm px-2 py-1.5', textMuted)}>No tags yet</p>
+                ) : (
+                  <div className="themed-scrollbar max-h-48 overflow-y-auto flex flex-col gap-1">
+                    {allTags.map(tag => (
+                      <button
+                        key={tag}
+                        onClick={() => { setActiveTagFilter(prev => prev === tag ? null : tag); setShowFilter(false); }}
+                        className={cn(
+                          'text-left px-2 py-1.5 rounded-md text-sm transition-colors',
+                          activeTagFilter === tag
+                            ? (theme !== 'light' ? 'bg-purple-500/15 text-purple-300' : 'bg-purple-50 text-purple-700')
+                            : cn(textBody, theme !== 'light' ? 'hover:bg-zinc-800' : 'hover:bg-zinc-50')
+                        )}
+                      >
+                        {tag}
+                      </button>
+                    ))}
+                  </div>
+                )}
+                {activeTagFilter && (
+                  <button onClick={() => { setActiveTagFilter(null); setShowFilter(false); }} className="w-full text-left px-2 py-1.5 mt-1 rounded-md text-sm text-rose-400 hover:bg-zinc-800">
+                    Clear filter
+                  </button>
+                )}
+              </div>
+            )}
+          </div>
         </div>
-        <div className="relative">
-          <button
-            onClick={() => setShowFilter(v => !v)}
-            title="Filter by tag"
-            className={cn('p-2.5 rounded-lg border transition-colors', panelBg, border, activeTagFilter ? 'text-purple-400 border-purple-500/40' : cn(textMuted, 'hover:text-zinc-200'))}
-          >
-            <Filter className="w-4 h-4" />
-          </button>
-          {showFilter && (
-            <div className={cn('absolute right-0 mt-1.5 w-56 rounded-lg border shadow-xl z-20 p-2.5', theme !== 'light' ? 'bg-zinc-900 border-zinc-800' : 'bg-white border-zinc-200')}>
-              <p className={cn('text-xs font-semibold uppercase tracking-wider px-2 pb-1.5', textMuted)}>Filter by tag</p>
-              {allTags.length === 0 ? (
-                <p className={cn('text-sm px-2 py-1.5', textMuted)}>No tags yet</p>
-              ) : (
-                <div className="themed-scrollbar max-h-48 overflow-y-auto flex flex-col gap-1">
-                  {allTags.map(tag => (
-                    <button
-                      key={tag}
-                      onClick={() => { setActiveTagFilter(prev => prev === tag ? null : tag); setShowFilter(false); }}
-                      className={cn(
-                        'text-left px-2 py-1.5 rounded-md text-sm transition-colors',
-                        activeTagFilter === tag
-                          ? (theme !== 'light' ? 'bg-purple-500/15 text-purple-300' : 'bg-purple-50 text-purple-700')
-                          : cn(textBody, theme !== 'light' ? 'hover:bg-zinc-800' : 'hover:bg-zinc-50')
-                      )}
-                    >
-                      {tag}
-                    </button>
-                  ))}
-                </div>
-              )}
-              {activeTagFilter && (
-                <button onClick={() => { setActiveTagFilter(null); setShowFilter(false); }} className="w-full text-left px-2 py-1.5 mt-1 rounded-md text-sm text-rose-400 hover:bg-zinc-800">
-                  Clear filter
-                </button>
-              )}
-            </div>
-          )}
+
+        {/* Active Workspace Quick Stats — fills the space to the right of
+            the filter icon with live counts instead of empty air. */}
+        <div className="flex items-center gap-2.5 text-xs text-slate-400">
+          <div className="bg-slate-900/60 border border-slate-800/80 px-3 py-1.5 rounded-lg flex items-center gap-1.5 font-medium text-slate-300 shadow-sm">
+            <FileText className="w-3.5 h-3.5" />
+            <span>{visibleEntries.length} {visibleEntries.length === 1 ? 'Note' : 'Notes'}</span>
+          </div>
+          <div className="bg-slate-900/60 border border-slate-800/80 px-3 py-1.5 rounded-lg flex items-center gap-1.5 font-medium text-slate-300 shadow-sm">
+            <Tag className="w-3.5 h-3.5" />
+            <span>{allTags.length} {allTags.length === 1 ? 'Tag' : 'Tags'}</span>
+          </div>
+          <div className="bg-slate-900/60 border border-slate-800/80 px-3 py-1.5 rounded-lg flex items-center gap-1.5 font-medium text-slate-300 shadow-sm">
+            <Clock className="w-3.5 h-3.5" />
+            <span>
+              {lastSavedEntry
+                ? `Last Saved: ${new Date(lastSavedEntry.updatedAt).toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' })}`
+                : 'Notebook Workspace'}
+            </span>
+          </div>
         </div>
       </div>
+
+      {/* + New Note stays anchored top-right inside PageHeader's actions
+          slot above — untouched by this row, so it keeps its existing
+          far-right alignment. */}
 
       {/* ---- 3-pane layout ----
           At lg+ the three panes sit side-by-side and need a *bounded*
