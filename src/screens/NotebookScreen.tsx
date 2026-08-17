@@ -367,6 +367,13 @@ export function NotebookScreen() {
   const pendingNewNoteRef = useRef(false);
   const loadedEntryIdRef = useRef<string | null>(null);
   const savedRangeRef = useRef<Range | null>(null);
+  // False from the moment a note loads until the user explicitly picks a
+  // Font or Size from the toolbar THIS session. While false, typing that
+  // happens to land inside a leftover styled <span> from before the
+  // load/refresh (e.g. right next to text that was set to 64px) gets
+  // corrected back to the default instead of silently continuing that old
+  // formatting — see onBodyBeforeInput below.
+  const formattingTouchedRef = useRef(false);
 
   const liveEntries = useMemo(() => notebookEntries.filter(e => !e.isDeleted), [notebookEntries]);
   const deletedEntries = useMemo(() => notebookEntries.filter(e => e.isDeleted), [notebookEntries]);
@@ -487,6 +494,7 @@ export function NotebookScreen() {
     setSelectedStyleLabel(DEFAULT_STYLE_LABEL);
     setSelectedFontFamilyLabel(DEFAULT_FONT_FAMILY_LABEL);
     setSelectedFontSizeLabel(DEFAULT_FONT_SIZE);
+    formattingTouchedRef.current = false;
     document.execCommand('defaultParagraphSeparator', false, 'p');
   }, [selectedEntry]);
 
@@ -693,6 +701,7 @@ export function NotebookScreen() {
 
     const span = document.createElement('span');
     span.style[styleProp] = value;
+    formattingTouchedRef.current = true;
 
     if (range.collapsed) {
       span.appendChild(document.createTextNode('\u200B'));
@@ -821,6 +830,60 @@ export function NotebookScreen() {
     e.preventDefault();
     const text = e.clipboardData?.getData('text/plain') ?? '';
     if (text) exec('insertText', text);
+  };
+
+  // The toolbar resetting to "Paragraph / Default / 14" after a note loads
+  // is only a display value — it doesn't change what the browser actually
+  // does when you type. If the caret lands inside (or right at the edge
+  // of) a <span style="font-size:64px"> that's part of the note's already-
+  // saved content, typing there — even a single character, even right
+  // next to old big text on the same line — inherits that 64px, no matter
+  // what the toolbar shows. That's standard contentEditable behavior in
+  // every rich text editor, but it's not what "default after refresh"
+  // should mean here.
+  //
+  // So: until the user explicitly picks a Font or Size THIS session
+  // (formattingTouchedRef), every plain character typed is checked before
+  // it lands. If it would land inside a span carrying a leftover
+  // font-size/font-family, we redirect it to sit right after that span
+  // instead — plain text, inheriting the editor's real 14px/Default
+  // baseline — rather than letting it merge into the old formatting.
+  // Once the user deliberately chooses a font/size, this stops entirely
+  // and normal "continue the formatting you just picked" behavior applies,
+  // same as any other editor.
+  const onBodyBeforeInput = (e: React.FormEvent<HTMLDivElement>) => {
+    if (formattingTouchedRef.current) return;
+    const native = e.nativeEvent as InputEvent;
+    if (native.inputType !== 'insertText' || !native.data) return;
+    const editor = bodyRef.current;
+    const sel = window.getSelection();
+    if (!editor || !sel || sel.rangeCount === 0 || !sel.isCollapsed) return;
+
+    let node: Node | null = sel.getRangeAt(0).startContainer;
+    let styledAncestor: HTMLElement | null = null;
+    while (node && node !== editor) {
+      if (node.nodeType === 1) {
+        const el = node as HTMLElement;
+        if (el.style && (el.style.fontSize || el.style.fontFamily)) { styledAncestor = el; break; }
+      }
+      node = node.parentNode;
+    }
+    if (!styledAncestor) return;
+
+    e.preventDefault();
+    const textNode = document.createTextNode(native.data);
+    const insertAt = document.createRange();
+    insertAt.setStartAfter(styledAncestor);
+    insertAt.collapse(true);
+    insertAt.insertNode(textNode);
+
+    const newRange = document.createRange();
+    newRange.setStartAfter(textNode);
+    newRange.collapse(true);
+    sel.removeAllRanges();
+    sel.addRange(newRange);
+    savedRangeRef.current = newRange.cloneRange();
+    onBodyInput();
   };
 
   // Keeps the `checked` DOM attribute (not just the live property) in sync
@@ -2182,6 +2245,7 @@ export function NotebookScreen() {
                   suppressContentEditableWarning
                   spellCheck={false}
                   onInput={onBodyInput}
+                  onBeforeInput={onBodyBeforeInput}
                   onBlur={onBodyBlur}
                   onClick={onBodyClick}
                   onKeyDown={onBodyKeyDown}
