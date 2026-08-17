@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import {
   Eye,
   EyeOff,
@@ -984,6 +984,7 @@ export function LoginPage() {
     ? Math.max(1, Math.ceil((viewerAttemptState.lockedUntil - Date.now()) / 60000))
     : 0;
 
+  const passcodeGateMouseDownOnBackdrop = useRef(false);
   const handleViewerPasscodeSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
@@ -1376,7 +1377,23 @@ export function LoginPage() {
       {showPasscodeGate && (
         <div
           className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4"
-          onClick={() => setShowPasscodeGate(false)}
+          onMouseDown={(e) => {
+            // Records whether THIS press started on the backdrop itself
+            // (e.currentTarget) vs. bubbled up from something inside the
+            // card (e.g. the user pressing down inside the passcode/
+            // password input to start selecting text). Click fires on
+            // whichever element the mouseup lands on — if you start a
+            // selection inside the card and drag past its edge before
+            // releasing, mouseup (and therefore click) fires on this
+            // backdrop div even though the drag began inside the card, so
+            // checking only the click target isn't enough on its own.
+            passcodeGateMouseDownOnBackdrop.current = e.target === e.currentTarget;
+          }}
+          onClick={(e) => {
+            if (e.target === e.currentTarget && passcodeGateMouseDownOnBackdrop.current) {
+              setShowPasscodeGate(false);
+            }
+          }}
         >
           <div
             onClick={(e) => e.stopPropagation()}
