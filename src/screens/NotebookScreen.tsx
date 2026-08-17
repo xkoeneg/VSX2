@@ -1600,37 +1600,55 @@ export function NotebookScreen() {
           </div>
         </div>
 
-        {/* Top stat cards — dark container, muted uppercase label, bold
-            value, matching the app's other stat-panel screens exactly.
+        {/* Top stat cards — same frame as the shared renderStatCard used by
+            Discipline/Life Discipline (RenderHelpers.tsx): theme-aware
+            zinc-900/40+zinc-800/80 border in dark, white+zinc-200 in light,
+            with the same rounded-2xl/hover treatment, instead of the old
+            hardcoded navy `bg-[#12141c]`. Icon chips/colors are unchanged.
             `flex-1` on the group and on each card stretches them evenly
             across whatever width remains, so they fill the row instead of
             leaving a blank gap next to the search/filter group. */}
         <div className="flex items-center gap-3 flex-1">
-          <div className="bg-[#12141c] border border-slate-800/80 rounded-xl px-4 py-2 flex items-center gap-3 shadow-sm flex-1">
+          <div className={cn(
+            'group rounded-2xl px-4 py-2 flex items-center gap-3 flex-1 transition-all duration-200',
+            theme !== 'light'
+              ? 'bg-zinc-900/40 border border-zinc-800/80 hover:border-zinc-700 hover:bg-zinc-900/70'
+              : 'bg-white border border-zinc-200 hover:border-zinc-300 hover:bg-zinc-50'
+          )}>
             <div className="p-1.5 rounded-lg bg-sky-500/10">
               <FileText className="w-4 h-4 text-sky-400" />
             </div>
             <div className="flex flex-col leading-tight">
-              <span className="text-[10px] font-semibold tracking-wider text-slate-400 uppercase">Total Notes</span>
-              <span className="text-sm font-bold text-slate-100">{liveEntries.length}</span>
+              <span className={cn('text-[10px] font-semibold tracking-wider uppercase', textMuted)}>Total Notes</span>
+              <span className={cn('text-sm font-bold', theme !== 'light' ? 'text-white' : 'text-zinc-900')}>{liveEntries.length}</span>
             </div>
           </div>
-          <div className="bg-[#12141c] border border-slate-800/80 rounded-xl px-4 py-2 flex items-center gap-3 shadow-sm flex-1">
+          <div className={cn(
+            'group rounded-2xl px-4 py-2 flex items-center gap-3 flex-1 transition-all duration-200',
+            theme !== 'light'
+              ? 'bg-zinc-900/40 border border-zinc-800/80 hover:border-zinc-700 hover:bg-zinc-900/70'
+              : 'bg-white border border-zinc-200 hover:border-zinc-300 hover:bg-zinc-50'
+          )}>
             <div className="p-1.5 rounded-lg bg-amber-500/10">
               <Star className="w-4 h-4 text-amber-400" />
             </div>
             <div className="flex flex-col leading-tight">
-              <span className="text-[10px] font-semibold tracking-wider text-slate-400 uppercase">Favorites</span>
-              <span className="text-sm font-bold text-slate-100">{liveEntries.filter(e => e.favorite).length}</span>
+              <span className={cn('text-[10px] font-semibold tracking-wider uppercase', textMuted)}>Favorites</span>
+              <span className={cn('text-sm font-bold', theme !== 'light' ? 'text-white' : 'text-zinc-900')}>{liveEntries.filter(e => e.favorite).length}</span>
             </div>
           </div>
-          <div className="bg-[#12141c] border border-slate-800/80 rounded-xl px-4 py-2 flex items-center gap-3 shadow-sm flex-1">
+          <div className={cn(
+            'group rounded-2xl px-4 py-2 flex items-center gap-3 flex-1 transition-all duration-200',
+            theme !== 'light'
+              ? 'bg-zinc-900/40 border border-zinc-800/80 hover:border-zinc-700 hover:bg-zinc-900/70'
+              : 'bg-white border border-zinc-200 hover:border-zinc-300 hover:bg-zinc-50'
+          )}>
             <div className="p-1.5 rounded-lg bg-purple-500/10">
               <Tag className="w-4 h-4 text-purple-400" />
             </div>
             <div className="flex flex-col leading-tight">
-              <span className="text-[10px] font-semibold tracking-wider text-slate-400 uppercase">Tags</span>
-              <span className="text-sm font-bold text-slate-100">{allTags.length}</span>
+              <span className={cn('text-[10px] font-semibold tracking-wider uppercase', textMuted)}>Tags</span>
+              <span className={cn('text-sm font-bold', theme !== 'light' ? 'text-white' : 'text-zinc-900')}>{allTags.length}</span>
             </div>
           </div>
         </div>
