@@ -968,38 +968,49 @@ function AppShell() {
 // the link is enough. Deep-linking to /preview/[id] works whether or not
 // the visitor is separately signed into their own account in another tab.
 // ============================================================================
-function usePreviewRoute(): { userId: string | null; exit: () => void } {
-  const [userId, setUserId] = useState<string | null>(() => {
-    if (typeof window === 'undefined') return null;
-    const match = window.location.pathname.match(/^\/preview\/([^/]+)\/?$/);
-    return match ? decodeURIComponent(match[1]) : null;
-  });
+// `access_token` (and `mode`, informational only — PreviewScreen re-derives
+// the real view_mode server-side via redeem_preview_access rather than
+// trusting this query param) come from the redirect LoginPage's "Have a
+// Viewer Passcode?" modal does after verify_viewer_access succeeds:
+// `/preview/[id]?access_token=...&mode=...`. Parsing them here is what lets
+// PreviewScreen skip straight to a silent, server-side confirmation instead
+// of showing its own second passcode prompt.
+function parsePreviewRoute(): { userId: string | null; accessToken: string | null } {
+  if (typeof window === 'undefined') return { userId: null, accessToken: null };
+  const match = window.location.pathname.match(/^\/preview\/([^/]+)\/?$/);
+  if (!match) return { userId: null, accessToken: null };
+  const params = new URLSearchParams(window.location.search);
+  return {
+    userId: decodeURIComponent(match[1]),
+    accessToken: params.get('access_token'),
+  };
+}
+
+function usePreviewRoute(): { userId: string | null; accessToken: string | null; exit: () => void } {
+  const [route, setRoute] = useState(parsePreviewRoute);
 
   useEffect(() => {
-    const onPopState = () => {
-      const match = window.location.pathname.match(/^\/preview\/([^/]+)\/?$/);
-      setUserId(match ? decodeURIComponent(match[1]) : null);
-    };
+    const onPopState = () => setRoute(parsePreviewRoute());
     window.addEventListener('popstate', onPopState);
     return () => window.removeEventListener('popstate', onPopState);
   }, []);
 
   const exit = () => {
     window.history.pushState({}, '', '/');
-    setUserId(null);
+    setRoute({ userId: null, accessToken: null });
   };
 
-  return { userId, exit };
+  return { userId: route.userId, accessToken: route.accessToken, exit };
 }
 
 export default function App() {
-  const { userId: previewUserId, exit: exitPreview } = usePreviewRoute();
+  const { userId: previewUserId, accessToken: previewAccessToken, exit: exitPreview } = usePreviewRoute();
 
   // Preview is a fully separate, unauthenticated surface — it intentionally
   // sits outside <AppProvider> so a viewer's session never mixes with (or
   // requires) the journal owner's app state.
   if (previewUserId) {
-    return <PreviewScreen userId={previewUserId} onExit={exitPreview} />;
+    return <PreviewScreen userId={previewUserId} accessToken={previewAccessToken} onExit={exitPreview} />;
   }
 
   return (
