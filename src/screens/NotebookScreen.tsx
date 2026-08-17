@@ -392,6 +392,7 @@ export function NotebookScreen() {
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [showTemplateMenu, setShowTemplateMenu] = useState(false);
   const [showMoveMenu, setShowMoveMenu] = useState(false);
+  const [showSortMenu, setShowSortMenu] = useState(false);
 
   const [titleDraft, setTitleDraft] = useState('');
   const [tagInput, setTagInput] = useState('');
@@ -405,6 +406,7 @@ export function NotebookScreen() {
   const rootRef = useRef<HTMLDivElement>(null);
   const [frameHeight, setFrameHeight] = useState<number | null>(null);
   const moreMenuRef = useRef<HTMLDivElement>(null);
+  const sortMenuRef = useRef<HTMLDivElement>(null);
   const imageInputRef = useRef<HTMLInputElement>(null);
   const saveTimeoutRef = useRef<number | undefined>(undefined);
   const pendingNewNoteRef = useRef(false);
@@ -583,6 +585,19 @@ export function NotebookScreen() {
     document.addEventListener('mousedown', onMouseDown);
     return () => document.removeEventListener('mousedown', onMouseDown);
   }, [showMoreMenu, showEntryFolderMenu]);
+
+  // Sort menu — same outside-click-closes behavior as the "more" menu above,
+  // so picking a sort (or clicking away) both dismiss it cleanly.
+  useEffect(() => {
+    if (!showSortMenu) return;
+    const onMouseDown = (e: MouseEvent) => {
+      if (sortMenuRef.current && !sortMenuRef.current.contains(e.target as Node)) {
+        setShowSortMenu(false);
+      }
+    };
+    document.addEventListener('mousedown', onMouseDown);
+    return () => document.removeEventListener('mousedown', onMouseDown);
+  }, [showSortMenu]);
 
   // `h-full` on the page frame only works if some ancestor above this
   // component actually has a resolved (non-auto) height — otherwise it's a
@@ -1283,8 +1298,12 @@ export function NotebookScreen() {
   const textMuted = theme !== 'light' ? 'text-zinc-500' : 'text-zinc-400';
   const textBody = theme !== 'light' ? 'text-zinc-300' : 'text-zinc-700';
 
+  const SORT_OPTIONS: { id: 'updated' | 'title' | 'created'; label: string }[] = [
+    { id: 'updated', label: 'Last updated' },
+    { id: 'title', label: 'Title' },
+    { id: 'created', label: 'Date created' },
+  ];
   const sortLabel = sortMode === 'updated' ? 'Last updated' : sortMode === 'title' ? 'Title' : 'Date created';
-  const cycleSort = () => setSortMode(m => (m === 'updated' ? 'title' : m === 'title' ? 'created' : 'updated'));
 
   const resolveFolderColor = (name: string) => {
     const chosen = notebookFolderColors[name];
@@ -1849,13 +1868,40 @@ export function NotebookScreen() {
                   >
                     {viewMode === 'list' ? <LayoutGrid className="w-3.5 h-3.5" /> : <Rows3 className="w-3.5 h-3.5" />}
                   </button>
-                  <button
-                    onClick={cycleSort}
-                    title={`Sort: ${sortLabel}`}
-                    className={cn('flex items-center justify-center w-7 h-7 rounded-full transition-colors', textMuted, theme !== 'light' ? 'hover:bg-zinc-800 hover:text-zinc-200' : 'hover:bg-zinc-100 hover:text-zinc-700')}
-                  >
-                    <ArrowUpDown className="w-3.5 h-3.5" />
-                  </button>
+                  <div className="relative" ref={sortMenuRef}>
+                    <button
+                      onClick={() => setShowSortMenu(v => !v)}
+                      title={`Sort: ${sortLabel}`}
+                      className={cn(
+                        'flex items-center justify-center w-7 h-7 rounded-full transition-colors',
+                        showSortMenu
+                          ? 'bg-purple-500/15 text-purple-400'
+                          : cn(textMuted, theme !== 'light' ? 'hover:bg-zinc-800 hover:text-zinc-200' : 'hover:bg-zinc-100 hover:text-zinc-700')
+                      )}
+                    >
+                      <ArrowUpDown className="w-3.5 h-3.5" />
+                    </button>
+                    {showSortMenu && (
+                      <div className={cn('absolute right-0 top-full mt-1.5 w-44 rounded-lg border shadow-xl z-20 py-1.5', theme !== 'light' ? 'bg-zinc-900 border-zinc-800' : 'bg-white border-zinc-200')}>
+                        <p className={cn('text-xs font-semibold uppercase tracking-wider px-3.5 pb-1', textMuted)}>Sort by</p>
+                        {SORT_OPTIONS.map(opt => (
+                          <button
+                            key={opt.id}
+                            onClick={() => { setSortMode(opt.id); setShowSortMenu(false); }}
+                            className={cn(
+                              'w-full text-left px-3.5 py-1.5 text-sm transition-colors flex items-center justify-between',
+                              sortMode === opt.id
+                                ? (theme !== 'light' ? 'text-purple-300' : 'text-purple-700')
+                                : cn(textBody, theme !== 'light' ? 'hover:bg-zinc-800' : 'hover:bg-zinc-50')
+                            )}
+                          >
+                            {opt.label}
+                            {sortMode === opt.id && <span className="w-1.5 h-1.5 rounded-full bg-purple-500 flex-shrink-0" />}
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
                 </div>
               </>
             )}
