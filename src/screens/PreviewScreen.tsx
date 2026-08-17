@@ -48,14 +48,10 @@ type PreviewTimeframe = {
 
 type PreviewTrade = {
   id: string;
-  /** Stable, DB-assigned trade number (e.g. the `trade_number` column, or
-   *  whatever ordinal the main app's `getDisplayTradeNumber` renders for
-   *  this row). This is what the #42-style badge shows, and it's the ONLY
-   *  way to guarantee the badge matches the main app for same-day trades.
-   *  Optional because `get_preview_journal` doesn't select it yet — see the
-   *  TODO in the fetch handler below. Until the RPC is updated, badges fall
-   *  back to a locally-computed ordinal that is NOT guaranteed to match the
-   *  main app when trades share a date. */
+  /** Stable, DB-assigned trade number (e.g. the `trade_number` column).
+   *  NOT used for the #42-style badge — see chronologicalNumberById below
+   *  for why — but kept on the type in case another part of this screen
+   *  ever wants the raw per-account/DB value specifically. */
   tradeNumber?: number;
   /** Row insert timestamp — used only as the tiebreaker when two trades
    *  share the same `date`, to match the main app's
@@ -604,11 +600,10 @@ export function PreviewScreen({ userId, accessToken, onExit }: PreviewScreenProp
 
         if (cancelled) return;
         // Same-day trade ordering uses `startTime` (already returned by
-        // this RPC) as the tiebreaker — see sortedTrades below. `tradeNumber`
-        // and `createdAt` are still optional/best-effort on top of that; if
+        // this RPC) as the tiebreaker — see sortedTrades below. `createdAt`
+        // is still optional/best-effort on top of that; if
         // `get_preview_journal` is ever updated to also select a real
-        // `trade_number` or `created_at` column, badges will prefer those
-        // automatically (see getDisplayNumber below).
+        // `created_at` column, ordering will prefer it automatically.
         setData({
           profile: rpcData.profile,
           accounts: rpcData.accounts || [],
@@ -744,13 +739,20 @@ function UnlockedPreview({
     [data.trades]
   );
 
-  // Badge numbers: prefer the DB-assigned `tradeNumber` (matches the main
-  // app exactly). Until the RPC returns it, fall back to a locally-computed
-  // ordinal (newest trade in `sortedTrades` = highest number) so the badge
-  // at least shows *something* instead of going blank — but this fallback
-  // can disagree with the main app whenever trades share a date, for the
-  // same reason described above.
-  const fallbackNumberById = useMemo(() => {
+  // Badge numbers (Top-Left Badge, matches the main app's fix): always
+  // computed dynamically from `sortedTrades`, oldest = 1, newest = highest.
+  //
+  // Deliberately NOT `trade.tradeNumber` anymore. That field is sourced
+  // from the DB's static `trade_number`/`absoluteTradeNumber` column —
+  // stamped once at creation/import time as an insertion-order counter —
+  // which is exactly the bug the main app just fixed (see useAppState.tsx:
+  // getDisplayTradeNumber). Preferring it here (`trade.tradeNumber ?? ...`)
+  // was quietly reintroducing the same "#8, #7 ... #3, #2, #1 ... #50, #49"
+  // bug on this screen, since the RPC does populate that stale column now.
+  // Computing it fresh from `sortedTrades` every time — independent of any
+  // stored counter, insertion order, or import order — keeps this screen's
+  // numbering self-correcting the same way the main app's now is.
+  const chronologicalNumberById = useMemo(() => {
     const map = new Map<string, number>();
     const total = sortedTrades.length;
     sortedTrades.forEach((t, i) => map.set(t.id, total - i));
@@ -758,7 +760,7 @@ function UnlockedPreview({
   }, [sortedTrades]);
 
   const getDisplayNumber = (trade: PreviewTrade) =>
-    trade.tradeNumber ?? fallbackNumberById.get(trade.id) ?? 0;
+    chronologicalNumberById.get(trade.id) ?? 0;
 
   const stats = useMemo(() => {
     const total = data.trades.length;
