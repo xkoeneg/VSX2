@@ -794,10 +794,22 @@ export function NotebookScreen() {
   // dropdown's real options resolves to that option's label; anything
   // else (a family this dropdown doesn't offer, e.g. from old pasted-in
   // content) still falls back to Default rather than showing raw CSS.
+  // Normalizes a raw font-family CSS value so it can be compared against our
+  // dropdown's option values. Sources like getComputedStyle (and some
+  // browsers' own CSSOM normalization of inline styles) can return this as
+  // a quoted string (e.g. `"Times New Roman"`) or as a full font stack
+  // (e.g. `"Times New Roman", serif`) — neither of which matched our plain
+  // `Times New Roman` option value under strict equality. This strips
+  // surrounding/embedded quotes, keeps only the first (primary) font in a
+  // stack, and trims + lowercases for a case-insensitive comparison.
+  const normalizeFontFamilyValue = (value: string): string =>
+    value.split(',')[0].replace(/['"]/g, '').trim().toLowerCase();
+
   const resolveFamilyLabel = (familyValue: string | null): string => {
     if (!familyValue) return DEFAULT_FONT_FAMILY_LABEL;
+    const normalized = normalizeFontFamilyValue(familyValue);
     const match = FONT_FAMILY_OPTIONS.find(
-      o => o.value.replace(/'/g, '').toLowerCase() === familyValue.replace(/'/g, '').toLowerCase()
+      o => normalizeFontFamilyValue(o.value) === normalized
     );
     return match ? match.label : DEFAULT_FONT_FAMILY_LABEL;
   };
@@ -2343,8 +2355,16 @@ export function NotebookScreen() {
                             key={px}
                             onMouseDown={(e) => { e.preventDefault(); }}
                             onClick={() => {
-                              if (px === DEFAULT_FONT_SIZE) clearSelectionStyle('fontSize');
-                              else applyFontSize(px);
+                              // Always explicitly apply the chosen size, even
+                              // the default (14px). Treating 14 as "clear"
+                              // only unset the inline style, so a selection
+                              // sitting inside an ancestor span still styled
+                              // at e.g. 20px kept inheriting that 20px —
+                              // picking "14" visually did nothing. Forcing an
+                              // explicit `font-size: 14px` span here makes it
+                              // strictly override any outer size, the same
+                              // way every other size option already does.
+                              applyFontSize(px);
                               setSelectedFontSizeLabel(px);
                               setShowFontSizeMenu(false);
                             }}
