@@ -5,6 +5,7 @@ import {
   X,
   Camera,
   Eye,
+  EyeOff,
   Copy,
   Check,
   LogOut,
@@ -13,6 +14,10 @@ import {
   AlertTriangle,
   User as UserIcon,
   Loader2,
+  DollarSign,
+  Percent,
+  KeyRound,
+  ShieldCheck,
 } from 'lucide-react';
 import { ModalBackdrop } from '../components/shared/ModalBackdrop';
 import { cn } from '../utils/format';
@@ -31,13 +36,27 @@ export type AuthUser = {
   // access to, so a chosen preset color never showed up outside the modal.
   avatarPresetColor?: string | null;
   hideEmail?: boolean;
-  viewerPasscode?: string;
+  // Two-factor viewer access: a passcode picks the view mode (full $ vs
+  // masked %/R:R), the master password is the shared second factor that
+  // must ALSO be correct regardless of which passcode was entered. See
+  // handleViewerPasscodeSubmit in LoginPage.tsx and the verify_viewer_access
+  // RPC for the actual gate — these two passcodes alone are not sufficient
+  // to unlock anything without the master password too.
+  investorPasscode?: string;
+  friendPasscode?: string;
+  // Never populated with the real secret — the profiles row only ever
+  // stores a server-side bcrypt hash (master_password_hash, via pgcrypto),
+  // and that hash is never sent back to the client. This flag just tells
+  // the UI "a master password is already set" so the settings field can
+  // show a neutral placeholder instead of either leaking or re-prompting
+  // for a password that already exists.
+  hasMasterPassword?: boolean;
   // Cross-device source of truth for whether /preview/[id] is currently
   // reachable at all for this user (see public_preview_enabled in
   // sql/001_preview_access.sql). Wiring this in fully means loading it
   // wherever AuthUser is populated from `profiles` on sign-in — that logic
   // lives in context/AppContext.tsx, which wasn't part of what I could see
-  // here, so for now it's read the same way viewerPasscode already is
+  // here, so for now it's read the same way the passcodes already are
   // below (authUser value wins, falls back to the local-only cache) and
   // needs that same fetch added on the AppContext side to be fully synced.
   publicPreviewEnabled?: boolean;
@@ -46,7 +65,8 @@ export type AuthUser = {
 type ProfilePrefs = {
   hideEmail: boolean;
   publicPreviewEnabled: boolean;
-  viewerPasscode: string;
+  investorPasscode: string;
+  friendPasscode: string;
   avatarPresetColor: string | null;
 };
 
@@ -106,7 +126,9 @@ export function loadCachedAuthUser(): AuthUser | null {
       avatarUrl: typeof parsed.avatarUrl === 'string' ? parsed.avatarUrl : null,
       avatarPresetColor: typeof parsed.avatarPresetColor === 'string' ? parsed.avatarPresetColor : null,
       hideEmail: typeof parsed.hideEmail === 'boolean' ? parsed.hideEmail : undefined,
-      viewerPasscode: typeof parsed.viewerPasscode === 'string' ? parsed.viewerPasscode : undefined,
+      investorPasscode: typeof parsed.investorPasscode === 'string' ? parsed.investorPasscode : undefined,
+      friendPasscode: typeof parsed.friendPasscode === 'string' ? parsed.friendPasscode : undefined,
+      hasMasterPassword: typeof parsed.hasMasterPassword === 'boolean' ? parsed.hasMasterPassword : undefined,
     };
   } catch {
     return null;
@@ -144,7 +166,8 @@ function loadPrefs(email: string | null): ProfilePrefs {
   const fallback: ProfilePrefs = {
     hideEmail: false,
     publicPreviewEnabled: false,
-    viewerPasscode: generatePasscode(),
+    investorPasscode: generatePasscode(),
+    friendPasscode: generatePasscode(),
     avatarPresetColor: null,
   };
   try {
@@ -154,12 +177,91 @@ function loadPrefs(email: string | null): ProfilePrefs {
     return {
       hideEmail: Boolean(parsed.hideEmail),
       publicPreviewEnabled: Boolean(parsed.publicPreviewEnabled),
-      viewerPasscode: typeof parsed.viewerPasscode === 'string' && parsed.viewerPasscode ? parsed.viewerPasscode : fallback.viewerPasscode,
+      investorPasscode: typeof parsed.investorPasscode === 'string' && parsed.investorPasscode ? parsed.investorPasscode : fallback.investorPasscode,
+      friendPasscode: typeof parsed.friendPasscode === 'string' && parsed.friendPasscode ? parsed.friendPasscode : fallback.friendPasscode,
       avatarPresetColor: typeof parsed.avatarPresetColor === 'string' ? parsed.avatarPresetColor : null,
     };
   } catch {
     return fallback;
   }
+}
+
+// One row of the two-passcode UI (investor or friend). Both behave
+// identically — value/regenerate/confirm — they just differ in copy and
+// which piece of state they're wired to, so this stays a plain prop-driven
+// component rather than duplicating the JSX twice below.
+function PasscodeRow({
+  label,
+  hint,
+  accentIcon,
+  value,
+  onChange,
+  confirming,
+  onRequestRegenerate,
+  onCancelRegenerate,
+  onConfirmRegenerate,
+}: {
+  label: string;
+  hint: string;
+  accentIcon: React.ReactNode;
+  value: string;
+  onChange: (next: string) => void;
+  confirming: boolean;
+  onRequestRegenerate: () => void;
+  onCancelRegenerate: () => void;
+  onConfirmRegenerate: () => void;
+}) {
+  return (
+    <div className="rounded-lg border border-zinc-800 bg-zinc-950/40 p-2.5">
+      <div className="flex items-center gap-1.5 mb-1.5">
+        {accentIcon}
+        <p className="text-xs font-medium text-white">{label}</p>
+      </div>
+      <p className="text-[11px] text-zinc-500 mb-2">{hint}</p>
+      <div className="flex items-center gap-2">
+        <input
+          type="text"
+          value={value}
+          onChange={(e) => onChange(e.target.value.toUpperCase().slice(0, 16))}
+          placeholder="Passcode"
+          className="flex-1 bg-zinc-950 border border-zinc-800 rounded-lg px-3 py-2 text-sm text-white font-mono tracking-widest placeholder:text-zinc-600 focus:outline-none focus:border-emerald-600/60"
+        />
+        <button
+          type="button"
+          onClick={onRequestRegenerate}
+          title="Generate new passcode"
+          className="flex-shrink-0 p-2 rounded-lg bg-zinc-800 text-zinc-300 hover:bg-zinc-700 hover:text-white transition-colors"
+        >
+          <RefreshCw className="w-4 h-4" />
+        </button>
+      </div>
+
+      {confirming && (
+        <div className="flex flex-col gap-2 mt-2 px-3 py-2.5 rounded-lg bg-amber-500/10 border border-amber-500/30">
+          <div className="flex items-start gap-2 text-xs text-amber-200">
+            <AlertTriangle className="w-3.5 h-3.5 mt-0.5 flex-shrink-0" />
+            <span>Generating a new code replaces this one. Anyone using the current passcode will lose access as soon as you save.</span>
+          </div>
+          <div className="flex items-center gap-2 justify-end">
+            <button
+              type="button"
+              onClick={onCancelRegenerate}
+              className="px-2.5 py-1 rounded text-xs font-medium text-zinc-300 hover:text-white transition-colors"
+            >
+              Cancel
+            </button>
+            <button
+              type="button"
+              onClick={onConfirmRegenerate}
+              className="px-2.5 py-1 rounded text-xs font-medium bg-amber-500 text-amber-950 hover:bg-amber-400 transition-colors"
+            >
+              Generate new code
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
 }
 
 interface UserProfileModalProps {
@@ -180,16 +282,27 @@ export function UserProfileModal({ isOpen, onClose, authUser, onAuthUserChange, 
 
   const [hideEmail, setHideEmail] = useState(false);
   const [publicPreviewEnabled, setPublicPreviewEnabled] = useState(false);
-  const [viewerPasscode, setViewerPasscode] = useState('');
+  const [investorPasscode, setInvestorPasscode] = useState('');
+  const [friendPasscode, setFriendPasscode] = useState('');
+
+  // Second factor required alongside EITHER passcode above. Deliberately
+  // never pre-filled from a saved value — the server only ever gives us
+  // back `hasMasterPassword` (a boolean), never the password or its hash —
+  // so this field starts empty every time the modal opens and only gets
+  // sent/changed if the user actually types something new.
+  const [masterPasswordInput, setMasterPasswordInput] = useState('');
+  const [showMasterPassword, setShowMasterPassword] = useState(false);
+  const [hasMasterPassword, setHasMasterPassword] = useState(false);
 
   const [isSaving, setIsSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
   const [avatarError, setAvatarError] = useState<string | null>(null);
-  const [copied, setCopied] = useState(false);
-  // Gates the regenerate ⟳ button behind an explicit confirmation — once
+  const [copied, setCopied] = useState<'investor' | 'friend' | null>(null);
+  // Gates each regenerate ⟳ button behind an explicit confirmation — once
   // saved, a new passcode immediately locks out anyone still using the old
-  // one, so this shouldn't be a single accidental click.
-  const [confirmingRegenerate, setConfirmingRegenerate] = useState(false);
+  // one, so this shouldn't be a single accidental click. Tracks which of
+  // the two passcodes is mid-confirmation (or neither).
+  const [confirmingRegenerate, setConfirmingRegenerate] = useState<'investor' | 'friend' | null>(null);
 
   // Reset local editing state from the source of truth whenever the modal opens
   useEffect(() => {
@@ -197,7 +310,7 @@ export function UserProfileModal({ isOpen, onClose, authUser, onAuthUserChange, 
     const prefs = loadPrefs(authUser?.email ?? null);
     setEditableName(authUser?.name ?? '');
     setUploadedAvatar(null);
-    // authUser.avatarPresetColor / hideEmail / viewerPasscode are synced
+    // authUser.avatarPresetColor / hideEmail / investorPasscode / friendPasscode are synced
     // from the public.profiles table (cross-device source of truth); the
     // local prefs value is only a same-browser fallback for when that
     // hasn't loaded yet (e.g. first paint before the auth fetch resolves).
@@ -210,12 +323,26 @@ export function UserProfileModal({ isOpen, onClose, authUser, onAuthUserChange, 
     setPublicPreviewEnabled(
       typeof authUser?.publicPreviewEnabled === 'boolean' ? authUser.publicPreviewEnabled : prefs.publicPreviewEnabled
     );
-    setViewerPasscode(authUser?.viewerPasscode || prefs.viewerPasscode);
+    setInvestorPasscode(authUser?.investorPasscode || prefs.investorPasscode);
+    setFriendPasscode(authUser?.friendPasscode || prefs.friendPasscode);
+    setMasterPasswordInput('');
+    setShowMasterPassword(false);
+    setHasMasterPassword(Boolean(authUser?.hasMasterPassword));
     setSaveError(null);
     setAvatarError(null);
-    setCopied(false);
-    setConfirmingRegenerate(false);
-  }, [isOpen, authUser?.email, authUser?.name, authUser?.hideEmail, authUser?.viewerPasscode, authUser?.avatarPresetColor, authUser?.publicPreviewEnabled]);
+    setCopied(null);
+    setConfirmingRegenerate(null);
+  }, [
+    isOpen,
+    authUser?.email,
+    authUser?.name,
+    authUser?.hideEmail,
+    authUser?.investorPasscode,
+    authUser?.friendPasscode,
+    authUser?.hasMasterPassword,
+    authUser?.avatarPresetColor,
+    authUser?.publicPreviewEnabled,
+  ]);
 
   if (!isOpen) return null;
 
@@ -259,12 +386,16 @@ export function UserProfileModal({ isOpen, onClose, authUser, onAuthUserChange, 
     authUser?.id || 'demo'
   }`;
 
-  const handleCopyLink = async () => {
-    const text = `${publicPreviewLink} — passcode: ${viewerPasscode}`;
+  const handleCopyLink = async (kind: 'investor' | 'friend') => {
+    const passcode = kind === 'investor' ? investorPasscode : friendPasscode;
+    const masterNote = hasMasterPassword || masterPasswordInput
+      ? ' + your master password'
+      : ' (set a master password below before sharing — a passcode alone won\u2019t unlock anything)';
+    const text = `${publicPreviewLink} — passcode: ${passcode}${masterNote}`;
     try {
       await navigator.clipboard.writeText(text);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
+      setCopied(kind);
+      setTimeout(() => setCopied(null), 2000);
     } catch {
       setAvatarError(null);
       setSaveError('Could not copy to clipboard — you can select and copy manually.');
@@ -272,6 +403,21 @@ export function UserProfileModal({ isOpen, onClose, authUser, onAuthUserChange, 
   };
 
   const handleSave = async () => {
+    // Master password is optional to *change* on any given save, but if the
+    // user is turning public preview on for the first time and hasn't set
+    // one yet (locally or on the server), block the save — a passcode with
+    // no master password isn't the two-factor setup that was asked for, and
+    // it's better to say so here than to let someone believe they're
+    // protected when they aren't.
+    if (publicPreviewEnabled && !hasMasterPassword && !masterPasswordInput.trim()) {
+      setSaveError('Set a master password before enabling the public preview — it\u2019s required alongside either passcode.');
+      return;
+    }
+    if (masterPasswordInput && masterPasswordInput.trim().length < 8) {
+      setSaveError('Master password must be at least 8 characters.');
+      return;
+    }
+
     setIsSaving(true);
     setSaveError(null);
 
@@ -284,16 +430,20 @@ export function UserProfileModal({ isOpen, onClose, authUser, onAuthUserChange, 
       avatarUrl: nextAvatarUrl,
       avatarPresetColor,
       hideEmail,
-      viewerPasscode,
+      investorPasscode,
+      friendPasscode,
+      hasMasterPassword: hasMasterPassword || Boolean(masterPasswordInput.trim()),
       publicPreviewEnabled,
     };
 
     // 1. Persist locally first. This is the reliable primary store for UI
     // prefs like publicPreviewEnabled (still local-only) plus an instant
     // mirror of everything else — it must succeed even if the network
-    // calls below fail.
+    // calls below fail. Deliberately excludes the master password itself —
+    // that only ever lives server-side as a hash (see step 2b below), never
+    // in localStorage or the AuthUser cache.
     try {
-      const nextPrefs: ProfilePrefs = { hideEmail, publicPreviewEnabled, viewerPasscode, avatarPresetColor };
+      const nextPrefs: ProfilePrefs = { hideEmail, publicPreviewEnabled, investorPasscode, friendPasscode, avatarPresetColor };
       localStorage.setItem(prefsKey(authUser?.email ?? null), JSON.stringify(nextPrefs));
       saveCachedAuthUser(nextUser);
       onPrefsSaved?.(nextPrefs);
@@ -322,6 +472,7 @@ export function UserProfileModal({ isOpen, onClose, authUser, onAuthUserChange, 
     // which then breaks every other Supabase call in the app, not just
     // this one. Storing it as a plain profiles column avoids the JWT
     // entirely, so there's no updateUser()/refreshSession() step anymore.
+    let remoteFailed = false;
     try {
       const userId = authUser?.id;
       if (!userId) throw new Error('No authenticated user id — cannot sync profile.');
@@ -329,7 +480,13 @@ export function UserProfileModal({ isOpen, onClose, authUser, onAuthUserChange, 
         id: userId,
         display_name: nextName,
         hide_email: hideEmail,
-        viewer_passcode: viewerPasscode,
+        // Plain columns, same as the old single viewer_passcode — these are
+        // meant to be readable/shareable by the owner (the copy-link button
+        // above needs the literal value), so they're not hashed. They're
+        // also not the real gate on their own anymore: verify_viewer_access
+        // requires the master password too (see below), which IS hashed.
+        investor_passcode: investorPasscode,
+        friend_passcode: friendPasscode,
         // Previously local-only (see the comment on `ProfilePrefs` above),
         // which meant switching this off didn't actually revoke an
         // already-shared preview link for anyone who still had it —
@@ -344,11 +501,40 @@ export function UserProfileModal({ isOpen, onClose, authUser, onAuthUserChange, 
     } catch (remoteErr) {
       console.error('Could not sync profile to Supabase — local copy is saved', remoteErr);
       setSaveError('Saved on this device, but syncing to your account failed — it may not show up on other browsers yet.');
+      remoteFailed = true;
     }
+
+    // 2b. Master password goes through its own RPC rather than the plain
+    // upsert above — set_master_password() hashes it server-side (pgcrypto
+    // bcrypt) before it ever touches a row, so the plaintext only exists
+    // for the duration of this one request and is never stored or echoed
+    // back. Only called when the user actually typed a new one; leaving
+    // the field blank keeps whatever password is already set.
+    if (masterPasswordInput.trim()) {
+      try {
+        const userId = authUser?.id;
+        if (!userId) throw new Error('No authenticated user id.');
+        const { error } = await supabase.rpc('set_master_password', {
+          p_owner_id: userId,
+          p_master_password: masterPasswordInput.trim(),
+        });
+        if (error) throw error;
+        setHasMasterPassword(true);
+        nextUser.hasMasterPassword = true;
+      } catch (mpErr) {
+        console.error('Could not update master password', mpErr);
+        setSaveError(prev => prev ?? 'Saved everything else, but the master password update failed — try again.');
+        remoteFailed = true;
+      }
+    }
+    // Always clear the typed password from state after a save attempt —
+    // success or failure, it shouldn't linger in memory/the input longer
+    // than it has to.
+    setMasterPasswordInput('');
 
     onAuthUserChange(nextUser);
     setIsSaving(false);
-    onClose();
+    if (!remoteFailed) onClose();
   };
 
   return createPortal(
@@ -463,12 +649,14 @@ export function UserProfileModal({ isOpen, onClose, authUser, onAuthUserChange, 
           )}
         </div>
 
-        {/* Public / viewer passcode */}
+        {/* Public / viewer passcodes — two-factor: a passcode picks the view
+            mode, the master password (below) is required in addition to
+            either one. */}
         <div className="mb-5 pt-4 border-t border-zinc-800">
           <div className="flex items-center justify-between gap-4 mb-2">
             <div className="min-w-0">
-              <p className="text-sm font-medium text-white">Public / Viewer Passcode</p>
-              <p className="text-xs text-zinc-500">Share a read-only preview with investors or viewers</p>
+              <p className="text-sm font-medium text-white">Public / Viewer Passcodes</p>
+              <p className="text-xs text-zinc-500">Share a read-only preview — requires a passcode AND your master password</p>
             </div>
             <button
               type="button"
@@ -485,61 +673,54 @@ export function UserProfileModal({ isOpen, onClose, authUser, onAuthUserChange, 
           </div>
 
           {publicPreviewEnabled && (
-            <div className="flex flex-col gap-2">
-              <div className="flex items-center gap-2">
-                <input
-                  type="text"
-                  value={viewerPasscode}
-                  onChange={(e) => setViewerPasscode(e.target.value.toUpperCase().slice(0, 16))}
-                  placeholder="Viewer passcode"
-                  className="flex-1 bg-zinc-950 border border-zinc-800 rounded-lg px-3 py-2 text-sm text-white font-mono tracking-widest placeholder:text-zinc-600 focus:outline-none focus:border-emerald-600/60"
-                />
+            <div className="flex flex-col gap-2.5">
+              <PasscodeRow
+                label="Investor Passcode"
+                hint="Full access — real dollar amounts"
+                accentIcon={<DollarSign className="w-3.5 h-3.5 text-emerald-400" />}
+                value={investorPasscode}
+                onChange={setInvestorPasscode}
+                confirming={confirmingRegenerate === 'investor'}
+                onRequestRegenerate={() => setConfirmingRegenerate('investor')}
+                onCancelRegenerate={() => setConfirmingRegenerate(null)}
+                onConfirmRegenerate={() => {
+                  setInvestorPasscode(generatePasscode());
+                  setConfirmingRegenerate(null);
+                }}
+              />
+              <PasscodeRow
+                label="Public / Friend Passcode"
+                hint="Masked — percentages and R:R only, no dollar amounts"
+                accentIcon={<Percent className="w-3.5 h-3.5 text-cyan-400" />}
+                value={friendPasscode}
+                onChange={setFriendPasscode}
+                confirming={confirmingRegenerate === 'friend'}
+                onRequestRegenerate={() => setConfirmingRegenerate('friend')}
+                onCancelRegenerate={() => setConfirmingRegenerate(null)}
+                onConfirmRegenerate={() => {
+                  setFriendPasscode(generatePasscode());
+                  setConfirmingRegenerate(null);
+                }}
+              />
+
+              <div className="flex gap-2">
                 <button
                   type="button"
-                  onClick={() => setConfirmingRegenerate(true)}
-                  title="Generate new passcode"
-                  className="flex-shrink-0 p-2 rounded-lg bg-zinc-800 text-zinc-300 hover:bg-zinc-700 hover:text-white transition-colors"
+                  onClick={() => handleCopyLink('investor')}
+                  className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg text-xs font-medium bg-zinc-800/70 text-zinc-300 hover:bg-zinc-800 hover:text-white transition-colors border border-zinc-800"
                 >
-                  <RefreshCw className="w-4 h-4" />
+                  {copied === 'investor' ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
+                  <span className="truncate">{copied === 'investor' ? 'Copied' : 'Copy investor link'}</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleCopyLink('friend')}
+                  className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg text-xs font-medium bg-zinc-800/70 text-zinc-300 hover:bg-zinc-800 hover:text-white transition-colors border border-zinc-800"
+                >
+                  {copied === 'friend' ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
+                  <span className="truncate">{copied === 'friend' ? 'Copied' : 'Copy friend link'}</span>
                 </button>
               </div>
-
-              {confirmingRegenerate && (
-                <div className="flex flex-col gap-2 px-3 py-2.5 rounded-lg bg-amber-500/10 border border-amber-500/30">
-                  <div className="flex items-start gap-2 text-xs text-amber-200">
-                    <AlertTriangle className="w-3.5 h-3.5 mt-0.5 flex-shrink-0" />
-                    <span>Generating a new code replaces this one. Anyone using the current passcode will lose access as soon as you save.</span>
-                  </div>
-                  <div className="flex items-center gap-2 justify-end">
-                    <button
-                      type="button"
-                      onClick={() => setConfirmingRegenerate(false)}
-                      className="px-2.5 py-1 rounded text-xs font-medium text-zinc-300 hover:text-white transition-colors"
-                    >
-                      Cancel
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setViewerPasscode(generatePasscode());
-                        setConfirmingRegenerate(false);
-                      }}
-                      className="px-2.5 py-1 rounded text-xs font-medium bg-amber-500 text-amber-950 hover:bg-amber-400 transition-colors"
-                    >
-                      Generate new code
-                    </button>
-                  </div>
-                </div>
-              )}
-
-              <button
-                type="button"
-                onClick={handleCopyLink}
-                className="flex items-center justify-center gap-2 px-3 py-2 rounded-lg text-xs font-medium bg-zinc-800/70 text-zinc-300 hover:bg-zinc-800 hover:text-white transition-colors border border-zinc-800"
-              >
-                {copied ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
-                <span className="truncate">{copied ? 'Copied link & passcode' : 'Copy preview link & passcode'}</span>
-              </button>
 
               <div className="flex items-center gap-1.5 text-[11px] text-zinc-500">
                 <LinkIcon className="w-3 h-3 flex-shrink-0" />
@@ -547,6 +728,43 @@ export function UserProfileModal({ isOpen, onClose, authUser, onAuthUserChange, 
               </div>
             </div>
           )}
+        </div>
+
+        {/* Master password — the required second factor for both passcodes
+            above. Field is always empty on open; typing something new is
+            the only way to change it (see the RPC-based save in
+            handleSave), so leaving it blank on save just keeps the
+            existing password. */}
+        <div className="mb-5 pt-4 border-t border-zinc-800">
+          <div className="flex items-center gap-1.5 mb-1">
+            <KeyRound className="w-3.5 h-3.5 text-amber-400" />
+            <p className="text-sm font-medium text-white">Master Password</p>
+          </div>
+          <p className="text-xs text-zinc-500 mb-2">
+            Required in addition to whichever passcode is entered — without it, a passcode alone can't open the preview.
+          </p>
+          <div className="relative">
+            <input
+              type={showMasterPassword ? 'text' : 'password'}
+              autoComplete="new-password"
+              value={masterPasswordInput}
+              onChange={(e) => setMasterPasswordInput(e.target.value)}
+              placeholder={hasMasterPassword ? 'Currently set — enter to change' : 'e.g. MyJournal2026!'}
+              className="w-full bg-zinc-950 border border-zinc-800 rounded-lg pl-3 pr-10 py-2 text-sm text-white placeholder:text-zinc-600 focus:outline-none focus:border-emerald-600/60"
+            />
+            <button
+              type="button"
+              onClick={() => setShowMasterPassword(v => !v)}
+              aria-label={showMasterPassword ? 'Hide password' : 'Show password'}
+              className="absolute right-0 top-0 h-full w-10 flex items-center justify-center text-zinc-500 hover:text-zinc-300 transition-colors"
+            >
+              {showMasterPassword ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+            </button>
+          </div>
+          <div className="flex items-center gap-1.5 mt-1.5 text-[11px] text-zinc-500">
+            <ShieldCheck className="w-3 h-3 flex-shrink-0" />
+            <span>{hasMasterPassword ? 'A master password is set on this account.' : 'No master password set yet — required before sharing.'}</span>
+          </div>
         </div>
 
         {saveError && <p className="text-xs text-rose-400 mb-3">{saveError}</p>}
