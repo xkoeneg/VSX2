@@ -1043,6 +1043,17 @@ export function LoginPage() {
     'w-full h-11 px-3.5 rounded-lg bg-[#15171b] border border-zinc-800 text-white text-[16px] ' +
     'placeholder:text-zinc-500 outline-none transition-colors focus:border-zinc-500 focus:bg-[#181a1f]';
 
+  // Password fields render our own Eye/EyeOff toggle button, but some
+  // browsers (Edge, and Chrome's "strong password" autofill suggestion)
+  // also draw their own native reveal icon inside type="password" inputs —
+  // stacking a second eye right next to ours. These pseudo-elements hide
+  // those native controls so only our custom toggle shows.
+  const passwordInputClass = cn(
+    inputClass,
+    '[&::-ms-reveal]:hidden [&::-ms-clear]:hidden',
+    '[&::-webkit-credentials-auto-fill-button]:hidden [&::-webkit-strong-password-auto-fill-button]:hidden'
+  );
+
   return (
     <div className="relative min-h-screen w-full flex items-center justify-center bg-[#0a0c0f] px-4 py-10 overflow-hidden">
       {/* Anamorphic, edge-to-edge scatter of preview tiles + ambient glows.
@@ -1140,7 +1151,7 @@ export function LoginPage() {
                   value={password}
                   onChange={e => setPassword(e.target.value)}
                   placeholder={mode === 'signUp' ? '8+ characters, 1 special' : '••••••••'}
-                  className={cn(inputClass, 'pr-11')}
+                  className={cn(passwordInputClass, 'pr-11')}
                 />
                 <button
                   type="button"
@@ -1166,7 +1177,7 @@ export function LoginPage() {
                     value={confirmPassword}
                     onChange={e => setConfirmPassword(e.target.value)}
                     placeholder="Re-enter your password"
-                    className={cn(inputClass, 'pr-11')}
+                    className={cn(passwordInputClass, 'pr-11')}
                   />
                   <button
                     type="button"
