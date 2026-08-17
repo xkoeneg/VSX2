@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import {
   Eye,
   EyeOff,
@@ -962,6 +962,21 @@ export function LoginPage() {
   const [isGoogleSubmitting, setIsGoogleSubmitting] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [infoMsg, setInfoMsg] = useState<string | null>(null);
+
+  // Set by PreviewScreen.tsx's reactive session guard right before it calls
+  // onExit() — i.e. the owner turned "Public / Viewer Passcodes" off while
+  // this viewer's tab was still open, and it just got kicked back here.
+  // Read-once-and-clear so it doesn't persist across an unrelated sign-in.
+  useEffect(() => {
+    try {
+      if (sessionStorage.getItem('vsx-preview-revoked') === '1') {
+        sessionStorage.removeItem('vsx-preview-revoked');
+        setInfoMsg('Public preview access is currently disabled by the owner.');
+      }
+    } catch {
+      // sessionStorage unavailable — not worth failing sign-in over.
+    }
+  }, []);
 
   // "Have a Viewer Passcode?" — a second, unrelated entry path for people
   // who were shared a read-only preview but don't have (and don't need) an
