@@ -44,7 +44,7 @@ import {
   Palette,
   Highlighter,
   FileText,
-  Clock,
+  Tag,
 } from 'lucide-react';
 import { PageHeader } from '../components/shared/PageHeader';
 import type { NotebookEntry, NotebookTemplate } from '../types';
@@ -464,14 +464,6 @@ export function NotebookScreen() {
       return new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime();
     });
   }, [activeFolder, isTrashView, isFavoritesView, liveEntries, deletedEntries, notebookDeletedFolders, search, activeTagFilter, sortMode]);
-
-  // Powers the "Last saved" line in the folder rail's footer: the most
-  // recently updated note across the whole workspace (not just the current
-  // filtered/folder view), since the sidebar footer is a global stat.
-  const lastSavedEntry = useMemo(() => {
-    if (!liveEntries.length) return null;
-    return liveEntries.reduce((latest, e) => (new Date(e.updatedAt) > new Date(latest.updatedAt) ? e : latest), liveEntries[0]);
-  }, [liveEntries]);
 
   const selectedEntry = useMemo(
     () => notebookEntries.find(e => e.id === selectedEntryId) ?? null,
@@ -1550,70 +1542,91 @@ export function NotebookScreen() {
       `}</style>
 
       {/* ---- Search + filter row ----
-          Left-aligned group only — search bar, filter icon, and sort
-          button — matching the clean header language on Dashboard,
-          Discipline Tracker, and Life Discipline Hub (no stat badges
-          cluttering the top bar; + New Note stays alone on the far right,
-          up in PageHeader's actions slot). */}
-      <div className="flex items-center gap-2.5">
-        <div className="relative flex-1 max-w-md">
-          <Search className={cn('absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4', textMuted)} />
-          <input
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search notes and tags"
-            className={cn('w-full pl-10 pr-3.5 py-2.5 rounded-lg text-base border outline-none', panelBg, border, theme !== 'light' ? 'text-white placeholder-zinc-500 focus:border-zinc-600' : 'text-zinc-900 placeholder-zinc-400 focus:border-zinc-300')}
-          />
+          Search bar + filter icon stay grouped on the left. The middle/
+          right space (previously empty, then briefly badges, then a
+          duplicate sort button) now holds compact stat cards matching the
+          Dashboard/Discipline Tracker/Life Discipline Hub stat-panel look.
+          `justify-between` on the full-width row pushes the cards toward
+          the far right, under where + New Note sits up in PageHeader. The
+          "All Notes" section below already has its own sort/view controls,
+          so no sort control is duplicated up here. */}
+      <div className="flex items-center justify-between gap-4 w-full">
+        <div className="flex items-center gap-2.5">
+          <div className="relative flex-1 max-w-md">
+            <Search className={cn('absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4', textMuted)} />
+            <input
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Search notes and tags"
+              className={cn('w-full pl-10 pr-3.5 py-2.5 rounded-lg text-base border outline-none', panelBg, border, theme !== 'light' ? 'text-white placeholder-zinc-500 focus:border-zinc-600' : 'text-zinc-900 placeholder-zinc-400 focus:border-zinc-300')}
+            />
+          </div>
+          <div className="relative">
+            <button
+              onClick={() => setShowFilter(v => !v)}
+              title="Filter by tag"
+              className={cn('p-2.5 rounded-lg border transition-colors', panelBg, border, activeTagFilter ? 'text-purple-400 border-purple-500/40' : cn(textMuted, 'hover:text-zinc-200'))}
+            >
+              <Filter className="w-4 h-4" />
+            </button>
+            {showFilter && (
+              <div className={cn('absolute right-0 mt-1.5 w-56 rounded-lg border shadow-xl z-20 p-2.5', theme !== 'light' ? 'bg-zinc-900 border-zinc-800' : 'bg-white border-zinc-200')}>
+                <p className={cn('text-xs font-semibold uppercase tracking-wider px-2 pb-1.5', textMuted)}>Filter by tag</p>
+                {allTags.length === 0 ? (
+                  <p className={cn('text-sm px-2 py-1.5', textMuted)}>No tags yet</p>
+                ) : (
+                  <div className="themed-scrollbar max-h-48 overflow-y-auto flex flex-col gap-1">
+                    {allTags.map(tag => (
+                      <button
+                        key={tag}
+                        onClick={() => { setActiveTagFilter(prev => prev === tag ? null : tag); setShowFilter(false); }}
+                        className={cn(
+                          'text-left px-2 py-1.5 rounded-md text-sm transition-colors',
+                          activeTagFilter === tag
+                            ? (theme !== 'light' ? 'bg-purple-500/15 text-purple-300' : 'bg-purple-50 text-purple-700')
+                            : cn(textBody, theme !== 'light' ? 'hover:bg-zinc-800' : 'hover:bg-zinc-50')
+                        )}
+                      >
+                        {tag}
+                      </button>
+                    ))}
+                  </div>
+                )}
+                {activeTagFilter && (
+                  <button onClick={() => { setActiveTagFilter(null); setShowFilter(false); }} className="w-full text-left px-2 py-1.5 mt-1 rounded-md text-sm text-rose-400 hover:bg-zinc-800">
+                    Clear filter
+                  </button>
+                )}
+              </div>
+            )}
+          </div>
         </div>
-        <div className="relative">
-          <button
-            onClick={() => setShowFilter(v => !v)}
-            title="Filter by tag"
-            className={cn('p-2.5 rounded-lg border transition-colors', panelBg, border, activeTagFilter ? 'text-purple-400 border-purple-500/40' : cn(textMuted, 'hover:text-zinc-200'))}
-          >
-            <Filter className="w-4 h-4" />
-          </button>
-          {showFilter && (
-            <div className={cn('absolute right-0 mt-1.5 w-56 rounded-lg border shadow-xl z-20 p-2.5', theme !== 'light' ? 'bg-zinc-900 border-zinc-800' : 'bg-white border-zinc-200')}>
-              <p className={cn('text-xs font-semibold uppercase tracking-wider px-2 pb-1.5', textMuted)}>Filter by tag</p>
-              {allTags.length === 0 ? (
-                <p className={cn('text-sm px-2 py-1.5', textMuted)}>No tags yet</p>
-              ) : (
-                <div className="themed-scrollbar max-h-48 overflow-y-auto flex flex-col gap-1">
-                  {allTags.map(tag => (
-                    <button
-                      key={tag}
-                      onClick={() => { setActiveTagFilter(prev => prev === tag ? null : tag); setShowFilter(false); }}
-                      className={cn(
-                        'text-left px-2 py-1.5 rounded-md text-sm transition-colors',
-                        activeTagFilter === tag
-                          ? (theme !== 'light' ? 'bg-purple-500/15 text-purple-300' : 'bg-purple-50 text-purple-700')
-                          : cn(textBody, theme !== 'light' ? 'hover:bg-zinc-800' : 'hover:bg-zinc-50')
-                      )}
-                    >
-                      {tag}
-                    </button>
-                  ))}
-                </div>
-              )}
-              {activeTagFilter && (
-                <button onClick={() => { setActiveTagFilter(null); setShowFilter(false); }} className="w-full text-left px-2 py-1.5 mt-1 rounded-md text-sm text-rose-400 hover:bg-zinc-800">
-                  Clear filter
-                </button>
-              )}
+
+        {/* Top stat cards — dark container, muted uppercase label, bold
+            value, matching the app's other stat-panel screens exactly. */}
+        <div className="flex items-center gap-3">
+          <div className="bg-[#12141c] border border-slate-800/80 rounded-xl px-4 py-2 flex items-center gap-3 shadow-sm">
+            <FileText className="w-4 h-4 text-slate-400" />
+            <div className="flex flex-col leading-tight">
+              <span className="text-[10px] font-semibold tracking-wider text-slate-400 uppercase">Total Notes</span>
+              <span className="text-sm font-bold text-slate-100">{liveEntries.length}</span>
             </div>
-          )}
+          </div>
+          <div className="bg-[#12141c] border border-slate-800/80 rounded-xl px-4 py-2 flex items-center gap-3 shadow-sm">
+            <Star className="w-4 h-4 text-slate-400" />
+            <div className="flex flex-col leading-tight">
+              <span className="text-[10px] font-semibold tracking-wider text-slate-400 uppercase">Favorites</span>
+              <span className="text-sm font-bold text-slate-100">{liveEntries.filter(e => e.favorite).length}</span>
+            </div>
+          </div>
+          <div className="bg-[#12141c] border border-slate-800/80 rounded-xl px-4 py-2 flex items-center gap-3 shadow-sm">
+            <Tag className="w-4 h-4 text-slate-400" />
+            <div className="flex flex-col leading-tight">
+              <span className="text-[10px] font-semibold tracking-wider text-slate-400 uppercase">Tags</span>
+              <span className="text-sm font-bold text-slate-100">{allTags.length}</span>
+            </div>
+          </div>
         </div>
-        {/* Sort — same icon-button chrome as Filter, paired directly beside
-            it. Reuses the existing cycleSort/sortLabel already wired up for
-            the note-list header below, so both controls stay in sync. */}
-        <button
-          onClick={cycleSort}
-          title={`Sort: ${sortLabel}`}
-          className={cn('p-2.5 rounded-lg border transition-colors', panelBg, border, textMuted, 'hover:text-zinc-200')}
-        >
-          <ArrowUpDown className="w-4 h-4" />
-        </button>
       </div>
 
       {/* + New Note stays anchored top-right inside PageHeader's actions
@@ -1748,27 +1761,6 @@ export function NotebookScreen() {
             </button>
 
             {folderTree.map(node => renderFolderNode(node, 0))}
-          </div>
-
-          {/* Quick stats footer — total notes + last saved, pinned below
-              the scrollable folder list (All Notes / Favorites / custom
-              folders) and above Recently Deleted. Replaces the old top-bar
-              badges with the same dark glass border-t footer language used
-              elsewhere in the app, tucked into the sidebar instead of the
-              header. */}
-          <div className="px-2.5 pt-3 pb-2.5 border-t border-slate-800/80 text-xs text-slate-400 flex-shrink-0 space-y-1.5">
-            <div className="flex items-center gap-1.5">
-              <FileText className="w-3.5 h-3.5" />
-              <span>{liveEntries.length} {liveEntries.length === 1 ? 'Note' : 'Notes'}</span>
-            </div>
-            <div className="flex items-center gap-1.5">
-              <Clock className="w-3.5 h-3.5" />
-              <span>
-                {lastSavedEntry
-                  ? `Last saved ${new Date(lastSavedEntry.updatedAt).toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' })}`
-                  : 'No notes yet'}
-              </span>
-            </div>
           </div>
 
           {/* Recently Deleted — pinned as a footer row at the very bottom
