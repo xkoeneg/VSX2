@@ -397,15 +397,17 @@ export interface NotebookTemplate {
   bodyHtml: string;
 }
 
-// A folder that's been deleted but is still sitting in "Recently Deleted"
-// (see NotebookScreen's trash view). Deleting a folder soft-deletes it AND
-// every entry that was directly in it (see handleDeleteNotebookFolder in
-// useAppState.tsx) — restoring the folder restores those entries too.
-// `color` is captured at delete time so it renders the same way once
-// restored, even though the live notebookFolderColors map no longer has
-// an entry for this (now inactive) folder name.
-export interface DeletedNotebookFolder {
+// A folder the user deleted. Deleting a folder soft-deletes it (and every
+// entry whose `folder` matches it) into "Recently Deleted" together, rather
+// than immediately dropping the folder and orphaning its notes — mirrors
+// NotebookEntry's isDeleted/deletedAt pattern, but as its own list, since
+// folders are just names in `notebookFolders`, not rows with their own
+// isDeleted flag.
+export interface NotebookDeletedFolder {
   name: string;
+  // The folder's color at the time it was deleted (see notebookFolderColors
+  // below), carried along so the trashed-folder row still shows the right
+  // swatch and restoring it doesn't lose the color.
   color?: string;
   deletedAt: string;
 }
@@ -433,17 +435,13 @@ export interface StoredData {
   // they live in their own `notebook_entries` table, loaded/saved the same
   // way `accounts`/`trades` are (see useAppState.tsx).
   notebookFolders: string[];
-  // Maps a folder name -> one of NOTEBOOK_COVER_COLORS, for folders whose
-  // color was explicitly chosen (at creation, or changed later) rather than
-  // left to the deterministic name-hash fallback the UI uses otherwise.
-  // Keyed by folder name so it naturally survives folder renames-by-delete
-  // (a renamed folder is just a new name, which falls back to the hash
-  // color again unless re-chosen — acceptable since renames aren't common).
+  // Per-folder color override: folder name/path -> a NOTEBOOK_COVER_COLORS
+  // id. A folder with no entry here falls back to a deterministic
+  // name-hash color (see folderColor() in NotebookScreen.tsx) rather than
+  // going uncolored.
   notebookFolderColors: Record<string, string>;
-  // Folders currently sitting in "Recently Deleted" (see
-  // DeletedNotebookFolder above). Small config-like list, same reasoning
-  // as notebookFolders for living in this blob rather than its own table.
-  notebookDeletedFolders: DeletedNotebookFolder[];
+  // Soft-deleted folders — see NotebookDeletedFolder above.
+  notebookDeletedFolders: NotebookDeletedFolder[];
 }
 
 export interface ParsedMTTrade {
