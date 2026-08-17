@@ -364,7 +364,8 @@ export function Sidebar({ isMobile }: { isMobile: boolean }) {
 
       const metadata = (rawUser.user_metadata ?? {}) as Record<string, unknown>;
 
-      // hide_email / display_name / viewer_passcode live in public.profiles,
+      // hide_email / display_name / investor_passcode / friend_passcode live
+      // in public.profiles,
       // NOT auth user_metadata — some OAuth providers silently overwrite
       // user_metadata with fresh provider claims on every sign-in, which
       // was wiping these settings. avatar_url is still sourced from
@@ -374,7 +375,7 @@ export function Sidebar({ isMobile }: { isMobile: boolean }) {
         try {
           const { data: profile, error } = await supabase
             .from('profiles')
-            .select('display_name, hide_email, viewer_passcode, avatar_url, avatar_preset_color')
+            .select('display_name, hide_email, investor_passcode, friend_passcode, avatar_url, avatar_preset_color')
             .eq('id', rawUser.id)
             .maybeSingle();
           if (error) throw error;
@@ -399,7 +400,8 @@ export function Sidebar({ isMobile }: { isMobile: boolean }) {
             // an image src.
             avatarPresetColor: typeof profile?.avatar_preset_color === 'string' ? profile.avatar_preset_color : null,
             hideEmail: typeof profile?.hide_email === 'boolean' ? profile.hide_email : undefined,
-            viewerPasscode: typeof profile?.viewer_passcode === 'string' ? (profile.viewer_passcode ?? undefined) : undefined,
+            investorPasscode: typeof profile?.investor_passcode === 'string' ? profile.investor_passcode : undefined,
+            friendPasscode: typeof profile?.friend_passcode === 'string' ? profile.friend_passcode : undefined,
           });
         } catch (err) {
           console.error('Could not load profile row', err);
