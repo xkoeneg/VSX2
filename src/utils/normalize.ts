@@ -64,6 +64,15 @@ export const normalizeTrade = (t: any, fallbackTradeNumber: number): Trade => ({
   // reload, or every unreviewed trade silently turns into a false
   // "Rules Followed" the next time the app loads.
   rulesFollowed: t?.rulesFollowed === 'broken' ? 'broken' : t?.rulesFollowed === 'followed' ? 'followed' : undefined,
+  // Must survive normalization the same way rulesFollowed does above — this
+  // is the ONLY gate for Pending Review vs. Rule Adherence Log membership
+  // (see the isReviewed comment in useAppState.tsx). Without reading it
+  // back here, every trade that was actually reviewed came back as
+  // isReviewed === undefined (falsy) after a Full System Backup restore or
+  // a Trade Backup import, silently dropping it back into Pending Review
+  // and out of the Rule Adherence Log even though nothing about the trade
+  // itself changed.
+  isReviewed: t?.isReviewed === true,
   timeframes: Array.isArray(t?.timeframes) && t.timeframes.length > 0
     ? t.timeframes.map(normalizeTimeframeChart)
     : createEmptyTimeframes(),
