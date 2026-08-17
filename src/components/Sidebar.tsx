@@ -375,7 +375,7 @@ export function Sidebar({ isMobile }: { isMobile: boolean }) {
         try {
           const { data: profile, error } = await supabase
             .from('profiles')
-            .select('display_name, hide_email, investor_passcode, friend_passcode, avatar_url, avatar_preset_color')
+            .select('display_name, hide_email, investor_passcode, friend_passcode, avatar_url, avatar_preset_color, public_preview_enabled')
             .eq('id', rawUser.id)
             .maybeSingle();
           if (error) throw error;
@@ -402,6 +402,15 @@ export function Sidebar({ isMobile }: { isMobile: boolean }) {
             hideEmail: typeof profile?.hide_email === 'boolean' ? profile.hide_email : undefined,
             investorPasscode: typeof profile?.investor_passcode === 'string' ? profile.investor_passcode : undefined,
             friendPasscode: typeof profile?.friend_passcode === 'string' ? profile.friend_passcode : undefined,
+            // Cross-device source of truth for whether /preview/[id] is
+            // reachable at all — previously not selected here, so a fresh
+            // browser/incognito (no local prefs cache) always fell back to
+            // the local-only default of `false` even when the DB column
+            // was `true`, making the Settings toggle show "disabled" while
+            // the preview link (which checks this column server-side via
+            // get_preview_journal) still worked. Now sourced from the same
+            // profiles row as the passcodes above, so it's actually synced.
+            publicPreviewEnabled: typeof profile?.public_preview_enabled === 'boolean' ? profile.public_preview_enabled : undefined,
           });
         } catch (err) {
           console.error('Could not load profile row', err);
