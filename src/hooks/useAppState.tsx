@@ -102,7 +102,7 @@ import {
   CustomPillar, TradeImage, TimeframeChart, StrategyStep, ChatMessage, RoutineCategory, RoutineItem,
   ChallengeConfig, ChallengePreset, EconomicEvent, ParsedMTTrade, ViewType, GalleryView, TradeFilter,
   TradeSortField, SortOrder, PillarsPerRow, NoticeType, SessionOption, WikiCategory, RulePillar,
-  RuleAccentColor, StoredData, NotebookEntry, DeletedNotebookFolder,
+  RuleAccentColor, StoredData, NotebookEntry,
 } from '../types';
 import {
   WIKI_CATEGORIES,
@@ -216,31 +216,12 @@ type StandardConceptSeed = {
 const STANDARD_TRADING_CONCEPTS = standardTradingConceptsSeed as StandardConceptSeed[];
 
 // ----------------------------------------------------------------------------
-// Notebook — starter folders. "Mindset" and "Daily Reflections" are just a
-// couple of sensible suggestions seeded into `notebookFolders` the first
-// time a user's journal_data has no folders field at all (see
-// migrateStoredData in normalize.ts). From that point on they're ordinary,
-// persisted, renamable/deletable/reorderable entries in the same flat
-// list as any folder the user creates — nothing here treats them as
-// special or protects them from deletion.
+// Notebook — default folders. A couple of sensible built-ins, always
+// present, merged ahead of whatever custom folders the user has added
+// (`notebookFolders` in journal_data). Not persisted themselves — they're
+// implicit, so removing/renaming them here doesn't require a migration.
 // ----------------------------------------------------------------------------
-
-// Reorders the flat `notebookFolders` list by moving the dragged folder's
-// entire subtree (itself + any "dragged/child" descendants, wherever they
-// sit in the array) to sit immediately before the target folder's first
-// appearance. Purely an array reorder — the tree shown in the sidebar is
-// just built from array order (see buildFolderTree in NotebookScreen), so
-// this is enough to let drag-and-drop reorder top-level folders.
-const reorderNotebookFolders = (folders: string[], draggedRoot: string, targetRoot: string): string[] => {
-  if (draggedRoot === targetRoot) return folders;
-  const belongsTo = (f: string, root: string) => f === root || f.startsWith(`${root}/`);
-  const draggedGroup = folders.filter(f => belongsTo(f, draggedRoot));
-  if (draggedGroup.length === 0) return folders;
-  const rest = folders.filter(f => !belongsTo(f, draggedRoot));
-  const targetIndex = rest.findIndex(f => belongsTo(f, targetRoot));
-  if (targetIndex === -1) return folders;
-  return [...rest.slice(0, targetIndex), ...draggedGroup, ...rest.slice(targetIndex)];
-};
+const DEFAULT_NOTEBOOK_FOLDERS = ['Mindset', 'Daily Reflections'] as const;
 
 // ============================================================================
 // useAppState — the entire journal's state + business logic.
@@ -601,14 +582,6 @@ export function useAppState() {
   // table (own-row-per-entry, like `trades`) and are loaded/state-managed
   // separately below.
   const [notebookFolders, setNotebookFolders] = useState<string[]>([]);
-  // Explicit color choice per folder name (see StoredData.notebookFolderColors
-  // for why it's keyed this way). Folders with no entry here fall back to a
-  // deterministic name-hash color in the UI, so this only needs to hold the
-  // folders someone actually picked a color for.
-  const [notebookFolderColors, setNotebookFolderColors] = useState<Record<string, string>>({});
-  // Folders sitting in "Recently Deleted" — see DeletedNotebookFolder in
-  // ../types for why this exists as a separate list from notebookFolders.
-  const [notebookDeletedFolders, setNotebookDeletedFolders] = useState<DeletedNotebookFolder[]>([]);
   const [notebookEntries, setNotebookEntries] = useState<NotebookEntry[]>([]);
   // True while the initial Supabase fetch for notebook entries is in
   // flight — mirrors accountsTradesLoading's purpose for this table.
@@ -1099,8 +1072,6 @@ export function useAppState() {
       setCustomSymbols(migrated.customSymbols);
       setCustomPillars(migrated.customPillars);
       setNotebookFolders(migrated.notebookFolders);
-      setNotebookFolderColors(migrated.notebookFolderColors);
-      setNotebookDeletedFolders(migrated.notebookDeletedFolders);
     } catch (e) {
       console.error('Failed to load journal data from Supabase:', e);
       showTradeImportToast('error', 'Failed to load your Playbook/Notices/Wiki/Tags — check your connection and reload.');
@@ -1121,7 +1092,7 @@ export function useAppState() {
   // saved server-side before it's even been fetched.
   useEffect(() => {
     if (!userId || !hasLoadedJournalDataRef.current) return;
-    const payload = { rules, strategies, notices, wikiEntries, setupTypes, confluences, mistakesList, emotionsList, customSymbols, customPillars, notebookFolders, notebookFolderColors, notebookDeletedFolders };
+    const payload = { rules, strategies, notices, wikiEntries, setupTypes, confluences, mistakesList, emotionsList, customSymbols, customPillars, notebookFolders };
     writeJournalData(
       async () => {
         const { error } = await supabase
@@ -1134,7 +1105,7 @@ export function useAppState() {
         showTradeImportToast('error', 'Failed to save your changes — they may not sync to other devices. Check your connection.');
       }
     );
-  }, [userId, rules, strategies, notices, wikiEntries, setupTypes, confluences, mistakesList, emotionsList, customSymbols, customPillars, notebookFolders, notebookFolderColors, notebookDeletedFolders, writeJournalData]);
+  }, [userId, rules, strategies, notices, wikiEntries, setupTypes, confluences, mistakesList, emotionsList, customSymbols, customPillars, notebookFolders, writeJournalData]);
 
   // ==========================================================================
   // Accounts & Trades: Supabase (per-user, synced across devices)
@@ -1435,11 +1406,8 @@ export function useAppState() {
     });
   }, [userId]);
 
-  // Permanently deletes every entry currently in "Recently Deleted", plus
-  // every folder sitting in the trash alongside them (their notes are
-  // already covered by the entries wipe below since they're all isDeleted).
+  // Permanently deletes every entry currently in "Recently Deleted".
   const handleEmptyNotebookTrash = useCallback(() => {
-    setNotebookDeletedFolders([]);
     setNotebookEntries(prev => {
       const toDelete = prev.filter(e => e.isDeleted);
       if (toDelete.length > 0 && userId) {
@@ -1516,132 +1484,47 @@ export function useAppState() {
   // table — adding one just appends to the small persisted string list, and
   // the existing journal_data debounced writer picks up the change
   // automatically via its effect dependency array.
-  const handleAddNotebookFolder = useCallback((name: string, color?: string) => {
+  const notebookFoldersWithDefaults = useMemo(() => {
+    const custom = notebookFolders.filter(f => !(DEFAULT_NOTEBOOK_FOLDERS as readonly string[]).includes(f));
+    return [...DEFAULT_NOTEBOOK_FOLDERS, ...custom];
+  }, [notebookFolders]);
+
+  const handleAddNotebookFolder = useCallback((name: string) => {
     const trimmed = name.trim();
     if (!trimmed) return;
     setNotebookFolders(prev => {
-      if (prev.includes(trimmed)) return prev;
+      if (prev.includes(trimmed) || (DEFAULT_NOTEBOOK_FOLDERS as readonly string[]).includes(trimmed)) return prev;
       return [...prev, trimmed];
-    });
-    if (color) {
-      setNotebookFolderColors(prev => ({ ...prev, [trimmed]: color }));
-    }
-  }, []);
-
-  // Drag-and-drop reorder from the sidebar — drops `draggedName` immediately
-  // before `targetName`'s current position. See reorderNotebookFolders above.
-  const handleReorderNotebookFolder = useCallback((draggedName: string, targetName: string) => {
-    setNotebookFolders(prev => reorderNotebookFolders(prev, draggedName, targetName));
-  }, []);
-
-  // Recolors a folder after the fact (not just at creation) — same
-  // journal_data-backed map as the color chosen on create, just updated in
-  // place. Passing undefined clears the explicit choice and falls back to
-  // the deterministic name-hash color again.
-  const handleSetNotebookFolderColor = useCallback((name: string, color: string | undefined) => {
-    setNotebookFolderColors(prev => {
-      if (!color) {
-        if (!(name in prev)) return prev;
-        const { [name]: _omit, ...rest } = prev;
-        return rest;
-      }
-      return { ...prev, [name]: color };
     });
   }, []);
 
   const handleDeleteNotebookFolder = useCallback((name: string) => {
-    const now = new Date().toISOString();
-    const color = notebookFolderColors[name];
+    if ((DEFAULT_NOTEBOOK_FOLDERS as readonly string[]).includes(name)) return; // default folders aren't removable
     setNotebookFolders(prev => prev.filter(f => f !== name));
-    setNotebookFolderColors(prev => {
-      if (!(name in prev)) return prev;
-      const { [name]: _omit, ...rest } = prev;
-      return rest;
-    });
-    // The folder itself moves to "Recently Deleted" — its color is
-    // captured here since the live notebookFolderColors map above just
-    // lost its entry for this (now inactive) name.
-    setNotebookDeletedFolders(prev => prev.some(f => f.name === name) ? prev : [...prev, { name, color, deletedAt: now }]);
-    // Entries that were directly in this folder move to Recently Deleted
-    // together with it (soft delete, same as handleSoftDeleteNotebookEntry)
-    // instead of falling back to Uncategorized — restoring the folder
-    // brings them back too (see handleRestoreNotebookFolder below).
+    // Entries that were in the deleted folder fall back to uncategorized
+    // rather than pointing at a folder that no longer exists. Each entry is
+    // its own Supabase row, so the reset has to be pushed per-entry, not
+    // just via the journal_data blob (which only holds the folder names).
     setNotebookEntries(prev => {
-      const affected = prev.filter(e => e.folder === name && !e.isDeleted);
-      if (affected.length === 0) return prev;
-      const updated = prev.map(e => e.folder === name && !e.isDeleted ? { ...e, isDeleted: true, deletedAt: now, pinned: false } : e);
-      if (userId) {
-        affected.forEach(e => {
-          const updatedEntry = updated.find(u => u.id === e.id)!;
-          supabase.from('notebook_entries').update({ data: updatedEntry }).eq('id', e.id).eq('user_id', userId).then(({ error }) => {
-            if (error) {
-              console.error('Failed to soft-delete notebook entries after folder deletion in Supabase:', error);
-              showTradeImportToast('error', 'Failed to move some notes to Recently Deleted — they may reappear on reload.');
-            }
-          });
-        });
-      } else {
-        console.error('Cannot update notebook entries in Supabase: no authenticated user id.');
-        showTradeImportToast('error', 'Not signed in — these note changes were NOT saved and will be lost on refresh.');
-      }
-      return updated;
-    });
-  }, [userId, notebookFolderColors]);
-
-  // Brings a trashed folder (and every entry that was soft-deleted along
-  // with it) back to the active list. Entries an individual user already
-  // restored one-by-one, or permanently deleted, are left alone — this
-  // only touches entries still marked isDeleted with folder === name.
-  const handleRestoreNotebookFolder = useCallback((name: string) => {
-    const trashedColor = notebookDeletedFolders.find(f => f.name === name)?.color;
-    setNotebookDeletedFolders(prev => prev.filter(f => f.name !== name));
-    setNotebookFolders(prev => prev.includes(name) ? prev : [...prev, name]);
-    if (trashedColor) {
-      setNotebookFolderColors(prev => ({ ...prev, [name]: trashedColor }));
-    }
-    const now = new Date().toISOString();
-    setNotebookEntries(prev => {
-      const affected = prev.filter(e => e.folder === name && e.isDeleted);
-      if (affected.length === 0) return prev;
-      const updated = prev.map(e => e.folder === name && e.isDeleted ? { ...e, isDeleted: false, deletedAt: undefined, updatedAt: now } : e);
-      if (userId) {
-        affected.forEach(e => {
-          const updatedEntry = updated.find(u => u.id === e.id)!;
-          supabase.from('notebook_entries').update({ data: updatedEntry }).eq('id', e.id).eq('user_id', userId).then(({ error }) => {
-            if (error) {
-              console.error('Failed to restore notebook entries with Supabase:', error);
-              showTradeImportToast('error', 'Failed to restore some notes on the server — they may still show as deleted on reload.');
-            }
-          });
-        });
-      } else {
-        console.error('Cannot update notebook entries in Supabase: no authenticated user id.');
-        showTradeImportToast('error', 'Not signed in — this restore was NOT saved and will be lost on refresh.');
-      }
-      return updated;
-    });
-  }, [userId, notebookDeletedFolders]);
-
-  // Permanently removes a single trashed folder and whatever of its notes
-  // are still sitting in Recently Deleted (mirrors handlePermanentDeleteNotebookEntry,
-  // just scoped to a whole folder instead of one note).
-  const handlePermanentDeleteNotebookFolder = useCallback((name: string) => {
-    setNotebookDeletedFolders(prev => prev.filter(f => f.name !== name));
-    setNotebookEntries(prev => {
-      const toDelete = prev.filter(e => e.folder === name && e.isDeleted);
-      if (toDelete.length > 0) {
+      const affected = prev.filter(e => e.folder === name);
+      const updated = prev.map(e => e.folder === name ? { ...e, folder: '', updatedAt: new Date().toISOString() } : e);
+      if (affected.length > 0) {
         if (userId) {
-          toDelete.forEach(e => {
-            supabase.from('notebook_entries').delete().eq('id', e.id).eq('user_id', userId).then(({ error }) => {
-              if (error) console.error('Failed to permanently delete notebook entry from Supabase:', error);
+          affected.forEach(e => {
+            const updatedEntry = updated.find(u => u.id === e.id)!;
+            supabase.from('notebook_entries').update({ data: updatedEntry }).eq('id', e.id).eq('user_id', userId).then(({ error }) => {
+              if (error) {
+                console.error('Failed to update notebook entry after folder deletion in Supabase:', error);
+                showTradeImportToast('error', 'Failed to move some notes out of the deleted folder — they may reappear on reload.');
+              }
             });
           });
         } else {
-          console.error('Cannot delete notebook entries from Supabase: no authenticated user id.');
-          showTradeImportToast('error', 'Not signed in — these notes were only removed locally and may reappear on reload.');
+          console.error('Cannot update notebook entries in Supabase: no authenticated user id.');
+          showTradeImportToast('error', 'Not signed in — these note changes were NOT saved and will be lost on refresh.');
         }
       }
-      return prev.filter(e => !(e.folder === name && e.isDeleted));
+      return updated;
     });
   }, [userId]);
 
@@ -1992,8 +1875,6 @@ export function useAppState() {
       setEmotionsList(EMOTION_OPTIONS.map(name => ({ id: generateId(), name, color: 'purple' as TagColor })));
       setCustomSymbols([]);
       setNotebookFolders([]);
-      setNotebookFolderColors({});
-      setNotebookDeletedFolders([]);
       setJournalDataLoading(true);
       hasLoadedJournalDataRef.current = false;
 
@@ -2865,6 +2746,63 @@ export function useAppState() {
     });
   }, [accountFilteredTrades, tradeFilter, tradeSortField, tradeSortOrder]);
 
+  // Global chronological trade numbering (Top-Left Badge).
+  //
+  // Deliberately NOT `trade.absoluteTradeNumber` — that field is a STATIC
+  // counter stamped once at creation/import time as `max(existing) + 1`
+  // (see handleImportTradesFile / handleAddTrade / the backup-import path
+  // below, where imports even get offset by `+ trades.length`). That's an
+  // insertion-order id, not a chronological one: import a batch of OLDER
+  // trades after you already have 50, and they get stamped #51-#100 instead
+  // of reflowing into #1-#50, which is exactly the "#8, #7 ... #3, #2, #1
+  // ... #50, #49" bug.
+  //
+  // Instead this is computed fresh from the full, unfiltered `trades` master
+  // list every time it changes: sort ALL trades oldest -> newest by
+  // timestamp, and the badge is just that trade's 1-based position in that
+  // sort. The oldest trade in the whole account history is always #1, the
+  // newest is always #N — automatically, regardless of import/insertion
+  // order, and regardless of which account/date-range filter is currently
+  // active (this map is built off `trades`, not `filteredTrades`).
+  const chronologicalTradeNumberById = useMemo(() => {
+    const sorted = [...trades].sort((a, b) => {
+      const timeA = new Date(a.timestamp).getTime();
+      const timeB = new Date(b.timestamp).getTime();
+      if (timeA !== timeB) return timeA - timeB;
+      // Same-timestamp tiebreaker: manually entered Trade # (trackingNumber),
+      // same convention as filteredTrades' date-sort tiebreak above. Falls
+      // back to a stable id compare so two trades never flip order between
+      // renders even if neither has a numeric trackingNumber.
+      const numA = parseInt(a.trackingNumber || '', 10);
+      const numB = parseInt(b.trackingNumber || '', 10);
+      const validA = Number.isFinite(numA);
+      const validB = Number.isFinite(numB);
+      if (validA && validB && numA !== numB) return numA - numB;
+      if (validA && !validB) return -1;
+      if (!validA && validB) return 1;
+      return a.id.localeCompare(b.id);
+    });
+    const map = new Map<string, number>();
+    sorted.forEach((t, i) => map.set(t.id, i + 1));
+    return map;
+  }, [trades]);
+
+  // Returns the trade's dynamic, globally-chronological display number (the
+  // Top-Left Badge). This is intentionally independent of the current sort
+  // field/order and of any active filters, so the badge on a given trade's
+  // card never changes just because the list was re-sorted (Date asc/desc,
+  // P&L, R:R, etc.) or filtered down to one account. Toggling
+  // Ascending/Descending only changes which card sits on top — the newest
+  // trade in the whole history naturally carries the highest number and the
+  // oldest the lowest, so the badge and its card always travel together.
+  // Wrapped in useCallback purely for referential stability: this is passed
+  // down through context to trade card / row components that are now
+  // React.memo'd (see TradesScreen.tsx), and a function prop that changes
+  // identity every render would defeat that memoization.
+  const getDisplayTradeNumber = useCallback((trade: Trade): number => {
+    return chronologicalTradeNumberById.get(trade.id) ?? 0;
+  }, [chronologicalTradeNumberById]);
+
   // Database sub-page: applies its own independent filter set on top of the
   // already account/outcome-filtered trades, then paginates the result.
   const dbFilteredTrades = useMemo(() => {
@@ -2874,7 +2812,10 @@ export function useAppState() {
       result = result.filter(t =>
         t.symbol.toLowerCase().includes(q) ||
         (t.trackingNumber || '').toLowerCase().includes(q) ||
-        String(t.absoluteTradeNumber).includes(q) ||
+        // Search by the same dynamic chronological number shown on the
+        // badge (not the stale/static absoluteTradeNumber), so searching
+        // "#12" finds whatever trade is actually showing #12 right now.
+        String(chronologicalTradeNumberById.get(t.id) ?? '').includes(q) ||
         (t.setupTypes || []).some(s => s.toLowerCase().includes(q)) ||
         (t.confluences || []).some(c => c.toLowerCase().includes(q)) ||
         (t.mistakes || []).some(m => m.toLowerCase().includes(q)) ||
@@ -2891,28 +2832,13 @@ export function useAppState() {
     }
     if (dbRulesFilter !== 'all') result = result.filter(t => t.rulesFollowed === dbRulesFilter);
     return result;
-  }, [filteredTrades, dbSearch, dbAccountFilter, dbSessionFilter, dbOutcomeFilter, dbRulesFilter]);
+  }, [filteredTrades, dbSearch, dbAccountFilter, dbSessionFilter, dbOutcomeFilter, dbRulesFilter, chronologicalTradeNumberById]);
 
   const dbPageCount = Math.max(1, Math.ceil(dbFilteredTrades.length / DB_PAGE_SIZE));
   const dbPagedTrades = useMemo(() => {
     const start = dbPage * DB_PAGE_SIZE;
     return dbFilteredTrades.slice(start, start + DB_PAGE_SIZE);
   }, [dbFilteredTrades, dbPage]);
-
-  // Returns the trade's permanent chronological identity number — its absolute creation
-  // position in the master trades array. This is intentionally independent of the current
-  // sort field/order and of any active filters, so the badge on a given trade's card never
-  // changes just because the list was re-sorted (Date asc/desc, P&L, R:R, etc.) or filtered.
-  // Toggling Ascending/Descending only changes which card sits on top — the newest trade
-  // naturally carries the highest number (it was created last) and the oldest the lowest,
-  // so the badge and its card always travel together.
-  // Wrapped in useCallback purely for referential stability: this is passed
-  // down through context to trade card / row components that are now
-  // React.memo'd (see TradesScreen.tsx), and a function prop that changes
-  // identity every render would defeat that memoization.
-  const getDisplayTradeNumber = useCallback((trade: Trade): number => {
-    return trade.absoluteTradeNumber || 0;
-  }, []);
 
   const stats = useMemo(() => {
     const filtered = filteredTrades;
@@ -4849,8 +4775,6 @@ Return ONLY a JSON object — no markdown, no code fences, no commentary — wit
       customPillars,
       notebookEntries,
       notebookFolders,
-      notebookFolderColors,
-      notebookDeletedFolders,
       lifeDisciplineData: buildLifeDisciplineSnapshot(),
       appPreferencesData: buildAppPreferencesSnapshot(),
     };
@@ -4894,14 +4818,6 @@ Return ONLY a JSON object — no markdown, no code fences, no commentary — wit
         // backups predate this field and just no-op here.
         const restoredNotebookFolders: string[] | null = Array.isArray(raw.notebookFolders) ? raw.notebookFolders : null;
         if (restoredNotebookFolders) setNotebookFolders(restoredNotebookFolders);
-        const restoredNotebookFolderColors: Record<string, string> | null =
-          raw.notebookFolderColors && typeof raw.notebookFolderColors === 'object' && !Array.isArray(raw.notebookFolderColors)
-            ? raw.notebookFolderColors
-            : null;
-        if (restoredNotebookFolderColors) setNotebookFolderColors(restoredNotebookFolderColors);
-        const restoredNotebookDeletedFolders: DeletedNotebookFolder[] | null =
-          Array.isArray(raw.notebookDeletedFolders) ? migrated.notebookDeletedFolders : null;
-        if (restoredNotebookDeletedFolders) setNotebookDeletedFolders(restoredNotebookDeletedFolders);
 
         // Everything now lives in Supabase (accounts/trades, journal data,
         // and preferences), so a full restore replaces this user's
@@ -4939,8 +4855,6 @@ Return ONLY a JSON object — no markdown, no code fences, no commentary — wit
                 emotionsList: migrated.emotionsList,
                 customSymbols: migrated.customSymbols,
                 ...(restoredNotebookFolders ? { notebookFolders: restoredNotebookFolders } : {}),
-                ...(restoredNotebookFolderColors ? { notebookFolderColors: restoredNotebookFolderColors } : {}),
-                ...(restoredNotebookDeletedFolders ? { notebookDeletedFolders: restoredNotebookDeletedFolders } : {}),
               },
             }, { onConflict: 'user_id' });
             if (journalErr) throw journalErr;
@@ -5401,8 +5315,6 @@ Return ONLY a JSON object — no markdown, no code fences, no commentary — wit
     // Notebook
     setNotebookEntries([]);
     setNotebookFolders([]);
-    setNotebookFolderColors({});
-    setNotebookDeletedFolders([]);
 
     // Journal Data: Rules/Playbook, Notices, Wiki, Tags
     setRules([]);
@@ -5511,13 +5423,7 @@ Return ONLY a JSON object — no markdown, no code fences, no commentary — wit
     // ---- Notebook ----
     notebookEntries,
     notebookEntriesLoading,
-    notebookFolders,
-    notebookFolderColors,
-    notebookDeletedFolders,
-    handleSetNotebookFolderColor,
-    handleReorderNotebookFolder,
-    handleRestoreNotebookFolder,
-    handlePermanentDeleteNotebookFolder,
+    notebookFolders: notebookFoldersWithDefaults,
     handleAddNotebookEntry,
     handleUpdateNotebookEntry,
     handleToggleNotebookEntryPin,
