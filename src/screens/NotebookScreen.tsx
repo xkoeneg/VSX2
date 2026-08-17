@@ -198,6 +198,39 @@ const normalizeLegacyFormatting = (html: string): string => {
   return container.innerHTML;
 };
 
+// Single source of truth for all three toolbar dropdowns — used both to
+// render the option lists and (below, in NotebookScreen) to work out what
+// the toolbar should show for the actual formatting at the cursor. Having
+// one shared list means the sync logic can never quietly drift out of step
+// with what the dropdown actually offers.
+const STYLE_OPTIONS = [
+  { value: 'P', label: 'Paragraph' },
+  { value: 'H1', label: 'Heading 1' },
+  { value: 'H2', label: 'Heading 2' },
+  { value: 'H3', label: 'Heading 3' },
+] as const;
+
+const FONT_FAMILY_OPTIONS = [
+  { value: 'inherit', label: 'Default' },
+  { value: 'Arial', label: 'Arial' },
+  { value: 'Helvetica', label: 'Helvetica' },
+  { value: 'Georgia', label: 'Georgia' },
+  { value: "'Times New Roman'", label: 'Times New Roman' },
+  { value: "'Courier New'", label: 'Courier New' },
+  { value: 'Verdana', label: 'Verdana' },
+  { value: 'Tahoma', label: 'Tahoma' },
+  { value: "'Trebuchet MS'", label: 'Trebuchet MS' },
+  { value: "'Comic Sans MS'", label: 'Comic Sans MS' },
+] as const;
+
+const FONT_SIZE_OPTIONS = [10, 12, 14, 16, 18, 20, 24, 28, 32, 36, 48, 64] as const;
+
+// Block tags the Style dropdown can produce, in priority order for the
+// nearest-ancestor walk in syncToolbarFromSelection — most specific first.
+const BLOCK_TAG_TO_STYLE_LABEL: Record<string, string> = Object.fromEntries(
+  STYLE_OPTIONS.map(o => [o.value, o.label])
+);
+
 const stripHtml = (html: string) =>
   html.replace(/<[^>]*>/g, ' ').replace(/&nbsp;/g, ' ').replace(/\s+/g, ' ').trim();
 
@@ -622,24 +655,93 @@ export function NotebookScreen() {
   };
   const onTitleBlur = () => flushSave({ title: titleDraft });
 
-  const onBodyInput = () => {
+  const onBodyInput = (e?: React.FormEvent<HTMLDivElement>) => {
+    const native = e?.nativeEvent as InputEvent | undefined;
+    if (native && (native.inputType === 'insertParagraph' || native.inputType === 'insertLineBreak')) {
+      stripLeakedStyleFromNewEmptyLine();
+    }
     const html = bodyRef.current?.innerHTML ?? '';
     scheduleSave({ body: html });
     setWordCount(countWords(html));
   };
   const onBodyBlur = () => flushSave({ body: bodyRef.current?.innerHTML ?? '' });
 
+  // Requirement 3: pressing Enter after text that had an overridden
+  // font-size/font-family shouldn't hand that formatting to the new line
+  // too. The browser's own paragraph-split (which we let run natively —
+  // reimplementing it by hand risks breaking normal typing) commonly
+  // clones the surrounding styled <span> into the new paragraph so its
+  // (empty) text node has somewhere to live. Since the new line has no
+  // content yet, it's always safe to strip inline font-size/font-family
+  // there — this never touches the previous paragraph's actual text.
+  const stripLeakedStyleFromNewEmptyLine = () => {
+    const editor = bodyRef.current;
+    const sel = window.getSelection();
+    if (!editor || !sel || sel.rangeCount === 0 || !sel.isCollapsed) return;
+    let node: Node | null = sel.getRangeAt(0).startContainer;
+    while (node && node !== editor) {
+      if (node.nodeType === 1) {
+        const el = node as HTMLElement;
+        if (el.style && (el.style.fontSize || el.style.fontFamily)) {
+          el.style.removeProperty('font-size');
+          el.style.removeProperty('font-family');
+          if (!el.getAttribute('style')?.trim()) el.removeAttribute('style');
+        }
+      }
+      node = node.parentNode;
+    }
+  };
+
   // Selection is lost the instant focus leaves the contentEditable div
   // (opening a <select>, clicking a color swatch, etc.), which breaks
   // execCommand-based toolbar actions. We snapshot the last real selection
   // on every mouseup/keyup inside the editor and restore it right before
   // running a command, so toolbar controls work no matter what stole focus
-  // in between.
+  // in between. Every time the selection moves, this is also the moment
+  // the toolbar's own dropdowns get resynced to whatever's actually at the
+  // new cursor position — see syncToolbarFromSelection below.
   const saveSelection = () => {
     const sel = window.getSelection();
     if (sel && sel.rangeCount > 0 && bodyRef.current?.contains(sel.anchorNode)) {
       savedRangeRef.current = sel.getRangeAt(0).cloneRange();
     }
+    syncToolbarFromSelection();
+  };
+
+  // Requirement 1 (active selection listener / two-way sync): reads the
+  // ACTUAL inline font-size, font-family, and block tag at the current
+  // cursor position, and updates the toolbar dropdown labels to match —
+  // instead of the labels being a snapshot of whatever was last clicked,
+  // which drifts the instant the cursor moves anywhere else in the note.
+  const syncToolbarFromSelection = () => {
+    const editor = bodyRef.current;
+    const sel = window.getSelection();
+    if (!editor || !sel || sel.rangeCount === 0 || !editor.contains(sel.anchorNode)) return;
+
+    let node: Node | null = sel.getRangeAt(0).startContainer;
+    let sizePx: number | null = null;
+    let familyValue: string | null = null;
+    let blockLabel = DEFAULT_STYLE_LABEL;
+    while (node && node !== editor) {
+      if (node.nodeType === 1) {
+        const el = node as HTMLElement;
+        if (sizePx === null && el.style?.fontSize) {
+          const parsed = parseFloat(el.style.fontSize);
+          if (!Number.isNaN(parsed)) sizePx = parsed;
+        }
+        if (familyValue === null && el.style?.fontFamily) familyValue = el.style.fontFamily;
+        const tag = el.tagName;
+        if (tag in BLOCK_TAG_TO_STYLE_LABEL) blockLabel = BLOCK_TAG_TO_STYLE_LABEL[tag];
+      }
+      node = node.parentNode;
+    }
+
+    setSelectedFontSizeLabel(sizePx !== null ? Math.round(sizePx) : DEFAULT_FONT_SIZE);
+    const familyMatch = familyValue
+      ? FONT_FAMILY_OPTIONS.find(o => o.value.replace(/'/g, '').toLowerCase() === familyValue!.replace(/'/g, '').toLowerCase())
+      : null;
+    setSelectedFontFamilyLabel(familyMatch ? familyMatch.label : DEFAULT_FONT_FAMILY_LABEL);
+    setSelectedStyleLabel(blockLabel);
   };
 
   // Restores the last saved caret/selection into a Range that's guaranteed
@@ -720,6 +822,79 @@ export function NotebookScreen() {
       sel.removeAllRanges();
       sel.addRange(newRange);
       savedRangeRef.current = newRange.cloneRange();
+    }
+
+    onBodyInput();
+  };
+
+  // Requirement 2 (clean unset & attribute stripping): picking "Default"
+  // family or "14" size from the toolbar should actually remove the
+  // font-size/font-family that's there, not paper over it with another
+  // inline span set to 'inherit'/14px — that's still an extra wrapper
+  // sitting in the HTML, and worse, it's exactly the kind of leftover span
+  // that later typing can get trapped inside (see onBodyBeforeInput). This
+  // walks every element inside the selection and clears just that one CSS
+  // property, dropping the whole `style` attribute if nothing's left in
+  // it — so choosing "Default" leaves plain, unstyled text behind, the
+  // same as text that was never styled in the first place.
+  const clearSelectionStyle = (styleProp: 'fontSize' | 'fontFamily') => {
+    const editor = bodyRef.current;
+    if (!editor) return;
+    editor.focus();
+    const range = getEditableRange();
+    if (!range) return;
+    const sel = window.getSelection();
+    if (!sel) return;
+    formattingTouchedRef.current = true;
+    const cssProp = styleProp === 'fontSize' ? 'font-size' : 'font-family';
+
+    const stripFrom = (el: HTMLElement) => {
+      if (el.style?.[styleProp]) {
+        el.style.removeProperty(cssProp);
+        if (!el.getAttribute('style')?.trim()) el.removeAttribute('style');
+      }
+    };
+
+    if (range.collapsed) {
+      // Nothing highlighted — nothing on the page changes. Just move the
+      // caret past any styled ancestor so text typed from here on isn't
+      // sitting inside it anymore.
+      let node: Node | null = range.startContainer;
+      let outerStyled: HTMLElement | null = null;
+      while (node && node !== editor) {
+        if (node.nodeType === 1) {
+          const el = node as HTMLElement;
+          if (el.style?.[styleProp]) outerStyled = el;
+        }
+        node = node.parentNode;
+      }
+      if (outerStyled) {
+        const newRange = document.createRange();
+        newRange.setStartAfter(outerStyled);
+        newRange.collapse(true);
+        sel.removeAllRanges();
+        sel.addRange(newRange);
+        savedRangeRef.current = newRange.cloneRange();
+      }
+    } else {
+      // Real selection — mutate matching elements in place (no
+      // extract/reinsert) so the Range's own boundary points stay valid
+      // and we don't need to reconstruct the selection afterward. Note:
+      // an element that's only *partially* covered by the selection gets
+      // cleared in full, same as most editors do for a "clear formatting"
+      // action on a partial run.
+      const root = range.commonAncestorContainer.nodeType === 1
+        ? (range.commonAncestorContainer as HTMLElement)
+        : range.commonAncestorContainer.parentElement;
+      if (root) {
+        const walker = document.createTreeWalker(root, NodeFilter.SHOW_ELEMENT);
+        const matches: HTMLElement[] = [];
+        while (walker.nextNode()) {
+          const el = walker.currentNode as HTMLElement;
+          if (el.style?.[styleProp] && range.intersectsNode(el)) matches.push(el);
+        }
+        matches.forEach(stripFrom);
+      }
     }
 
     onBodyInput();
@@ -1979,12 +2154,7 @@ export function NotebookScreen() {
                         style={{ position: 'fixed', top: styleMenuPos.top, left: styleMenuPos.left }}
                         className={cn('w-40 rounded-lg border shadow-xl z-30 py-1.5', theme !== 'light' ? 'bg-zinc-900 border-zinc-800' : 'bg-white border-zinc-200')}
                       >
-                        {[
-                          { value: 'P', label: 'Paragraph' },
-                          { value: 'H1', label: 'Heading 1' },
-                          { value: 'H2', label: 'Heading 2' },
-                          { value: 'H3', label: 'Heading 3' },
-                        ].map(({ value, label }) => (
+                        {STYLE_OPTIONS.map(({ value, label }) => (
                           <button
                             key={value}
                             onMouseDown={(e) => { e.preventDefault(); }}
@@ -2024,22 +2194,16 @@ export function NotebookScreen() {
                         style={{ position: 'fixed', top: fontFamilyMenuPos.top, left: fontFamilyMenuPos.left }}
                         className={cn('w-48 rounded-lg border shadow-xl z-30 py-1.5 max-h-72 overflow-y-auto', theme !== 'light' ? 'bg-zinc-900 border-zinc-800' : 'bg-white border-zinc-200')}
                       >
-                        {[
-                          { value: 'inherit', label: 'Default' },
-                          { value: 'Arial', label: 'Arial' },
-                          { value: 'Helvetica', label: 'Helvetica' },
-                          { value: 'Georgia', label: 'Georgia' },
-                          { value: '\'Times New Roman\'', label: 'Times New Roman' },
-                          { value: '\'Courier New\'', label: 'Courier New' },
-                          { value: 'Verdana', label: 'Verdana' },
-                          { value: 'Tahoma', label: 'Tahoma' },
-                          { value: '\'Trebuchet MS\'', label: 'Trebuchet MS' },
-                          { value: '\'Comic Sans MS\'', label: 'Comic Sans MS' },
-                        ].map(({ value, label }) => (
+                        {FONT_FAMILY_OPTIONS.map(({ value, label }) => (
                           <button
                             key={value}
                             onMouseDown={(e) => { e.preventDefault(); }}
-                            onClick={() => { applyFontFamily(value); setSelectedFontFamilyLabel(label); setShowFontFamilyMenu(false); }}
+                            onClick={() => {
+                              if (value === DEFAULT_FONT_FAMILY_VALUE) clearSelectionStyle('fontFamily');
+                              else applyFontFamily(value);
+                              setSelectedFontFamilyLabel(label);
+                              setShowFontFamilyMenu(false);
+                            }}
                             style={{ fontFamily: value }}
                             className={cn('w-full px-3.5 py-2 text-sm text-left transition-colors', textBody, theme !== 'light' ? 'hover:bg-zinc-800' : 'hover:bg-zinc-50')}
                           >
@@ -2076,11 +2240,16 @@ export function NotebookScreen() {
                         style={{ position: 'fixed', top: fontSizeMenuPos.top, left: fontSizeMenuPos.left }}
                         className={cn('w-24 rounded-lg border shadow-xl z-30 py-1.5 max-h-72 overflow-y-auto', theme !== 'light' ? 'bg-zinc-900 border-zinc-800' : 'bg-white border-zinc-200')}
                       >
-                        {[10, 12, 14, 16, 18, 20, 24, 28, 32, 36, 48, 64].map((px) => (
+                        {FONT_SIZE_OPTIONS.map((px) => (
                           <button
                             key={px}
                             onMouseDown={(e) => { e.preventDefault(); }}
-                            onClick={() => { applyFontSize(px); setSelectedFontSizeLabel(px); setShowFontSizeMenu(false); }}
+                            onClick={() => {
+                              if (px === DEFAULT_FONT_SIZE) clearSelectionStyle('fontSize');
+                              else applyFontSize(px);
+                              setSelectedFontSizeLabel(px);
+                              setShowFontSizeMenu(false);
+                            }}
                             className={cn('w-full px-3.5 py-2 text-sm text-left transition-colors', textBody, theme !== 'light' ? 'hover:bg-zinc-800' : 'hover:bg-zinc-50')}
                           >
                             {px}
