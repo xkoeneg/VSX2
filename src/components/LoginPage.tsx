@@ -21,6 +21,7 @@ import {
   Activity,
   Coins,
   Lock,
+  KeyRound,
   X,
 } from 'lucide-react';
 import { signInWithGoogle, signInWithEmail, signUpWithEmail, supabase } from '../lib/supabaseClient';
@@ -51,6 +52,70 @@ import { cn } from '../utils/format';
 // ============================================================================
 
 type AuthMode = 'signIn' | 'signUp';
+
+// ----------------------------------------------------------------------------
+// Viewer-passcode brute-force guard.
+//
+// IMPORTANT: this is a client-side speed bump, not the real defense. It
+// stops someone idly mashing the form or running a naive script against
+// THIS browser, but localStorage is trivially cleared/spoofed and an
+// automated attacker can just call the Supabase RPC directly with a fresh
+// client token every time — so it does NOT by itself satisfy "prevent
+// automated brute-force access". The actual gate has to live server-side,
+// in the verify_viewer_access RPC (see sql/002_viewer_two_factor.sql),
+// which rate-limits by client token AND by which profile a passcode
+// matches, independent of whatever this browser reports. Keep both: this
+// layer gives instant feedback and avoids spamming the network; the SQL
+// layer is what actually can't be bypassed by clearing site data.
+// ----------------------------------------------------------------------------
+const VIEWER_ATTEMPT_MAX = 8;
+const VIEWER_LOCKOUT_MS = 15 * 60 * 1000; // 15 minutes
+const VIEWER_TOKEN_KEY = 'vsx-viewer-attempt-token';
+const VIEWER_ATTEMPT_STATE_KEY = 'vsx-viewer-attempt-state';
+
+type ViewerAttemptState = { count: number; lockedUntil: number | null };
+
+// Random-ish per-browser token, persisted so the count survives a page
+// reload but reset by clearing site data — same caveat as above, this is
+// telling the server "which browser is asking", not proving it.
+function getViewerAttemptToken(): string {
+  try {
+    let token = localStorage.getItem(VIEWER_TOKEN_KEY);
+    if (!token) {
+      token = (typeof crypto !== 'undefined' && 'randomUUID' in crypto)
+        ? crypto.randomUUID()
+        : `t_${Date.now()}_${Math.random().toString(36).slice(2)}`;
+      localStorage.setItem(VIEWER_TOKEN_KEY, token);
+    }
+    return token;
+  } catch {
+    // localStorage unavailable (private mode, etc.) — fall back to a
+    // per-page-load token; the server-side limiter is still authoritative.
+    return `t_${Date.now()}_${Math.random().toString(36).slice(2)}`;
+  }
+}
+
+function loadViewerAttemptState(): ViewerAttemptState {
+  try {
+    const raw = localStorage.getItem(VIEWER_ATTEMPT_STATE_KEY);
+    if (!raw) return { count: 0, lockedUntil: null };
+    const parsed = JSON.parse(raw);
+    return {
+      count: typeof parsed.count === 'number' ? parsed.count : 0,
+      lockedUntil: typeof parsed.lockedUntil === 'number' ? parsed.lockedUntil : null,
+    };
+  } catch {
+    return { count: 0, lockedUntil: null };
+  }
+}
+
+function saveViewerAttemptState(state: ViewerAttemptState): void {
+  try {
+    localStorage.setItem(VIEWER_ATTEMPT_STATE_KEY, JSON.stringify(state));
+  } catch {
+    // best effort only
+  }
+}
 
 // Minimal multicolor Google "G" mark — inline so the button doesn't need an
 // external image asset (and works instantly, no network round trip / flash
@@ -897,38 +962,94 @@ export function LoginPage() {
   // (see handleViewerPasscodeSubmit below).
   const [showPasscodeGate, setShowPasscodeGate] = useState(false);
   const [viewerPasscodeInput, setViewerPasscodeInput] = useState('');
+  const [masterPasswordInput, setMasterPasswordInput] = useState('');
+  const [showViewerMasterPassword, setShowViewerMasterPassword] = useState(false);
   const [isCheckingPasscode, setIsCheckingPasscode] = useState(false);
   const [passcodeError, setPasscodeError] = useState<string | null>(null);
+  // Mirrors localStorage so the lockout banner/countdown can actually
+  // re-render; localStorage writes alone don't trigger React updates.
+  const [viewerAttemptState, setViewerAttemptState] = useState<ViewerAttemptState>(() => loadViewerAttemptState());
+
+  const viewerLockedOut = Boolean(viewerAttemptState.lockedUntil && viewerAttemptState.lockedUntil > Date.now());
+  const viewerLockoutMinutesLeft = viewerAttemptState.lockedUntil
+    ? Math.max(1, Math.ceil((viewerAttemptState.lockedUntil - Date.now()) / 60000))
+    : 0;
 
   const handleViewerPasscodeSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!viewerPasscodeInput.trim()) {
-      setPasscodeError('Enter a viewer passcode.');
+
+    // Re-check lockout at submit time too (not just via the disabled
+    // button) in case state went stale across tabs.
+    const currentState = loadViewerAttemptState();
+    if (currentState.lockedUntil && currentState.lockedUntil > Date.now()) {
+      setViewerAttemptState(currentState);
+      setPasscodeError(`Too many failed attempts. Try again in ${Math.max(1, Math.ceil((currentState.lockedUntil - Date.now()) / 60000))} minute(s).`);
       return;
     }
+
+    if (!viewerPasscodeInput.trim() || !masterPasswordInput.trim()) {
+      setPasscodeError('Enter both the passcode and the master password.');
+      return;
+    }
+
     setIsCheckingPasscode(true);
     setPasscodeError(null);
     try {
-      // find_user_by_viewer_passcode is a SECURITY DEFINER RPC — it looks
-      // the passcode up server-side and returns only a user id (or
-      // nothing). The passcode itself is verified again on the preview
-      // page itself before any journal data loads, so this step is just
-      // "which journal does this code belong to", not the actual gate.
-      const { data: matchedUserId, error } = await supabase.rpc('find_user_by_viewer_passcode', {
+      // verify_viewer_access is a SECURITY DEFINER RPC — it looks up which
+      // profile (if any) has this passcode as either its investor_passcode
+      // or friend_passcode, checks the master password against that
+      // profile's bcrypt hash, AND enforces its own server-side rate limit
+      // keyed by p_client_token (see sql/002_viewer_two_factor.sql). This
+      // is the actual gate — the client-side lockout above is only a UX
+      // nicety layered on top of it.
+      //
+      // On success it returns a short-lived, single-purpose access_token
+      // (not the passcode or password) so the /preview page can silently
+      // confirm access server-side without prompting the person again —
+      // that's what removes the old second passcode modal there.
+      const { data, error } = await supabase.rpc('verify_viewer_access', {
         p_passcode: viewerPasscodeInput.trim(),
+        p_master_password: masterPasswordInput,
+        p_client_token: getViewerAttemptToken(),
       });
       if (error) throw error;
-      if (!matchedUserId) {
-        setPasscodeError("That passcode doesn't match any shared journal.");
+
+      if (data?.locked_out) {
+        const lockedUntil = data.locked_until ? new Date(data.locked_until).getTime() : Date.now() + VIEWER_LOCKOUT_MS;
+        const nextState: ViewerAttemptState = { count: VIEWER_ATTEMPT_MAX, lockedUntil };
+        saveViewerAttemptState(nextState);
+        setViewerAttemptState(nextState);
+        setPasscodeError(`Too many failed attempts. Try again in ${Math.max(1, Math.ceil((lockedUntil - Date.now()) / 60000))} minute(s).`);
         setIsCheckingPasscode(false);
         return;
       }
+
+      if (!data?.allowed || !data?.owner_id || !data?.access_token) {
+        const nextState: ViewerAttemptState = { count: currentState.count + 1, lockedUntil: null };
+        saveViewerAttemptState(nextState);
+        setViewerAttemptState(nextState);
+        const remaining = VIEWER_ATTEMPT_MAX - nextState.count;
+        setPasscodeError(
+          remaining > 0
+            ? `Incorrect passcode or master password. ${remaining} attempt(s) left before a 15-minute lockout.`
+            : 'Incorrect passcode or master password.'
+        );
+        setIsCheckingPasscode(false);
+        return;
+      }
+
+      // Success — clear the local attempt counter and hand off to the
+      // preview page via a one-time access token, not the raw credentials.
+      const clearedState: ViewerAttemptState = { count: 0, lockedUntil: null };
+      saveViewerAttemptState(clearedState);
+      setViewerAttemptState(clearedState);
+
       // Full navigation (not client-side state) so App.tsx's route check
       // picks up /preview/[id] fresh, outside AppProvider/AuthGate.
-      window.location.href = `/preview/${matchedUserId}`;
+      window.location.href = `/preview/${data.owner_id}?access_token=${encodeURIComponent(data.access_token)}&mode=${encodeURIComponent(data.view_mode)}`;
     } catch (err) {
-      console.error('Viewer passcode lookup failed', err);
-      setPasscodeError('Something went wrong looking that up. Please try again.');
+      console.error('Viewer access verification failed', err);
+      setPasscodeError('Something went wrong checking that. Please try again.');
       setIsCheckingPasscode(false);
     }
   };
@@ -1043,17 +1164,6 @@ export function LoginPage() {
     'w-full h-11 px-3.5 rounded-lg bg-[#15171b] border border-zinc-800 text-white text-[16px] ' +
     'placeholder:text-zinc-500 outline-none transition-colors focus:border-zinc-500 focus:bg-[#181a1f]';
 
-  // Password fields render our own Eye/EyeOff toggle button, but some
-  // browsers (Edge, and Chrome's "strong password" autofill suggestion)
-  // also draw their own native reveal icon inside type="password" inputs —
-  // stacking a second eye right next to ours. These pseudo-elements hide
-  // those native controls so only our custom toggle shows.
-  const passwordInputClass = cn(
-    inputClass,
-    '[&::-ms-reveal]:hidden [&::-ms-clear]:hidden',
-    '[&::-webkit-credentials-auto-fill-button]:hidden [&::-webkit-strong-password-auto-fill-button]:hidden'
-  );
-
   return (
     <div className="relative min-h-screen w-full flex items-center justify-center bg-[#0a0c0f] px-4 py-10 overflow-hidden">
       {/* Anamorphic, edge-to-edge scatter of preview tiles + ambient glows.
@@ -1151,7 +1261,7 @@ export function LoginPage() {
                   value={password}
                   onChange={e => setPassword(e.target.value)}
                   placeholder={mode === 'signUp' ? '8+ characters, 1 special' : '••••••••'}
-                  className={cn(passwordInputClass, 'pr-11')}
+                  className={cn(inputClass, 'pr-11')}
                 />
                 <button
                   type="button"
@@ -1177,7 +1287,7 @@ export function LoginPage() {
                     value={confirmPassword}
                     onChange={e => setConfirmPassword(e.target.value)}
                     placeholder="Re-enter your password"
-                    className={cn(passwordInputClass, 'pr-11')}
+                    className={cn(inputClass, 'pr-11')}
                   />
                   <button
                     type="button"
@@ -1223,7 +1333,14 @@ export function LoginPage() {
               creating or signing into an account. */}
           <button
             type="button"
-            onClick={() => { setShowPasscodeGate(true); setPasscodeError(null); setViewerPasscodeInput(''); }}
+            onClick={() => {
+              setShowPasscodeGate(true);
+              setPasscodeError(null);
+              setViewerPasscodeInput('');
+              setMasterPasswordInput('');
+              setShowViewerMasterPassword(false);
+              setViewerAttemptState(loadViewerAttemptState());
+            }}
             className="w-full mt-3 flex items-center justify-center gap-1.5 text-xs text-zinc-500 hover:text-zinc-300 transition-colors"
           >
             <Eye className="w-3.5 h-3.5" />
@@ -1271,13 +1388,20 @@ export function LoginPage() {
               </button>
             </div>
             <p className="text-xs text-zinc-500 mb-4">
-              Enter the passcode someone shared with you to view their trading journal in read-only mode.
+              Enter the passcode and master password someone shared with you to view their trading journal in read-only mode.
             </p>
 
             {passcodeError && (
               <div className="mb-4 flex items-start gap-2 rounded-lg border border-red-900/50 bg-red-950/40 px-3 py-2.5 text-sm text-red-300">
                 <AlertCircle className="w-4 h-4 mt-0.5 flex-shrink-0" />
                 <span>{passcodeError}</span>
+              </div>
+            )}
+
+            {viewerLockedOut && !passcodeError && (
+              <div className="mb-4 flex items-start gap-2 rounded-lg border border-amber-900/50 bg-amber-950/30 px-3 py-2.5 text-sm text-amber-300">
+                <Lock className="w-4 h-4 mt-0.5 flex-shrink-0" />
+                <span>Locked for {viewerLockoutMinutesLeft} more minute(s) after too many failed attempts.</span>
               </div>
             )}
 
@@ -1288,19 +1412,40 @@ export function LoginPage() {
                   type="text"
                   autoFocus
                   autoComplete="off"
+                  disabled={viewerLockedOut}
                   value={viewerPasscodeInput}
                   onChange={(e) => setViewerPasscodeInput(e.target.value.toUpperCase().slice(0, 16))}
-                  placeholder="e.g. 7K2QX9RT"
-                  className={cn(inputClass, 'pl-9 font-mono tracking-widest placeholder:tracking-normal placeholder:font-sans')}
+                  placeholder="Passcode — e.g. 7K2QX9RT"
+                  className={cn(inputClass, 'pl-9 font-mono tracking-widest placeholder:tracking-normal placeholder:font-sans disabled:opacity-50')}
                 />
+              </div>
+              <div className="relative">
+                <KeyRound className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-500" />
+                <input
+                  type={showViewerMasterPassword ? 'text' : 'password'}
+                  autoComplete="off"
+                  disabled={viewerLockedOut}
+                  value={masterPasswordInput}
+                  onChange={(e) => setMasterPasswordInput(e.target.value)}
+                  placeholder="Master password"
+                  className={cn(inputClass, 'pl-9 pr-11 disabled:opacity-50')}
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowViewerMasterPassword(v => !v)}
+                  aria-label={showViewerMasterPassword ? 'Hide password' : 'Show password'}
+                  className="absolute right-0 top-0 h-11 w-11 flex items-center justify-center text-zinc-500 hover:text-zinc-300 transition-colors"
+                >
+                  {showViewerMasterPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                </button>
               </div>
               <button
                 type="submit"
-                disabled={isCheckingPasscode}
+                disabled={isCheckingPasscode || viewerLockedOut}
                 className="w-full h-11 flex items-center justify-center gap-2 rounded-lg bg-zinc-100 text-zinc-900 text-sm font-medium hover:bg-emerald-500 hover:text-black transition-all duration-200 disabled:opacity-60 disabled:cursor-not-allowed"
               >
                 {isCheckingPasscode && <Loader2 className="w-4 h-4 animate-spin" />}
-                {isCheckingPasscode ? 'Looking up…' : 'View Journal'}
+                {isCheckingPasscode ? 'Verifying…' : viewerLockedOut ? 'Locked' : 'View Journal'}
               </button>
             </form>
           </div>
