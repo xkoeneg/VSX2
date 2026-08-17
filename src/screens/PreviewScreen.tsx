@@ -518,7 +518,7 @@ function PreviewTradeRow({ trade, account, displayNumber, onOpenDetail, viewMode
         {viewMode === 'investor' ? (
           <span className={isWin ? 'text-emerald-400' : 'text-rose-500'}>{formatMoney(trade.profitLoss)}</span>
         ) : (
-          <span className="text-zinc-600" title="Hidden in Friend View — see R Multiple">••••</span>
+          <span className="text-zinc-600" title="Hidden in Public View — see R Multiple">••••</span>
         )}
       </td>
       <td className="px-3 py-2.5 text-xs font-medium text-right whitespace-nowrap">
@@ -881,7 +881,7 @@ function UnlockedPreview({
               <span className="hidden sm:inline"> (Read-Only Mode)</span>
             </span>
             <span className="flex-shrink-0 px-1.5 py-0.5 rounded text-[10px] font-semibold uppercase tracking-wide bg-white/10 text-amber-100 border border-white/10">
-              {viewMode === 'investor' ? 'Investor View' : 'Friend View'}
+              {viewMode === 'investor' ? 'Investor View' : 'Public View'}
             </span>
           </p>
           <button
