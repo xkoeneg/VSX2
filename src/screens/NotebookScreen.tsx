@@ -717,67 +717,57 @@ export function NotebookScreen() {
   };
 
   // Requirement 1 (active selection listener / two-way sync): reads the
-  // ACTUAL inline font-size, font-family, and block tag across the WHOLE
-  // current selection — not just wherever the anchor happens to sit — and
-  // updates the toolbar dropdown labels to match. A collapsed caret still
-  // just reports its own position; a real highlight is inspected node by
-  // node so a selection spanning two different sizes/fonts/block types
-  // correctly shows "Mixed" instead of silently reporting only one side
-  // of it.
+  // ACTUAL inline font-size, font-family, and block tag for the current
+  // selection and updates the toolbar dropdown labels to match.
+  //
+  // Deliberately simple: a collapsed caret just walks up from
+  // window.getSelection().anchorNode. A real highlight compares the
+  // START and END container's resolved formatting — if they match, the
+  // dropdown shows that shared value; if they don't, it shows "Mixed".
+  // This intentionally does NOT walk every text node in between (an
+  // earlier TreeWalker-based version did, and a whitespace/empty text
+  // node picked up along the way — e.g. sitting between two block
+  // elements, or one of our own zero-width formatting markers — could
+  // read back as "no style here", diluting an otherwise uniformly
+  // formatted selection back down to the default). Comparing just the two
+  // ends is a smaller, easier-to-reason-about surface: it can miss a
+  // "sandwich" selection where the start and end happen to match but
+  // something different sits in the middle, but it won't misreport an
+  // otherwise-uniform selection as empty/default.
   const syncToolbarFromSelection = () => {
     const editor = bodyRef.current;
     const sel = window.getSelection();
-    if (!editor || !sel || sel.rangeCount === 0 || !editor.contains(sel.anchorNode)) return;
-    const range = sel.getRangeAt(0);
+    if (!editor || !sel || !sel.anchorNode || !editor.contains(sel.anchorNode)) return;
 
-    const applyResult = (sizePx: number | null, familyValue: string | null, blockLabel: string) => {
-      setSelectedFontSizeLabel(sizePx !== null ? Math.round(sizePx) : DEFAULT_FONT_SIZE);
-      setSelectedFontFamilyLabel(resolveFamilyLabel(familyValue));
-      setSelectedStyleLabel(blockLabel);
+    const applyResult = (r: { sizePx: number | null; familyValue: string | null; blockLabel: string }) => {
+      setSelectedFontSizeLabel(r.sizePx !== null ? Math.round(r.sizePx) : DEFAULT_FONT_SIZE);
+      setSelectedFontFamilyLabel(resolveFamilyLabel(r.familyValue));
+      setSelectedStyleLabel(r.blockLabel);
     };
 
-    if (range.collapsed) {
-      const r = getAncestorFormatting(range.startContainer, editor);
-      applyResult(r.sizePx, r.familyValue, r.blockLabel);
+    if (sel.isCollapsed || sel.rangeCount === 0) {
+      applyResult(getAncestorFormatting(sel.anchorNode, editor));
       return;
     }
 
-    // Real highlight — inspect every text node it actually touches.
-    const root = range.commonAncestorContainer.nodeType === 1
-      ? (range.commonAncestorContainer as HTMLElement)
-      : (range.commonAncestorContainer.parentElement ?? editor);
-    const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
-    const sizes = new Set<number>();
-    const families = new Set<string>();
-    const blocks = new Set<string>();
-    let sawAny = false;
-    while (walker.nextNode()) {
-      const textNode = walker.currentNode;
-      if (!textNode.nodeValue || !range.intersectsNode(textNode)) continue;
-      sawAny = true;
-      const r = getAncestorFormatting(textNode, editor);
-      sizes.add(r.sizePx !== null ? Math.round(r.sizePx) : DEFAULT_FONT_SIZE);
-      families.add(resolveFamilyLabel(r.familyValue));
-      blocks.add(r.blockLabel);
-    }
+    const range = sel.getRangeAt(0);
+    const start = getAncestorFormatting(range.startContainer, editor);
+    const end = getAncestorFormatting(range.endContainer, editor);
 
-    if (!sawAny) {
-      // Selection didn't actually cross any text (e.g. an image block) —
-      // fall back to the anchor point, same as a collapsed caret.
-      const r = getAncestorFormatting(range.startContainer, editor);
-      applyResult(r.sizePx, r.familyValue, r.blockLabel);
-      return;
-    }
-
-    setSelectedFontSizeLabel(sizes.size === 1 ? [...sizes][0] : MIXED_LABEL);
-    setSelectedFontFamilyLabel(families.size === 1 ? [...families][0] : MIXED_LABEL);
-    setSelectedStyleLabel(blocks.size === 1 ? [...blocks][0] : MIXED_LABEL);
+    setSelectedFontSizeLabel(start.sizePx === end.sizePx
+      ? (start.sizePx !== null ? Math.round(start.sizePx) : DEFAULT_FONT_SIZE)
+      : MIXED_LABEL);
+    setSelectedFontFamilyLabel((start.familyValue ?? null) === (end.familyValue ?? null)
+      ? resolveFamilyLabel(start.familyValue)
+      : MIXED_LABEL);
+    setSelectedStyleLabel(start.blockLabel === end.blockLabel ? start.blockLabel : MIXED_LABEL);
   };
 
-  // Shared by syncToolbarFromSelection for both the collapsed-caret case
-  // and each text node visited while inspecting a real highlight: walks
-  // up from a node to the editor root and reports the nearest inline
-  // font-size/font-family and nearest block tag it finds.
+  // Shared by syncToolbarFromSelection for the caret, the start container,
+  // and the end container: walks up from a node to the editor root and
+  // reports the nearest inline font-size/font-family and nearest block
+  // tag it finds — i.e. exactly what a real cursor position or Range
+  // boundary is actually formatted as.
   const getAncestorFormatting = (start: Node, editor: HTMLElement) => {
     let sizePx: number | null = null;
     let familyValue: string | null = null;
@@ -811,6 +801,24 @@ export function NotebookScreen() {
     );
     return match ? match.label : DEFAULT_FONT_FAMILY_LABEL;
   };
+
+  // mouseup/keyup on the editor (wired to saveSelection below) catch most
+  // selection changes, but not all of them — shift+click, Ctrl/Cmd+A, and
+  // a few other paths change the selection without firing either event on
+  // the div itself. A document-level selectionchange listener catches
+  // those too, so the toolbar never has a chance to sit stale.
+  useEffect(() => {
+    const onSelectionChange = () => {
+      const editor = bodyRef.current;
+      const sel = window.getSelection();
+      if (editor && sel?.anchorNode && editor.contains(sel.anchorNode)) {
+        syncToolbarFromSelection();
+      }
+    };
+    document.addEventListener('selectionchange', onSelectionChange);
+    return () => document.removeEventListener('selectionchange', onSelectionChange);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // Restores the last saved caret/selection into a Range that's guaranteed
   // to still be inside the editor, falling back to the end of the note if
