@@ -37,14 +37,15 @@ import {
   CheckSquare,
   Square,
   ChevronRight,
+  ChevronLeft,
   ChevronDown,
   LayoutGrid,
   Rows3,
   Image as ImageIcon,
   Palette,
   Highlighter,
-  FileText,
-  Tag,
+  PanelLeftClose,
+  PanelLeft,
 } from 'lucide-react';
 import { PageHeader } from '../components/shared/PageHeader';
 import type { NotebookEntry, NotebookTemplate } from '../types';
@@ -326,6 +327,11 @@ export function NotebookScreen() {
   const [activeTagFilter, setActiveTagFilter] = useState<string | null>(null);
   const [sortMode, setSortMode] = useState<'updated' | 'title' | 'created'>('updated');
   const [viewMode, setViewMode] = useState<'list' | 'grid'>('list');
+  // Collapsible panel state (TradeZella-style focus layout): folders rail
+  // can shrink to a thin rail, and the note list can hide entirely so the
+  // editor gets the full width for distraction-free writing.
+  const [isFoldersCollapsed, setIsFoldersCollapsed] = useState(false);
+  const [isNoteListCollapsed, setIsNoteListCollapsed] = useState(false);
 
   const [isAddingFolder, setIsAddingFolder] = useState(false);
   const [newFolderName, setNewFolderName] = useState('');
@@ -1560,118 +1566,13 @@ export function NotebookScreen() {
         .themed-scrollbar::-webkit-scrollbar-thumb:hover { background-color: var(--scrollbar-thumb-hover); }
       `}</style>
 
-      {/* ---- Search + filter row ----
-          Search bar + filter icon stay grouped on the left, now given more
-          room (`max-w-xl` instead of `max-w-md`) so it isn't dwarfed by the
-          row. The stat-card group is `flex-1` with each card also `flex-1`,
-          so together they stretch to fill whatever width is left instead
-          of sitting as a small fixed-width cluster with dead space next to
-          it — no more gap between the filter icon and the cards. */}
-      <div className="flex items-center gap-4 w-full">
-        <div className="flex items-center gap-2.5 flex-1 max-w-xl">
-          <div className="relative flex-1">
-            <Search className={cn('absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4', textMuted)} />
-            <input
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder="Search notes and tags"
-              className={cn('w-full pl-10 pr-3.5 py-2.5 rounded-lg text-base border outline-none', panelBg, border, theme !== 'light' ? 'text-white placeholder-zinc-500 focus:border-zinc-600' : 'text-zinc-900 placeholder-zinc-400 focus:border-zinc-300')}
-            />
-          </div>
-          <div className="relative">
-            <button
-              onClick={() => setShowFilter(v => !v)}
-              title="Filter by tag"
-              className={cn('p-2.5 rounded-lg border transition-colors', panelBg, border, activeTagFilter ? 'text-purple-400 border-purple-500/40' : cn(textMuted, 'hover:text-zinc-200'))}
-            >
-              <Filter className="w-4 h-4" />
-            </button>
-            {showFilter && (
-              <div className={cn('absolute right-0 mt-1.5 w-56 rounded-lg border shadow-xl z-20 p-2.5', theme !== 'light' ? 'bg-zinc-900 border-zinc-800' : 'bg-white border-zinc-200')}>
-                <p className={cn('text-xs font-semibold uppercase tracking-wider px-2 pb-1.5', textMuted)}>Filter by tag</p>
-                {allTags.length === 0 ? (
-                  <p className={cn('text-sm px-2 py-1.5', textMuted)}>No tags yet</p>
-                ) : (
-                  <div className="themed-scrollbar max-h-48 overflow-y-auto flex flex-col gap-1">
-                    {allTags.map(tag => (
-                      <button
-                        key={tag}
-                        onClick={() => { setActiveTagFilter(prev => prev === tag ? null : tag); setShowFilter(false); }}
-                        className={cn(
-                          'text-left px-2 py-1.5 rounded-md text-sm transition-colors',
-                          activeTagFilter === tag
-                            ? (theme !== 'light' ? 'bg-purple-500/15 text-purple-300' : 'bg-purple-50 text-purple-700')
-                            : cn(textBody, theme !== 'light' ? 'hover:bg-zinc-800' : 'hover:bg-zinc-50')
-                        )}
-                      >
-                        {tag}
-                      </button>
-                    ))}
-                  </div>
-                )}
-                {activeTagFilter && (
-                  <button onClick={() => { setActiveTagFilter(null); setShowFilter(false); }} className="w-full text-left px-2 py-1.5 mt-1 rounded-md text-sm text-rose-400 hover:bg-zinc-800">
-                    Clear filter
-                  </button>
-                )}
-              </div>
-            )}
-          </div>
-        </div>
-
-        {/* Top stat cards — same frame as the shared renderStatCard used by
-            Discipline/Life Discipline (RenderHelpers.tsx): theme-aware
-            zinc-900/40+zinc-800/80 border in dark, white+zinc-200 in light,
-            with the same rounded-2xl/hover treatment, instead of the old
-            hardcoded navy `bg-[#12141c]`. Icon chips/colors are unchanged.
-            `flex-1` on the group and on each card stretches them evenly
-            across whatever width remains, so they fill the row instead of
-            leaving a blank gap next to the search/filter group. */}
-        <div className="flex items-center gap-3 flex-1">
-          <div className={cn(
-            'group rounded-2xl px-4 py-2 flex items-center gap-3 flex-1 transition-all duration-200',
-            theme !== 'light'
-              ? 'bg-zinc-900/40 border border-zinc-800/80 hover:border-zinc-700 hover:bg-zinc-900/70'
-              : 'bg-white border border-zinc-200 hover:border-zinc-300 hover:bg-zinc-50'
-          )}>
-            <div className="p-1.5 rounded-lg bg-sky-500/10">
-              <FileText className="w-4 h-4 text-sky-400" />
-            </div>
-            <div className="flex flex-col leading-tight">
-              <span className={cn('text-[10px] font-semibold tracking-wider uppercase', textMuted)}>Total Notes</span>
-              <span className={cn('text-sm font-bold', theme !== 'light' ? 'text-white' : 'text-zinc-900')}>{liveEntries.length}</span>
-            </div>
-          </div>
-          <div className={cn(
-            'group rounded-2xl px-4 py-2 flex items-center gap-3 flex-1 transition-all duration-200',
-            theme !== 'light'
-              ? 'bg-zinc-900/40 border border-zinc-800/80 hover:border-zinc-700 hover:bg-zinc-900/70'
-              : 'bg-white border border-zinc-200 hover:border-zinc-300 hover:bg-zinc-50'
-          )}>
-            <div className="p-1.5 rounded-lg bg-amber-500/10">
-              <Star className="w-4 h-4 text-amber-400" />
-            </div>
-            <div className="flex flex-col leading-tight">
-              <span className={cn('text-[10px] font-semibold tracking-wider uppercase', textMuted)}>Favorites</span>
-              <span className={cn('text-sm font-bold', theme !== 'light' ? 'text-white' : 'text-zinc-900')}>{liveEntries.filter(e => e.favorite).length}</span>
-            </div>
-          </div>
-          <div className={cn(
-            'group rounded-2xl px-4 py-2 flex items-center gap-3 flex-1 transition-all duration-200',
-            theme !== 'light'
-              ? 'bg-zinc-900/40 border border-zinc-800/80 hover:border-zinc-700 hover:bg-zinc-900/70'
-              : 'bg-white border border-zinc-200 hover:border-zinc-300 hover:bg-zinc-50'
-          )}>
-            <div className="p-1.5 rounded-lg bg-purple-500/10">
-              <Tag className="w-4 h-4 text-purple-400" />
-            </div>
-            <div className="flex flex-col leading-tight">
-              <span className={cn('text-[10px] font-semibold tracking-wider uppercase', textMuted)}>Tags</span>
-              <span className={cn('text-sm font-bold', theme !== 'light' ? 'text-white' : 'text-zinc-900')}>{allTags.length}</span>
-            </div>
-          </div>
-        </div>
-      </div>
+      {/* Search + filter used to be a separate full-width row above the
+          3-pane layout (sitting oddly next to a group of stat badges that
+          didn't relate to anything below it). It's now anchored to the top
+          of the Note list column itself — see "Search + filter" inside
+          "==== Note list ====" below — so it's visually and functionally
+          wired to what it actually searches, TradeZella-style. The stat
+          badges are gone entirely rather than orphaned somewhere else. */}
 
       {/* + New Note stays anchored top-right inside PageHeader's actions
           slot above — untouched by this row, so it keeps its existing
@@ -1693,8 +1594,37 @@ export function NotebookScreen() {
           is used there and the page itself scrolls. */}
       <div className={cn('flex flex-col lg:flex-row gap-3 min-h-[75vh] lg:h-auto lg:flex-1 lg:min-h-0 lg:overflow-hidden')}
       >
-        {/* ==== Folder rail ==== */}
-        <div className={cn('relative flex flex-col min-h-0 h-full rounded-xl border overflow-hidden lg:w-[248px] lg:flex-shrink-0', border, panelBg)}>
+        {/* ==== Folder rail ====
+            `lg:w-14` when collapsed, animated via `transition-all` since
+            both states are literal width values the browser can tween
+            between (unlike a grid-template-columns swap). Collapsed state
+            shows just a thin rail with an expand button; the middle note
+            list and editor pick up the freed-up width automatically since
+            this sits in a flex row and only this pane's basis changes. */}
+        <div className={cn(
+          'relative flex flex-col min-h-0 h-full rounded-xl border overflow-hidden transition-all duration-300 ease-in-out lg:flex-shrink-0',
+          isFoldersCollapsed ? 'lg:w-14' : 'lg:w-[248px]',
+          border, panelBg
+        )}>
+          {isFoldersCollapsed ? (
+            <div className="flex flex-row lg:flex-col items-center justify-center lg:justify-start py-2.5 lg:py-3.5 gap-2">
+              <button
+                onClick={() => setIsFoldersCollapsed(false)}
+                title="Expand folders"
+                className={cn('flex-shrink-0 p-2 rounded-lg transition-colors', textMuted, theme !== 'light' ? 'hover:bg-zinc-800 hover:text-zinc-200' : 'hover:bg-zinc-100 hover:text-zinc-700')}
+              >
+                <ChevronRight className="w-4 h-4" />
+              </button>
+              <button
+                onClick={() => setIsFoldersCollapsed(false)}
+                title="Expand folders"
+                className={cn('flex-shrink-0 p-2 rounded-lg transition-colors', textMuted, theme !== 'light' ? 'hover:bg-zinc-800 hover:text-zinc-200' : 'hover:bg-zinc-100 hover:text-zinc-700')}
+              >
+                <Folder className="w-4 h-4" />
+              </button>
+            </div>
+          ) : (
+          <>
           <div className={cn('p-3.5 border-b', border)}>
             {isAddingFolder ? (
               <div className="space-y-2">
@@ -1758,18 +1688,31 @@ export function NotebookScreen() {
                 </div>
               </div>
             ) : (
-              <button
-                onClick={() => setIsAddingFolder(true)}
-                className={cn(
-                  'w-full flex items-center justify-center gap-2 px-3 py-2.5 rounded-xl text-sm font-medium border transition-colors',
-                  theme !== 'light'
-                    ? 'bg-zinc-800/80 hover:bg-zinc-800 border-zinc-700/80 text-white'
-                    : 'bg-zinc-900 hover:bg-zinc-800 border-zinc-900 text-white'
-                )}
-              >
-                <FolderPlus className="w-4 h-4" />
-                Add folder
-              </button>
+              <div className="flex items-center gap-1.5">
+                <button
+                  onClick={() => setIsAddingFolder(true)}
+                  className={cn(
+                    'flex-1 min-w-0 flex items-center justify-center gap-2 px-3 py-2.5 rounded-xl text-sm font-medium border transition-colors',
+                    theme !== 'light'
+                      ? 'bg-zinc-800/80 hover:bg-zinc-800 border-zinc-700/80 text-white'
+                      : 'bg-zinc-900 hover:bg-zinc-800 border-zinc-900 text-white'
+                  )}
+                >
+                  <FolderPlus className="w-4 h-4" />
+                  Add folder
+                </button>
+                <button
+                  onClick={() => setIsFoldersCollapsed(true)}
+                  title="Collapse folders"
+                  className={cn(
+                    'flex flex-shrink-0 items-center justify-center p-2.5 rounded-xl border transition-colors',
+                    border, textMuted,
+                    theme !== 'light' ? 'hover:bg-zinc-800 hover:text-zinc-200' : 'hover:bg-zinc-100 hover:text-zinc-700'
+                  )}
+                >
+                  <ChevronLeft className="w-4 h-4" />
+                </button>
+              </div>
             )}
           </div>
 
@@ -1827,12 +1770,74 @@ export function NotebookScreen() {
               <span className={cn('text-xs', textMuted)}>{deletedEntries.length}</span>
             </button>
           </div>
+          </>
+          )}
         </div>
 
-        {/* ==== Notes + editor frame ==== */}
-        <div className={cn('grid grid-cols-1 lg:grid-cols-[320px_1fr] gap-0 rounded-xl border overflow-hidden min-h-0 flex-1', border, panelBg)}>
+        {/* ==== Notes + editor frame ====
+            Note list column is only mounted when not collapsed, so the
+            grid drops straight to a single `1fr` column and the editor
+            takes the full width — a real Focus Mode instead of a squished
+            zero-width column. */}
+        <div className={cn('grid grid-cols-1 gap-0 rounded-xl border overflow-hidden min-h-0 flex-1', isNoteListCollapsed ? 'lg:grid-cols-1' : 'lg:grid-cols-[320px_1fr]', border, panelBg)}>
         {/* ==== Note list ==== */}
+        {!isNoteListCollapsed && (
         <div className={cn('flex flex-col min-h-0 h-full overflow-hidden border-b lg:border-b-0 lg:border-r', border)}>
+          {/* Search + filter — anchored to the top of the note list column
+              it actually searches, instead of floating in its own row
+              above the whole 3-pane layout. */}
+          {!isTrashView && (
+            <div className={cn('flex items-center gap-2 p-2.5 border-b', border)}>
+              <div className="relative flex-1">
+                <Search className={cn('absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4', textMuted)} />
+                <input
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  placeholder="Search notes and tags"
+                  className={cn('w-full pl-9 pr-3 py-2 rounded-lg text-sm border outline-none', theme !== 'light' ? 'bg-zinc-800/60 border-zinc-700/60 text-white placeholder-zinc-500 focus:border-zinc-600' : 'bg-zinc-50 border-zinc-200 text-zinc-900 placeholder-zinc-400 focus:border-zinc-300')}
+                />
+              </div>
+              <div className="relative">
+                <button
+                  onClick={() => setShowFilter(v => !v)}
+                  title="Filter by tag"
+                  className={cn('p-2 rounded-lg border transition-colors', border, activeTagFilter ? 'text-purple-400 border-purple-500/40' : cn(textMuted, 'hover:text-zinc-200'))}
+                >
+                  <Filter className="w-4 h-4" />
+                </button>
+                {showFilter && (
+                  <div className={cn('absolute right-0 mt-1.5 w-56 rounded-lg border shadow-xl z-20 p-2.5', theme !== 'light' ? 'bg-zinc-900 border-zinc-800' : 'bg-white border-zinc-200')}>
+                    <p className={cn('text-xs font-semibold uppercase tracking-wider px-2 pb-1.5', textMuted)}>Filter by tag</p>
+                    {allTags.length === 0 ? (
+                      <p className={cn('text-sm px-2 py-1.5', textMuted)}>No tags yet</p>
+                    ) : (
+                      <div className="themed-scrollbar max-h-48 overflow-y-auto flex flex-col gap-1">
+                        {allTags.map(tag => (
+                          <button
+                            key={tag}
+                            onClick={() => { setActiveTagFilter(prev => prev === tag ? null : tag); setShowFilter(false); }}
+                            className={cn(
+                              'text-left px-2 py-1.5 rounded-md text-sm transition-colors',
+                              activeTagFilter === tag
+                                ? (theme !== 'light' ? 'bg-purple-500/15 text-purple-300' : 'bg-purple-50 text-purple-700')
+                                : cn(textBody, theme !== 'light' ? 'hover:bg-zinc-800' : 'hover:bg-zinc-50')
+                            )}
+                          >
+                            {tag}
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                    {activeTagFilter && (
+                      <button onClick={() => { setActiveTagFilter(null); setShowFilter(false); }} className="w-full text-left px-2 py-1.5 mt-1 rounded-md text-sm text-rose-400 hover:bg-zinc-800">
+                        Clear filter
+                      </button>
+                    )}
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
           <div className={cn('flex items-center justify-between gap-2.5 p-3.5 border-b', border)}>
             {isTrashView ? (
               <div className="flex items-center justify-between w-full">
@@ -2133,22 +2138,43 @@ export function NotebookScreen() {
             )}
           </div>
         </div>
+        )}
 
         {/* ==== Editor / detail pane ==== */}
         <div className="flex flex-col min-h-0 h-full min-w-0 overflow-hidden">
           {!selectedEntry ? (
-            <div className="flex-1 flex flex-col items-center justify-center gap-2.5 p-8">
-              <StickyNote className={cn('w-9 h-9', theme !== 'light' ? 'text-zinc-700' : 'text-zinc-300')} />
-              <p className={cn('text-base', textMuted)}>
-                {isTrashView ? 'Nothing selected' : 'Select a note, or create a new one'}
-              </p>
+            <div className="flex flex-col min-h-0 h-full overflow-hidden">
+              <div className="flex items-center gap-2 px-3.5 py-3">
+                <button
+                  onClick={() => setIsNoteListCollapsed(v => !v)}
+                  title={isNoteListCollapsed ? 'Show note list' : 'Hide note list (focus mode)'}
+                  className={cn('hidden lg:flex flex-shrink-0 p-2 rounded-md transition-colors', textMuted, theme !== 'light' ? 'hover:bg-zinc-800 hover:text-zinc-200' : 'hover:bg-zinc-100 hover:text-zinc-700')}
+                >
+                  {isNoteListCollapsed ? <PanelLeft className="w-4 h-4" /> : <PanelLeftClose className="w-4 h-4" />}
+                </button>
+              </div>
+              <div className="flex-1 flex flex-col items-center justify-center gap-2.5 p-8">
+                <StickyNote className={cn('w-9 h-9', theme !== 'light' ? 'text-zinc-700' : 'text-zinc-300')} />
+                <p className={cn('text-base', textMuted)}>
+                  {isTrashView ? 'Nothing selected' : 'Select a note, or create a new one'}
+                </p>
+              </div>
             </div>
           ) : isTrashView ? (
             <div className="flex flex-col min-h-0 h-full overflow-hidden">
               <div className={cn('flex items-center justify-between gap-3.5 px-6 py-5 border-b', border)}>
-                <h2 className={cn('text-xl font-semibold truncate', theme !== 'light' ? 'text-white' : 'text-zinc-900')}>
-                  {formatNoteHeading(selectedEntry)}
-                </h2>
+                <div className="flex items-center gap-2.5 min-w-0">
+                  <button
+                    onClick={() => setIsNoteListCollapsed(v => !v)}
+                    title={isNoteListCollapsed ? 'Show note list' : 'Hide note list (focus mode)'}
+                    className={cn('hidden lg:flex flex-shrink-0 p-2 -ml-2 rounded-md transition-colors', textMuted, theme !== 'light' ? 'hover:bg-zinc-800 hover:text-zinc-200' : 'hover:bg-zinc-100 hover:text-zinc-700')}
+                  >
+                    {isNoteListCollapsed ? <PanelLeft className="w-4 h-4" /> : <PanelLeftClose className="w-4 h-4" />}
+                  </button>
+                  <h2 className={cn('text-xl font-semibold truncate', theme !== 'light' ? 'text-white' : 'text-zinc-900')}>
+                    {formatNoteHeading(selectedEntry)}
+                  </h2>
+                </div>
                 <div className="flex items-center gap-2 flex-shrink-0">
                   <button
                     onClick={() => handleRestoreNotebookEntry(selectedEntry.id)}
@@ -2183,13 +2209,22 @@ export function NotebookScreen() {
               {/* Title + meta + more menu */}
               <div className={cn('px-6 pt-4 pb-3 border-b', border)}>
                 <div className="flex items-start justify-between gap-3.5">
-                  <input
-                    value={titleDraft}
-                    onChange={onTitleChange}
-                    onBlur={onTitleBlur}
-                    placeholder="Untitled"
-                    className={cn('flex-1 min-w-0 bg-transparent outline-none text-xl font-semibold', theme !== 'light' ? 'text-white placeholder-zinc-600' : 'text-zinc-900 placeholder-zinc-300')}
-                  />
+                  <div className="flex items-start gap-1.5 flex-1 min-w-0">
+                    <button
+                      onClick={() => setIsNoteListCollapsed(v => !v)}
+                      title={isNoteListCollapsed ? 'Show note list' : 'Hide note list (focus mode)'}
+                      className={cn('hidden lg:flex flex-shrink-0 p-2 mt-0.5 -ml-2 rounded-md transition-colors', textMuted, theme !== 'light' ? 'hover:bg-zinc-800 hover:text-zinc-200' : 'hover:bg-zinc-100 hover:text-zinc-700')}
+                    >
+                      {isNoteListCollapsed ? <PanelLeft className="w-4 h-4" /> : <PanelLeftClose className="w-4 h-4" />}
+                    </button>
+                    <input
+                      value={titleDraft}
+                      onChange={onTitleChange}
+                      onBlur={onTitleBlur}
+                      placeholder="Untitled"
+                      className={cn('flex-1 min-w-0 bg-transparent outline-none text-xl font-semibold', theme !== 'light' ? 'text-white placeholder-zinc-600' : 'text-zinc-900 placeholder-zinc-300')}
+                    />
+                  </div>
                   <div className="relative flex-shrink-0" ref={moreMenuRef}>
                     <button
                       onClick={() => setShowMoreMenu(v => !v)}
