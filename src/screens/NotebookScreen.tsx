@@ -1542,17 +1542,15 @@ export function NotebookScreen() {
       `}</style>
 
       {/* ---- Search + filter row ----
-          Search bar + filter icon stay grouped on the left. The middle/
-          right space (previously empty, then briefly badges, then a
-          duplicate sort button) now holds compact stat cards matching the
-          Dashboard/Discipline Tracker/Life Discipline Hub stat-panel look.
-          `justify-between` on the full-width row pushes the cards toward
-          the far right, under where + New Note sits up in PageHeader. The
-          "All Notes" section below already has its own sort/view controls,
-          so no sort control is duplicated up here. */}
-      <div className="flex items-center justify-between gap-4 w-full">
-        <div className="flex items-center gap-2.5">
-          <div className="relative flex-1 max-w-md">
+          Search bar + filter icon stay grouped on the left, now given more
+          room (`max-w-xl` instead of `max-w-md`) so it isn't dwarfed by the
+          row. The stat-card group is `flex-1` with each card also `flex-1`,
+          so together they stretch to fill whatever width is left instead
+          of sitting as a small fixed-width cluster with dead space next to
+          it — no more gap between the filter icon and the cards. */}
+      <div className="flex items-center gap-4 w-full">
+        <div className="flex items-center gap-2.5 flex-1 max-w-xl">
+          <div className="relative flex-1">
             <Search className={cn('absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4', textMuted)} />
             <input
               value={search}
@@ -1603,23 +1601,26 @@ export function NotebookScreen() {
         </div>
 
         {/* Top stat cards — dark container, muted uppercase label, bold
-            value, matching the app's other stat-panel screens exactly. */}
-        <div className="flex items-center gap-3">
-          <div className="bg-[#12141c] border border-slate-800/80 rounded-xl px-4 py-2 flex items-center gap-3 shadow-sm">
+            value, matching the app's other stat-panel screens exactly.
+            `flex-1` on the group and on each card stretches them evenly
+            across whatever width remains, so they fill the row instead of
+            leaving a blank gap next to the search/filter group. */}
+        <div className="flex items-center gap-3 flex-1">
+          <div className="bg-[#12141c] border border-slate-800/80 rounded-xl px-4 py-2 flex items-center gap-3 shadow-sm flex-1">
             <FileText className="w-4 h-4 text-slate-400" />
             <div className="flex flex-col leading-tight">
               <span className="text-[10px] font-semibold tracking-wider text-slate-400 uppercase">Total Notes</span>
               <span className="text-sm font-bold text-slate-100">{liveEntries.length}</span>
             </div>
           </div>
-          <div className="bg-[#12141c] border border-slate-800/80 rounded-xl px-4 py-2 flex items-center gap-3 shadow-sm">
+          <div className="bg-[#12141c] border border-slate-800/80 rounded-xl px-4 py-2 flex items-center gap-3 shadow-sm flex-1">
             <Star className="w-4 h-4 text-slate-400" />
             <div className="flex flex-col leading-tight">
               <span className="text-[10px] font-semibold tracking-wider text-slate-400 uppercase">Favorites</span>
               <span className="text-sm font-bold text-slate-100">{liveEntries.filter(e => e.favorite).length}</span>
             </div>
           </div>
-          <div className="bg-[#12141c] border border-slate-800/80 rounded-xl px-4 py-2 flex items-center gap-3 shadow-sm">
+          <div className="bg-[#12141c] border border-slate-800/80 rounded-xl px-4 py-2 flex items-center gap-3 shadow-sm flex-1">
             <Tag className="w-4 h-4 text-slate-400" />
             <div className="flex flex-col leading-tight">
               <span className="text-[10px] font-semibold tracking-wider text-slate-400 uppercase">Tags</span>
