@@ -1607,21 +1607,27 @@ export function NotebookScreen() {
             leaving a blank gap next to the search/filter group. */}
         <div className="flex items-center gap-3 flex-1">
           <div className="bg-[#12141c] border border-slate-800/80 rounded-xl px-4 py-2 flex items-center gap-3 shadow-sm flex-1">
-            <FileText className="w-4 h-4 text-slate-400" />
+            <div className="p-1.5 rounded-lg bg-sky-500/10">
+              <FileText className="w-4 h-4 text-sky-400" />
+            </div>
             <div className="flex flex-col leading-tight">
               <span className="text-[10px] font-semibold tracking-wider text-slate-400 uppercase">Total Notes</span>
               <span className="text-sm font-bold text-slate-100">{liveEntries.length}</span>
             </div>
           </div>
           <div className="bg-[#12141c] border border-slate-800/80 rounded-xl px-4 py-2 flex items-center gap-3 shadow-sm flex-1">
-            <Star className="w-4 h-4 text-slate-400" />
+            <div className="p-1.5 rounded-lg bg-amber-500/10">
+              <Star className="w-4 h-4 text-amber-400" />
+            </div>
             <div className="flex flex-col leading-tight">
               <span className="text-[10px] font-semibold tracking-wider text-slate-400 uppercase">Favorites</span>
               <span className="text-sm font-bold text-slate-100">{liveEntries.filter(e => e.favorite).length}</span>
             </div>
           </div>
           <div className="bg-[#12141c] border border-slate-800/80 rounded-xl px-4 py-2 flex items-center gap-3 shadow-sm flex-1">
-            <Tag className="w-4 h-4 text-slate-400" />
+            <div className="p-1.5 rounded-lg bg-purple-500/10">
+              <Tag className="w-4 h-4 text-purple-400" />
+            </div>
             <div className="flex flex-col leading-tight">
               <span className="text-[10px] font-semibold tracking-wider text-slate-400 uppercase">Tags</span>
               <span className="text-sm font-bold text-slate-100">{allTags.length}</span>
