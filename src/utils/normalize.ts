@@ -2,9 +2,8 @@ import { generateId } from './id';
 import { WIKI_CATEGORIES } from '../types';
 import type {
   TradeImage, TimeframeChart, Account, Trade, RulePillar, Rule, CustomPillar, StrategyStep, Strategy,
-  ChatMessage, MarketNotice, WikiEntry, TagColor, StoredData, NotebookEntry, DeletedNotebookFolder,
+  ChatMessage, MarketNotice, WikiEntry, TagColor, StoredData, NotebookEntry, NotebookDeletedFolder,
 } from '../types';
-import { NOTEBOOK_COVER_COLORS } from '../types';
 import { DEFAULT_TAG_COLOR, TAG_COLOR_PALETTE } from '../constants/tagColors';
 import { EMOTION_OPTIONS } from '../constants/trading';
 import { ACCOUNT_TYPES, SESSION_OPTIONS, TIMEFRAMES, TRADING_ACCOUNT_TYPES } from '../constants/trading';
@@ -291,14 +290,14 @@ export const normalizeNotebookEntry = (e: any): NotebookEntry => {
   };
 };
 
-const normalizeDeletedNotebookFolder = (item: any): DeletedNotebookFolder | null => {
-  if (typeof item?.name !== 'string' || !item.name.trim()) return null;
-  return {
-    name: item.name,
-    color: typeof item.color === 'string' && (NOTEBOOK_COVER_COLORS as readonly string[]).includes(item.color) ? item.color : undefined,
-    deletedAt: typeof item.deletedAt === 'string' ? item.deletedAt : new Date().toISOString(),
-  };
-};
+// Mirrors normalizeNotebookEntry's defensive rebuild, for the small list of
+// soft-deleted folders living in the journal_data blob (see
+// StoredData.notebookDeletedFolders).
+export const normalizeNotebookDeletedFolder = (f: any): NotebookDeletedFolder => ({
+  name: normalizeStringField(f?.name),
+  color: typeof f?.color === 'string' && f.color.trim() ? f.color : undefined,
+  deletedAt: typeof f?.deletedAt === 'string' ? f.deletedAt : new Date().toISOString(),
+});
 
 export const migrateStoredData = (raw: any): StoredData => {
   const data = raw && typeof raw === 'object' ? raw : {};
@@ -324,23 +323,20 @@ export const migrateStoredData = (raw: any): StoredData => {
       : EMOTION_OPTIONS.map(name => ({ id: generateId(), name, color: 'purple' as TagColor })),
     customSymbols: Array.isArray(data.customSymbols) ? data.customSymbols.filter((s: any) => typeof s === 'string') : [],
     customPillars: Array.isArray(data.customPillars) ? data.customPillars.map(normalizeCustomPillar) : [],
-    // A missing field (fresh install / pre-existing backup from before
-    // folders had a UI) seeds the two starter folders as a friendly
-    // default. An explicit array — even an empty one, meaning the user
-    // deleted every folder — is respected as-is and never reseeded.
     notebookFolders: Array.isArray(data.notebookFolders)
       ? data.notebookFolders.filter((f: any) => typeof f === 'string' && f.trim())
-      : ['Mindset', 'Daily Reflections'],
-    notebookFolderColors: (data.notebookFolderColors && typeof data.notebookFolderColors === 'object' && !Array.isArray(data.notebookFolderColors))
-      ? Object.entries(data.notebookFolderColors).reduce<Record<string, string>>((acc, [k, v]) => {
-          if (typeof k === 'string' && typeof v === 'string' && (NOTEBOOK_COVER_COLORS as readonly string[]).includes(v)) {
-            acc[k] = v;
-          }
-          return acc;
-        }, {})
+      : [],
+    notebookFolderColors: data.notebookFolderColors && typeof data.notebookFolderColors === 'object' && !Array.isArray(data.notebookFolderColors)
+      ? Object.fromEntries(
+          Object.entries(data.notebookFolderColors).filter(
+            ([k, v]) => typeof k === 'string' && k.trim() && typeof v === 'string' && v.trim()
+          )
+        )
       : {},
     notebookDeletedFolders: Array.isArray(data.notebookDeletedFolders)
-      ? data.notebookDeletedFolders.map(normalizeDeletedNotebookFolder).filter((f: DeletedNotebookFolder | null): f is DeletedNotebookFolder => f !== null)
+      ? data.notebookDeletedFolders
+          .filter((f: any) => f && typeof f.name === 'string' && f.name.trim())
+          .map(normalizeNotebookDeletedFolder)
       : [],
   };
 };
