@@ -1850,9 +1850,20 @@ export function NotebookScreen() {
               </div>
             ) : (
               <>
-                <span className={cn('text-sm font-semibold truncate', theme !== 'light' ? 'text-white' : 'text-zinc-900')}>
-                  {activeFolder === ALL_NOTES ? 'All Notes' : activeFolder === FAVORITES ? 'Favorites' : activeFolder}
-                </span>
+                <div className="min-w-0 flex flex-col">
+                  <span className={cn('text-sm font-semibold truncate', theme !== 'light' ? 'text-white' : 'text-zinc-900')}>
+                    {activeFolder === ALL_NOTES ? 'All Notes' : activeFolder === FAVORITES ? 'Favorites' : activeFolder}
+                  </span>
+                  {/* Slim stand-in for the old stat cards — just a count
+                      line under the folder name instead of a separate row
+                      of badges. visibleEntries already reflects the active
+                      folder/search/tag filter, so it's the count of what's
+                      actually showing below, not a global total. */}
+                  <span className={cn('text-xs truncate', textMuted)}>
+                    {visibleEntries.length} {visibleEntries.length === 1 ? 'note' : 'notes'}
+                    {allTags.length > 0 && <> &middot; {allTags.length} {allTags.length === 1 ? 'tag' : 'tags'}</>}
+                  </span>
+                </div>
                 <div className={cn('flex items-center gap-0.5 rounded-full border p-0.5 flex-shrink-0', border, theme !== 'light' ? 'bg-zinc-900' : 'bg-white')}>
                   <button
                     onClick={() => setSelectMode(v => !v)}
