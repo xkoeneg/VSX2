@@ -231,6 +231,12 @@ const BLOCK_TAG_TO_STYLE_LABEL: Record<string, string> = Object.fromEntries(
   STYLE_OPTIONS.map(o => [o.value, o.label])
 );
 
+// Shown by any of the three toolbar dropdowns when a highlighted selection
+// spans more than one value for that property — e.g. part of the selection
+// is 14px and part is 48px. Matches how Google Docs/Notion show "--"/blank
+// for a mixed selection instead of just picking one side of it to display.
+const MIXED_LABEL = 'Mixed';
+
 const stripHtml = (html: string) =>
   html.replace(/<[^>]*>/g, ' ').replace(/&nbsp;/g, ' ').replace(/\s+/g, ' ').trim();
 
@@ -371,7 +377,9 @@ export function NotebookScreen() {
   const [fontSizeMenuPos, setFontSizeMenuPos] = useState({ top: 0, left: 0 });
   const fontSizeButtonRef = useRef<HTMLButtonElement>(null);
   // Defaults to 14 (not null) for the same reason as the font family label.
-  const [selectedFontSizeLabel, setSelectedFontSizeLabel] = useState<number>(DEFAULT_FONT_SIZE);
+  // Can also be 'Mixed' when a highlighted selection spans more than one
+  // size — see syncToolbarFromSelection.
+  const [selectedFontSizeLabel, setSelectedFontSizeLabel] = useState<number | typeof MIXED_LABEL>(DEFAULT_FONT_SIZE);
   const [colorPickerPos, setColorPickerPos] = useState({ top: 0, left: 0 });
   const [richColorMenu, setRichColorMenu] = useState<null | 'text' | 'highlight'>(null);
   const [richColorMenuPos, setRichColorMenuPos] = useState({ top: 0, left: 0 });
@@ -709,19 +717,72 @@ export function NotebookScreen() {
   };
 
   // Requirement 1 (active selection listener / two-way sync): reads the
-  // ACTUAL inline font-size, font-family, and block tag at the current
-  // cursor position, and updates the toolbar dropdown labels to match —
-  // instead of the labels being a snapshot of whatever was last clicked,
-  // which drifts the instant the cursor moves anywhere else in the note.
+  // ACTUAL inline font-size, font-family, and block tag across the WHOLE
+  // current selection — not just wherever the anchor happens to sit — and
+  // updates the toolbar dropdown labels to match. A collapsed caret still
+  // just reports its own position; a real highlight is inspected node by
+  // node so a selection spanning two different sizes/fonts/block types
+  // correctly shows "Mixed" instead of silently reporting only one side
+  // of it.
   const syncToolbarFromSelection = () => {
     const editor = bodyRef.current;
     const sel = window.getSelection();
     if (!editor || !sel || sel.rangeCount === 0 || !editor.contains(sel.anchorNode)) return;
+    const range = sel.getRangeAt(0);
 
-    let node: Node | null = sel.getRangeAt(0).startContainer;
+    const applyResult = (sizePx: number | null, familyValue: string | null, blockLabel: string) => {
+      setSelectedFontSizeLabel(sizePx !== null ? Math.round(sizePx) : DEFAULT_FONT_SIZE);
+      setSelectedFontFamilyLabel(resolveFamilyLabel(familyValue));
+      setSelectedStyleLabel(blockLabel);
+    };
+
+    if (range.collapsed) {
+      const r = getAncestorFormatting(range.startContainer, editor);
+      applyResult(r.sizePx, r.familyValue, r.blockLabel);
+      return;
+    }
+
+    // Real highlight — inspect every text node it actually touches.
+    const root = range.commonAncestorContainer.nodeType === 1
+      ? (range.commonAncestorContainer as HTMLElement)
+      : (range.commonAncestorContainer.parentElement ?? editor);
+    const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
+    const sizes = new Set<number>();
+    const families = new Set<string>();
+    const blocks = new Set<string>();
+    let sawAny = false;
+    while (walker.nextNode()) {
+      const textNode = walker.currentNode;
+      if (!textNode.nodeValue || !range.intersectsNode(textNode)) continue;
+      sawAny = true;
+      const r = getAncestorFormatting(textNode, editor);
+      sizes.add(r.sizePx !== null ? Math.round(r.sizePx) : DEFAULT_FONT_SIZE);
+      families.add(resolveFamilyLabel(r.familyValue));
+      blocks.add(r.blockLabel);
+    }
+
+    if (!sawAny) {
+      // Selection didn't actually cross any text (e.g. an image block) —
+      // fall back to the anchor point, same as a collapsed caret.
+      const r = getAncestorFormatting(range.startContainer, editor);
+      applyResult(r.sizePx, r.familyValue, r.blockLabel);
+      return;
+    }
+
+    setSelectedFontSizeLabel(sizes.size === 1 ? [...sizes][0] : MIXED_LABEL);
+    setSelectedFontFamilyLabel(families.size === 1 ? [...families][0] : MIXED_LABEL);
+    setSelectedStyleLabel(blocks.size === 1 ? [...blocks][0] : MIXED_LABEL);
+  };
+
+  // Shared by syncToolbarFromSelection for both the collapsed-caret case
+  // and each text node visited while inspecting a real highlight: walks
+  // up from a node to the editor root and reports the nearest inline
+  // font-size/font-family and nearest block tag it finds.
+  const getAncestorFormatting = (start: Node, editor: HTMLElement) => {
     let sizePx: number | null = null;
     let familyValue: string | null = null;
     let blockLabel = DEFAULT_STYLE_LABEL;
+    let node: Node | null = start;
     while (node && node !== editor) {
       if (node.nodeType === 1) {
         const el = node as HTMLElement;
@@ -735,13 +796,20 @@ export function NotebookScreen() {
       }
       node = node.parentNode;
     }
+    return { sizePx, familyValue, blockLabel };
+  };
 
-    setSelectedFontSizeLabel(sizePx !== null ? Math.round(sizePx) : DEFAULT_FONT_SIZE);
-    const familyMatch = familyValue
-      ? FONT_FAMILY_OPTIONS.find(o => o.value.replace(/'/g, '').toLowerCase() === familyValue!.replace(/'/g, '').toLowerCase())
-      : null;
-    setSelectedFontFamilyLabel(familyMatch ? familyMatch.label : DEFAULT_FONT_FAMILY_LABEL);
-    setSelectedStyleLabel(blockLabel);
+  // "no font family mark exists -> display Default": a null/unset family
+  // resolves to the Default label; a set value that matches one of the
+  // dropdown's real options resolves to that option's label; anything
+  // else (a family this dropdown doesn't offer, e.g. from old pasted-in
+  // content) still falls back to Default rather than showing raw CSS.
+  const resolveFamilyLabel = (familyValue: string | null): string => {
+    if (!familyValue) return DEFAULT_FONT_FAMILY_LABEL;
+    const match = FONT_FAMILY_OPTIONS.find(
+      o => o.value.replace(/'/g, '').toLowerCase() === familyValue.replace(/'/g, '').toLowerCase()
+    );
+    return match ? match.label : DEFAULT_FONT_FAMILY_LABEL;
   };
 
   // Restores the last saved caret/selection into a Range that's guaranteed
@@ -804,6 +872,26 @@ export function NotebookScreen() {
     const span = document.createElement('span');
     span.style[styleProp] = value;
     formattingTouchedRef.current = true;
+    const cssProp = styleProp === 'fontSize' ? 'font-size' : 'font-family';
+
+    // A nested element's own inline style always wins over an ancestor's,
+    // regardless of which was set more recently — so if the selection
+    // contained a mix of sizes/fonts (multiple nested spans with their
+    // own conflicting values), just wrapping them in a new outer span
+    // would leave the old values still winning underneath it. Strip the
+    // same property from every descendant first so the new wrapper's
+    // value is the only one left to apply — a genuine uniform overwrite
+    // across the whole selection, not just wherever nothing else applied.
+    const stripConflicting = (node: Node) => {
+      if (node.nodeType === 1) {
+        const el = node as HTMLElement;
+        if (el.style?.[styleProp]) {
+          el.style.removeProperty(cssProp);
+          if (!el.getAttribute('style')?.trim()) el.removeAttribute('style');
+        }
+      }
+      node.childNodes.forEach(stripConflicting);
+    };
 
     if (range.collapsed) {
       span.appendChild(document.createTextNode('\u200B'));
@@ -815,7 +903,9 @@ export function NotebookScreen() {
       sel.addRange(newRange);
       savedRangeRef.current = newRange.cloneRange();
     } else {
-      span.appendChild(range.extractContents());
+      const extracted = range.extractContents();
+      stripConflicting(extracted);
+      span.appendChild(extracted);
       range.insertNode(span);
       const newRange = document.createRange();
       newRange.selectNodeContents(span);
