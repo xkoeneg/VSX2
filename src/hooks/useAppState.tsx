@@ -102,7 +102,7 @@ import {
   CustomPillar, TradeImage, TimeframeChart, StrategyStep, ChatMessage, RoutineCategory, RoutineItem,
   ChallengeConfig, ChallengePreset, EconomicEvent, ParsedMTTrade, ViewType, GalleryView, TradeFilter,
   TradeSortField, SortOrder, PillarsPerRow, NoticeType, SessionOption, WikiCategory, RulePillar,
-  RuleAccentColor, StoredData, NotebookEntry,
+  RuleAccentColor, StoredData, NotebookEntry, NotebookDeletedFolder,
 } from '../types';
 import {
   WIKI_CATEGORIES,
@@ -136,7 +136,7 @@ import {
   normalizeAccount, normalizeTrade, normalizeTrades, normalizeStringField, guessRulePillar,
   normalizeRule, normalizeCustomPillar, normalizeStrategyStep, normalizeStrategySteps,
   normalizeStrategyImages, normalizeStrategy, normalizeChatMessage, normalizeNotice, normalizeWiki,
-  normalizeNamedItem, migrateStoredData, normalizeNotebookEntry,
+  normalizeNamedItem, migrateStoredData, normalizeNotebookEntry, normalizeNotebookDeletedFolder,
 } from '../utils/normalize';
 import {
   parseMTNumber, parseMTTimestamp, classifyMTHeaders, rowToMTTrade, splitMTDelimitedLine,
@@ -582,6 +582,11 @@ export function useAppState() {
   // table (own-row-per-entry, like `trades`) and are loaded/state-managed
   // separately below.
   const [notebookFolders, setNotebookFolders] = useState<string[]>([]);
+  // Per-folder color override (folder name/path -> NOTEBOOK_COVER_COLORS
+  // id) and soft-deleted folders — both small config-like slices, so they
+  // live in journal_data right alongside notebookFolders itself.
+  const [notebookFolderColors, setNotebookFolderColors] = useState<Record<string, string>>({});
+  const [notebookDeletedFolders, setNotebookDeletedFolders] = useState<NotebookDeletedFolder[]>([]);
   const [notebookEntries, setNotebookEntries] = useState<NotebookEntry[]>([]);
   // True while the initial Supabase fetch for notebook entries is in
   // flight — mirrors accountsTradesLoading's purpose for this table.
@@ -1072,6 +1077,8 @@ export function useAppState() {
       setCustomSymbols(migrated.customSymbols);
       setCustomPillars(migrated.customPillars);
       setNotebookFolders(migrated.notebookFolders);
+      setNotebookFolderColors(migrated.notebookFolderColors);
+      setNotebookDeletedFolders(migrated.notebookDeletedFolders);
     } catch (e) {
       console.error('Failed to load journal data from Supabase:', e);
       showTradeImportToast('error', 'Failed to load your Playbook/Notices/Wiki/Tags — check your connection and reload.');
@@ -1092,7 +1099,7 @@ export function useAppState() {
   // saved server-side before it's even been fetched.
   useEffect(() => {
     if (!userId || !hasLoadedJournalDataRef.current) return;
-    const payload = { rules, strategies, notices, wikiEntries, setupTypes, confluences, mistakesList, emotionsList, customSymbols, customPillars, notebookFolders };
+    const payload = { rules, strategies, notices, wikiEntries, setupTypes, confluences, mistakesList, emotionsList, customSymbols, customPillars, notebookFolders, notebookFolderColors, notebookDeletedFolders };
     writeJournalData(
       async () => {
         const { error } = await supabase
@@ -1105,7 +1112,7 @@ export function useAppState() {
         showTradeImportToast('error', 'Failed to save your changes — they may not sync to other devices. Check your connection.');
       }
     );
-  }, [userId, rules, strategies, notices, wikiEntries, setupTypes, confluences, mistakesList, emotionsList, customSymbols, customPillars, notebookFolders, writeJournalData]);
+  }, [userId, rules, strategies, notices, wikiEntries, setupTypes, confluences, mistakesList, emotionsList, customSymbols, customPillars, notebookFolders, notebookFolderColors, notebookDeletedFolders, writeJournalData]);
 
   // ==========================================================================
   // Accounts & Trades: Supabase (per-user, synced across devices)
@@ -1406,7 +1413,11 @@ export function useAppState() {
     });
   }, [userId]);
 
-  // Permanently deletes every entry currently in "Recently Deleted".
+  // Permanently deletes every entry AND every folder currently in "Recently
+  // Deleted" — folders' still-trashed notes are already covered by the
+  // entries wipe below (a deleted folder's notes were soft-deleted right
+  // along with it, see handleDeleteNotebookFolder), so this just also
+  // clears notebookDeletedFolders itself.
   const handleEmptyNotebookTrash = useCallback(() => {
     setNotebookEntries(prev => {
       const toDelete = prev.filter(e => e.isDeleted);
@@ -1419,6 +1430,7 @@ export function useAppState() {
       }
       return prev.filter(e => !e.isDeleted);
     });
+    setNotebookDeletedFolders([]);
   }, [userId]);
 
   // Soft delete — marks isDeleted/deletedAt instead of removing the row, so
@@ -1489,25 +1501,43 @@ export function useAppState() {
     return [...DEFAULT_NOTEBOOK_FOLDERS, ...custom];
   }, [notebookFolders]);
 
-  const handleAddNotebookFolder = useCallback((name: string) => {
+  const handleAddNotebookFolder = useCallback((name: string, color?: string) => {
     const trimmed = name.trim();
     if (!trimmed) return;
     setNotebookFolders(prev => {
       if (prev.includes(trimmed) || (DEFAULT_NOTEBOOK_FOLDERS as readonly string[]).includes(trimmed)) return prev;
       return [...prev, trimmed];
     });
+    if (color) setNotebookFolderColors(prev => ({ ...prev, [trimmed]: color }));
   }, []);
 
+  // Deleting a folder now moves it AND every note inside it to "Recently
+  // Deleted" together (see the confirm-dialog copy in NotebookScreen.tsx),
+  // instead of the old behavior of stripping the folder off its notes and
+  // discarding it outright. The folder's color is carried into
+  // notebookDeletedFolders so a restore doesn't lose it, and cleared out of
+  // notebookFolderColors while the folder is gone so re-creating a
+  // different folder with the same name doesn't inherit a stale color.
   const handleDeleteNotebookFolder = useCallback((name: string) => {
     if ((DEFAULT_NOTEBOOK_FOLDERS as readonly string[]).includes(name)) return; // default folders aren't removable
     setNotebookFolders(prev => prev.filter(f => f !== name));
-    // Entries that were in the deleted folder fall back to uncategorized
-    // rather than pointing at a folder that no longer exists. Each entry is
-    // its own Supabase row, so the reset has to be pushed per-entry, not
-    // just via the journal_data blob (which only holds the folder names).
+    setNotebookFolderColors(prev => {
+      if (!(name in prev)) return prev;
+      const { [name]: _removed, ...rest } = prev;
+      return rest;
+    });
+    setNotebookDeletedFolders(prev => {
+      if (prev.some(f => f.name === name)) return prev;
+      return [...prev, { name, color: notebookFolderColors[name], deletedAt: new Date().toISOString() }];
+    });
+    // Notes that were in the deleted folder are soft-deleted right along
+    // with it (not stripped of their folder / kept live) — each entry is
+    // its own Supabase row, so this has to be pushed per-entry, not just
+    // via the journal_data blob (which only holds the folder names/colors).
     setNotebookEntries(prev => {
-      const affected = prev.filter(e => e.folder === name);
-      const updated = prev.map(e => e.folder === name ? { ...e, folder: '', updatedAt: new Date().toISOString() } : e);
+      const now = new Date().toISOString();
+      const affected = prev.filter(e => e.folder === name && !e.isDeleted);
+      const updated = prev.map(e => e.folder === name && !e.isDeleted ? { ...e, isDeleted: true, deletedAt: now, pinned: false } : e);
       if (affected.length > 0) {
         if (userId) {
           affected.forEach(e => {
@@ -1525,6 +1555,89 @@ export function useAppState() {
         }
       }
       return updated;
+    });
+  }, [userId, notebookFolderColors]);
+
+  // Explicit per-folder accent color, independent of adding/deleting a
+  // folder — pass `undefined` to clear back to the deterministic name-hash
+  // fallback color (see folderColor() in NotebookScreen.tsx).
+  const handleSetNotebookFolderColor = useCallback((name: string, color: string | undefined) => {
+    setNotebookFolderColors(prev => {
+      if (!color) {
+        if (!(name in prev)) return prev;
+        const { [name]: _removed, ...rest } = prev;
+        return rest;
+      }
+      return { ...prev, [name]: color };
+    });
+  }, []);
+
+  // Top-level drag-to-reorder: moves `draggedName`'s whole entry to sit
+  // just before `targetName` in notebookFolders. Only ever called with two
+  // top-level (depth 0) folder names — see renderFolderNode in
+  // NotebookScreen.tsx, which only makes depth-0 rows draggable — so a
+  // simple splice-and-reinsert on the flat list is enough; nested folders
+  // underneath a moved parent are untouched since folder order is derived
+  // purely from array position within this flat string list.
+  const handleReorderNotebookFolder = useCallback((draggedName: string, targetName: string) => {
+    if (draggedName === targetName) return;
+    setNotebookFolders(prev => {
+      if (!prev.includes(draggedName) || !prev.includes(targetName)) return prev;
+      const withoutDragged = prev.filter(f => f !== draggedName);
+      const targetIndex = withoutDragged.indexOf(targetName);
+      const next = [...withoutDragged];
+      next.splice(targetIndex, 0, draggedName);
+      return next;
+    });
+  }, []);
+
+  // Restores a trashed folder (back into notebookFolders, color intact)
+  // and every note that was soft-deleted along with it.
+  const handleRestoreNotebookFolder = useCallback((name: string) => {
+    const deletedFolder = notebookDeletedFolders.find(f => f.name === name);
+    setNotebookDeletedFolders(prev => prev.filter(f => f.name !== name));
+    setNotebookFolders(prev => prev.includes(name) ? prev : [...prev, name]);
+    if (deletedFolder?.color) {
+      setNotebookFolderColors(prev => ({ ...prev, [name]: deletedFolder.color! }));
+    }
+    setNotebookEntries(prev => {
+      const now = new Date().toISOString();
+      const affected = prev.filter(e => e.folder === name && e.isDeleted);
+      const updated = prev.map(e => e.folder === name && e.isDeleted ? { ...e, isDeleted: false, deletedAt: undefined, updatedAt: now } : e);
+      if (affected.length > 0) {
+        if (userId) {
+          affected.forEach(e => {
+            const updatedEntry = updated.find(u => u.id === e.id)!;
+            supabase.from('notebook_entries').update({ data: updatedEntry }).eq('id', e.id).eq('user_id', userId).then(({ error }) => {
+              if (error) {
+                console.error('Failed to restore notebook entry after folder restore in Supabase:', error);
+                showTradeImportToast('error', 'Failed to restore some notes on the server — they may still show as deleted on reload.');
+              }
+            });
+          });
+        } else {
+          console.error('Cannot update notebook entries in Supabase: no authenticated user id.');
+          showTradeImportToast('error', 'Not signed in — this restore was NOT saved and will be lost on refresh.');
+        }
+      }
+      return updated;
+    });
+  }, [userId, notebookDeletedFolders]);
+
+  // Permanently deletes a trashed folder and every note still trashed under
+  // it — the folder-level equivalent of handlePermanentDeleteNotebookEntry.
+  const handlePermanentDeleteNotebookFolder = useCallback((name: string) => {
+    setNotebookDeletedFolders(prev => prev.filter(f => f.name !== name));
+    setNotebookEntries(prev => {
+      const toDelete = prev.filter(e => e.folder === name && e.isDeleted);
+      if (toDelete.length > 0 && userId) {
+        toDelete.forEach(e => {
+          supabase.from('notebook_entries').delete().eq('id', e.id).eq('user_id', userId).then(({ error }) => {
+            if (error) console.error('Failed to permanently delete notebook entry from Supabase:', error);
+          });
+        });
+      }
+      return prev.filter(e => !(e.folder === name && e.isDeleted));
     });
   }, [userId]);
 
@@ -4775,6 +4888,8 @@ Return ONLY a JSON object — no markdown, no code fences, no commentary — wit
       customPillars,
       notebookEntries,
       notebookFolders,
+      notebookFolderColors,
+      notebookDeletedFolders,
       lifeDisciplineData: buildLifeDisciplineSnapshot(),
       appPreferencesData: buildAppPreferencesSnapshot(),
     };
@@ -4813,11 +4928,23 @@ Return ONLY a JSON object — no markdown, no code fences, no commentary — wit
         setCustomSymbols(migrated.customSymbols);
         setCustomPillars(migrated.customPillars);
 
-        // Notebook folders — small config-like list, restored independently
-        // (like lifeDisciplineData/appPreferencesData below) since older
-        // backups predate this field and just no-op here.
+        // Notebook folders (+ their colors, + soft-deleted folders) — small
+        // config-like slices, restored independently off the RAW backup
+        // (not `migrated`, which defaults every one of these to []/{} when
+        // absent) like lifeDisciplineData/appPreferencesData below, since
+        // older backups predate these fields entirely and should just no-op
+        // here rather than wiping out whatever the account currently has.
         const restoredNotebookFolders: string[] | null = Array.isArray(raw.notebookFolders) ? raw.notebookFolders : null;
         if (restoredNotebookFolders) setNotebookFolders(restoredNotebookFolders);
+        const restoredNotebookFolderColors: Record<string, string> | null =
+          raw.notebookFolderColors && typeof raw.notebookFolderColors === 'object' && !Array.isArray(raw.notebookFolderColors)
+            ? raw.notebookFolderColors
+            : null;
+        if (restoredNotebookFolderColors) setNotebookFolderColors(restoredNotebookFolderColors);
+        const restoredNotebookDeletedFolders: NotebookDeletedFolder[] | null = Array.isArray(raw.notebookDeletedFolders)
+          ? raw.notebookDeletedFolders.map(normalizeNotebookDeletedFolder)
+          : null;
+        if (restoredNotebookDeletedFolders) setNotebookDeletedFolders(restoredNotebookDeletedFolders);
 
         // Everything now lives in Supabase (accounts/trades, journal data,
         // and preferences), so a full restore replaces this user's
@@ -4855,6 +4982,8 @@ Return ONLY a JSON object — no markdown, no code fences, no commentary — wit
                 emotionsList: migrated.emotionsList,
                 customSymbols: migrated.customSymbols,
                 ...(restoredNotebookFolders ? { notebookFolders: restoredNotebookFolders } : {}),
+                ...(restoredNotebookFolderColors ? { notebookFolderColors: restoredNotebookFolderColors } : {}),
+                ...(restoredNotebookDeletedFolders ? { notebookDeletedFolders: restoredNotebookDeletedFolders } : {}),
               },
             }, { onConflict: 'user_id' });
             if (journalErr) throw journalErr;
@@ -5424,6 +5553,8 @@ Return ONLY a JSON object — no markdown, no code fences, no commentary — wit
     notebookEntries,
     notebookEntriesLoading,
     notebookFolders: notebookFoldersWithDefaults,
+    notebookFolderColors,
+    notebookDeletedFolders,
     handleAddNotebookEntry,
     handleUpdateNotebookEntry,
     handleToggleNotebookEntryPin,
@@ -5437,6 +5568,10 @@ Return ONLY a JSON object — no markdown, no code fences, no commentary — wit
     handlePermanentDeleteNotebookEntry,
     handleAddNotebookFolder,
     handleDeleteNotebookFolder,
+    handleSetNotebookFolderColor,
+    handleReorderNotebookFolder,
+    handleRestoreNotebookFolder,
+    handlePermanentDeleteNotebookFolder,
     rules,
     setRules,
     strategies,
