@@ -3176,6 +3176,26 @@ export function useAppState() {
   const PH_UTC_OFFSET_HOURS = 8;
   const BROKER_TO_PH_SHIFT_HOURS = PH_UTC_OFFSET_HOURS - MT5_SERVER_UTC_OFFSET_HOURS;
 
+  // Trading-day cutoff: unlike a calendar day, the trading day doesn't roll
+  // over at midnight — the market just keeps running. A trade opened at,
+  // say, 1:30 AM still belongs to the PREVIOUS session for Daily Count /
+  // Calendar purposes, all the way up to this cutoff hour. Everything from
+  // 4:00 AM onward counts as the new trading day. This is the one number to
+  // edit if the desk's "end of day" ever moves.
+  const TRADING_DAY_CUTOFF_HOUR = 4;
+
+  // Given PH wall-clock Y/M/D/H components, returns the "trading day" date
+  // string (YYYY-MM-DD) — the calendar date, unless it falls before the
+  // cutoff hour, in which case it rolls back to the previous day.
+  const getTradingDayDateStr = (year: number, monthIndex0: number, day: number, hour: number): string => {
+    const asOf = new Date(year, monthIndex0, day, hour);
+    asOf.setHours(asOf.getHours() - TRADING_DAY_CUTOFF_HOUR);
+    const y = asOf.getFullYear();
+    const mo = String(asOf.getMonth() + 1).padStart(2, '0');
+    const d = String(asOf.getDate()).padStart(2, '0');
+    return `${y}-${mo}-${d}`;
+  };
+
   // Takes a naive "YYYY-MM-DDTHH:mm:ss" broker-server-time string and returns
   // the equivalent Philippine-time date/time fields, plus a correct absolute
   // ISO timestamp. Does the shift with pure UTC-epoch arithmetic first (so
@@ -3196,7 +3216,11 @@ export function useAppState() {
     const mi = String(phWall.getUTCMinutes()).padStart(2, '0');
     const s = String(phWall.getUTCSeconds()).padStart(2, '0');
     const asLocalDate = new Date(y, phWall.getUTCMonth(), Number(d), Number(h), Number(mi), Number(s));
-    return { date: `${y}-${mo}-${d}`, time: `${h}:${mi}`, timestamp: asLocalDate.toISOString() };
+    // `date` is the TRADING day (4 AM cutoff, not midnight) — this is what
+    // Calendar/Daily Count group by. `time` stays the real wall-clock time
+    // so trade history still shows "1:30 AM" instead of silently relabeling it.
+    const tradingDate = getTradingDayDateStr(y, phWall.getUTCMonth(), Number(d), Number(h));
+    return { date: tradingDate, time: `${h}:${mi}`, timestamp: asLocalDate.toISOString() };
   };
 
   // Reads an uploaded MT4/MT5 .csv or .html report, parses it, maps each
@@ -3648,7 +3672,14 @@ export function useAppState() {
   };
 
   // Helper to get today's date in local YYYY-MM-DD format
-  const getTodayLocalDate = () => new Date().toLocaleDateString('en-CA'); // Returns YYYY-MM-DD in local time
+  // Returns the current TRADING day (YYYY-MM-DD), not the calendar day —
+  // before the 4 AM cutoff this still returns yesterday's date, matching
+  // how the Calendar/Daily Count group trades. Used as the default date
+  // when logging a new trade.
+  const getTodayLocalDate = () => {
+    const now = new Date();
+    return getTradingDayDateStr(now.getFullYear(), now.getMonth(), now.getDate(), now.getHours());
+  };
 
   // Theme-aware class helpers
   const tc = {
