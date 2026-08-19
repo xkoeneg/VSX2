@@ -316,7 +316,7 @@ export function DashboardScreen() {
     const height = 180;
     const chartWidth = Math.max(equityChartWidth, 200);
     const isPositive = stats.totalPnL >= 0;
-    const strokeColor = isPositive ? '#10b981' : '#ef4444';
+    const strokeColor = isPositive ? '#10b981' : '#f43f5e';
     const gradientId = `equityFill-${isPositive ? 'up' : 'down'}`;
 
     // Y-axis domain padding: a small percentage of the data range, just
@@ -417,11 +417,11 @@ export function DashboardScreen() {
         {showProfitBar && (
           <div>
             <div className="flex items-center justify-between mb-1.5">
-              <span className="text-xs text-zinc-500 flex items-center gap-1.5">
+              <span className={cn("text-xs flex items-center gap-1.5", tc.textMuted)}>
                 <Target className="w-3 h-3 text-emerald-400" />
                 Progress to Target
               </span>
-              <span className={cn('text-xs font-medium', metrics.profitProgress >= 90 ? 'text-emerald-400' : 'text-zinc-400')}>
+              <span className={cn('text-xs font-medium', metrics.profitProgress >= 90 ? 'text-emerald-400' : tc.textSecondary)}>
                 {privacyMode ? '****' : `${metrics.profitProgress.toFixed(1)}%`}
               </span>
             </div>
@@ -435,8 +435,8 @@ export function DashboardScreen() {
               />
             </div>
             <div className="flex justify-between mt-1.5">
-              <span className="text-[10px] text-zinc-600">Current: {privacyMode ? '****' : formatCurrencyAbsolute(metrics.currentBalance)}</span>
-              <span className="text-[10px] text-zinc-600">Target: {privacyMode ? '****' : formatCurrencyAbsolute(account.profitTarget!)}</span>
+              <span className={cn("text-[10px]", tc.textMuted)}>Current: {privacyMode ? '****' : formatCurrencyAbsolute(metrics.currentBalance)}</span>
+              <span className={cn("text-[10px]", tc.textMuted)}>Target: {privacyMode ? '****' : formatCurrencyAbsolute(account.profitTarget!)}</span>
             </div>
           </div>
         )}
@@ -446,10 +446,10 @@ export function DashboardScreen() {
             {(metrics.isLocked || metrics.isBreached) && (
               <div className="flex items-center gap-2 mb-2">
                 {metrics.isLocked && (
-                  <span className="text-[10px] px-2 py-0.5 bg-amber-500/20 text-amber-400 rounded">Locked</span>
+                  <span className="text-[10px] px-2 py-0.5 rounded-full bg-amber-500/15 border border-amber-500/30 text-amber-300">Locked</span>
                 )}
                 {metrics.isBreached && (
-                  <span className="text-[10px] px-2 py-0.5 bg-rose-500/20 text-rose-400 rounded flex items-center gap-1">
+                  <span className="text-[10px] px-2 py-0.5 rounded-full bg-rose-500/15 border border-rose-500/30 text-rose-300 flex items-center gap-1">
                     <AlertCircle className="w-3 h-3" />
                     Breached
                   </span>
@@ -458,12 +458,12 @@ export function DashboardScreen() {
             )}
 
             <div className="flex items-center justify-between mb-1.5">
-              <span className="text-xs text-zinc-500 flex items-center gap-1.5">
-                <TrendingDown className="w-3 h-3 text-red-500" />
+              <span className={cn("text-xs flex items-center gap-1.5", tc.textMuted)}>
+                <TrendingDown className="w-3 h-3 text-rose-500" />
                 {tradingType === 'FUTURES' ? 'Trailing Drawdown' :
                  tradingType === 'LIVE' ? 'Drawdown from Capital' : 'Drawdown Usage'}
               </span>
-              <span className={cn('text-xs font-medium', metrics.drawdownProgress > 70 ? 'text-red-500' : 'text-zinc-400')}>
+              <span className={cn('text-xs font-medium', metrics.drawdownProgress > 70 ? 'text-rose-500' : tc.textSecondary)}>
                 {privacyMode ? '****' : `${metrics.drawdownProgress.toFixed(1)}%`}
               </span>
             </div>
@@ -471,17 +471,17 @@ export function DashboardScreen() {
               <div className="absolute right-[30%] top-0 bottom-0 w-px bg-amber-500/30" />
               <div
                 className={cn(
-                  'h-full rounded-full transition-all duration-500 bg-red-600',
-                  metrics.drawdownProgress > 70 && 'shadow-[0_0_10px_2px_rgba(239,68,68,0.8)]'
+                  'h-full rounded-full transition-all duration-500 bg-rose-600',
+                  metrics.drawdownProgress > 70 && 'shadow-[0_0_10px_2px_rgba(244,63,94,0.8)]'
                 )}
                 style={{ width: `${metrics.drawdownProgress}%` }}
               />
             </div>
             <div className="flex justify-between mt-1.5">
-              <span className="text-[10px] text-zinc-600">
+              <span className={cn("text-[10px]", tc.textMuted)}>
                 Current: {privacyMode ? '****' : formatCurrencyAbsolute(metrics.currentBalance)}
               </span>
-              <span className="text-[10px] text-zinc-600">
+              <span className={cn("text-[10px]", tc.textMuted)}>
                 {tradingType === 'LIVE' ? 'Floor: $0.00' : `Liquidation Level: ${privacyMode ? '****' : formatCurrencyAbsolute(metrics.threshold)}`}
               </span>
             </div>
@@ -492,9 +492,9 @@ export function DashboardScreen() {
           <div className={cn(showProfitBar && 'mt-3 pt-3 border-t border-zinc-800/60')}>
             {metrics.isLocked && (
               <div className="flex items-center gap-2 mb-2">
-                <span className="text-[10px] px-2 py-0.5 bg-cyan-500/20 text-cyan-400 rounded">Threshold Locked</span>
+                <span className="text-[10px] px-2 py-0.5 rounded-full bg-cyan-500/15 border border-cyan-500/30 text-cyan-300">Threshold Locked</span>
                 {metrics.isBreached && (
-                  <span className="text-[10px] px-2 py-0.5 bg-rose-500/20 text-rose-400 rounded flex items-center gap-1">
+                  <span className="text-[10px] px-2 py-0.5 rounded-full bg-rose-500/15 border border-rose-500/30 text-rose-300 flex items-center gap-1">
                     <AlertCircle className="w-3 h-3" />
                     Breached
                   </span>
@@ -502,16 +502,16 @@ export function DashboardScreen() {
               </div>
             )}
             <div className="flex items-center justify-between mb-1.5">
-              <span className="text-xs text-zinc-500 flex items-center gap-1.5">
+              <span className={cn("text-xs flex items-center gap-1.5", tc.textMuted)}>
                 <Shield className="w-3 h-3 text-cyan-400" />
                 {metrics.isLocked ? 'Locked Threshold' : 'Trailing Threshold'}
               </span>
-              <span className={cn('text-xs font-medium', metrics.isLocked ? 'text-cyan-400' : 'text-zinc-400')}>
+              <span className={cn('text-xs font-medium', metrics.isLocked ? 'text-cyan-400' : tc.textSecondary)}>
                 {privacyMode ? '****' : formatCurrencyAbsolute(metrics.threshold)}
               </span>
             </div>
             <div className="flex justify-between mt-1.5">
-              <span className="text-[10px] text-zinc-600">
+              <span className={cn("text-[10px]", tc.textMuted)}>
                 Current Balance: {privacyMode ? '****' : formatCurrencyAbsolute(metrics.currentBalance)}
               </span>
               <span className={cn(
@@ -525,7 +525,7 @@ export function DashboardScreen() {
         )}
 
         {!showProfitBar && !showDrawdownBar && !isFundedFuturesAcct && hasProfitTarget && hasDrawdown && (
-          <div className="text-xs text-zinc-500 italic">
+          <div className={cn("text-xs italic", tc.textMuted)}>
             Add trades to see progress
           </div>
         )}
@@ -563,7 +563,7 @@ export function DashboardScreen() {
       <div className="flex flex-col gap-4">
         {/* Total P&L */}
         <div className={cn(
-          "relative overflow-hidden border rounded-2xl p-4 sm:p-6 transition-colors duration-300 min-w-0",
+          "relative overflow-hidden border rounded-xl p-4 sm:p-6 transition-colors duration-300 min-w-0",
           theme !== 'light'
             ? 'bg-gradient-to-br from-zinc-900 via-zinc-900/90 to-zinc-900/60 border-zinc-800'
             : 'bg-gradient-to-br from-white via-zinc-50 to-zinc-100 border-zinc-200'
@@ -592,8 +592,8 @@ export function DashboardScreen() {
                 <p className={cn("text-sm font-semibold tabular-nums", tc.text)}>{stats.winRate.toFixed(1)}%</p>
               </div>
               <div className={cn("px-3 py-2 rounded-xl min-w-[84px]", theme !== 'light' ? 'bg-zinc-800/50' : 'bg-zinc-100')}>
-                <p className="text-[10px] text-zinc-500 uppercase tracking-wider">Profit Factor</p>
-                <p className="text-sm font-semibold text-white tabular-nums">{isFinite(stats.profitFactor) ? stats.profitFactor.toFixed(2) : 'N/A'}</p>
+                <p className={cn("text-[10px] uppercase tracking-wider", tc.textMuted)}>Profit Factor</p>
+                <p className={cn("text-sm font-semibold tabular-nums", tc.text)}>{isFinite(stats.profitFactor) ? stats.profitFactor.toFixed(2) : 'N/A'}</p>
               </div>
             </div>
           </div>
@@ -629,7 +629,7 @@ export function DashboardScreen() {
           return (
             <div
               className={cn(
-                'relative flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 rounded-2xl border border-l-4 bg-zinc-900/40 border-zinc-800/80 p-4 sm:px-5 sm:py-3.5 min-w-0 transition-all duration-300',
+                'relative flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 rounded-xl border border-l-4 bg-zinc-900/40 border-zinc-800/80 p-4 sm:px-5 sm:py-3.5 min-w-0 transition-all duration-300',
                 isRed && 'border-l-rose-500',
                 isWarning && 'border-l-amber-500',
                 isGreen && 'border-l-emerald-500',
@@ -643,14 +643,14 @@ export function DashboardScreen() {
               <div className="flex flex-wrap items-center gap-2 sm:gap-4 min-w-0 w-full sm:w-auto sm:flex-1">
                 <div className="flex items-center gap-1.5 flex-shrink-0">
                   <Brain className="w-4 h-4 text-violet-400 flex-shrink-0" />
-                  <h3 className="text-sm font-semibold text-white tracking-tight truncate">Discipline</h3>
+                  <h3 className={cn("text-sm font-semibold tracking-tight truncate", tc.text)}>Discipline</h3>
                 </div>
 
                 <div className="flex items-baseline gap-1.5 flex-shrink-0">
-                  <span className={cn('text-2xl font-bold tabular-nums leading-none', isGreen ? 'text-emerald-400' : isRed ? 'text-rose-400' : isWarning ? 'text-amber-400' : 'text-white')}>
+                  <span className={cn('text-2xl font-bold tabular-nums leading-none', isGreen ? 'text-emerald-400' : isRed ? 'text-rose-400' : isWarning ? 'text-amber-400' : tc.text)}>
                     {followRate.toFixed(0)}%
                   </span>
-                  <span className="text-[10px] text-zinc-500 uppercase tracking-wider whitespace-nowrap">follow rate</span>
+                  <span className={cn("text-[10px] uppercase tracking-wider whitespace-nowrap", tc.textMuted)}>follow rate</span>
                 </div>
 
                 {/* Thin inline progress bar fills remaining space on wider screens — single
@@ -679,13 +679,18 @@ export function DashboardScreen() {
                   <XCircle className="w-3.5 h-3.5 flex-shrink-0" />
                   <span className="text-xs font-semibold tabular-nums">{broken}</span>
                 </div>
-                <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-zinc-500/10 text-zinc-400">
+                <div className={cn("flex items-center gap-1.5 px-2.5 py-1 rounded-full border", theme !== 'light' ? 'bg-zinc-500/10 border-zinc-600/30 text-zinc-400' : 'bg-zinc-200/60 border-zinc-300 text-zinc-500')}>
                   <Clock className="w-3.5 h-3.5 flex-shrink-0" />
                   <span className="text-xs font-semibold tabular-nums">{pending}</span>
                 </div>
                 <button
                   onClick={() => setView('discipline')}
-                  className="group flex items-center gap-1 text-xs font-medium text-zinc-400 hover:text-white bg-zinc-800/50 hover:bg-zinc-700/50 transition-colors flex-shrink-0 pl-2.5 pr-2 py-1 rounded-full ml-1"
+                  className={cn(
+                    "group flex items-center gap-1 text-xs font-medium transition-colors flex-shrink-0 pl-2.5 pr-2 py-1 rounded-full ml-1",
+                    theme !== 'light'
+                      ? 'text-zinc-400 hover:text-white bg-zinc-800/50 hover:bg-zinc-700/50'
+                      : 'text-zinc-500 hover:text-zinc-900 bg-zinc-100 hover:bg-zinc-200'
+                  )}
                 >
                   <span>Full</span>
                   <ChevronRight className="w-3.5 h-3.5 transition-transform duration-200 group-hover:translate-x-0.5" />
@@ -704,7 +709,7 @@ export function DashboardScreen() {
         {/* Win / Loss Ratio — replaces the redundant Total Trades count with
             an actionable breakdown of wins vs. losses, dual-color coded. */}
         <div className={cn(
-          "group rounded-2xl p-4 flex items-center gap-3 min-w-0 transition-all duration-200",
+          "group rounded-xl p-4 flex items-center gap-3 min-w-0 transition-all duration-200",
           theme !== 'light'
             ? 'bg-zinc-900/40 border border-zinc-800/80 hover:border-zinc-700 hover:bg-zinc-900/70'
             : 'bg-white border border-zinc-200 hover:border-zinc-300 hover:bg-zinc-50'
@@ -731,7 +736,7 @@ export function DashboardScreen() {
             Chart summary badges above) with the current run of 100%
             rule-compliant trades, the more actionable discipline signal. */}
         <div className={cn(
-          "group rounded-2xl p-4 flex items-center gap-3 min-w-0 transition-all duration-200",
+          "group rounded-xl p-4 flex items-center gap-3 min-w-0 transition-all duration-200",
           theme !== 'light'
             ? 'bg-zinc-900/40 border border-zinc-800/80 hover:border-zinc-700 hover:bg-zinc-900/70'
             : 'bg-white border border-zinc-200 hover:border-zinc-300 hover:bg-zinc-50'
@@ -784,7 +789,7 @@ export function DashboardScreen() {
 
             return (
               <div key={account.id} className={cn(
-                'group relative rounded-2xl p-4 min-w-0 overflow-hidden transition-all duration-200',
+                'group relative rounded-xl p-4 min-w-0 overflow-hidden transition-all duration-200',
                 theme !== 'light'
                   ? 'bg-zinc-900/40 border border-zinc-800/80 hover:border-zinc-700 hover:bg-zinc-900/70'
                   : 'bg-white border border-zinc-200 hover:border-zinc-300 hover:bg-zinc-50',
@@ -813,19 +818,19 @@ export function DashboardScreen() {
                       </button>
                       <button
                         onClick={() => handleDeleteAccount(account.id)}
-                        className="p-1 text-zinc-600 hover:text-rose-400 opacity-0 group-hover:opacity-100 transition-opacity"
+                        className={cn("p-1 opacity-0 group-hover:opacity-100 transition-opacity", theme !== 'light' ? 'text-zinc-600 hover:text-rose-400' : 'text-zinc-400 hover:text-rose-500')}
                       >
                         <Trash2 className="w-4 h-4" />
                       </button>
                       {showsCycleBadges ? (
                         <div className="flex items-center gap-1.5">
                           {hasPassedTarget && (
-                            <span className="text-xs px-2 py-0.5 rounded truncate inline-flex items-center gap-1 bg-emerald-500/20 text-emerald-400 whitespace-nowrap">
+                            <span className="text-xs px-2 py-0.5 rounded-full border truncate inline-flex items-center gap-1 bg-emerald-500/15 border-emerald-500/30 text-emerald-300 whitespace-nowrap">
                               ✅ Passed
                             </span>
                           )}
                           {showPayoutBadge && (
-                            <span className="text-xs px-2 py-0.5 rounded truncate inline-flex items-center gap-1 bg-amber-500/20 text-amber-400 whitespace-nowrap">
+                            <span className="text-xs px-2 py-0.5 rounded-full border truncate inline-flex items-center gap-1 bg-amber-500/15 border-amber-500/30 text-amber-300 whitespace-nowrap">
                               💰 Payout #{account.payoutResetsCount}
                             </span>
                           )}
@@ -850,16 +855,16 @@ export function DashboardScreen() {
 
                   <div className="grid grid-cols-3 gap-2 sm:gap-3">
                     <div className="min-w-0">
-                      <p className="text-[10px] text-zinc-500 uppercase tracking-wider truncate">Starting</p>
-                      <p className="text-xs text-zinc-300 truncate tabular-nums">{privacyMode ? '****' : `$${account.startingBalance.toLocaleString()}`}</p>
+                      <p className={cn("text-[10px] uppercase tracking-wider truncate", tc.textMuted)}>Starting</p>
+                      <p className={cn("text-xs truncate tabular-nums", tc.textSecondary)}>{privacyMode ? '****' : `$${account.startingBalance.toLocaleString()}`}</p>
                     </div>
                     <div className="min-w-0">
-                      <p className="text-[10px] text-zinc-500 uppercase tracking-wider truncate">Current</p>
-                      <p className="text-xs text-zinc-300 truncate tabular-nums">{privacyMode ? '****' : `$${metrics.currentBalance.toLocaleString()}`}</p>
+                      <p className={cn("text-[10px] uppercase tracking-wider truncate", tc.textMuted)}>Current</p>
+                      <p className={cn("text-xs truncate tabular-nums", tc.textSecondary)}>{privacyMode ? '****' : `$${metrics.currentBalance.toLocaleString()}`}</p>
                     </div>
                     <div className="min-w-0">
-                      <p className="text-[10px] text-zinc-500 uppercase tracking-wider truncate">Trades</p>
-                      <p className="text-xs text-zinc-300 truncate tabular-nums">{accountTrades.length}</p>
+                      <p className={cn("text-[10px] uppercase tracking-wider truncate", tc.textMuted)}>Trades</p>
+                      <p className={cn("text-xs truncate tabular-nums", tc.textSecondary)}>{accountTrades.length}</p>
                     </div>
                   </div>
                 </div>
@@ -867,7 +872,7 @@ export function DashboardScreen() {
             );
           })}
           {accounts.length === 0 && (
-            <div className="col-span-full text-center text-zinc-600 py-8 border border-dashed border-zinc-800 rounded-2xl">
+            <div className={cn("col-span-full text-center py-8 border border-dashed rounded-xl", tc.textMuted, theme !== 'light' ? 'border-zinc-800' : 'border-zinc-300')}>
               No accounts yet. Add your first account to get started.
             </div>
           )}
@@ -875,10 +880,21 @@ export function DashboardScreen() {
       </div>
 
       {/* Recent trades */}
-      <div className="bg-zinc-900/40 border border-zinc-800/80 rounded-2xl p-4 sm:p-6">
+      <div className={cn(
+        "rounded-xl p-4 sm:p-6 border",
+        theme !== 'light' ? 'bg-zinc-900/40 border-zinc-800/80' : 'bg-white border-zinc-200'
+      )}>
         <div className="flex items-center justify-between mb-4 flex-wrap gap-2">
-          <h3 className="text-lg font-semibold text-white tracking-tight">Recent Trades</h3>
-          <button onClick={() => { resetTradeForm(); resetCalculator(); setShowAddTrade(true); }} className="flex items-center gap-2 px-3 py-1.5 bg-zinc-800 hover:bg-zinc-700 text-white rounded-lg text-sm transition-colors">
+          <h3 className={cn("text-lg font-semibold tracking-tight", tc.text)}>Recent Trades</h3>
+          <button
+            onClick={() => { resetTradeForm(); resetCalculator(); setShowAddTrade(true); }}
+            className={cn(
+              "flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm transition-colors",
+              theme !== 'light'
+                ? 'bg-zinc-800 hover:bg-zinc-700 text-white'
+                : 'bg-zinc-100 hover:bg-zinc-200 text-zinc-900'
+            )}
+          >
             <Plus className="w-4 h-4" />
             <span>Add Trade</span>
           </button>
@@ -888,32 +904,49 @@ export function DashboardScreen() {
             const account = accounts.find(a => a.id === trade.accountId);
             const isWin = trade.profitLoss >= 0;
             return (
-              <div key={trade.id} onClick={() => { setShowTradeDetail(trade.id); setShowExpandGallery(false); }} className="relative flex items-center justify-between p-3 pl-4 bg-zinc-800/30 rounded-xl hover:bg-zinc-800/60 cursor-pointer transition-colors min-w-0 overflow-hidden">
+              <div
+                key={trade.id}
+                onClick={() => { setShowTradeDetail(trade.id); setShowExpandGallery(false); }}
+                className={cn(
+                  "relative flex items-center justify-between p-3 pl-4 rounded-lg cursor-pointer transition-colors min-w-0 overflow-hidden border",
+                  theme !== 'light'
+                    ? 'bg-zinc-800/30 border-zinc-700/40 hover:bg-zinc-800/50 hover:border-zinc-600/50'
+                    : 'bg-zinc-50 border-zinc-200 hover:bg-zinc-100 hover:border-zinc-300'
+                )}
+              >
                 <div className={cn('absolute left-0 top-0 bottom-0 w-0.5', isWin ? 'bg-emerald-500/60' : 'bg-rose-500/60')} />
                 <div className="flex items-center gap-4 min-w-0 flex-1">
                   <div className={cn('w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0', isWin ? 'bg-emerald-500/20 text-emerald-400' : 'bg-rose-500/20 text-rose-400')}>
                     {isWin ? <ArrowUpRight className="w-4 h-4" /> : <ArrowDownRight className="w-4 h-4" />}
                   </div>
                   <div className="min-w-0 flex-1">
-                    <p className="font-medium text-white truncate">{trade.symbol}</p>
-                    <p className="text-xs text-zinc-500 truncate">{account?.name} | {trade.setupTypes.join(', ') || 'No setup'}</p>
+                    <p className={cn("font-medium truncate", tc.text)}>{trade.symbol}</p>
+                    <p className={cn("text-xs truncate", tc.textMuted)}>{account?.name} | {trade.setupTypes.join(', ') || 'No setup'}</p>
                   </div>
                 </div>
                 <div className="text-right flex-shrink-0 ml-4">
                   <p className={cn('font-mono font-medium tabular-nums', isWin ? 'text-emerald-400' : 'text-rose-400')}>
                     {formatCurrency(trade.profitLoss, privacyMode)}
                   </p>
-                  <p className="text-xs text-zinc-500">{formatDate(trade.date)}</p>
+                  <p className={cn("text-xs", tc.textMuted)}>{formatDate(trade.date)}</p>
                 </div>
               </div>
             );
           })}
           {filteredTrades.length === 0 && (
-            <p className="text-center text-zinc-600 py-8">No trades yet. Add your first trade to get started.</p>
+            <p className={cn("text-center py-8", tc.textMuted)}>No trades yet. Add your first trade to get started.</p>
           )}
         </div>
         {filteredTrades.length > 5 && (
-          <button onClick={() => setView('trades')} className="w-full flex items-center justify-center gap-2 py-2.5 mt-4 text-sm text-zinc-400 hover:text-white bg-zinc-800/40 hover:bg-zinc-800 rounded-xl transition-colors">
+          <button
+            onClick={() => setView('trades')}
+            className={cn(
+              "w-full flex items-center justify-center gap-2 py-2.5 mt-4 text-sm rounded-lg transition-colors",
+              theme !== 'light'
+                ? 'text-zinc-400 hover:text-white bg-zinc-800/40 hover:bg-zinc-800'
+                : 'text-zinc-500 hover:text-zinc-900 bg-zinc-100 hover:bg-zinc-200'
+            )}
+          >
             <span>View All Trades ({filteredTrades.length})</span>
             <ChevronRight className="w-4 h-4" />
           </button>
