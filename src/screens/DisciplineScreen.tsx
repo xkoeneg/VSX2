@@ -924,9 +924,12 @@ export function DisciplineScreen() {
         </div>
 
         {/* Psychology & Behavioral Analytics — now positioned above the log, full width, two columns */}
-        <div className="bg-zinc-900/40 border border-zinc-800/80 rounded-2xl p-5 min-w-0">
+        <div className={cn(
+          "rounded-xl border p-5 min-w-0",
+          theme !== 'light' ? 'bg-zinc-900/40 border-zinc-800/80' : 'bg-white border-zinc-200'
+        )}>
           <div className="flex items-center justify-between flex-wrap gap-2 mb-4">
-            <h3 className="text-base font-semibold text-white flex items-center gap-2 truncate">
+            <h3 className={cn("text-base font-semibold flex items-center gap-2 truncate", tc.text)}>
               <Brain className="w-4 h-4 text-violet-400 flex-shrink-0" />
               <span className="truncate">Psychology & Behavioral Analytics</span>
             </h3>
@@ -934,7 +937,11 @@ export function DisciplineScreen() {
               value={globalAnalyticsTimeframe ?? ''}
               onChange={(e) => setGlobalAnalyticsTimeframe(e.target.value as DisciplineAnalyticsTimeframe)}
               title="Global Timeframe — updates both cards at once"
-              className="px-2.5 py-1 bg-zinc-900 border border-white/10 rounded-lg text-xs text-zinc-300 focus:outline-none focus:border-indigo-500/50 transition-colors cursor-pointer flex-shrink-0"
+              className={cn(
+                "px-2.5 py-1 border rounded-lg text-xs focus:outline-none focus:border-indigo-500/50 transition-colors cursor-pointer flex-shrink-0",
+                tc.text,
+                theme !== 'light' ? 'bg-zinc-900 border-white/10' : 'bg-white border-zinc-200'
+              )}
             >
               {globalAnalyticsTimeframe === null && <option value="" disabled>Mixed</option>}
               {disciplineAnalyticsTimeframeOptions.map(opt => (
@@ -948,8 +955,8 @@ export function DisciplineScreen() {
               <Flame className="w-5 h-5 text-amber-400" />
             </div>
             <div className="min-w-0">
-              <p className="text-xs text-zinc-400 uppercase tracking-wider truncate">Current Discipline Streak</p>
-              <p className="text-lg font-bold text-white truncate">{disciplineStreak} trade{disciplineStreak !== 1 ? 's' : ''}</p>
+              <p className={cn("text-[11px] uppercase tracking-wider truncate", tc.textMuted)}>Current Discipline Streak</p>
+              <p className={cn("text-lg font-bold truncate", tc.text)}>{disciplineStreak} trade{disciplineStreak !== 1 ? 's' : ''}</p>
             </div>
           </div>
 
@@ -966,7 +973,11 @@ export function DisciplineScreen() {
                 <select
                   value={emotionsTimeframe}
                   onChange={(e) => setEmotionsTimeframe(e.target.value as DisciplineAnalyticsTimeframe)}
-                  className="px-2.5 py-1 bg-zinc-900 border border-white/10 rounded-lg text-xs text-zinc-300 focus:outline-none focus:border-indigo-500/50 transition-colors cursor-pointer flex-shrink-0"
+                  className={cn(
+                    "px-2.5 py-1 border rounded-lg text-xs focus:outline-none focus:border-indigo-500/50 transition-colors cursor-pointer flex-shrink-0",
+                    tc.text,
+                    theme !== 'light' ? 'bg-zinc-900 border-white/10' : 'bg-white border-zinc-200'
+                  )}
                 >
                   {disciplineAnalyticsTimeframeOptions.map(opt => (
                     <option key={opt.value} value={opt.value}>{opt.label}</option>
@@ -974,7 +985,7 @@ export function DisciplineScreen() {
                 </select>
               </div>
               {topEmotions.length === 0 ? (
-                <p className="text-sm text-zinc-500 py-1">No emotions logged in this timeframe</p>
+                <p className={cn("text-sm py-1", tc.textMuted)}>No emotions logged in this timeframe</p>
               ) : (
                 <div className="space-y-3">
                   {topEmotions.map(({ emotion, count, pnl, winRate }) => {
@@ -990,13 +1001,13 @@ export function DisciplineScreen() {
                           </span>
                         </div>
                         <div className="flex items-center gap-2">
-                          <div className="h-1.5 flex-1 bg-zinc-800 rounded-full overflow-hidden">
+                          <div className={cn('h-1.5 flex-1 rounded-full overflow-hidden', theme !== 'light' ? 'bg-zinc-800' : 'bg-zinc-200')}>
                             <div
                               className={cn('h-full rounded-full', isProfit ? 'bg-gradient-to-r from-emerald-600 to-emerald-400' : 'bg-gradient-to-r from-rose-600 to-orange-400')}
                               style={{ width: `${(count / maxEmotionCount) * 100}%` }}
                             />
                           </div>
-                          <span className="text-xs text-zinc-500 font-mono flex-shrink-0">{count}x · {winRate.toFixed(0)}% WR</span>
+                          <span className={cn('text-xs font-mono flex-shrink-0', tc.textMuted)}>{count}x · {winRate.toFixed(0)}% WR</span>
                         </div>
                       </div>
                     );
@@ -1017,7 +1028,11 @@ export function DisciplineScreen() {
                 <select
                   value={mistakesTimeframe}
                   onChange={(e) => setMistakesTimeframe(e.target.value as DisciplineAnalyticsTimeframe)}
-                  className="px-2.5 py-1 bg-zinc-900 border border-white/10 rounded-lg text-xs text-zinc-300 focus:outline-none focus:border-indigo-500/50 transition-colors cursor-pointer flex-shrink-0"
+                  className={cn(
+                    "px-2.5 py-1 border rounded-lg text-xs focus:outline-none focus:border-indigo-500/50 transition-colors cursor-pointer flex-shrink-0",
+                    tc.text,
+                    theme !== 'light' ? 'bg-zinc-900 border-white/10' : 'bg-white border-zinc-200'
+                  )}
                 >
                   {disciplineAnalyticsTimeframeOptions.map(opt => (
                     <option key={opt.value} value={opt.value}>{opt.label}</option>
@@ -1025,7 +1040,7 @@ export function DisciplineScreen() {
                 </select>
               </div>
               {topMistakes.length === 0 ? (
-                <p className="text-sm text-zinc-500 py-1">No mistakes logged in this timeframe</p>
+                <p className={cn("text-sm py-1", tc.textMuted)}>No mistakes logged in this timeframe</p>
               ) : (
                 <div className="space-y-3">
                   {topMistakes.map(({ mistake, count, pnl }) => (
@@ -1039,13 +1054,13 @@ export function DisciplineScreen() {
                         </span>
                       </div>
                       <div className="flex items-center gap-2">
-                        <div className="h-1.5 flex-1 bg-zinc-800 rounded-full overflow-hidden">
+                        <div className={cn('h-1.5 flex-1 rounded-full overflow-hidden', theme !== 'light' ? 'bg-zinc-800' : 'bg-zinc-200')}>
                           <div
                             className="h-full rounded-full bg-gradient-to-r from-rose-600 to-orange-400"
                             style={{ width: `${(count / maxMistakeCount) * 100}%` }}
                           />
                         </div>
-                        <span className="text-xs text-zinc-500 font-mono flex-shrink-0">{count}x</span>
+                        <span className={cn('text-xs font-mono flex-shrink-0', tc.textMuted)}>{count}x</span>
                       </div>
                     </div>
                   ))}
@@ -1056,30 +1071,36 @@ export function DisciplineScreen() {
         </div>
 
         {/* Rule Adherence Log — full width so trades have room to show every emotion/mistake tag, not just the first couple */}
-        <div className="bg-zinc-900/40 border border-zinc-800/80 rounded-2xl p-5 min-w-0">
-          <h3 className="text-base font-semibold text-white flex items-center gap-2 mb-4">
+        <div className={cn(
+          "rounded-xl border p-5 min-w-0",
+          theme !== 'light' ? 'bg-zinc-900/40 border-zinc-800/80' : 'bg-white border-zinc-200'
+        )}>
+          <h3 className={cn("text-base font-semibold flex items-center gap-2 mb-4", tc.text)}>
             <Shield className="w-4 h-4 text-zinc-400 flex-shrink-0" />
             <span className="truncate">Rule Adherence Log</span>
           </h3>
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
             <div className="flex flex-col w-full min-w-0">
-              <div className="flex items-center justify-between mb-3 pb-3 border-b border-zinc-800/70 flex-shrink-0">
+              <div className={cn("flex items-center justify-between mb-3 pb-3 border-b flex-shrink-0", theme !== 'light' ? 'border-zinc-800/70' : 'border-zinc-200')}>
                 <span className="flex items-center gap-1.5 text-sm font-semibold text-emerald-400 truncate">
                   <CheckCircle2 className="w-4 h-4 flex-shrink-0" /> Followed
                 </span>
-                <span className="text-xs font-mono text-zinc-400 flex-shrink-0 px-2 py-0.5 rounded bg-zinc-800/60">{followedTrades.length}</span>
+                <span className={cn('text-xs font-mono flex-shrink-0 px-2 py-0.5 rounded', tc.textSecondary, theme !== 'light' ? 'bg-zinc-800/60' : 'bg-zinc-100')}>{followedTrades.length}</span>
               </div>
               <div className="space-y-2 flex-1 overflow-y-auto max-h-[420px] pr-1 overscroll-contain" onWheel={(e) => e.stopPropagation()}>
                 {followedTrades.map(trade => {
                   const account = accounts.find(a => a.id === trade.accountId);
                   return (
-                    <div key={trade.id} onClick={() => { setShowRuleReviewModal(trade.id); setIsEditingRuleReview(false); }} className="p-3 bg-zinc-800/30 rounded-lg hover:bg-zinc-800/50 cursor-pointer transition-colors min-w-0 border-l-2 border-emerald-500/70">
+                    <div key={trade.id} onClick={() => { setShowRuleReviewModal(trade.id); setIsEditingRuleReview(false); }} className={cn(
+                      'p-3 rounded-lg cursor-pointer transition-colors min-w-0 border-l-2 border-emerald-500/70',
+                      theme !== 'light' ? 'bg-zinc-800/30 hover:bg-zinc-800/50' : 'bg-zinc-50 hover:bg-zinc-100'
+                    )}>
                       <div className="flex items-start justify-between gap-3 min-w-0">
                         <div className="flex items-center gap-2 min-w-0 flex-1">
                           <TrackingBadge value={trade.trackingNumber} size="sm" />
                           <div className="min-w-0 flex-1">
-                            <p className="text-sm font-medium text-white truncate">{trade.symbol}</p>
-                            <p className="text-xs text-zinc-400 truncate">{account?.name} | {formatDate(trade.date)}</p>
+                            <p className={cn("text-sm font-medium truncate", tc.text)}>{trade.symbol}</p>
+                            <p className={cn("text-xs truncate", tc.textSecondary)}>{account?.name} | {formatDate(trade.date)}</p>
                           </div>
                         </div>
                         <p className={cn('font-mono font-medium text-sm flex-shrink-0', trade.profitLoss >= 0 ? 'text-emerald-400' : 'text-rose-400')}>
@@ -1087,7 +1108,7 @@ export function DisciplineScreen() {
                         </p>
                       </div>
                       {(trade.emotions?.length || trade.mistakes?.length) ? (
-                        <div className="mt-2 pt-2 border-t border-zinc-800/60">
+                        <div className={cn("mt-2 pt-2 border-t", theme !== 'light' ? 'border-zinc-800/60' : 'border-zinc-200')}>
                           {renderPsychBadges(trade)}
                         </div>
                       ) : null}
@@ -1096,31 +1117,34 @@ export function DisciplineScreen() {
                 })}
                 {followedTrades.length === 0 && (
                   <div className="h-full min-h-[280px] flex flex-col items-center justify-center gap-2 text-center">
-                    <CheckCircle2 className="w-7 h-7 text-zinc-700" />
-                    <p className="text-sm text-zinc-600">No trades with rules followed</p>
+                    <CheckCircle2 className={cn("w-7 h-7", theme !== 'light' ? 'text-zinc-700' : 'text-zinc-300')} />
+                    <p className={cn("text-sm", tc.textMuted)}>No trades with rules followed</p>
                   </div>
                 )}
               </div>
             </div>
 
             <div className="flex flex-col w-full min-w-0">
-              <div className="flex items-center justify-between mb-3 pb-3 border-b border-zinc-800/70 flex-shrink-0">
+              <div className={cn("flex items-center justify-between mb-3 pb-3 border-b flex-shrink-0", theme !== 'light' ? 'border-zinc-800/70' : 'border-zinc-200')}>
                 <span className="flex items-center gap-1.5 text-sm font-semibold text-rose-400 truncate">
                   <XCircle className="w-4 h-4 flex-shrink-0" /> Broken
                 </span>
-                <span className="text-xs font-mono text-zinc-400 flex-shrink-0 px-2 py-0.5 rounded bg-zinc-800/60">{brokenTrades.length}</span>
+                <span className={cn('text-xs font-mono flex-shrink-0 px-2 py-0.5 rounded', tc.textSecondary, theme !== 'light' ? 'bg-zinc-800/60' : 'bg-zinc-100')}>{brokenTrades.length}</span>
               </div>
               <div className="space-y-2 flex-1 overflow-y-auto max-h-[420px] pr-1 overscroll-contain" onWheel={(e) => e.stopPropagation()}>
                 {brokenTrades.map(trade => {
                   const account = accounts.find(a => a.id === trade.accountId);
                   return (
-                    <div key={trade.id} onClick={() => { setShowRuleReviewModal(trade.id); setIsEditingRuleReview(false); }} className="p-3 bg-zinc-800/30 rounded-lg hover:bg-zinc-800/50 cursor-pointer transition-colors min-w-0 border-l-2 border-rose-500/70">
+                    <div key={trade.id} onClick={() => { setShowRuleReviewModal(trade.id); setIsEditingRuleReview(false); }} className={cn(
+                      'p-3 rounded-lg cursor-pointer transition-colors min-w-0 border-l-2 border-rose-500/70',
+                      theme !== 'light' ? 'bg-zinc-800/30 hover:bg-zinc-800/50' : 'bg-zinc-50 hover:bg-zinc-100'
+                    )}>
                       <div className="flex items-start justify-between gap-3 min-w-0">
                         <div className="flex items-center gap-2 min-w-0 flex-1">
                           <TrackingBadge value={trade.trackingNumber} size="sm" />
                           <div className="min-w-0 flex-1">
-                            <p className="text-sm font-medium text-white truncate">{trade.symbol}</p>
-                            <p className="text-xs text-zinc-400 truncate">{account?.name} | {formatDate(trade.date)}</p>
+                            <p className={cn("text-sm font-medium truncate", tc.text)}>{trade.symbol}</p>
+                            <p className={cn("text-xs truncate", tc.textSecondary)}>{account?.name} | {formatDate(trade.date)}</p>
                           </div>
                         </div>
                         <p className={cn('font-mono font-medium text-sm flex-shrink-0', trade.profitLoss >= 0 ? 'text-emerald-400' : 'text-rose-400')}>
@@ -1128,7 +1152,7 @@ export function DisciplineScreen() {
                         </p>
                       </div>
                       {(trade.emotions?.length || trade.mistakes?.length) ? (
-                        <div className="mt-2 pt-2 border-t border-zinc-800/60">
+                        <div className={cn("mt-2 pt-2 border-t", theme !== 'light' ? 'border-zinc-800/60' : 'border-zinc-200')}>
                           {renderPsychBadges(trade)}
                         </div>
                       ) : null}
@@ -1137,8 +1161,8 @@ export function DisciplineScreen() {
                 })}
                 {brokenTrades.length === 0 && (
                   <div className="h-full min-h-[280px] flex flex-col items-center justify-center gap-2 text-center">
-                    <XCircle className="w-7 h-7 text-zinc-700" />
-                    <p className="text-sm text-zinc-600">No trades with rules broken</p>
+                    <XCircle className={cn("w-7 h-7", theme !== 'light' ? 'text-zinc-700' : 'text-zinc-300')} />
+                    <p className={cn("text-sm", tc.textMuted)}>No trades with rules broken</p>
                   </div>
                 )}
               </div>
