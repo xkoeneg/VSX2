@@ -311,13 +311,13 @@ export function CalendarScreen() {
               {renderAccountFilter()}
 
               <div className="flex items-center gap-2 h-9 select-none">
-                <button type="button" onClick={() => { setCalendarMonth(prev => prev.month === 0 ? { year: prev.year - 1, month: 11 } : { ...prev, month: prev.month - 1 }); }} className="h-9 w-9 flex items-center justify-center flex-shrink-0 rounded-lg text-xs font-medium border border-zinc-700 bg-zinc-800 text-zinc-300 select-none transition-colors hover:bg-zinc-700 active:scale-95">
+                <button type="button" onClick={() => { setCalendarMonth(prev => prev.month === 0 ? { year: prev.year - 1, month: 11 } : { ...prev, month: prev.month - 1 }); }} className={cn('h-9 w-9 flex items-center justify-center flex-shrink-0 rounded-lg text-xs font-medium border select-none transition-colors active:scale-95', tc.btnSecondary)}>
                   <ChevronLeft className="w-4 h-4" />
                 </button>
-                <div className="h-9 flex items-center px-3 rounded-lg border border-zinc-700 bg-zinc-800 text-zinc-300 select-none">
+                <div className={cn('h-9 flex items-center px-3 rounded-lg border select-none', tc.btnSecondary)}>
                   <span className="text-xs font-medium whitespace-nowrap select-none">{monthNames[calendarMonth.month]} {calendarMonth.year}</span>
                 </div>
-                <button type="button" onClick={() => { setCalendarMonth(prev => prev.month === 11 ? { year: prev.year + 1, month: 0 } : { ...prev, month: prev.month + 1 }); }} className="h-9 w-9 flex items-center justify-center flex-shrink-0 rounded-lg text-xs font-medium border border-zinc-700 bg-zinc-800 text-zinc-300 select-none transition-colors hover:bg-zinc-700 active:scale-95">
+                <button type="button" onClick={() => { setCalendarMonth(prev => prev.month === 11 ? { year: prev.year + 1, month: 0 } : { ...prev, month: prev.month + 1 }); }} className={cn('h-9 w-9 flex items-center justify-center flex-shrink-0 rounded-lg text-xs font-medium border select-none transition-colors active:scale-95', tc.btnSecondary)}>
                   <ChevronRight className="w-4 h-4" />
                 </button>
               </div>
@@ -326,13 +326,16 @@ export function CalendarScreen() {
         />
 
         {/* Hero summary bar — big net P&L front and center like a prop-firm dashboard, stats trailing */}
-        <div className="bg-zinc-900/50 border border-zinc-800 rounded-2xl p-4 sm:p-5 flex flex-wrap items-center gap-x-4 sm:gap-x-8 gap-y-4">
-          <div className="flex items-center gap-3 pr-4 sm:pr-8 border-r border-zinc-800/80">
-            <div className={cn('w-11 h-11 rounded-xl flex items-center justify-center flex-shrink-0', totalPnL >= 0 ? 'bg-emerald-500/15 border border-emerald-500/25' : 'bg-rose-500/15 border border-rose-500/25')}>
+        <div className={cn(
+          'rounded-xl border p-4 sm:p-5 flex flex-wrap items-center gap-x-4 sm:gap-x-8 gap-y-4',
+          theme !== 'light' ? 'bg-zinc-900/40 border-zinc-800/80' : 'bg-white border-zinc-200'
+        )}>
+          <div className={cn('flex items-center gap-3 pr-4 sm:pr-8 border-r', theme !== 'light' ? 'border-zinc-800/80' : 'border-zinc-200')}>
+            <div className={cn('w-11 h-11 rounded-xl flex items-center justify-center flex-shrink-0', totalPnL >= 0 ? 'bg-emerald-500/15 border border-emerald-500/40' : 'bg-rose-500/15 border border-rose-500/40')}>
               <DollarSign className={cn('w-5 h-5', totalPnL >= 0 ? 'text-emerald-400' : 'text-rose-400')} />
             </div>
             <div>
-              <p className="text-xs text-zinc-500 uppercase tracking-wider">Net P&L This Month</p>
+              <p className={cn('text-[11px] uppercase tracking-wider', tc.textMuted)}>Net P&L This Month</p>
               <p className={cn('text-2xl font-bold font-mono', totalPnL >= 0 ? 'text-emerald-400' : 'text-rose-400')}>
                 {formatCurrency(totalPnL, privacyMode)}
               </p>
@@ -340,36 +343,39 @@ export function CalendarScreen() {
           </div>
           <div className="flex flex-wrap items-center gap-x-4 sm:gap-x-8 gap-y-3">
             <div>
-              <p className="text-xs text-zinc-500 uppercase tracking-wider mb-0.5">Trading Days</p>
-              <p className="text-lg font-semibold text-white">{tradingDays}</p>
+              <p className={cn('text-[11px] uppercase tracking-wider mb-0.5', tc.textMuted)}>Trading Days</p>
+              <p className={cn('text-lg font-semibold', tc.text)}>{tradingDays}</p>
             </div>
             <div>
-              <p className="text-xs text-zinc-500 uppercase tracking-wider mb-0.5">Winning Days</p>
+              <p className={cn('text-[11px] uppercase tracking-wider mb-0.5', tc.textMuted)}>Winning Days</p>
               <p className="text-lg font-semibold text-emerald-400">{winningDays}</p>
             </div>
             <div>
-              <p className="text-xs text-zinc-500 uppercase tracking-wider mb-0.5">Losing Days</p>
+              <p className={cn('text-[11px] uppercase tracking-wider mb-0.5', tc.textMuted)}>Losing Days</p>
               <p className="text-lg font-semibold text-rose-400">{losingDays}</p>
             </div>
             <div>
-              <p className="text-xs text-zinc-500 uppercase tracking-wider mb-0.5">Win Rate</p>
-              <p className="text-lg font-semibold text-white">{winRate.toFixed(0)}%</p>
+              <p className={cn('text-[11px] uppercase tracking-wider mb-0.5', tc.textMuted)}>Win Rate</p>
+              <p className={cn('text-lg font-semibold', tc.text)}>{winRate.toFixed(0)}%</p>
             </div>
             <div>
-              <p className="text-xs text-zinc-500 uppercase tracking-wider mb-0.5">Trades</p>
-              <p className="text-lg font-semibold text-white">{monthTrades.length}</p>
+              <p className={cn('text-[11px] uppercase tracking-wider mb-0.5', tc.textMuted)}>Trades</p>
+              <p className={cn('text-lg font-semibold', tc.text)}>{monthTrades.length}</p>
             </div>
           </div>
         </div>
 
-        <div className="bg-zinc-900/50 border border-zinc-800 rounded-2xl p-3 sm:p-4">
+        <div className={cn(
+          'rounded-xl border p-3 sm:p-4',
+          theme !== 'light' ? 'bg-zinc-900/40 border-zinc-800/80' : 'bg-white border-zinc-200'
+        )}>
           {/* Desktop/tablet: original 8-column grid (7 days + Week recap column) */}
           <div className="hidden md:block">
             <div className="grid grid-cols-8 gap-2 mb-2">
               {dayNames.map(day => (
-                <div key={day} className="text-center text-xs text-zinc-500 font-medium py-2">{day}</div>
+                <div key={day} className={cn('text-center text-xs font-medium py-2', tc.textMuted)}>{day}</div>
               ))}
-              <div className="text-center text-xs text-zinc-500 font-medium py-2">Week</div>
+              <div className={cn('text-center text-xs font-medium py-2', tc.textMuted)}>Week</div>
             </div>
 
             <div className="space-y-2">
@@ -384,26 +390,26 @@ export function CalendarScreen() {
                       <div
                         key={di}
                         className={cn(
-                          'rounded-xl p-2.5 min-h-[92px] flex flex-col justify-between min-w-0 transition-colors',
+                          'rounded-lg p-2.5 min-h-[92px] flex flex-col justify-between min-w-0 transition-colors',
                           day.day === null ? 'bg-transparent' :
-                          day.trades.length === 0 ? 'bg-zinc-800/30 border border-zinc-800/60' :
+                          day.trades.length === 0 ? (theme !== 'light' ? 'bg-zinc-800/30 border border-zinc-800/60' : 'bg-zinc-50 border border-zinc-200') :
                           day.pnl > 0 ? 'bg-emerald-500/15 border border-emerald-500/30 hover:bg-emerald-500/25 cursor-pointer' :
                           day.pnl < 0 ? 'bg-rose-500/15 border border-rose-500/30 hover:bg-rose-500/25 cursor-pointer' :
-                          'bg-zinc-800/40 border border-zinc-700/60'
+                          (theme !== 'light' ? 'bg-zinc-800/40 border border-zinc-700/60' : 'bg-zinc-100 border border-zinc-200')
                         )}
                       >
                         {day.day !== null && (
                           <>
-                            <span className="text-xs text-zinc-500 font-medium">{day.day}</span>
+                            <span className={cn('text-xs font-medium', tc.textMuted)}>{day.day}</span>
                             {day.trades.length > 0 ? (
                               <div className="min-w-0">
-                                <p className={cn('text-sm font-bold font-mono truncate', day.pnl > 0 ? 'text-emerald-400' : day.pnl < 0 ? 'text-rose-400' : 'text-zinc-300')}>
+                                <p className={cn('text-sm font-bold font-mono truncate', day.pnl > 0 ? 'text-emerald-400' : day.pnl < 0 ? 'text-rose-400' : tc.textSecondary)}>
                                   {formatCurrency(day.pnl, privacyMode)}
                                 </p>
-                                <p className="text-[10px] text-zinc-500 mt-0.5">{day.trades.length} trade{day.trades.length !== 1 ? 's' : ''}</p>
+                                <p className={cn('text-[10px] mt-0.5', tc.textMuted)}>{day.trades.length} trade{day.trades.length !== 1 ? 's' : ''}</p>
                               </div>
                             ) : (
-                              <span className="text-xs text-zinc-700">—</span>
+                              <span className={cn('text-xs', theme !== 'light' ? 'text-zinc-700' : 'text-zinc-300')}>—</span>
                             )}
                           </>
                         )}
@@ -412,22 +418,22 @@ export function CalendarScreen() {
 
                     {/* Week recap cell */}
                     <div className={cn(
-                      'rounded-xl p-2.5 min-h-[92px] flex flex-col items-center justify-center min-w-0 border',
-                      !hasWeekData ? 'bg-zinc-900/40 border-zinc-800/50' :
-                      weekPnl > 0 ? 'bg-emerald-500/10 border-emerald-500/25' :
-                      weekPnl < 0 ? 'bg-rose-500/10 border-rose-500/25' :
-                      'bg-zinc-800/40 border-zinc-700/60'
+                      'rounded-lg p-2.5 min-h-[92px] flex flex-col items-center justify-center min-w-0 border',
+                      !hasWeekData ? (theme !== 'light' ? 'bg-zinc-900/40 border-zinc-800/50' : 'bg-zinc-50 border-zinc-200') :
+                      weekPnl > 0 ? 'bg-emerald-500/15 border-emerald-500/30' :
+                      weekPnl < 0 ? 'bg-rose-500/15 border-rose-500/30' :
+                      (theme !== 'light' ? 'bg-zinc-800/40 border-zinc-700/60' : 'bg-zinc-100 border-zinc-200')
                     )}>
                       {hasWeekData ? (
                         <>
-                          <p className="text-[9px] text-zinc-500 uppercase tracking-wider">Week {wi + 1}</p>
-                          <p className={cn('text-sm font-bold font-mono truncate', weekPnl > 0 ? 'text-emerald-400' : weekPnl < 0 ? 'text-rose-400' : 'text-zinc-300')}>
+                          <p className={cn('text-[10px] uppercase tracking-wider', tc.textMuted)}>Week {wi + 1}</p>
+                          <p className={cn('text-sm font-bold font-mono truncate', weekPnl > 0 ? 'text-emerald-400' : weekPnl < 0 ? 'text-rose-400' : tc.textSecondary)}>
                             {formatCurrency(weekPnl, privacyMode)}
                           </p>
-                          <p className="text-[10px] text-zinc-600">{weekTradingDays} day{weekTradingDays !== 1 ? 's' : ''}</p>
+                          <p className={cn('text-[10px]', tc.textMuted)}>{weekTradingDays} day{weekTradingDays !== 1 ? 's' : ''}</p>
                         </>
                       ) : (
-                        <span className="text-xs text-zinc-700">—</span>
+                        <span className={cn('text-xs', theme !== 'light' ? 'text-zinc-700' : 'text-zinc-300')}>—</span>
                       )}
                     </div>
                   </div>
@@ -442,7 +448,7 @@ export function CalendarScreen() {
           <div className="md:hidden">
             <div className="grid grid-cols-7 gap-1">
               {dayNames.map(day => (
-                <div key={day} className="text-center text-[10px] text-zinc-500 font-medium py-1 truncate">{day.slice(0, 2)}</div>
+                <div key={day} className={cn('text-center text-[10px] font-medium py-1 truncate', tc.textMuted)}>{day.slice(0, 2)}</div>
               ))}
             </div>
 
@@ -461,21 +467,21 @@ export function CalendarScreen() {
                           className={cn(
                             'rounded-lg p-1 min-h-[44px] flex flex-col justify-between min-w-0 transition-colors',
                             day.day === null ? 'bg-transparent' :
-                            day.trades.length === 0 ? 'bg-zinc-800/30 border border-zinc-800/60' :
+                            day.trades.length === 0 ? (theme !== 'light' ? 'bg-zinc-800/30 border border-zinc-800/60' : 'bg-zinc-50 border border-zinc-200') :
                             day.pnl > 0 ? 'bg-emerald-500/15 border border-emerald-500/30' :
                             day.pnl < 0 ? 'bg-rose-500/15 border border-rose-500/30' :
-                            'bg-zinc-800/40 border border-zinc-700/60'
+                            (theme !== 'light' ? 'bg-zinc-800/40 border border-zinc-700/60' : 'bg-zinc-100 border border-zinc-200')
                           )}
                         >
                           {day.day !== null && (
                             <>
-                              <span className="text-[9px] text-zinc-500 font-medium">{day.day}</span>
+                              <span className={cn('text-[10px] font-medium', tc.textMuted)}>{day.day}</span>
                               {day.trades.length > 0 ? (
-                                <p className={cn('text-[9px] font-bold font-mono truncate leading-tight', day.pnl > 0 ? 'text-emerald-400' : day.pnl < 0 ? 'text-rose-400' : 'text-zinc-300')}>
+                                <p className={cn('text-[10px] font-bold font-mono truncate leading-tight', day.pnl > 0 ? 'text-emerald-400' : day.pnl < 0 ? 'text-rose-400' : tc.textSecondary)}>
                                   {formatCurrencyCompact(day.pnl, privacyMode)}
                                 </p>
                               ) : (
-                                <span className="text-[9px] text-zinc-700">—</span>
+                                <span className={cn('text-[10px]', theme !== 'light' ? 'text-zinc-700' : 'text-zinc-300')}>—</span>
                               )}
                             </>
                           )}
@@ -485,8 +491,8 @@ export function CalendarScreen() {
 
                     {hasWeekData && (
                       <div className="flex items-center justify-between px-1 text-[10px]">
-                        <span className="text-zinc-500">Week {wi + 1} · {weekTradingDays} day{weekTradingDays !== 1 ? 's' : ''}</span>
-                        <span className={cn('font-mono font-semibold', weekPnl > 0 ? 'text-emerald-400' : weekPnl < 0 ? 'text-rose-400' : 'text-zinc-400')}>
+                        <span className={tc.textMuted}>Week {wi + 1} · {weekTradingDays} day{weekTradingDays !== 1 ? 's' : ''}</span>
+                        <span className={cn('font-mono font-semibold', weekPnl > 0 ? 'text-emerald-400' : weekPnl < 0 ? 'text-rose-400' : tc.textSecondary)}>
                           {formatCurrency(weekPnl, privacyMode)}
                         </span>
                       </div>
@@ -497,15 +503,15 @@ export function CalendarScreen() {
             </div>
           </div>
 
-          <div className="flex items-center gap-4 mt-4 pt-4 border-t border-zinc-800/70 flex-wrap">
-            <span className="flex items-center gap-1.5 text-xs text-zinc-500">
+          <div className={cn('flex items-center gap-4 mt-4 pt-4 border-t flex-wrap', theme !== 'light' ? 'border-zinc-800/70' : 'border-zinc-200')}>
+            <span className={cn('flex items-center gap-1.5 text-xs', tc.textMuted)}>
               <span className="w-2.5 h-2.5 rounded-sm bg-emerald-500/40 border border-emerald-500/50" /> Profit
             </span>
-            <span className="flex items-center gap-1.5 text-xs text-zinc-500">
+            <span className={cn('flex items-center gap-1.5 text-xs', tc.textMuted)}>
               <span className="w-2.5 h-2.5 rounded-sm bg-rose-500/40 border border-rose-500/50" /> Loss
             </span>
-            <span className="flex items-center gap-1.5 text-xs text-zinc-500">
-              <span className="w-2.5 h-2.5 rounded-sm bg-zinc-800/60 border border-zinc-700/60" /> No trades
+            <span className={cn('flex items-center gap-1.5 text-xs', tc.textMuted)}>
+              <span className={cn('w-2.5 h-2.5 rounded-sm border', theme !== 'light' ? 'bg-zinc-800/60 border-zinc-700/60' : 'bg-zinc-100 border-zinc-200')} /> No trades
             </span>
           </div>
         </div>
