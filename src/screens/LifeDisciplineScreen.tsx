@@ -431,9 +431,9 @@ export function LifeDisciplineScreen() {
     const disciplineScore = decidedDays > 0 ? Math.round((completedCount / decidedDays) * 100) : 0;
 
     const statusStyles: Record<string, string> = {
-      complete: 'bg-emerald-500 border-emerald-400 text-white',
-      grace: 'bg-cyan-500/80 border-cyan-400 text-white',
-      failed: 'bg-rose-500/90 border-rose-400 text-white cursor-pointer hover:brightness-110',
+      complete: 'bg-emerald-500/15 border-emerald-500/40 text-emerald-300 hover:bg-emerald-500/25',
+      grace: 'bg-cyan-500/15 border-cyan-500/40 text-cyan-300 hover:bg-cyan-500/25',
+      failed: 'bg-rose-500/15 border-rose-500/40 text-rose-300 cursor-pointer hover:bg-rose-500/25',
       pending: 'bg-amber-500/20 border-amber-500/50 text-amber-300',
       upcoming: theme !== 'light' ? 'bg-zinc-800/50 border-zinc-800 text-zinc-600' : 'bg-zinc-100 border-zinc-200 text-zinc-400',
     };
@@ -452,7 +452,7 @@ export function LifeDisciplineScreen() {
           actions={
             <button
               onClick={() => openChallengeConfigModal('configure')}
-              className="flex-shrink-0 flex items-center gap-2 px-3.5 py-2 rounded-lg text-sm font-medium transition-all bg-zinc-800 text-white border border-zinc-700 hover:bg-zinc-700"
+              className={cn("flex-shrink-0 flex items-center gap-2 px-3.5 py-2 rounded-lg text-sm font-medium transition-all", tc.btnSecondary)}
             >
               <Settings className="w-4 h-4" />
               Configure Challenge
@@ -463,15 +463,20 @@ export function LifeDisciplineScreen() {
         {/* ACTIVE CHALLENGE BANNER — the Challenge Title + Identity/Vision
             Motto from the Configure Challenge modal live here, not in the
             static page header above. */}
-        <div className="bg-gradient-to-r from-amber-500/10 via-zinc-900/40 to-zinc-900/40 border border-amber-500/20 rounded-2xl px-5 py-4 min-w-0">
-          <p className="text-base sm:text-lg font-bold text-white truncate flex items-center gap-2">
+        <div className={cn(
+          "border rounded-xl px-5 py-4 min-w-0",
+          theme !== 'light'
+            ? 'bg-gradient-to-r from-amber-500/10 via-zinc-900/40 to-zinc-900/40 border-amber-500/20'
+            : 'bg-gradient-to-r from-amber-500/10 via-white to-white border-amber-500/30'
+        )}>
+          <p className={cn("text-base sm:text-lg font-bold truncate flex items-center gap-2", tc.text)}>
             <Flame className="w-5 h-5 text-amber-400 flex-shrink-0" />
             <span className="text-amber-400">ACTIVE CHALLENGE:</span>
             <span className="truncate">{challengeConfig.title}</span>
           </p>
           {challengeConfig.motto && (
-            <p className="mt-1.5 text-sm italic text-zinc-400 truncate">
-              <span aria-hidden="true">💬</span> "{challengeConfig.motto}"
+            <p className={cn("mt-1.5 text-sm italic truncate", tc.textMuted)}>
+              "{challengeConfig.motto}"
             </p>
           )}
         </div>
@@ -484,10 +489,13 @@ export function LifeDisciplineScreen() {
         </div>
 
         {/* DAILY CHECKLIST SECTION */}
-        <div className="relative bg-zinc-900/40 border border-zinc-800/80 rounded-2xl p-5 min-w-0">
+        <div className={cn(
+          "relative rounded-xl p-5 min-w-0 border",
+          theme !== 'light' ? 'bg-zinc-900/40 border-zinc-800/80' : 'bg-white border-zinc-200'
+        )}>
           <div className="flex items-center justify-between gap-3 flex-wrap mb-4">
-            <h3 className="text-base font-semibold text-white flex items-center gap-2 select-none">
-              <Shield className="w-4 h-4 text-zinc-400 flex-shrink-0" />
+            <h3 className={cn("text-base font-semibold flex items-center gap-2 select-none", tc.text)}>
+              <Shield className={cn("w-4 h-4 flex-shrink-0", tc.textMuted)} />
               <span className="truncate">Daily Checklist — {formatDate(todayKey)}</span>
             </h3>
             <div className="flex items-center gap-2 flex-shrink-0">
@@ -496,7 +504,7 @@ export function LifeDisciplineScreen() {
                   onClick={() => openChallengeConfigModal('edit')}
                   title="Edit Challenge"
                   aria-label="Edit Challenge"
-                  className="flex items-center justify-center p-2 rounded-lg transition-all bg-zinc-800 text-white border border-zinc-700 hover:bg-zinc-700"
+                  className={cn("flex items-center justify-center p-2 rounded-lg transition-all", tc.btnSecondary)}
                 >
                   <Edit2 className="w-4 h-4" />
                 </button>
@@ -505,10 +513,10 @@ export function LifeDisciplineScreen() {
                 onClick={() => completeAllLifeDisciplineToday(todayKey)}
                 disabled={todayComplete || totalItems === 0}
                 className={cn(
-                  'flex-shrink-0 flex items-center gap-1.5 px-3.5 py-2 rounded-lg text-sm font-medium transition-all select-none',
+                  'flex-shrink-0 flex items-center gap-1.5 px-3.5 py-2 rounded-lg text-sm font-semibold transition-all select-none border',
                   todayComplete || totalItems === 0
-                    ? 'bg-zinc-800/50 text-zinc-600 cursor-not-allowed'
-                    : 'bg-emerald-500 text-black hover:bg-emerald-400 cursor-pointer'
+                    ? cn(tc.bgSecondary, tc.textMuted, theme !== 'light' ? 'border-zinc-700/50' : 'border-zinc-200', 'cursor-not-allowed')
+                    : 'bg-emerald-500/15 border-emerald-500/40 text-emerald-400 hover:bg-emerald-500/25 cursor-pointer'
                 )}
               >
                 <Zap className="w-4 h-4" />
@@ -522,7 +530,7 @@ export function LifeDisciplineScreen() {
             <div
               key={lifeDisciplineToast}
               style={{ animation: 'lifeDisciplineToastIn 0.25s ease-out' }}
-              className="absolute top-3 right-5 z-10 px-3.5 py-2 rounded-lg bg-emerald-500 text-black text-xs font-semibold shadow-lg select-none"
+              className="absolute top-3 right-5 z-10 px-3.5 py-2 rounded-lg bg-emerald-500/15 border border-emerald-500/40 text-emerald-400 text-xs font-semibold shadow-lg select-none"
             >
               {lifeDisciplineToast}
             </div>
@@ -536,22 +544,22 @@ export function LifeDisciplineScreen() {
 
           {routineGroups.length === 0 ? (
             <div className="flex flex-col items-center justify-center gap-3 py-10 text-center select-none">
-              <div className="w-12 h-12 rounded-full bg-zinc-800/60 border border-zinc-800 flex items-center justify-center">
-                <ListChecks className="w-5 h-5 text-zinc-500" />
+              <div className={cn("w-12 h-12 rounded-full flex items-center justify-center border", tc.bgSecondary, theme !== 'light' ? 'border-zinc-800' : 'border-zinc-200')}>
+                <ListChecks className={cn("w-5 h-5", tc.textMuted)} />
               </div>
-              <p className="text-sm text-zinc-400 max-w-xs">
+              <p className={cn("text-sm max-w-xs", tc.textMuted)}>
                 No routine categories added yet. Click "+ Add Category" to start.
               </p>
               <button
                 onClick={() => openChallengeConfigModal(hasActiveChallengeProgress ? 'edit' : 'configure')}
-                className="flex items-center gap-1.5 px-3.5 py-2 rounded-lg text-sm font-medium bg-zinc-800 text-white border border-zinc-700 hover:bg-zinc-700 transition-all"
+                className={cn("flex items-center gap-1.5 px-3.5 py-2 rounded-lg text-sm font-medium transition-all", tc.btnSecondary)}
               >
                 <Plus className="w-4 h-4" />
                 Add Category
               </button>
             </div>
           ) : dailyOnlyGroups.length === 0 ? (
-            <p className="text-sm text-zinc-500 italic py-2 select-none">
+            <p className={cn("text-sm italic py-2 select-none", tc.textMuted)}>
               All routines live in the Weekly card — see {WEEKDAY_FULL_NAME[todayWeekday]} Specifics below.
             </p>
           ) : (
@@ -582,18 +590,20 @@ export function LifeDisciplineScreen() {
                   key={group.id}
                   className={cn(
                     'rounded-xl border p-4 transition-colors',
-                    groupComplete ? 'bg-emerald-500/10 border-emerald-500/30' : 'bg-zinc-800/30 border-zinc-800/70'
+                    groupComplete
+                      ? 'bg-emerald-500/10 border-emerald-500/30'
+                      : theme !== 'light' ? 'bg-zinc-800/30 border-zinc-800/70' : 'bg-zinc-50 border-zinc-200'
                   )}
                 >
-                  <div className="flex items-center gap-2 mb-3 pb-3 border-b border-zinc-800/60 select-none">
+                  <div className={cn("flex items-center gap-2 mb-3 pb-3 border-b select-none", theme !== 'light' ? 'border-zinc-800/60' : 'border-zinc-200')}>
                     {renderCategoryIcon(group, 'w-4 h-4', groupComplete ? 'text-emerald-400' : undefined)}
-                    <span className="text-sm font-semibold text-white truncate">{group.label}</span>
+                    <span className={cn("text-sm font-semibold truncate", tc.text)}>{group.label}</span>
                     <span
                       className={cn(
                         'ml-auto flex-shrink-0 text-[10px] font-semibold px-2 py-0.5 rounded-full border whitespace-nowrap',
                         groupComplete
                           ? 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30'
-                          : 'bg-zinc-800 text-zinc-400 border-zinc-700'
+                          : cn(tc.bgSecondary, tc.textMuted, theme !== 'light' ? 'border-zinc-700' : 'border-zinc-200')
                       )}
                     >
                       {groupCheckedCount}/{dailyItemsWithIndex.length}{groupComplete ? ' Ready' : ''}
@@ -601,7 +611,7 @@ export function LifeDisciplineScreen() {
                   </div>
                   <div className="space-y-2">
                     {dailyItemsWithIndex.length === 0 && (
-                      <p className="text-xs text-zinc-500 italic select-none">
+                      <p className={cn("text-xs italic select-none", tc.textMuted)}>
                         No routine items — add some in Configure Challenge.
                       </p>
                     )}
@@ -623,12 +633,12 @@ export function LifeDisciplineScreen() {
                               'w-5 h-5 rounded-full border-2 flex items-center justify-center flex-shrink-0 cursor-pointer transition-all duration-200 ease-out',
                               checked
                                 ? 'bg-emerald-500 border-emerald-400 scale-100'
-                                : 'border-zinc-600 group-hover:border-zinc-400 group-active:scale-90'
+                                : cn(tc.borderSecondary, theme !== 'light' ? 'group-hover:border-zinc-400' : 'group-hover:border-zinc-500', 'group-active:scale-90')
                             )}
                           >
                             {checked && <Check className="w-3.5 h-3.5 text-white" />}
                           </span>
-                          <span className={cn('text-sm select-none transition-colors', checked ? 'text-zinc-300 line-through decoration-zinc-600' : 'text-zinc-300')}>
+                          <span className={cn('text-sm select-none transition-colors', checked ? cn(tc.textMuted, 'line-through') : tc.textSecondary)}>
                             {item.text}
                           </span>
                         </label>
@@ -653,11 +663,13 @@ export function LifeDisciplineScreen() {
             return (
               <div className={cn(
                 'mt-4 rounded-xl border p-4 transition-colors',
-                weeklyTargetsComplete ? 'bg-emerald-500/10 border-emerald-500/30' : 'bg-zinc-800/30 border-zinc-800/70'
+                weeklyTargetsComplete
+                  ? 'bg-emerald-500/10 border-emerald-500/30'
+                  : theme !== 'light' ? 'bg-zinc-800/30 border-zinc-800/70' : 'bg-zinc-50 border-zinc-200'
               )}>
-                <div className="flex items-center gap-2 mb-3 pb-3 border-b border-zinc-800/60 select-none">
-                  <CalendarDays className={cn('w-4 h-4 flex-shrink-0', weeklyTargetsComplete ? 'text-emerald-400' : 'text-zinc-400')} strokeWidth={2} />
-                  <span className="text-sm font-semibold text-white truncate">
+                <div className={cn("flex items-center gap-2 mb-3 pb-3 border-b select-none", theme !== 'light' ? 'border-zinc-800/60' : 'border-zinc-200')}>
+                  <CalendarDays className={cn('w-4 h-4 flex-shrink-0', weeklyTargetsComplete ? 'text-emerald-400' : tc.textMuted)} strokeWidth={2} />
+                  <span className={cn("text-sm font-semibold truncate", tc.text)}>
                     {WEEKDAY_FULL_NAME[todayWeekday]} Specifics
                   </span>
                   <span
@@ -665,7 +677,7 @@ export function LifeDisciplineScreen() {
                       'ml-auto flex-shrink-0 text-[10px] font-semibold px-2 py-0.5 rounded-full border whitespace-nowrap',
                       weeklyTargetsComplete
                         ? 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30'
-                        : 'bg-zinc-800 text-zinc-400 border-zinc-700'
+                        : cn(tc.bgSecondary, tc.textMuted, theme !== 'light' ? 'border-zinc-700' : 'border-zinc-200')
                     )}
                   >
                     {weeklyCheckedCount}/{weeklyTargetsToday.length}{weeklyTargetsComplete ? ' Ready' : ' Today'}
@@ -690,12 +702,12 @@ export function LifeDisciplineScreen() {
                             'w-5 h-5 rounded-full border-2 flex items-center justify-center flex-shrink-0 cursor-pointer transition-all duration-200 ease-out',
                             checked
                               ? 'bg-emerald-500 border-emerald-400 scale-100'
-                              : 'border-zinc-600 group-hover:border-zinc-400 group-active:scale-90'
+                              : cn(tc.borderSecondary, theme !== 'light' ? 'group-hover:border-zinc-400' : 'group-hover:border-zinc-500', 'group-active:scale-90')
                           )}
                         >
                           {checked && <Check className="w-3.5 h-3.5 text-white" />}
                         </span>
-                        <span className={cn('text-sm select-none transition-colors truncate', checked ? 'text-zinc-300 line-through decoration-zinc-600' : 'text-zinc-300')}>
+                        <span className={cn('text-sm select-none transition-colors truncate', checked ? cn(tc.textMuted, 'line-through') : tc.textSecondary)}>
                           {item.text}
                         </span>
                       </label>
@@ -708,18 +720,21 @@ export function LifeDisciplineScreen() {
         </div>
 
         {/* DYNAMIC CHALLENGE PROGRESS GRID */}
-        <div className="bg-zinc-900/40 border border-zinc-800/80 rounded-2xl p-5 min-w-0 w-full">
+        <div className={cn(
+          "rounded-xl p-5 min-w-0 w-full border",
+          theme !== 'light' ? 'bg-zinc-900/40 border-zinc-800/80' : 'bg-white border-zinc-200'
+        )}>
           <div className="flex items-center justify-between mb-4 flex-wrap gap-2">
-            <h3 className="text-base font-semibold text-white flex items-center gap-2 select-none">
-              <Target className="w-4 h-4 text-zinc-400 flex-shrink-0" />
+            <h3 className={cn("text-base font-semibold flex items-center gap-2 select-none", tc.text)}>
+              <Target className={cn("w-4 h-4 flex-shrink-0", tc.textMuted)} />
               <span className="truncate">{challengeConfig.durationDays}-Day Challenge Progress</span>
             </h3>
-            <div className="flex items-center gap-3 text-xs text-zinc-400 flex-wrap">
-              <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-sm bg-emerald-500" /> Complete</span>
-              <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-sm bg-cyan-500/80" /> Re-checked</span>
-              <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-sm bg-rose-500/90" /> Failed</span>
+            <div className={cn("flex items-center gap-3 text-xs flex-wrap", tc.textMuted)}>
+              <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-sm bg-emerald-500/15 border border-emerald-500/40" /> Complete</span>
+              <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-sm bg-cyan-500/15 border border-cyan-500/40" /> Re-checked</span>
+              <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-sm bg-rose-500/15 border border-rose-500/40" /> Failed</span>
               <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-sm bg-amber-500/20 border border-amber-500/50" /> Today</span>
-              <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-sm bg-zinc-800 border border-zinc-700" /> Upcoming</span>
+              <span className="flex items-center gap-1.5"><span className={cn("w-2.5 h-2.5 rounded-sm border", theme !== 'light' ? 'bg-zinc-800 border-zinc-700' : 'bg-zinc-100 border-zinc-200')} /> Upcoming</span>
             </div>
           </div>
 
@@ -727,54 +742,54 @@ export function LifeDisciplineScreen() {
               discipline score (re-check tokens already shown in the stat
               card above) */}
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4 select-none">
-            <div className="flex items-center gap-2.5 px-3.5 py-2.5 rounded-xl bg-zinc-800/50 border border-zinc-800">
-              <div className="p-2 rounded-lg bg-violet-500/10 text-violet-400 flex-shrink-0">
+            <div className={cn("flex items-center gap-2.5 px-3.5 py-2.5 rounded-xl border", tc.bgSecondary, theme !== 'light' ? 'border-zinc-800' : 'border-zinc-200')}>
+              <div className="p-2 rounded-lg bg-violet-500/10 border border-violet-500/20 text-violet-400 flex-shrink-0">
                 <CalendarDays className="w-4 h-4" />
               </div>
               <div className="min-w-0">
-                <p className="text-sm font-bold text-white truncate">
-                  {formatDate(lifeDisciplineStartDate)} <span className="text-zinc-500 font-normal">→</span> {formatDate(endDateKey)}
+                <p className={cn("text-sm font-bold truncate", tc.text)}>
+                  {formatDate(lifeDisciplineStartDate)} <span className={cn(tc.textMuted, "font-normal")}>→</span> {formatDate(endDateKey)}
                 </p>
-                <p className="text-[11px] text-zinc-500">Challenge timeline</p>
+                <p className={cn("text-[11px]", tc.textMuted)}>Challenge timeline</p>
               </div>
             </div>
-            <div className="flex items-center gap-2.5 px-3.5 py-2.5 rounded-xl bg-zinc-800/50 border border-zinc-800">
-              <div className="p-2 rounded-lg bg-cyan-500/10 text-cyan-400 flex-shrink-0">
+            <div className={cn("flex items-center gap-2.5 px-3.5 py-2.5 rounded-xl border", tc.bgSecondary, theme !== 'light' ? 'border-zinc-800' : 'border-zinc-200')}>
+              <div className="p-2 rounded-lg bg-blue-500/10 border border-blue-500/20 text-blue-400 flex-shrink-0">
                 <Clock className="w-4 h-4" />
               </div>
               <div className="min-w-0">
-                <p className="text-sm font-bold text-white truncate">{daysRemaining} Days Remaining</p>
-                <p className="text-[11px] text-zinc-500">Until target end date</p>
+                <p className={cn("text-sm font-bold truncate", tc.text)}>{daysRemaining} Days Remaining</p>
+                <p className={cn("text-[11px]", tc.textMuted)}>Until target end date</p>
               </div>
             </div>
-            <div className="flex items-center gap-2.5 px-3.5 py-2.5 rounded-xl bg-zinc-800/50 border border-zinc-800">
-              <div className="p-2 rounded-lg bg-amber-500/10 text-amber-400 flex-shrink-0">
+            <div className={cn("flex items-center gap-2.5 px-3.5 py-2.5 rounded-xl border", tc.bgSecondary, theme !== 'light' ? 'border-zinc-800' : 'border-zinc-200')}>
+              <div className="p-2 rounded-lg bg-amber-500/10 border border-amber-500/20 text-amber-400 flex-shrink-0">
                 <Flame className="w-4 h-4" />
               </div>
               <div className="min-w-0">
-                <p className="text-sm font-bold text-white truncate">{activeStreak}-Day Streak</p>
-                <p className="text-[11px] text-zinc-500">Active streak</p>
+                <p className={cn("text-sm font-bold truncate", tc.text)}>{activeStreak}-Day Streak</p>
+                <p className={cn("text-[11px]", tc.textMuted)}>Active streak</p>
               </div>
             </div>
-            <div className="flex items-center gap-2.5 px-3.5 py-2.5 rounded-xl bg-zinc-800/50 border border-zinc-800">
-              <div className="p-2 rounded-lg bg-emerald-500/10 text-emerald-400 flex-shrink-0">
+            <div className={cn("flex items-center gap-2.5 px-3.5 py-2.5 rounded-xl border", tc.bgSecondary, theme !== 'light' ? 'border-zinc-800' : 'border-zinc-200')}>
+              <div className="p-2 rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 flex-shrink-0">
                 <Target className="w-4 h-4" />
               </div>
               <div className="min-w-0">
                 <p className={cn('text-sm font-bold truncate', disciplineScore >= 80 ? 'text-emerald-400' : disciplineScore >= 50 ? 'text-amber-400' : 'text-rose-400')}>
                   {disciplineScore}% Discipline Score
                 </p>
-                <p className="text-[11px] text-zinc-500">Execution rate</p>
+                <p className={cn("text-[11px]", tc.textMuted)}>Execution rate</p>
               </div>
             </div>
           </div>
 
           {challengeConfig.recheckTokens > 0 ? (
-            <p className="text-xs text-zinc-500 mb-3 select-none">
+            <p className={cn("text-xs mb-3 select-none", tc.textMuted)}>
               Click any past day to view its details, spend a re-check token, or edit a logged reason. {lifeDisciplineTokensRemaining} of {challengeConfig.recheckTokens} tokens remaining.
             </p>
           ) : (
-            <p className="text-xs text-zinc-500 mb-3 select-none">
+            <p className={cn("text-xs mb-3 select-none", tc.textMuted)}>
               Zero-cheating mode: no re-check tokens remaining. Click any past day to view its details or log why it was missed.
             </p>
           )}
@@ -811,7 +826,7 @@ export function LifeDisciplineScreen() {
                   className={cn(
                     'relative aspect-square rounded-md border flex items-center justify-center text-[10px] font-mono font-medium transition-colors select-none',
                     statusStyles[status],
-                    isClickable && 'cursor-pointer hover:brightness-110'
+                    isClickable && 'cursor-pointer'
                   )}
                 >
                   {day}
