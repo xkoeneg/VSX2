@@ -969,7 +969,7 @@ export function TradesScreen() {
           {/* Frame — matches the Discipline Tracker card tone/border exactly. The frame IS the
               scroll container: cards scroll edge-to-edge against its inner walls, no nested wrapper. */}
           <div className={cn(
-            "border rounded-xl max-h-[520px] overflow-y-auto overscroll-contain scroll-smooth p-5 shadow-[0_20px_45px_rgba(0,0,0,0.5),inset_0_2px_12px_rgba(0,0,0,0.25)] scrollbar-thin scrollbar-thumb-zinc-700 scrollbar-track-transparent",
+            "border rounded-xl max-h-[520px] overflow-y-auto overscroll-contain scroll-smooth p-5 scrollbar-thin scrollbar-thumb-zinc-700 scrollbar-track-transparent",
             theme !== 'light' ? 'bg-zinc-900/40 border-zinc-800/80' : 'bg-white border-zinc-200'
           )}>
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
@@ -1038,7 +1038,8 @@ export function TradesScreen() {
                         key={trade.id}
                         onClick={handleRowClick}
                         className={cn(
-                          "border-b border-white/5 hover:bg-white/[0.02] cursor-pointer transition-colors",
+                          "cursor-pointer transition-colors",
+                          theme !== 'light' ? 'border-b border-zinc-800/70 hover:bg-white/[0.02]' : 'border-b border-zinc-200 hover:bg-zinc-50',
                           tradeSelectMode && isRowSelected && "bg-indigo-500/10"
                         )}
                       >
@@ -1057,7 +1058,10 @@ export function TradesScreen() {
                                 <Check className="w-2.5 h-2.5" />
                               </button>
                             )}
-                            <span className="inline-flex items-center justify-center min-w-[1.5rem] px-1.5 py-0.5 rounded bg-zinc-800/80 border border-zinc-700/50 text-[11px] font-mono font-semibold text-zinc-300">
+                            <span className={cn(
+                              "inline-flex items-center justify-center min-w-[1.5rem] px-1.5 py-0.5 rounded-md border text-[11px] font-mono font-semibold tabular-nums",
+                              theme !== 'light' ? 'bg-zinc-800/80 border-zinc-700/50 text-zinc-300' : 'bg-zinc-100 border-zinc-200 text-zinc-600'
+                            )}>
                               {getDisplayTradeNumber(trade)}
                             </span>
                           </div>
@@ -1081,8 +1085,11 @@ export function TradesScreen() {
                         <td className="px-3 py-2.5 whitespace-nowrap">
                           <div className="flex items-center gap-1.5 flex-wrap max-w-[220px]">
                             {trade.setupTypes.length > 0 ? trade.setupTypes.slice(0, 2).map(s => (
-                              <span key={s} className="px-1.5 py-0.5 bg-zinc-800/80 border border-zinc-700/50 rounded text-[10px] text-zinc-300 whitespace-nowrap">{s}</span>
-                            )) : <span className="text-xs text-zinc-600">-</span>}
+                              <span key={s} className={cn(
+                                "px-1.5 py-0.5 rounded-md border text-[10px] whitespace-nowrap",
+                                theme !== 'light' ? 'bg-zinc-800/80 border-zinc-700/50 text-zinc-300' : 'bg-zinc-100 border-zinc-200 text-zinc-600'
+                              )}>{s}</span>
+                            )) : <span className={cn("text-xs", tc.textMuted)}>-</span>}
                           </div>
                         </td>
                         <td className="px-3 py-2.5 text-xs font-medium text-right whitespace-nowrap">
@@ -1119,7 +1126,7 @@ export function TradesScreen() {
             </div>
           ) : (
             <div className="text-center py-10">
-              <div className="w-14 h-14 mx-auto rounded-full bg-zinc-800 flex items-center justify-center mb-3">
+              <div className={cn("w-14 h-14 mx-auto rounded-full flex items-center justify-center mb-3", theme !== 'light' ? 'bg-zinc-800' : 'bg-zinc-100')}>
                 <TrendingUp className={cn("w-7 h-7", tc.textMuted)} />
               </div>
               <h3 className={cn("text-base font-medium mb-1.5", tc.text)}>No trades yet</h3>
@@ -1500,7 +1507,7 @@ export function TradesScreen() {
           )
         ) : (
           <div className={cn("text-center py-12 border rounded-xl", theme !== 'light' ? 'bg-zinc-900/40 border-zinc-800/80' : 'bg-white border-zinc-200')}>
-            <div className="w-14 h-14 mx-auto rounded-full bg-zinc-800 flex items-center justify-center mb-3">
+            <div className={cn("w-14 h-14 mx-auto rounded-full flex items-center justify-center mb-3", theme !== 'light' ? 'bg-zinc-800' : 'bg-zinc-100')}>
               <Database className={cn("w-7 h-7", tc.textMuted)} />
             </div>
             <h3 className={cn("text-base font-medium mb-1.5", tc.text)}>No trades match your filters</h3>
