@@ -576,7 +576,7 @@ export function DashboardScreen() {
                 <span className={cn('text-3xl sm:text-4xl font-bold tracking-tight tabular-nums', stats.totalPnL >= 0 ? 'text-emerald-500' : 'text-rose-500')}>
                   {formatCurrency(stats.totalPnL, privacyMode)}
                 </span>
-                <span className={cn('flex items-center gap-1 text-sm font-medium px-2.5 py-1 rounded-lg flex-shrink-0', stats.growth >= 0 ? 'bg-emerald-500/10 text-emerald-600' : 'bg-rose-500/10 text-rose-500')}>
+                <span className={cn('flex items-center gap-1 text-sm font-medium px-2.5 py-1 rounded-lg border flex-shrink-0', stats.growth >= 0 ? 'bg-emerald-500/15 border-emerald-500/30 text-emerald-500' : 'bg-rose-500/15 border-rose-500/30 text-rose-500')}>
                   {stats.growth >= 0 ? <TrendingUp className="w-3.5 h-3.5" /> : <TrendingDown className="w-3.5 h-3.5" />}
                   {stats.growth >= 0 ? '+' : ''}{stats.growth.toFixed(2)}%
                 </span>
