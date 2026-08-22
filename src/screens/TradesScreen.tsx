@@ -492,8 +492,10 @@ function TradeAnalyticsCard({ trades, stats, privacyMode, theme, tc, tradeFilter
   // Discipline Tracker stat tiles, just with a touch more breathing room
   // (p-5) than the very first compact pass so it doesn't feel cramped.
   const cardClass = cn(
-    "bg-zinc-900/50 border border-white/10 rounded-xl p-6 hover:border-white/20 transition-all flex items-center gap-3",
-    theme === 'light' && 'bg-white border-zinc-200'
+    "border rounded-xl p-6 transition-all flex items-center gap-3",
+    theme !== 'light'
+      ? 'bg-zinc-900/50 border-white/10 hover:border-white/20'
+      : 'bg-white border-zinc-200 hover:border-zinc-300'
   );
   const iconCircleClass = "p-3 rounded-xl flex-shrink-0";
 
@@ -519,7 +521,7 @@ function TradeAnalyticsCard({ trades, stats, privacyMode, theme, tc, tradeFilter
       <div className={cardClass}>
         <div className="relative w-11 h-11 -ml-1.5 flex-shrink-0">
           <svg viewBox="0 0 112 112" className="w-full h-full -rotate-90">
-            <circle cx="56" cy="56" r={r} fill="none" stroke="rgb(39,39,42)" strokeWidth={strokeWidth} />
+            <circle cx="56" cy="56" r={r} fill="none" stroke={theme !== 'light' ? 'rgb(39,39,42)' : 'rgb(228,228,231)'} strokeWidth={strokeWidth} />
             {winRateArc > 0 && (
               <circle
                 cx="56" cy="56" r={r} fill="none" stroke="rgb(16,185,129)" strokeWidth={strokeWidth}
@@ -544,7 +546,7 @@ function TradeAnalyticsCard({ trades, stats, privacyMode, theme, tc, tradeFilter
       {/* Card 3 — Win / Loss / Break-Even breakdown; chips stay clickable
           against `tradeFilter`, same as the old bar. */}
       <div className={cardClass}>
-        <div className={cn(iconCircleClass, "bg-white/5")}>
+        <div className={cn(iconCircleClass, theme !== 'light' ? 'bg-white/5' : 'bg-zinc-100')}>
           <Scale className={cn("w-5 h-5", tc.textMuted)} />
         </div>
         <div className="min-w-0">
@@ -565,7 +567,7 @@ function TradeAnalyticsCard({ trades, stats, privacyMode, theme, tc, tradeFilter
               type="button"
               onClick={() => setTradeFilter(prev => prev === 'loss' ? 'all' : 'loss')}
               className={cn(
-                "text-rose-400 rounded transition-colors",
+                "text-rose-500 rounded transition-colors",
                 tradeFilter === 'loss' ? 'ring-1 ring-rose-500/40 bg-rose-500/10 px-1' : 'hover:text-rose-400'
               )}
             >
@@ -589,7 +591,7 @@ function TradeAnalyticsCard({ trades, stats, privacyMode, theme, tc, tradeFilter
 
       {/* Card 4 — Profit Factor / Avg Win & Loss */}
       <div className={cardClass}>
-        <div className={cn(iconCircleClass, "bg-white/5")}>
+        <div className={cn(iconCircleClass, theme !== 'light' ? 'bg-white/5' : 'bg-zinc-100')}>
           <Target className={cn("w-5 h-5", tc.textMuted)} />
         </div>
         <div className="min-w-0">
@@ -597,7 +599,7 @@ function TradeAnalyticsCard({ trades, stats, privacyMode, theme, tc, tradeFilter
           <p className={cn("text-xl font-bold tabular-nums leading-tight", tc.text)}>
             {total > 0 && isFinite(stats.profitFactor) ? stats.profitFactor.toFixed(2) : 'N/A'}
             <span className={cn("text-xs font-medium tabular-nums ml-1.5", tc.textMuted)}>
-              <span className="text-emerald-500">{formatCurrency(stats.avgWin, privacyMode)}</span>
+              <span className="text-emerald-400">{formatCurrency(stats.avgWin, privacyMode)}</span>
               <span className="mx-0.5">/</span>
               <span className="text-rose-400">{formatCurrency(-stats.avgLoss, privacyMode)}</span>
             </span>
@@ -607,8 +609,8 @@ function TradeAnalyticsCard({ trades, stats, privacyMode, theme, tc, tradeFilter
 
       {/* Card 5 — Total Trades, now trailing the row. */}
       <div className={cardClass}>
-        <div className={cn(iconCircleClass, "bg-indigo-500/10")}>
-          <BarChart3 className="w-5 h-5 text-indigo-400" />
+        <div className={cn(iconCircleClass, theme !== 'light' ? 'bg-white/5' : 'bg-zinc-100')}>
+          <BarChart3 className={cn("w-5 h-5", tc.textMuted)} />
         </div>
         <div className="min-w-0">
           <p className={cn("text-[10px] font-semibold tracking-wider uppercase", tc.textMuted)}>Total Trades</p>
