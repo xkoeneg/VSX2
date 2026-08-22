@@ -425,7 +425,7 @@ export function DashboardScreen() {
                 {privacyMode ? '****' : `${metrics.profitProgress.toFixed(1)}%`}
               </span>
             </div>
-            <div className="h-2 bg-zinc-800 rounded-full overflow-hidden">
+            <div className={cn("h-2 rounded-full overflow-hidden", theme !== 'light' ? 'bg-zinc-800' : 'bg-zinc-100')}>
               <div
                 className={cn(
                   'h-full rounded-full transition-all duration-500 bg-emerald-500',
@@ -467,7 +467,7 @@ export function DashboardScreen() {
                 {privacyMode ? '****' : `${metrics.drawdownProgress.toFixed(1)}%`}
               </span>
             </div>
-            <div className="h-2 bg-zinc-800 rounded-full overflow-hidden relative">
+            <div className={cn("h-2 rounded-full overflow-hidden relative", theme !== 'light' ? 'bg-zinc-800' : 'bg-zinc-100')}>
               <div className="absolute right-[30%] top-0 bottom-0 w-px bg-amber-500/30" />
               <div
                 className={cn(
@@ -629,7 +629,7 @@ export function DashboardScreen() {
           return (
             <div
               className={cn(
-                'relative flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 rounded-xl border border-l-4 p-4 sm:px-5 sm:py-3.5 min-w-0 transition-all duration-300',
+                'relative flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 rounded-xl border border-l-2 p-4 sm:px-5 sm:py-3.5 min-w-0 transition-all duration-300',
                 theme !== 'light' ? 'bg-zinc-900/40 border-zinc-800/80' : 'bg-white border-zinc-200',
                 isRed && 'border-l-rose-500',
                 isWarning && 'border-l-amber-500',
@@ -657,7 +657,7 @@ export function DashboardScreen() {
                 {/* Thin inline progress bar fills remaining space on wider screens — single
                     fill proportional to the honest follow rate, colored by status tier so a
                     low rate reads as a short red bar rather than a full segmented bar. */}
-                <div className="hidden sm:block flex-1 max-w-[220px] h-1.5 bg-zinc-800 rounded-full overflow-hidden">
+                <div className={cn("hidden sm:block flex-1 max-w-[220px] h-1.5 rounded-full overflow-hidden", theme !== 'light' ? 'bg-zinc-800' : 'bg-zinc-100')}>
                   <div
                     className={cn(
                       'h-full rounded-full transition-all duration-500',
