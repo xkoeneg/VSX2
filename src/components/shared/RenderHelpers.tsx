@@ -32,7 +32,7 @@ function StatCardInner({ title, value, icon, color }: {
         ? 'bg-zinc-900/40 border border-zinc-800/80 hover:border-zinc-700 hover:bg-zinc-900/70'
         : 'bg-white border border-zinc-200 hover:border-zinc-300 hover:bg-zinc-50'
     )}>
-      <div className={cn('p-2.5 rounded-xl flex-shrink-0', theme !== 'light' ? 'bg-zinc-800/60' : 'bg-zinc-100', color)}>{icon}</div>
+      <div className={cn('p-2.5 rounded-lg flex-shrink-0', theme !== 'light' ? 'bg-zinc-800/60' : 'bg-zinc-100', color)}>{icon}</div>
       <div className="min-w-0 flex-1">
         <p className={cn("text-[11px] uppercase tracking-wider truncate font-medium", tc.textMuted)}>{title}</p>
         <p className={cn('text-lg font-semibold truncate tabular-nums',
