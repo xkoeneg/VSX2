@@ -27,7 +27,7 @@ function StatCardInner({ title, value, icon, color }: {
   const { theme, tc } = useAppContext();
   return (
     <div className={cn(
-      "group rounded-2xl p-4 flex items-center gap-3 min-w-0 transition-all duration-200",
+      "group rounded-xl p-4 flex items-center gap-3 min-w-0 transition-all duration-200",
       theme !== 'light'
         ? 'bg-zinc-900/40 border border-zinc-800/80 hover:border-zinc-700 hover:bg-zinc-900/70'
         : 'bg-white border border-zinc-200 hover:border-zinc-300 hover:bg-zinc-50'
