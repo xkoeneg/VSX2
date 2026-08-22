@@ -298,7 +298,7 @@ export function PlaybookScreen() {
                   <div key={rule.id} className="flex items-center gap-2 py-0.5">
                     <span className={cn("flex-1 h-px", theme !== 'light' ? 'bg-zinc-800' : 'bg-zinc-200')} />
                     {rule.dividerLabel && (
-                      <span className={cn("text-[9px] font-bold uppercase tracking-wider flex-shrink-0", tc.textMuted)}>{rule.dividerLabel}</span>
+                      <span className={cn("text-[10px] font-bold uppercase tracking-wider flex-shrink-0", tc.textMuted)}>{rule.dividerLabel}</span>
                     )}
                     <span className={cn("flex-1 h-px", theme !== 'light' ? 'bg-zinc-800' : 'bg-zinc-200')} />
                   </div>
@@ -315,10 +315,10 @@ export function PlaybookScreen() {
                 <div key={rule.id} className="flex items-start gap-2.5 min-w-0">
                   {/* Bullet / number / icon-badge prefix */}
                   {bulletStyle === 'icon' ? (
-                    <span className={cn("inline-flex items-center justify-center w-6 h-6 rounded-md flex-shrink-0 mt-0.5", accent.bg)}>
+                    <span className={cn("inline-flex items-center justify-center w-8 h-8 rounded-lg flex-shrink-0 mt-0.5", accent.bg)}>
                       {rule.iconKind === 'emoji' && rule.iconValue
                         ? <span className="text-[13px] leading-none">{rule.iconValue}</span>
-                        : <RuleIcon className={cn("w-3.5 h-3.5", accent.text)} strokeWidth={2.5} />}
+                        : <RuleIcon className={cn("w-4 h-4", accent.text)} strokeWidth={2.5} />}
                     </span>
                   ) : bulletStyle === 'number' ? (
                     <span className={cn("flex items-center justify-center w-5 h-5 rounded-full text-[10px] font-bold flex-shrink-0 mt-0.5", accent.bg, accent.text)}>
@@ -331,13 +331,13 @@ export function PlaybookScreen() {
                   <div className="min-w-0 flex-1 leading-relaxed">
                     <div className="flex flex-col sm:flex-row sm:items-center items-start gap-1 sm:gap-1.5">
                       <h5 className={cn("font-bold whitespace-normal break-words leading-snug", tc.text, large ? "text-base" : "text-sm")}>{rule.title}</h5>
-                      <span className={cn("text-[9px] px-1 py-0.5 rounded font-semibold uppercase tracking-wide leading-none flex-shrink-0 whitespace-normal break-words", severityMeta.badge)}>{severityMeta.label}</span>
+                      <span className={cn("text-[10px] px-1 py-0.5 rounded font-semibold uppercase tracking-wide leading-none flex-shrink-0 whitespace-normal break-words", severityMeta.badge)}>{severityMeta.label}</span>
                     </div>
                     {rule.description && (
                       <p className={cn("mt-0.5 leading-relaxed whitespace-normal break-words", tc.textMuted, large ? "text-sm" : "text-xs")}>{rule.description}</p>
                     )}
                     {violations > 0 && (
-                      <span className="inline-flex items-center gap-0.5 text-[9px] mt-1.5 px-1 py-0.5 rounded-full bg-rose-500/15 text-rose-400 border border-rose-500/20 font-semibold">
+                      <span className="inline-flex items-center gap-0.5 text-[10px] mt-1.5 px-1 py-0.5 rounded-full bg-rose-500/15 text-rose-400 border border-rose-500/30 font-semibold">
                         <AlertTriangle className="w-2.5 h-2.5" strokeWidth={2} /> {violations}x
                       </span>
                     )}
@@ -365,12 +365,12 @@ export function PlaybookScreen() {
           {/* SECTION 1: ACTIVE STRATEGY MODELS — wrapped in a system card container to match other dashboard widgets */}
           <div className="min-w-0 lg:col-span-2 h-full">
             <div className={cn(
-              "h-full flex flex-col rounded-2xl p-6 border",
+              "h-full flex flex-col rounded-xl p-6 border",
               theme !== 'light' ? 'bg-zinc-900/40 border-zinc-800/80' : 'bg-white border-zinc-200'
             )}>
               <div className="flex items-center justify-between flex-wrap gap-3">
-                <h3 className={cn("text-sm font-bold tracking-wide flex items-center gap-1.5", tc.text)}>
-                  <Layers className="w-4 h-4 text-emerald-400" strokeWidth={2} />
+                <h3 className={cn("text-xs font-semibold flex items-center gap-1.5 truncate", tc.text)}>
+                  <Layers className="w-4 h-4 text-emerald-400 flex-shrink-0" strokeWidth={2} />
                   STRATEGY MODELS
                 </h3>
                 <div className="flex items-center gap-2 flex-shrink-0">
@@ -385,8 +385,10 @@ export function PlaybookScreen() {
                         className={cn(
                           "p-1.5 rounded-lg border transition-colors",
                           canScrollLeftStrategy
-                            ? "text-white bg-white/10 hover:bg-white/20 border-white/20 cursor-pointer"
-                            : "text-white/20 bg-transparent border-white/5 cursor-not-allowed pointer-events-none"
+                            ? cn(tc.text, theme !== 'light' ? 'bg-white/10 hover:bg-white/20 border-white/20' : 'bg-zinc-100 hover:bg-zinc-200 border-zinc-300', 'cursor-pointer')
+                            : theme !== 'light'
+                              ? 'text-white/20 bg-transparent border-white/5 cursor-not-allowed pointer-events-none'
+                              : 'text-zinc-300 bg-transparent border-zinc-100 cursor-not-allowed pointer-events-none'
                         )}
                       >
                         <ChevronLeft className="w-4 h-4" />
@@ -400,8 +402,10 @@ export function PlaybookScreen() {
                         className={cn(
                           "p-1.5 rounded-lg border transition-colors",
                           canScrollRightStrategy
-                            ? "text-white bg-white/10 hover:bg-white/20 border-white/20 cursor-pointer"
-                            : "text-white/20 bg-transparent border-white/5 cursor-not-allowed pointer-events-none"
+                            ? cn(tc.text, theme !== 'light' ? 'bg-white/10 hover:bg-white/20 border-white/20' : 'bg-zinc-100 hover:bg-zinc-200 border-zinc-300', 'cursor-pointer')
+                            : theme !== 'light'
+                              ? 'text-white/20 bg-transparent border-white/5 cursor-not-allowed pointer-events-none'
+                              : 'text-zinc-300 bg-transparent border-zinc-100 cursor-not-allowed pointer-events-none'
                         )}
                       >
                         <ChevronRight className="w-4 h-4" />
@@ -456,7 +460,7 @@ export function PlaybookScreen() {
                         "group snap-start w-[calc((100%-2*1rem)/3)] min-w-[calc((100%-2*1rem)/3)] shrink-0 h-full flex flex-col border rounded-xl overflow-hidden cursor-grab active:cursor-grabbing transition-all duration-200 ease-out text-left",
                         theme !== 'light' ? 'bg-zinc-900/40' : 'bg-white',
                         dragOverStrategyId === strategy.id
-                          ? "border-sky-400 ring-2 ring-sky-400/60"
+                          ? "border-indigo-400/80 ring-2 ring-indigo-400/40"
                           : theme !== 'light' ? "border-zinc-800/80 hover:border-zinc-700" : "border-zinc-200 hover:border-zinc-300",
                         draggingStrategyId === strategy.id && "opacity-40"
                       )}
@@ -474,7 +478,7 @@ export function PlaybookScreen() {
                             <span className="text-[10px]">No image</span>
                           </div>
                         )}
-                        <div className="absolute top-1.5 left-1.5 flex items-center gap-0.5 px-1 py-0.5 rounded bg-black/70 text-white opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
+                        <div className="absolute top-1.5 left-1.5 flex items-center gap-0.5 px-1 py-0.5 rounded bg-zinc-950/70 text-white opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
                           <GripVertical className="w-3 h-3" />
                         </div>
                       </div>
@@ -592,7 +596,7 @@ export function PlaybookScreen() {
 
         {/* HORIZONTAL PRE-SESSION PROTOCOL STRIP — full width, sits above Trading Rules */}
         <div className={cn(
-          "relative overflow-hidden min-w-0 border rounded-2xl px-5 py-4 space-y-3 transition-colors duration-300 select-none",
+          "relative overflow-hidden min-w-0 border rounded-xl px-5 py-4 space-y-3 transition-colors duration-300 select-none",
           theme !== 'light'
             ? 'bg-gradient-to-br from-zinc-900 via-zinc-900/90 to-zinc-900/60 border-zinc-800'
             : 'bg-gradient-to-br from-white via-zinc-50 to-zinc-100 border-zinc-200'
@@ -600,15 +604,15 @@ export function PlaybookScreen() {
           <div className="absolute inset-0 bg-gradient-to-br from-violet-500/[0.06] via-transparent to-emerald-500/[0.05] pointer-events-none" />
           <div className="relative flex flex-wrap items-center justify-between gap-4">
             <div className="flex items-center gap-3 flex-shrink-0">
-              <div className="w-7 h-7 rounded-lg bg-emerald-500/10 flex items-center justify-center flex-shrink-0">
+              <div className="w-7 h-7 rounded-lg bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center flex-shrink-0">
                 <ListChecks className="w-3.5 h-3.5 text-emerald-400" strokeWidth={2} />
               </div>
-              <h3 className={cn("text-xs font-bold uppercase tracking-wider whitespace-nowrap", tc.textMuted)}>Pre-Session Protocol</h3>
+              <h3 className={cn("text-xs font-semibold uppercase tracking-wider whitespace-nowrap", tc.textMuted)}>Pre-Session Protocol</h3>
               <span className={cn(
-                "text-[11px] font-semibold px-2 py-0.5 rounded-full flex-shrink-0 whitespace-nowrap",
+                "text-[11px] font-semibold px-2 py-0.5 rounded-full border flex-shrink-0 whitespace-nowrap",
                 preSessionCompletedCount === PRE_SESSION_CHECKLIST_ITEMS.length
-                  ? "bg-emerald-500/15 text-emerald-400"
-                  : cn(tc.bgSecondary, tc.textMuted)
+                  ? "bg-emerald-500/15 border-emerald-500/30 text-emerald-400"
+                  : cn(tc.bgSecondary, tc.textMuted, theme !== 'light' ? 'border-zinc-700/50' : 'border-zinc-200')
               )}>
                 {preSessionCompletedCount}/{PRE_SESSION_CHECKLIST_ITEMS.length} Ready
               </span>
@@ -652,9 +656,9 @@ export function PlaybookScreen() {
           </div>
 
           {/* Progress bar */}
-          <div className={cn("relative w-full h-1.5 rounded-full overflow-hidden", tc.bgSecondary)}>
+          <div className={cn("relative w-full h-2 rounded-full overflow-hidden", tc.bgSecondary)}>
             <div
-              className="h-full bg-emerald-500 transition-all duration-300 ease-out rounded-full"
+              className="h-full bg-emerald-500 transition-all duration-500 ease-out rounded-full"
               style={{ width: `${(preSessionCompletedCount / PRE_SESSION_CHECKLIST_ITEMS.length) * 100}%` }}
             />
           </div>
@@ -662,16 +666,16 @@ export function PlaybookScreen() {
 
         {/* SECTION 2: TRADING CHARTER & MANDATES — single unified, read-only card */}
         <div className={cn(
-          "min-w-0 rounded-2xl p-6 border",
+          "min-w-0 rounded-xl p-6 border",
           theme !== 'light' ? 'bg-zinc-900/40 border-zinc-800/80' : 'bg-white border-zinc-200'
         )}>
           <div className="flex items-center justify-between flex-wrap gap-4 mb-6">
             <div className="flex items-center gap-3 min-w-0">
-              <div className="w-9 h-9 rounded-lg bg-emerald-500/10 flex items-center justify-center flex-shrink-0">
+              <div className="w-9 h-9 rounded-lg bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center flex-shrink-0">
                 <ShieldCheck className="w-5 h-5 text-emerald-400" strokeWidth={2} />
               </div>
               <div className="min-w-0">
-                <h3 className={cn("text-sm font-bold uppercase tracking-wide truncate", tc.text)}>Trading Rules</h3>
+                <h3 className={cn("text-sm font-semibold uppercase tracking-wide truncate", tc.text)}>Trading Rules</h3>
               </div>
             </div>
             <div className="flex items-center gap-2 flex-wrap flex-shrink-0">
