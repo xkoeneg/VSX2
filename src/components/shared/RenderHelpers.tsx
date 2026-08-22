@@ -83,10 +83,9 @@ export const renderAccountFilter = () => {
       <button
         onClick={() => setShowAccountDropdown(!showAccountDropdown)}
         className={cn(
-          "h-9 flex items-center gap-2 px-3 rounded-lg text-xs font-medium border transition-colors",
-          theme !== 'light'
-            ? 'bg-zinc-800 border-zinc-700/50 text-zinc-300 hover:bg-zinc-700'
-            : 'bg-zinc-100 border-zinc-200 text-zinc-700 hover:bg-zinc-200'
+          "h-9 flex items-center gap-2 px-3 rounded-lg text-xs font-medium border transition-colors focus:outline-none",
+          tc.btnSecondary,
+          theme !== 'light' ? 'border-zinc-700/50' : 'border-zinc-200'
         )}
       >
         <Filter className="w-4 h-4 flex-shrink-0" />
