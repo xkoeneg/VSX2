@@ -874,7 +874,7 @@ export function TradesScreen() {
                 'flex items-center gap-2 px-3 sm:px-4 py-2 rounded-lg text-sm transition-colors border',
                 tradeSelectMode
                   ? 'bg-indigo-500/15 border-indigo-500/40 text-indigo-400 hover:bg-indigo-500/25'
-                  : tc.btnSecondary
+                  : cn(tc.btnSecondary, theme !== 'light' ? 'border-zinc-700/50' : 'border-zinc-200')
               )}
             >
               <Check className="w-4 h-4" />
@@ -888,7 +888,7 @@ export function TradesScreen() {
               aria-label={isImportingTrades ? 'Importing…' : 'Import MT4/MT5'}
               className={cn(
                 'flex items-center justify-center w-8 h-8 rounded-lg transition-colors border flex-shrink-0',
-                tc.btnSecondary,
+                tc.btnSecondary, theme !== 'light' ? 'border-zinc-700/50' : 'border-zinc-200',
                 isImportingTrades && 'opacity-60 cursor-not-allowed'
               )}
             >
@@ -1282,7 +1282,7 @@ export function TradesScreen() {
               aria-label={isImportingTrades ? 'Importing…' : 'Import MT4/MT5'}
               className={cn(
                 'flex items-center justify-center w-8 h-8 rounded-lg transition-colors border flex-shrink-0',
-                tc.btnSecondary,
+                tc.btnSecondary, theme !== 'light' ? 'border-zinc-700/50' : 'border-zinc-200',
                 isImportingTrades && 'opacity-60 cursor-not-allowed'
               )}
             >
