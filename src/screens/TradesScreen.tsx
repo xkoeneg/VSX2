@@ -275,7 +275,7 @@ const TradeFeaturedCard = memo(function TradeFeaturedCard({
       )}
     >
       <div className="aspect-video bg-zinc-800 flex items-center justify-center relative overflow-hidden flex-shrink-0">
-        <span className="absolute top-2 left-2 z-10 flex items-center justify-center w-5 h-5 rounded bg-black/60 text-[10px] font-mono font-bold text-zinc-300 border border-white/10">
+        <span className="absolute top-2 left-2 z-10 flex items-center justify-center w-5 h-5 rounded bg-zinc-900/60 text-[10px] font-mono font-bold text-zinc-300 border border-white/10">
           {displayNumber}
         </span>
         {tradeSelectMode && (
@@ -284,7 +284,7 @@ const TradeFeaturedCard = memo(function TradeFeaturedCard({
             onClick={handleCheckboxClick}
             className={cn(
               'absolute top-2 right-2 z-20 flex items-center justify-center w-5 h-5 rounded-md border transition-colors',
-              isSelected ? 'bg-indigo-500 border-indigo-400 text-white' : 'bg-black/50 border-white/40 text-transparent hover:border-white/70'
+              isSelected ? 'bg-indigo-500/25 border-indigo-400 text-white' : 'bg-zinc-900/50 border-white/40 text-transparent hover:border-white/70'
             )}
             aria-label={isSelected ? 'Unselect trade' : 'Select trade'}
           >
@@ -294,14 +294,14 @@ const TradeFeaturedCard = memo(function TradeFeaturedCard({
         {coverImage ? (
           <img src={coverImage} alt="" loading="lazy" decoding="async" className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105 transform-gpu" />
         ) : (
-          <div className="flex flex-col items-center gap-1.5 text-zinc-600">
+          <div className={cn("flex flex-col items-center gap-1.5", tc.textMuted)}>
             <ImageIcon className="w-7 h-7" />
             <span className="text-[10px]">No image</span>
           </div>
         )}
         {/* Badge row at the bottom of the thumbnail — hidden entirely for unreviewed trades */}
         {trade.rulesFollowed === 'followed' || trade.rulesFollowed === 'broken' ? (
-          <div className="absolute bottom-0 left-0 right-0 z-10 flex items-center justify-end gap-1.5 px-2.5 py-1.5 bg-gradient-to-t from-black/80 to-transparent">
+          <div className="absolute bottom-0 left-0 right-0 z-10 flex items-center justify-end gap-1.5 px-2.5 py-1.5 bg-gradient-to-t from-zinc-900/80 to-transparent">
             <span className={cn(
               'flex items-center justify-center w-4 h-4 rounded-full border font-bold',
               trade.rulesFollowed === 'followed'
@@ -339,8 +339,8 @@ const TradeFeaturedCard = memo(function TradeFeaturedCard({
           <div className="flex items-center gap-1.5 min-w-0 flex-wrap">
             {trade.setupTypes.slice(0, 1).map(s => (
               <span key={s} className={cn(
-                "px-1.5 py-0.5 rounded-md border text-[10px] whitespace-nowrap",
-                theme !== 'light' ? 'bg-zinc-800/80 border-zinc-700/50 text-zinc-300' : 'bg-zinc-100 border-zinc-200 text-zinc-600'
+                "px-2 py-0.5 rounded text-[10px] whitespace-nowrap truncate max-w-[100px] inline-block",
+                theme !== 'light' ? 'bg-zinc-500/20 text-zinc-300' : 'bg-zinc-500/20 text-zinc-600'
               )}>{s}</span>
             ))}
           </div>
@@ -497,7 +497,7 @@ function TradeAnalyticsCard({ trades, stats, privacyMode, theme, tc, tradeFilter
       ? 'bg-zinc-900/50 border-zinc-800/80 hover:border-zinc-700'
       : 'bg-white border-zinc-200 hover:border-zinc-300'
   );
-  const iconCircleClass = "p-3 rounded-xl flex-shrink-0";
+  const iconCircleClass = "w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0";
 
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4 mb-6 items-start">
@@ -505,12 +505,12 @@ function TradeAnalyticsCard({ trades, stats, privacyMode, theme, tc, tradeFilter
       <div className={cardClass}>
         <div className={cn(iconCircleClass, isNetPositive ? "bg-emerald-500/10" : "bg-rose-500/10")}>
           {isNetPositive
-            ? <TrendingUp className="w-5 h-5 text-emerald-400" />
-            : <TrendingDown className="w-5 h-5 text-rose-400" />}
+            ? <TrendingUp className="w-4 h-4 text-emerald-400" />
+            : <TrendingDown className="w-4 h-4 text-rose-400" />}
         </div>
         <div className="min-w-0">
           <p className={cn("text-[10px] font-semibold tracking-wider uppercase", tc.textMuted)}>Net P&amp;L</p>
-          <p className={cn("text-xl font-bold tabular-nums leading-tight", isNetPositive ? 'text-emerald-400' : 'text-rose-400')}>
+          <p className={cn("text-lg font-semibold tabular-nums leading-tight", isNetPositive ? 'text-emerald-400' : 'text-rose-400')}>
             {formatCurrency(netPnl, privacyMode)}
           </p>
         </div>
@@ -533,7 +533,7 @@ function TradeAnalyticsCard({ trades, stats, privacyMode, theme, tc, tradeFilter
         <div className="min-w-0 -ml-1">
           <p className={cn("text-[10px] font-semibold tracking-wider uppercase", tc.textMuted)}>Win Rate</p>
           <div className="flex items-baseline gap-1.5">
-            <p className={cn("text-xl font-bold tabular-nums leading-tight", tc.text)}>
+            <p className={cn("text-lg font-semibold tabular-nums leading-tight", tc.text)}>
               {total > 0 ? `${winRatePct.toFixed(1)}%` : '—'}
             </p>
             <p className={cn("text-[11px] font-medium tabular-nums leading-tight", tc.textMuted)} title="Win rate counting breakeven trades as wins">
@@ -547,11 +547,11 @@ function TradeAnalyticsCard({ trades, stats, privacyMode, theme, tc, tradeFilter
           against `tradeFilter`, same as the old bar. */}
       <div className={cardClass}>
         <div className={cn(iconCircleClass, theme !== 'light' ? 'bg-white/5' : 'bg-zinc-100')}>
-          <Scale className={cn("w-5 h-5", tc.textMuted)} />
+          <Scale className={cn("w-4 h-4", tc.textMuted)} />
         </div>
         <div className="min-w-0">
           <p className={cn("text-[10px] font-semibold tracking-wider uppercase", tc.textMuted)}>Win / Loss Ratio</p>
-          <p className="text-xl font-bold tabular-nums leading-tight">
+          <p className="text-lg font-semibold tabular-nums leading-tight">
             <button
               type="button"
               onClick={() => setTradeFilter(prev => prev === 'profit' ? 'all' : 'profit')}
@@ -592,11 +592,11 @@ function TradeAnalyticsCard({ trades, stats, privacyMode, theme, tc, tradeFilter
       {/* Card 4 — Profit Factor / Avg Win & Loss */}
       <div className={cardClass}>
         <div className={cn(iconCircleClass, theme !== 'light' ? 'bg-white/5' : 'bg-zinc-100')}>
-          <Target className={cn("w-5 h-5", tc.textMuted)} />
+          <Target className={cn("w-4 h-4", tc.textMuted)} />
         </div>
         <div className="min-w-0">
           <p className={cn("text-[10px] font-semibold tracking-wider uppercase", tc.textMuted)}>Profit Factor</p>
-          <p className={cn("text-xl font-bold tabular-nums leading-tight", tc.text)}>
+          <p className={cn("text-lg font-semibold tabular-nums leading-tight", tc.text)}>
             {total > 0 && isFinite(stats.profitFactor) ? stats.profitFactor.toFixed(2) : 'N/A'}
             <span className={cn("text-xs font-medium tabular-nums ml-1.5", tc.textMuted)}>
               <span className="text-emerald-400">{formatCurrency(stats.avgWin, privacyMode)}</span>
@@ -610,11 +610,11 @@ function TradeAnalyticsCard({ trades, stats, privacyMode, theme, tc, tradeFilter
       {/* Card 5 — Total Trades, now trailing the row. */}
       <div className={cardClass}>
         <div className={cn(iconCircleClass, theme !== 'light' ? 'bg-white/5' : 'bg-zinc-100')}>
-          <BarChart3 className={cn("w-5 h-5", tc.textMuted)} />
+          <BarChart3 className={cn("w-4 h-4", tc.textMuted)} />
         </div>
         <div className="min-w-0">
           <p className={cn("text-[10px] font-semibold tracking-wider uppercase", tc.textMuted)}>Total Trades</p>
-          <p className={cn("text-xl font-bold tabular-nums leading-tight", tc.text)}>{total}</p>
+          <p className={cn("text-lg font-semibold tabular-nums leading-tight", tc.text)}>{total}</p>
         </div>
       </div>
     </div>
@@ -872,10 +872,10 @@ export function TradesScreen() {
               className={cn(
                 'flex items-center gap-2 px-3 sm:px-4 py-2 rounded-lg text-sm transition-colors border',
                 tradeSelectMode
-                  ? 'bg-white text-black border-white hover:bg-zinc-200'
-                  : theme !== 'light'
-                    ? 'bg-zinc-800 border-zinc-700 text-zinc-300 hover:bg-zinc-700'
-                    : 'bg-zinc-100 border-zinc-200 text-zinc-700 hover:bg-zinc-200'
+                  ? (theme !== 'light'
+                      ? 'bg-zinc-100 text-zinc-900 border-zinc-100 hover:bg-zinc-300'
+                      : 'bg-zinc-900 text-white border-zinc-900 hover:bg-zinc-700')
+                  : tc.btnSecondary
               )}
             >
               <Check className="w-4 h-4" />
@@ -889,13 +889,13 @@ export function TradesScreen() {
               aria-label={isImportingTrades ? 'Importing…' : 'Import MT4/MT5'}
               className={cn(
                 'flex items-center justify-center w-9 h-9 rounded-lg transition-colors border flex-shrink-0',
-                theme !== 'light' ? 'bg-zinc-800 border-zinc-700 text-zinc-300 hover:bg-zinc-700' : 'bg-zinc-100 border-zinc-200 text-zinc-700 hover:bg-zinc-200',
+                tc.btnSecondary,
                 isImportingTrades && 'opacity-60 cursor-not-allowed'
               )}
             >
               <Upload className={cn('w-4 h-4', isImportingTrades && 'animate-pulse')} />
             </button>
-            <button onClick={() => { resetTradeForm(); resetCalculator(); setShowAddTrade(true); }} className={cn("flex items-center gap-2 px-3 sm:px-4 py-2 rounded-lg text-sm transition-colors", theme !== 'light' ? 'bg-zinc-800 hover:bg-zinc-700 text-white' : 'bg-zinc-100 hover:bg-zinc-200 text-zinc-900')}>
+            <button onClick={() => { resetTradeForm(); resetCalculator(); setShowAddTrade(true); }} className={cn("flex items-center gap-2 px-3 sm:px-4 py-2 rounded-lg text-sm transition-colors", tc.btnSecondary)}>
               <Plus className="w-4 h-4" />
               <span className="hidden sm:inline">Add Trade</span>
             </button>
@@ -914,7 +914,7 @@ export function TradesScreen() {
               onClick={toggleSelectAllTrades}
               className={cn(
                 'flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors border',
-                theme !== 'light' ? 'bg-zinc-800 border-zinc-700 text-zinc-300 hover:bg-zinc-700' : 'bg-zinc-100 border-zinc-200 text-zinc-700 hover:bg-zinc-200'
+                tc.btnSecondary
               )}
             >
               {selectedTradeIds.length === filteredTrades.length && filteredTrades.length > 0 ? 'Deselect All' : 'Select All'}
@@ -925,7 +925,7 @@ export function TradesScreen() {
             type="button"
             onClick={handleDeleteSelectedTrades}
             disabled={selectedTradeIds.length === 0}
-            className="flex items-center gap-2 px-4 py-1.5 bg-rose-500/90 hover:bg-rose-500 disabled:opacity-40 disabled:cursor-not-allowed text-white rounded-lg text-sm font-medium transition-colors"
+            className="flex items-center gap-2 px-4 py-1.5 bg-rose-500/15 hover:bg-rose-500/25 border border-rose-500/40 disabled:opacity-40 disabled:cursor-not-allowed text-rose-300 rounded-lg text-sm font-medium transition-colors"
           >
             <Trash2 className="w-4 h-4" />
             Delete Selected ({selectedTradeIds.length})
@@ -986,7 +986,7 @@ export function TradesScreen() {
           <button
             type="button"
             onClick={() => setTradeSubView('database')}
-            className="bg-indigo-600/20 hover:bg-indigo-600/30 text-indigo-300 border border-indigo-500/30 px-3 py-1.5 rounded-lg text-xs font-medium flex items-center gap-1.5 cursor-pointer transition-colors"
+            className="bg-violet-500/15 hover:bg-violet-500/25 text-violet-400 border border-violet-500/40 px-3 py-1.5 rounded-lg text-xs font-medium flex items-center gap-1.5 cursor-pointer transition-colors"
           >
             <Expand className="w-3.5 h-3.5" />
             Open Full Database
@@ -1051,7 +1051,7 @@ export function TradesScreen() {
                                 onClick={(e) => { e.stopPropagation(); toggleTradeSelected(trade.id); }}
                                 className={cn(
                                   'flex items-center justify-center w-4 h-4 rounded border transition-colors flex-shrink-0',
-                                  isRowSelected ? 'bg-indigo-500 border-indigo-400 text-white' : 'border-zinc-600 text-transparent hover:border-zinc-400'
+                                  isRowSelected ? 'bg-indigo-500/25 border-indigo-400 text-white' : 'border-zinc-600 text-transparent hover:border-zinc-400'
                                 )}
                                 aria-label={isRowSelected ? 'Unselect trade' : 'Select trade'}
                               >
@@ -1086,8 +1086,8 @@ export function TradesScreen() {
                           <div className="flex items-center gap-1.5 flex-wrap max-w-[220px]">
                             {trade.setupTypes.length > 0 ? trade.setupTypes.slice(0, 2).map(s => (
                               <span key={s} className={cn(
-                                "px-1.5 py-0.5 rounded-md border text-[10px] whitespace-nowrap",
-                                theme !== 'light' ? 'bg-zinc-800/80 border-zinc-700/50 text-zinc-300' : 'bg-zinc-100 border-zinc-200 text-zinc-600'
+                                "px-2 py-0.5 rounded text-[10px] whitespace-nowrap truncate max-w-[100px] inline-block",
+                                theme !== 'light' ? 'bg-zinc-500/20 text-zinc-300' : 'bg-zinc-500/20 text-zinc-600'
                               )}>{s}</span>
                             )) : <span className={cn("text-xs", tc.textMuted)}>-</span>}
                           </div>
@@ -1131,7 +1131,7 @@ export function TradesScreen() {
               </div>
               <h3 className={cn("text-base font-medium mb-1.5", tc.text)}>No trades yet</h3>
               <p className={cn("mb-3 text-sm", tc.textMuted)}>Add your first trade to get started</p>
-              <button onClick={() => { resetTradeForm(); setShowAddTrade(true); }} className={cn("inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm transition-colors", theme !== 'light' ? 'bg-zinc-800 hover:bg-zinc-700 text-white' : 'bg-zinc-100 hover:bg-zinc-200 text-zinc-900')}>
+              <button onClick={() => { resetTradeForm(); setShowAddTrade(true); }} className={cn("inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm transition-colors", tc.btnSecondary)}>
                 <Plus className="w-4 h-4" />
                 Add Trade
               </button>
@@ -1177,7 +1177,7 @@ export function TradesScreen() {
               <ArrowLeft className="w-3.5 h-3.5" />
               <span className="hidden sm:inline">Back to Overview</span>
             </button>
-            <span className={theme !== 'light' ? 'text-zinc-700' : 'text-zinc-300'}>/</span>
+            <span className={tc.textMuted}>/</span>
             <span className={cn("font-medium truncate", tc.text)}>All Trades Database</span>
           </div>
           <div className="flex items-center gap-2 flex-shrink-0">
@@ -1189,7 +1189,7 @@ export function TradesScreen() {
                 onClick={() => setShowAccountDropdown(!showAccountDropdown)}
                 className={cn(
                   'flex items-center gap-2 px-3 py-2 rounded-lg text-sm transition-colors border',
-                  theme !== 'light' ? 'bg-zinc-800 border-zinc-700 text-zinc-300 hover:bg-zinc-700' : 'bg-zinc-100 border-zinc-200 text-zinc-700 hover:bg-zinc-200'
+                  tc.btnSecondary
                 )}
               >
                 <Filter className="w-4 h-4 flex-shrink-0" />
@@ -1199,8 +1199,8 @@ export function TradesScreen() {
 
               {showAccountDropdown && (
                 <div className={cn(
-                  "absolute right-0 sm:left-0 mt-2 min-w-[200px] w-64 rounded-lg shadow-xl z-50 p-2 border",
-                  theme !== 'light' ? 'bg-zinc-900 border-zinc-800' : 'bg-white border-zinc-200'
+                  "absolute right-0 sm:left-0 top-full mt-1.5 min-w-[200px] w-64 max-w-[calc(100vw-2rem)] rounded-xl shadow-2xl z-50 p-3.5 border",
+                  theme !== 'light' ? 'bg-zinc-900 border-white/10' : 'bg-white border-zinc-200'
                 )}>
                   <button
                     onClick={() => setSelectedAccounts(['all'])}
@@ -1208,7 +1208,7 @@ export function TradesScreen() {
                       'w-full text-left px-3 py-2 rounded text-sm truncate transition-colors',
                       selectedAccounts.includes('all')
                         ? (theme !== 'light' ? 'bg-zinc-800 text-white' : 'bg-zinc-100 text-zinc-900')
-                        : (theme !== 'light' ? 'text-zinc-400 hover:bg-zinc-800' : 'text-zinc-500 hover:bg-zinc-100')
+                        : cn(tc.textMuted, theme !== 'light' ? 'hover:bg-zinc-800' : 'hover:bg-zinc-100')
                     )}
                   >
                     All Accounts
@@ -1231,7 +1231,7 @@ export function TradesScreen() {
                         'w-full text-left px-3 py-2 rounded text-sm flex items-center justify-between transition-colors',
                         selectedAccounts.includes(acc.id)
                           ? (theme !== 'light' ? 'bg-zinc-800 text-white' : 'bg-zinc-100 text-zinc-900')
-                          : (theme !== 'light' ? 'text-zinc-400 hover:bg-zinc-800' : 'text-zinc-500 hover:bg-zinc-100')
+                          : cn(tc.textMuted, theme !== 'light' ? 'hover:bg-zinc-800' : 'hover:bg-zinc-100')
                       )}
                     >
                       <span className="truncate flex-1 mr-2">{acc.name}</span>
@@ -1254,8 +1254,8 @@ export function TradesScreen() {
                 className={cn(
                   'flex items-center justify-center w-8 h-8 rounded-md transition-colors',
                   dbViewMode === 'table'
-                    ? (theme !== 'light' ? 'bg-zinc-700 text-white' : 'bg-white text-zinc-900 shadow-sm')
-                    : (theme !== 'light' ? 'text-zinc-400 hover:text-white' : 'text-zinc-500 hover:text-zinc-900')
+                    ? (theme !== 'light' ? 'bg-zinc-700 text-white' : 'bg-white text-zinc-900')
+                    : cn(tc.textMuted, theme !== 'light' ? 'hover:text-white' : 'hover:text-zinc-900')
                 )}
               >
                 <List className="w-4 h-4" />
@@ -1267,8 +1267,8 @@ export function TradesScreen() {
                 className={cn(
                   'flex items-center justify-center w-8 h-8 rounded-md transition-colors',
                   dbViewMode === 'gallery'
-                    ? (theme !== 'light' ? 'bg-zinc-700 text-white' : 'bg-white text-zinc-900 shadow-sm')
-                    : (theme !== 'light' ? 'text-zinc-400 hover:text-white' : 'text-zinc-500 hover:text-zinc-900')
+                    ? (theme !== 'light' ? 'bg-zinc-700 text-white' : 'bg-white text-zinc-900')
+                    : cn(tc.textMuted, theme !== 'light' ? 'hover:text-white' : 'hover:text-zinc-900')
                 )}
               >
                 <LayoutGrid className="w-4 h-4" />
@@ -1283,13 +1283,13 @@ export function TradesScreen() {
               aria-label={isImportingTrades ? 'Importing…' : 'Import MT4/MT5'}
               className={cn(
                 'flex items-center justify-center w-9 h-9 rounded-lg transition-colors border flex-shrink-0',
-                theme !== 'light' ? 'bg-zinc-800 border-zinc-700 text-zinc-300 hover:bg-zinc-700' : 'bg-zinc-100 border-zinc-200 text-zinc-700 hover:bg-zinc-200',
+                tc.btnSecondary,
                 isImportingTrades && 'opacity-60 cursor-not-allowed'
               )}
             >
               <Upload className={cn('w-4 h-4', isImportingTrades && 'animate-pulse')} />
             </button>
-            <button onClick={() => { resetTradeForm(); resetCalculator(); setShowAddTrade(true); }} className={cn("flex items-center gap-2 px-3 py-2 rounded-lg text-sm transition-colors flex-shrink-0", theme !== 'light' ? 'bg-zinc-800 hover:bg-zinc-700 text-white' : 'bg-zinc-100 hover:bg-zinc-200 text-zinc-900')}>
+            <button onClick={() => { resetTradeForm(); resetCalculator(); setShowAddTrade(true); }} className={cn("flex items-center gap-2 px-3 py-2 rounded-lg text-sm transition-colors flex-shrink-0", tc.btnSecondary)}>
               <Plus className="w-4 h-4" />
               <span className="hidden sm:inline">Add Trade</span>
             </button>
@@ -1512,7 +1512,7 @@ export function TradesScreen() {
             </div>
             <h3 className={cn("text-base font-medium mb-1.5", tc.text)}>No trades match your filters</h3>
             <p className={cn("mb-3 text-sm", tc.textMuted)}>Try adjusting or clearing your filters</p>
-            <button onClick={resetDbFilters} className={cn("inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm transition-colors", theme !== 'light' ? 'bg-zinc-800 hover:bg-zinc-700 text-white' : 'bg-zinc-100 hover:bg-zinc-200 text-zinc-900')}>
+            <button onClick={resetDbFilters} className={cn("inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm transition-colors", tc.btnSecondary)}>
               Clear Filters
             </button>
           </div>
@@ -1542,8 +1542,8 @@ export function TradesScreen() {
           key={tradeImportToast.message}
           style={{ animation: 'tradeImportToastIn 0.25s ease-out' }}
           className={cn(
-            'fixed bottom-6 right-6 z-[60] max-w-sm px-4 py-3 rounded-lg text-sm font-medium shadow-2xl select-none',
-            tradeImportToast.type === 'success' ? 'bg-emerald-500 text-black' : 'bg-rose-500 text-white'
+            'fixed bottom-6 right-6 z-[60] max-w-sm px-4 py-3 rounded-lg border text-sm font-medium shadow-2xl select-none bg-zinc-900',
+            tradeImportToast.type === 'success' ? 'border-emerald-500/40 text-emerald-300' : 'border-rose-500/40 text-rose-300'
           )}
         >
           {tradeImportToast.message}
