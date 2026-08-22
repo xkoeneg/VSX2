@@ -197,6 +197,8 @@ interface TradeFeaturedCardProps {
   tradeSelectMode: boolean;
   isSelected: boolean;
   displayNumber: number;
+  theme: string;
+  tc: { text: string; textSecondary: string; textMuted: string; border: string };
   onOpenDetail: (id: string) => void;
   onToggleSelected: (id: string) => void;
 }
@@ -207,24 +209,37 @@ const tradeFeaturedCardPropsAreEqual = (prev: TradeFeaturedCardProps, next: Trad
   prev.privacyMode === next.privacyMode &&
   prev.tradeSelectMode === next.tradeSelectMode &&
   prev.isSelected === next.isSelected &&
-  prev.displayNumber === next.displayNumber;
+  prev.displayNumber === next.displayNumber &&
+  prev.theme === next.theme;
 
 const TradeFeaturedCard = memo(function TradeFeaturedCard({
-  trade, accountDisplayName, privacyMode, tradeSelectMode, isSelected, displayNumber, onOpenDetail, onToggleSelected,
+  trade, accountDisplayName, privacyMode, tradeSelectMode, isSelected, displayNumber, theme, tc, onOpenDetail, onToggleSelected,
 }: TradeFeaturedCardProps) {
   const coverImage = trade.executionImages[0]?.url || trade.timeframes.flatMap(tf => tf.images)[0]?.url;
   const isWin = trade.profitLoss >= 0;
   const isBreakeven = Math.abs(trade.profitLoss) < 10;
-  const outcomeCardClass = isBreakeven
-    ? 'bg-zinc-800/50 group-hover:bg-zinc-800/70'
-    : isWin
-      ? 'bg-emerald-900 border-t-0 shadow-none group-hover:bg-emerald-800'
-      : 'bg-rose-900 border-t-0 shadow-none group-hover:bg-rose-800';
-  const outcomeBorderClass = isBreakeven
-    ? 'border-zinc-700 hover:border-zinc-500'
-    : isWin
-      ? 'border-emerald-800 hover:border-emerald-600'
-      : 'border-rose-800 hover:border-rose-600';
+  const outcomeCardClass = theme !== 'light'
+    ? (isBreakeven
+        ? 'bg-zinc-800/50 group-hover:bg-zinc-800/70'
+        : isWin
+          ? 'bg-emerald-500/10 border-t-0 group-hover:bg-emerald-500/15'
+          : 'bg-rose-500/10 border-t-0 group-hover:bg-rose-500/15')
+    : (isBreakeven
+        ? 'bg-zinc-50 group-hover:bg-zinc-100'
+        : isWin
+          ? 'bg-emerald-50 border-t-0 group-hover:bg-emerald-100'
+          : 'bg-rose-50 border-t-0 group-hover:bg-rose-100');
+  const outcomeBorderClass = theme !== 'light'
+    ? (isBreakeven
+        ? 'border-zinc-700 hover:border-zinc-500'
+        : isWin
+          ? 'border-emerald-500/30 hover:border-emerald-500/50'
+          : 'border-rose-500/30 hover:border-rose-500/50')
+    : (isBreakeven
+        ? 'border-zinc-200 hover:border-zinc-300'
+        : isWin
+          ? 'border-emerald-300 hover:border-emerald-400'
+          : 'border-rose-300 hover:border-rose-400');
 
   // CRITICAL: while in select mode, a click anywhere on the card (including the
   // checkbox overlay) must ONLY toggle selection — it must never open the Trade
@@ -250,16 +265,17 @@ const TradeFeaturedCard = memo(function TradeFeaturedCard({
         // transform-gpu + backface-hidden push the hover lift/scale onto
         // their own GPU layer so they animate via compositing instead of
         // triggering layout/paint on the whole card each frame.
-        "group h-full flex flex-col border rounded-xl overflow-hidden cursor-pointer bg-[#16181e] transition-transform transition-colors duration-200 ease-out min-w-0 shadow-[0_10px_30px_rgba(0,0,0,0.8)] transform-gpu backface-hidden will-change-transform",
+        "group h-full flex flex-col border rounded-xl overflow-hidden cursor-pointer transition-transform transition-colors duration-200 ease-out min-w-0 transform-gpu backface-hidden will-change-transform",
+        theme !== 'light' ? 'bg-zinc-900/40' : 'bg-white',
         tradeSelectMode
           ? isSelected
             ? 'border-indigo-400/80 ring-2 ring-indigo-400/40'
-            : 'border-zinc-800/70 hover:border-zinc-600'
-          : cn(outcomeBorderClass, 'hover:-translate-y-0.5 hover:shadow-[0_16px_40px_rgba(0,0,0,0.9)]')
+            : theme !== 'light' ? 'border-zinc-800/70 hover:border-zinc-600' : 'border-zinc-200 hover:border-zinc-300'
+          : cn(outcomeBorderClass, 'hover:-translate-y-0.5')
       )}
     >
       <div className="aspect-video bg-zinc-800 flex items-center justify-center relative overflow-hidden flex-shrink-0">
-        <span className="absolute top-2 left-2 z-10 flex items-center justify-center w-5 h-5 rounded bg-black/60 text-[10px] font-mono font-bold text-zinc-300 border border-white/10 backdrop-blur-md shadow-[0_1px_4px_rgba(0,0,0,0.6)]">
+        <span className="absolute top-2 left-2 z-10 flex items-center justify-center w-5 h-5 rounded bg-black/60 text-[10px] font-mono font-bold text-zinc-300 border border-white/10">
           {displayNumber}
         </span>
         {tradeSelectMode && (
@@ -286,7 +302,12 @@ const TradeFeaturedCard = memo(function TradeFeaturedCard({
         {/* Badge row at the bottom of the thumbnail — hidden entirely for unreviewed trades */}
         {trade.rulesFollowed === 'followed' || trade.rulesFollowed === 'broken' ? (
           <div className="absolute bottom-0 left-0 right-0 z-10 flex items-center justify-end gap-1.5 px-2.5 py-1.5 bg-gradient-to-t from-black/80 to-transparent">
-            <span className={cn('flex items-center justify-center w-4 h-4 rounded text-[9px] font-bold', trade.rulesFollowed === 'followed' ? 'bg-emerald-500 text-emerald-950' : 'bg-rose-500 text-rose-950')}>
+            <span className={cn(
+              'flex items-center justify-center w-4 h-4 rounded-full border font-bold',
+              trade.rulesFollowed === 'followed'
+                ? 'bg-emerald-500/15 border-emerald-500/40 text-emerald-400'
+                : 'bg-rose-500/15 border-rose-500/40 text-rose-400'
+            )}>
               {trade.rulesFollowed === 'followed' ? <Check className="w-2.5 h-2.5" /> : <X className="w-2.5 h-2.5" />}
             </span>
           </div>
@@ -297,15 +318,15 @@ const TradeFeaturedCard = memo(function TradeFeaturedCard({
       </div>
       <div className={cn('p-3.5 min-w-0 flex-1 flex flex-col transition-colors duration-200', outcomeCardClass)}>
         <div className="flex items-start justify-between gap-2">
-          <h4 className="font-semibold truncate tracking-tight text-sm min-w-0 text-zinc-100">{trade.symbol}</h4>
+          <h4 className={cn("font-semibold truncate tracking-tight text-sm min-w-0", tc.text)}>{trade.symbol}</h4>
           <div className="flex items-center gap-1.5 flex-shrink-0">
-            <span className={cn('text-sm font-mono font-bold tracking-tight whitespace-nowrap', isBreakeven ? 'text-zinc-300' : isWin ? 'text-emerald-300' : 'text-rose-300')}>
+            <span className={cn('text-sm font-mono font-bold tracking-tight tabular-nums whitespace-nowrap', isBreakeven ? tc.textSecondary : isWin ? 'text-emerald-400' : 'text-rose-400')}>
               {formatCurrency(trade.profitLoss, privacyMode)}
             </span>
             {trade.trackingNumber && <TrackingBadge value={trade.trackingNumber} size="sm" />}
           </div>
         </div>
-        <p className="text-xs text-zinc-300 truncate mt-0.5">{accountDisplayName}</p>
+        <p className={cn("text-xs truncate mt-0.5", tc.textSecondary)}>{accountDisplayName}</p>
         {/* Fixed-height row so cards without a session still take up the same
             vertical space as cards that have one — keeps every card (and every
             grid row) the exact same height. */}
@@ -317,10 +338,13 @@ const TradeFeaturedCard = memo(function TradeFeaturedCard({
         <div className="flex items-center justify-between gap-2 mt-auto pt-2 min-h-[26px] min-w-0">
           <div className="flex items-center gap-1.5 min-w-0 flex-wrap">
             {trade.setupTypes.slice(0, 1).map(s => (
-              <span key={s} className="px-1.5 py-0.5 bg-zinc-800/80 border border-zinc-700/50 rounded text-[10px] text-zinc-300 whitespace-nowrap">{s}</span>
+              <span key={s} className={cn(
+                "px-1.5 py-0.5 rounded-md border text-[10px] whitespace-nowrap",
+                theme !== 'light' ? 'bg-zinc-800/80 border-zinc-700/50 text-zinc-300' : 'bg-zinc-100 border-zinc-200 text-zinc-600'
+              )}>{s}</span>
             ))}
           </div>
-          <span className="text-[11px] text-zinc-400 font-medium whitespace-nowrap flex-shrink-0">{formatDate(trade.date)}</span>
+          <span className={cn("text-[11px] font-medium whitespace-nowrap flex-shrink-0", tc.textMuted)}>{formatDate(trade.date)}</span>
         </div>
       </div>
     </div>
@@ -332,6 +356,8 @@ interface TradeRowProps {
   accountDisplayName: string | undefined;
   privacyMode: boolean;
   displayNumber: number;
+  theme: string;
+  tc: { text: string; textSecondary: string; textMuted: string; border: string };
   onOpenDetail: (id: string) => void;
 }
 
@@ -339,9 +365,10 @@ const tradeRowPropsAreEqual = (prev: TradeRowProps, next: TradeRowProps) =>
   prev.trade === next.trade &&
   prev.accountDisplayName === next.accountDisplayName &&
   prev.privacyMode === next.privacyMode &&
-  prev.displayNumber === next.displayNumber;
+  prev.displayNumber === next.displayNumber &&
+  prev.theme === next.theme;
 
-const TradeRow = memo(function TradeRow({ trade, accountDisplayName, privacyMode, displayNumber, onOpenDetail }: TradeRowProps) {
+const TradeRow = memo(function TradeRow({ trade, accountDisplayName, privacyMode, displayNumber, theme, tc, onOpenDetail }: TradeRowProps) {
   const isWin = trade.profitLoss >= 0;
   const isBreakeven = Math.abs(trade.profitLoss) < 10;
   const rowRR = trade.riskAmount > 0 ? trade.profitLoss / trade.riskAmount : null;
@@ -349,43 +376,57 @@ const TradeRow = memo(function TradeRow({ trade, accountDisplayName, privacyMode
   return (
     <tr
       onClick={() => onOpenDetail(trade.id)}
-      className="border-b border-zinc-800/70 hover:bg-white/[0.02] cursor-pointer transition-colors"
+      className={cn(
+        "cursor-pointer transition-colors",
+        theme !== 'light' ? 'border-b border-zinc-800/70 hover:bg-white/[0.02]' : 'border-b border-zinc-200 hover:bg-zinc-50'
+      )}
     >
       <td className="px-3 py-2.5">
         <span className={cn(
-          'text-[10px] font-bold px-2 py-0.5 rounded uppercase tracking-wide',
-          isBreakeven ? 'bg-zinc-700/40 text-zinc-300' : isWin ? 'bg-emerald-500/15 text-emerald-400' : 'bg-rose-500/10 text-rose-500'
+          'text-[10px] font-bold px-2 py-0.5 rounded-full border uppercase tracking-wide',
+          isBreakeven
+            ? (theme !== 'light' ? 'bg-zinc-700/40 border-zinc-600/40 text-zinc-300' : 'bg-zinc-100 border-zinc-200 text-zinc-600')
+            : isWin
+              ? 'bg-emerald-500/15 border-emerald-500/40 text-emerald-400'
+              : 'bg-rose-500/15 border-rose-500/40 text-rose-400'
         )}>
           {isBreakeven ? 'B/E' : isWin ? 'Win' : 'Loss'}
         </span>
       </td>
-      <td className="px-3 py-2.5 text-sm whitespace-nowrap text-zinc-400">{formatDate(trade.date)}</td>
+      <td className={cn("px-3 py-2.5 text-sm whitespace-nowrap", tc.textMuted)}>{formatDate(trade.date)}</td>
       <td className="px-3 py-2.5">
         <div className="flex items-center gap-1.5 min-w-0">
-          <span className="text-sm text-zinc-500 font-mono flex-shrink-0">{displayNumber}</span>
+          <span className={cn("text-sm font-mono tabular-nums flex-shrink-0", tc.textMuted)}>{displayNumber}</span>
           {trade.trackingNumber && <TrackingBadge value={trade.trackingNumber} size="sm" />}
         </div>
       </td>
-      <td className="px-3 py-2.5 text-sm text-zinc-400">
+      <td className={cn("px-3 py-2.5 text-sm", tc.textMuted)}>
         {trade.session ? (SESSION_SHORT_LABEL[trade.session] || trade.session.toLowerCase()) : '-'}
       </td>
-      <td className="px-3 py-2.5 text-sm text-zinc-400">{position}</td>
-      <td className="px-3 py-2.5 text-sm font-mono text-right font-bold whitespace-nowrap">
-        <span className={isWin ? 'text-emerald-400' : 'text-rose-500'}>{formatCurrency(trade.profitLoss, privacyMode)}</span>
+      <td className={cn("px-3 py-2.5 text-sm", tc.textMuted)}>{position}</td>
+      <td className="px-3 py-2.5 text-sm font-mono tabular-nums text-right font-bold whitespace-nowrap">
+        <span className={isWin ? 'text-emerald-400' : 'text-rose-400'}>{formatCurrency(trade.profitLoss, privacyMode)}</span>
       </td>
       <td className="px-3 py-2.5 text-xs font-medium text-right whitespace-nowrap">
         {rowRR !== null ? (
-          <span className={cn('px-1.5 py-0.5 rounded border', rowRR >= 1 ? 'text-emerald-400 border-emerald-500/30 bg-emerald-500/10' : rowRR >= 0 ? 'text-zinc-300 border-zinc-700 bg-zinc-800/60' : 'text-rose-500 border-rose-500/30 bg-rose-500/10')}>
+          <span className={cn(
+            'px-1.5 py-0.5 rounded border tabular-nums',
+            rowRR >= 1
+              ? 'text-emerald-400 border-emerald-500/30 bg-emerald-500/10'
+              : rowRR >= 0
+                ? cn(tc.textSecondary, theme !== 'light' ? 'border-zinc-700 bg-zinc-800/60' : 'border-zinc-200 bg-zinc-100')
+                : 'text-rose-400 border-rose-500/30 bg-rose-500/10'
+          )}>
             {rowRR >= 1 ? '+' : ''}{rowRR.toFixed(2)}R
           </span>
         ) : '-'}
       </td>
-      <td className="px-3 py-2.5 text-sm text-right whitespace-nowrap text-zinc-400">
+      <td className={cn("px-3 py-2.5 text-sm text-right tabular-nums whitespace-nowrap", tc.textMuted)}>
         {trade.riskAmount > 0 ? formatCurrencyAbsolute(trade.riskAmount, privacyMode) : '-'}
       </td>
-      <td className="px-3 py-2.5 text-sm text-white font-semibold truncate max-w-[100px]">{trade.symbol}</td>
-      <td className="px-3 py-2.5 text-sm truncate max-w-[120px] text-zinc-400">{trade.setupTypes.join(', ') || '-'}</td>
-      <td className="px-3 py-2.5 text-sm truncate max-w-[120px] text-zinc-400">{accountDisplayName || '-'}</td>
+      <td className={cn("px-3 py-2.5 text-sm font-semibold truncate max-w-[100px]", tc.text)}>{trade.symbol}</td>
+      <td className={cn("px-3 py-2.5 text-sm truncate max-w-[120px]", tc.textMuted)}>{trade.setupTypes.join(', ') || '-'}</td>
+      <td className={cn("px-3 py-2.5 text-sm truncate max-w-[120px]", tc.textMuted)}>{accountDisplayName || '-'}</td>
     </tr>
   );
 }, tradeRowPropsAreEqual);
@@ -451,7 +492,7 @@ function TradeAnalyticsCard({ trades, stats, privacyMode, theme, tc, tradeFilter
   // Discipline Tracker stat tiles, just with a touch more breathing room
   // (p-5) than the very first compact pass so it doesn't feel cramped.
   const cardClass = cn(
-    "bg-zinc-900/50 border border-white/10 rounded-xl p-6 backdrop-blur-md hover:border-white/20 transition-all flex items-center gap-3",
+    "bg-zinc-900/50 border border-white/10 rounded-xl p-6 hover:border-white/20 transition-all flex items-center gap-3",
     theme === 'light' && 'bg-white border-zinc-200'
   );
   const iconCircleClass = "p-3 rounded-xl flex-shrink-0";
@@ -463,11 +504,11 @@ function TradeAnalyticsCard({ trades, stats, privacyMode, theme, tc, tradeFilter
         <div className={cn(iconCircleClass, isNetPositive ? "bg-emerald-500/10" : "bg-rose-500/10")}>
           {isNetPositive
             ? <TrendingUp className="w-5 h-5 text-emerald-400" />
-            : <TrendingDown className="w-5 h-5 text-rose-500" />}
+            : <TrendingDown className="w-5 h-5 text-rose-400" />}
         </div>
         <div className="min-w-0">
           <p className={cn("text-[10px] font-semibold tracking-wider uppercase", tc.textMuted)}>Net P&amp;L</p>
-          <p className={cn("text-xl font-bold tabular-nums leading-tight", isNetPositive ? 'text-emerald-400' : 'text-rose-500')}>
+          <p className={cn("text-xl font-bold tabular-nums leading-tight", isNetPositive ? 'text-emerald-400' : 'text-rose-400')}>
             {formatCurrency(netPnl, privacyMode)}
           </p>
         </div>
@@ -524,7 +565,7 @@ function TradeAnalyticsCard({ trades, stats, privacyMode, theme, tc, tradeFilter
               type="button"
               onClick={() => setTradeFilter(prev => prev === 'loss' ? 'all' : 'loss')}
               className={cn(
-                "text-rose-500 rounded transition-colors",
+                "text-rose-400 rounded transition-colors",
                 tradeFilter === 'loss' ? 'ring-1 ring-rose-500/40 bg-rose-500/10 px-1' : 'hover:text-rose-400'
               )}
             >
@@ -558,7 +599,7 @@ function TradeAnalyticsCard({ trades, stats, privacyMode, theme, tc, tradeFilter
             <span className={cn("text-xs font-medium tabular-nums ml-1.5", tc.textMuted)}>
               <span className="text-emerald-500">{formatCurrency(stats.avgWin, privacyMode)}</span>
               <span className="mx-0.5">/</span>
-              <span className="text-rose-500">{formatCurrency(-stats.avgLoss, privacyMode)}</span>
+              <span className="text-rose-400">{formatCurrency(-stats.avgLoss, privacyMode)}</span>
             </span>
           </p>
         </div>
@@ -806,6 +847,8 @@ export function TradesScreen() {
       tradeSelectMode={tradeSelectMode}
       isSelected={selectedTradeIds.includes(trade.id)}
       displayNumber={getDisplayTradeNumber(trade)}
+      theme={theme}
+      tc={tc}
       onOpenDetail={handleOpenTradeDetail}
       onToggleSelected={handleToggleTradeSelected}
     />
@@ -956,7 +999,7 @@ export function TradesScreen() {
             <div className="overflow-x-auto">
               <table className="w-full min-w-[980px]">
                 <thead>
-                  <tr className="border-b border-zinc-800/70 text-left bg-white/[0.02]">
+                  <tr className={cn("text-left", theme !== 'light' ? 'border-b border-zinc-800/70 bg-white/[0.02]' : 'border-b border-zinc-200 bg-zinc-50')}>
                     <th className={cn("px-3 py-2.5 text-[11px] uppercase tracking-wider font-medium", tc.textMuted)}>#</th>
                     <th className={cn("px-3 py-2.5 text-[11px] uppercase tracking-wider font-medium", tc.textMuted)}>Date</th>
                     <th className={cn("px-3 py-2.5 text-[11px] uppercase tracking-wider font-medium", tc.textMuted)}>Account</th>
@@ -1024,8 +1067,8 @@ export function TradesScreen() {
                         <td className={cn("px-3 py-2.5 text-sm font-semibold truncate max-w-[100px]", tc.text)}>{trade.symbol}</td>
                         <td className="px-3 py-2.5 whitespace-nowrap">
                           <span className={cn(
-                            'text-[10px] font-bold px-2 py-0.5 rounded uppercase tracking-wide',
-                            isWin ? 'bg-emerald-500/15 text-emerald-400' : 'bg-rose-500/15 text-rose-500'
+                            'text-[10px] font-bold px-2 py-0.5 rounded-full border uppercase tracking-wide',
+                            isWin ? 'bg-emerald-500/15 border-emerald-500/40 text-emerald-400' : 'bg-rose-500/15 border-rose-500/40 text-rose-400'
                           )}>
                             {side}
                           </span>
@@ -1042,13 +1085,13 @@ export function TradesScreen() {
                         </td>
                         <td className="px-3 py-2.5 text-xs font-medium text-right whitespace-nowrap">
                           {rowRR !== null ? (
-                            <span className={cn('px-1.5 py-0.5 rounded border', rowRR >= 1 ? 'text-emerald-400 border-emerald-500/30 bg-emerald-500/10' : rowRR >= 0 ? 'text-zinc-300 border-zinc-700 bg-zinc-800/60' : 'text-rose-500 border-rose-500/30 bg-rose-500/10')}>
+                            <span className={cn('px-1.5 py-0.5 rounded border tabular-nums', rowRR >= 1 ? 'text-emerald-400 border-emerald-500/30 bg-emerald-500/10' : rowRR >= 0 ? cn(tc.textSecondary, theme !== 'light' ? 'border-zinc-700 bg-zinc-800/60' : 'border-zinc-200 bg-zinc-100') : 'text-rose-400 border-rose-500/30 bg-rose-500/10')}>
                               {rowRR >= 1 ? '+' : ''}{rowRR.toFixed(2)}R
                             </span>
                           ) : '-'}
                         </td>
-                        <td className="px-3 py-2.5 text-sm font-mono text-right font-bold whitespace-nowrap">
-                          <span className={isWin ? 'text-emerald-400' : 'text-rose-500'}>{formatCurrency(trade.profitLoss, privacyMode)}</span>
+                        <td className="px-3 py-2.5 text-sm font-mono tabular-nums text-right font-bold whitespace-nowrap">
+                          <span className={isWin ? 'text-emerald-400' : 'text-rose-400'}>{formatCurrency(trade.profitLoss, privacyMode)}</span>
                         </td>
                         <td className="px-3 py-2.5 text-right whitespace-nowrap">
                           {!tradeSelectMode && (
@@ -1379,11 +1422,11 @@ export function TradesScreen() {
               )}
             </div>
           ) : (
-          <div className="bg-zinc-900/40 border border-zinc-800/80 rounded-xl overflow-hidden">
+          <div className={cn("rounded-xl overflow-hidden border", theme !== 'light' ? 'bg-zinc-900/40 border-zinc-800/80' : 'bg-white border-zinc-200')}>
             <div className="overflow-x-auto">
               <table className="w-full min-w-[1100px]">
                 <thead>
-                  <tr className="border-b border-zinc-800/70 text-left bg-white/[0.02]">
+                  <tr className={cn("text-left", theme !== 'light' ? 'border-b border-zinc-800/70 bg-white/[0.02]' : 'border-b border-zinc-200 bg-zinc-50')}>
                     <th className={cn("px-3 py-2.5 text-[11px] uppercase tracking-wider font-medium", tc.textMuted)}>Outcome</th>
                     <th className={cn("px-3 py-2.5 text-[11px] uppercase tracking-wider font-medium", tc.textMuted)}>Date</th>
                     <th className={cn("px-3 py-2.5 text-[11px] uppercase tracking-wider font-medium", tc.textMuted)}>Trade #</th>
@@ -1405,6 +1448,8 @@ export function TradesScreen() {
                       accountDisplayName={accountDisplayNameById.get(trade.accountId)}
                       privacyMode={privacyMode}
                       displayNumber={getDisplayTradeNumber(trade)}
+                      theme={theme}
+                      tc={tc}
                       onOpenDetail={handleOpenTradeDetail}
                     />
                   ))}
@@ -1414,8 +1459,8 @@ export function TradesScreen() {
 
             {/* Pagination */}
             {dbPageCount > 1 && (
-              <div className="flex items-center justify-between px-4 py-3 border-t border-white/10 flex-wrap gap-2">
-                <p className="text-xs text-zinc-500">
+              <div className={cn("flex items-center justify-between px-4 py-3 border-t flex-wrap gap-2", theme !== 'light' ? 'border-white/10' : 'border-zinc-200')}>
+                <p className={cn("text-xs", tc.textMuted)}>
                   Page {dbPage + 1} of {dbPageCount} · {dbFilteredTrades.length} total
                 </p>
                 <div className="flex items-center gap-1.5">
@@ -1423,17 +1468,25 @@ export function TradesScreen() {
                     type="button"
                     onClick={() => setDbPage(p => Math.max(0, p - 1))}
                     disabled={dbPage === 0}
-                    className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs text-zinc-300 hover:bg-white/5 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                    className={cn(
+                      "flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs disabled:opacity-30 disabled:cursor-not-allowed transition-colors",
+                      tc.textSecondary,
+                      theme !== 'light' ? 'hover:bg-white/5' : 'hover:bg-zinc-100'
+                    )}
                   >
                     <ChevronLeft className="w-3.5 h-3.5" />
                     Prev
                   </button>
-                  <span className="text-xs text-zinc-500 px-2">{dbPage + 1} / {dbPageCount}</span>
+                  <span className={cn("text-xs px-2", tc.textMuted)}>{dbPage + 1} / {dbPageCount}</span>
                   <button
                     type="button"
                     onClick={() => setDbPage(p => Math.min(dbPageCount - 1, p + 1))}
                     disabled={dbPage >= dbPageCount - 1}
-                    className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs text-zinc-300 hover:bg-white/5 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                    className={cn(
+                      "flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs disabled:opacity-30 disabled:cursor-not-allowed transition-colors",
+                      tc.textSecondary,
+                      theme !== 'light' ? 'hover:bg-white/5' : 'hover:bg-zinc-100'
+                    )}
                   >
                     Next
                     <ChevronRight className="w-3.5 h-3.5" />
