@@ -497,7 +497,7 @@ export function PlaybookScreen() {
           {/* SECTION 1b: DAILY TRADING CREED / OPERATING MANIFESTO — quote card, matches Strategy Models column height */}
           <div className="min-w-0 lg:col-span-1 h-full">
             <div
-              className="h-full flex flex-col rounded-2xl p-6 relative overflow-hidden border border-emerald-500/20 backdrop-blur-sm"
+              className="h-full flex flex-col rounded-xl p-6 relative overflow-hidden border border-emerald-500/20 backdrop-blur-sm"
               style={{
                 background: 'radial-gradient(120% 100% at 100% 0%, rgba(16,185,129,0.16) 0%, rgba(8,145,178,0.08) 35%, rgba(15,15,20,0.92) 65%), linear-gradient(160deg, rgba(24,25,32,0.95), rgba(9,10,14,0.98))',
               }}
