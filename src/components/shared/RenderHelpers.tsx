@@ -32,7 +32,7 @@ function StatCardInner({ title, value, icon, color }: {
         ? 'bg-zinc-900/40 border border-zinc-800/80 hover:border-zinc-700 hover:bg-zinc-900/70'
         : 'bg-white border border-zinc-200 hover:border-zinc-300 hover:bg-zinc-50'
     )}>
-      <div className={cn('p-2.5 rounded-lg flex-shrink-0', theme !== 'light' ? 'bg-zinc-800/60' : 'bg-zinc-100', color)}>{icon}</div>
+      <div className={cn('p-2.5 rounded-xl flex-shrink-0', theme !== 'light' ? 'bg-zinc-800/60' : 'bg-zinc-100', color)}>{icon}</div>
       <div className="min-w-0 flex-1">
         <p className={cn("text-[11px] uppercase tracking-wider truncate font-medium", tc.textMuted)}>{title}</p>
         <p className={cn('text-lg font-semibold truncate tabular-nums',
@@ -77,12 +77,17 @@ export const renderAccountTypeBadge = (account: Account) => {
 // control used in the Dashboard, Trade History, and Performance Calendar
 // page headers.
 export const renderAccountFilter = () => {
-  const { accountDropdownRef, showAccountDropdown, setShowAccountDropdown, selectedAccounts, setSelectedAccounts, accounts } = useAppContext();
+  const { accountDropdownRef, showAccountDropdown, setShowAccountDropdown, selectedAccounts, setSelectedAccounts, accounts, theme } = useAppContext();
   return (
     <div className="relative" ref={accountDropdownRef}>
       <button
         onClick={() => setShowAccountDropdown(!showAccountDropdown)}
-        className="h-9 flex items-center gap-2 px-3 rounded-lg text-xs font-medium border border-zinc-700 bg-zinc-800 text-zinc-300 transition-colors hover:bg-zinc-700"
+        className={cn(
+          "h-9 flex items-center gap-2 px-3 rounded-lg text-xs font-medium border transition-colors",
+          theme !== 'light'
+            ? 'bg-zinc-800 border-zinc-700/50 text-zinc-300 hover:bg-zinc-700'
+            : 'bg-zinc-100 border-zinc-200 text-zinc-700 hover:bg-zinc-200'
+        )}
       >
         <Filter className="w-4 h-4 flex-shrink-0" />
         <span className="hidden sm:inline truncate max-w-[120px]">{selectedAccounts.includes('all') ? 'All Accounts' : `${selectedAccounts.length} Selected`}</span>
