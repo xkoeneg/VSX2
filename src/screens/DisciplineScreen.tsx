@@ -718,7 +718,7 @@ export function DisciplineScreen() {
                       className={cn(
                         'w-full h-full rounded-md border transition-colors',
                         filled
-                          ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/50'
+                          ? 'bg-emerald-500/15 text-emerald-400 border-emerald-500/40'
                           : theme !== 'light' ? 'bg-zinc-800/40 border-zinc-700/40' : 'bg-zinc-100 border-zinc-200'
                       )}
                     />
@@ -841,7 +841,7 @@ export function DisciplineScreen() {
                               const tradeAccount = accounts.find(a => a.id === t.accountId);
                               return (
                                 <div key={t.id} className={cn(
-                                  "rounded-xl p-3 pb-3 mb-2.5 border",
+                                  "rounded-lg p-3 pb-3 mb-2.5 border",
                                   theme !== 'light' ? 'bg-zinc-800/60 border-white/10' : 'bg-zinc-50 border-zinc-200'
                                 )}>
                                   <div className="flex items-center justify-between gap-2">
@@ -950,8 +950,8 @@ export function DisciplineScreen() {
             </select>
           </div>
 
-          <div className="flex items-center gap-3 p-3 rounded-xl bg-gradient-to-br from-amber-500/10 to-transparent border border-amber-500/20 mb-5">
-            <div className="w-10 h-10 rounded-lg bg-amber-500/15 border border-amber-500/25 flex items-center justify-center flex-shrink-0">
+          <div className="flex items-center gap-3 p-3 rounded-lg bg-gradient-to-br from-amber-500/10 to-transparent border border-amber-500/30 mb-5">
+            <div className="w-10 h-10 rounded-md bg-amber-500/15 border border-amber-500/30 flex items-center justify-center flex-shrink-0">
               <Flame className="w-5 h-5 text-amber-400" />
             </div>
             <div className="min-w-0">
@@ -1085,7 +1085,7 @@ export function DisciplineScreen() {
                 <span className="flex items-center gap-1.5 text-sm font-semibold text-emerald-400 truncate">
                   <CheckCircle2 className="w-4 h-4 flex-shrink-0" /> Followed
                 </span>
-                <span className={cn('text-xs font-mono flex-shrink-0 px-2 py-0.5 rounded', tc.textSecondary, theme !== 'light' ? 'bg-zinc-800/60' : 'bg-zinc-100')}>{followedTrades.length}</span>
+                <span className={cn('text-xs font-mono flex-shrink-0 px-2 py-0.5 rounded-full', tc.textSecondary, theme !== 'light' ? 'bg-zinc-800/60' : 'bg-zinc-100')}>{followedTrades.length}</span>
               </div>
               <div className="space-y-2 flex-1 overflow-y-auto max-h-[420px] pr-1 overscroll-contain" onWheel={(e) => e.stopPropagation()}>
                 {followedTrades.map(trade => {
@@ -1129,7 +1129,7 @@ export function DisciplineScreen() {
                 <span className="flex items-center gap-1.5 text-sm font-semibold text-rose-400 truncate">
                   <XCircle className="w-4 h-4 flex-shrink-0" /> Broken
                 </span>
-                <span className={cn('text-xs font-mono flex-shrink-0 px-2 py-0.5 rounded', tc.textSecondary, theme !== 'light' ? 'bg-zinc-800/60' : 'bg-zinc-100')}>{brokenTrades.length}</span>
+                <span className={cn('text-xs font-mono flex-shrink-0 px-2 py-0.5 rounded-full', tc.textSecondary, theme !== 'light' ? 'bg-zinc-800/60' : 'bg-zinc-100')}>{brokenTrades.length}</span>
               </div>
               <div className="space-y-2 flex-1 overflow-y-auto max-h-[420px] pr-1 overscroll-contain" onWheel={(e) => e.stopPropagation()}>
                 {brokenTrades.map(trade => {
