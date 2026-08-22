@@ -905,7 +905,7 @@ export function TradesScreen() {
       {tradeSelectMode && (
         <div className={cn(
           'flex items-center justify-between flex-wrap gap-3 px-4 py-3 rounded-xl border sticky top-0 z-20',
-          theme !== 'light' ? 'bg-zinc-900/95 border-zinc-800/80' : 'bg-white/95 border-zinc-200'
+          tc.bg, tc.border
         )}>
           <div className="flex items-center gap-3">
             <button
@@ -1542,7 +1542,7 @@ export function TradesScreen() {
           style={{ animation: 'tradeImportToastIn 0.25s ease-out' }}
           className={cn(
             'fixed bottom-6 right-6 z-[60] max-w-sm px-4 py-3 rounded-lg border text-sm font-medium shadow-2xl select-none',
-            theme !== 'light' ? 'bg-zinc-900' : 'bg-white',
+            tc.bg,
             tradeImportToast.type === 'success' ? 'border-emerald-500/40 text-emerald-400' : 'border-rose-500/40 text-rose-400'
           )}
         >
