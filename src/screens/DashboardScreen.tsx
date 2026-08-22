@@ -317,6 +317,7 @@ export function DashboardScreen() {
     const chartWidth = Math.max(equityChartWidth, 200);
     const isPositive = stats.totalPnL >= 0;
     const strokeColor = isPositive ? '#10b981' : '#f43f5e';
+    const midlineColor = theme !== 'light' ? '#3f3f46' : '#d4d4d8';
     const gradientId = `equityFill-${isPositive ? 'up' : 'down'}`;
 
     // Y-axis domain padding: a small percentage of the data range, just
@@ -359,7 +360,7 @@ export function DashboardScreen() {
               <stop offset="100%" stopColor={strokeColor} stopOpacity="0" />
             </linearGradient>
           </defs>
-          <line x1="0" y1={midY} x2={chartWidth} y2={midY} stroke="#3f3f46" strokeWidth="1" strokeDasharray="4" vectorEffect="non-scaling-stroke" />
+          <line x1="0" y1={midY} x2={chartWidth} y2={midY} stroke={midlineColor} strokeWidth="1" strokeDasharray="4" vectorEffect="non-scaling-stroke" />
           <path d={areaPath} fill={`url(#${gradientId})`} />
           <path d={linePath} fill="none" stroke={strokeColor} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" vectorEffect="non-scaling-stroke" />
         </svg>
@@ -583,15 +584,15 @@ export function DashboardScreen() {
               </div>
             </div>
             <div className="flex flex-wrap gap-2 flex-shrink-0">
-              <div className={cn("px-3 py-2 rounded-xl min-w-[84px]", theme !== 'light' ? 'bg-zinc-800/50' : 'bg-zinc-100')}>
+              <div className={cn("px-3 py-2 rounded-lg min-w-[84px]", theme !== 'light' ? 'bg-zinc-800/50' : 'bg-zinc-100')}>
                 <p className={cn("text-[10px] uppercase tracking-wider", tc.textMuted)}>Trades</p>
                 <p className={cn("text-sm font-semibold tabular-nums", tc.text)}>{stats.totalTrades}</p>
               </div>
-              <div className={cn("px-3 py-2 rounded-xl min-w-[84px]", theme !== 'light' ? 'bg-zinc-800/50' : 'bg-zinc-100')}>
+              <div className={cn("px-3 py-2 rounded-lg min-w-[84px]", theme !== 'light' ? 'bg-zinc-800/50' : 'bg-zinc-100')}>
                 <p className={cn("text-[10px] uppercase tracking-wider", tc.textMuted)}>Win Rate</p>
                 <p className={cn("text-sm font-semibold tabular-nums", tc.text)}>{stats.winRate.toFixed(1)}%</p>
               </div>
-              <div className={cn("px-3 py-2 rounded-xl min-w-[84px]", theme !== 'light' ? 'bg-zinc-800/50' : 'bg-zinc-100')}>
+              <div className={cn("px-3 py-2 rounded-lg min-w-[84px]", theme !== 'light' ? 'bg-zinc-800/50' : 'bg-zinc-100')}>
                 <p className={cn("text-[10px] uppercase tracking-wider", tc.textMuted)}>Profit Factor</p>
                 <p className={cn("text-sm font-semibold tabular-nums", tc.text)}>{isFinite(stats.profitFactor) ? stats.profitFactor.toFixed(2) : 'N/A'}</p>
               </div>
@@ -715,7 +716,7 @@ export function DashboardScreen() {
             ? 'bg-zinc-900/40 border border-zinc-800/80 hover:border-zinc-700 hover:bg-zinc-900/70'
             : 'bg-white border border-zinc-200 hover:border-zinc-300 hover:bg-zinc-50'
         )}>
-          <div className={cn('p-2.5 rounded-xl flex-shrink-0', theme !== 'light' ? 'bg-zinc-800/60' : 'bg-zinc-100')}>
+          <div className={cn('p-2.5 rounded-lg flex-shrink-0', theme !== 'light' ? 'bg-zinc-800/60' : 'bg-zinc-100')}>
             <Scale className="w-4 h-4 text-zinc-400" />
           </div>
           <div className="min-w-0 flex-1">
@@ -743,7 +744,7 @@ export function DashboardScreen() {
             : 'bg-white border border-zinc-200 hover:border-zinc-300 hover:bg-zinc-50'
         )}>
           <div className={cn(
-            'p-2.5 rounded-xl flex-shrink-0',
+            'p-2.5 rounded-lg flex-shrink-0',
             stats.disciplineStreak > 0
               ? 'bg-amber-500/10 text-amber-400'
               : theme !== 'light' ? 'bg-zinc-800/60 text-zinc-400' : 'bg-zinc-100 text-zinc-400'
