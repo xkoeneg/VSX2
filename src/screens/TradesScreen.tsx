@@ -340,7 +340,7 @@ const TradeFeaturedCard = memo(function TradeFeaturedCard({
             {trade.setupTypes.slice(0, 1).map(s => (
               <span key={s} className={cn(
                 "px-2 py-0.5 rounded text-[10px] whitespace-nowrap truncate max-w-[100px] inline-block",
-                theme !== 'light' ? 'bg-zinc-500/20 text-zinc-300' : 'bg-zinc-500/20 text-zinc-600'
+                "bg-zinc-500/20 text-zinc-400"
               )}>{s}</span>
             ))}
           </div>
@@ -410,7 +410,7 @@ const TradeRow = memo(function TradeRow({ trade, accountDisplayName, privacyMode
       <td className="px-3 py-2.5 text-xs font-medium text-right whitespace-nowrap">
         {rowRR !== null ? (
           <span className={cn(
-            'px-1.5 py-0.5 rounded border tabular-nums',
+            'px-2 py-0.5 rounded border tabular-nums',
             rowRR >= 1
               ? 'text-emerald-400 border-emerald-500/30 bg-emerald-500/10'
               : rowRR >= 0
@@ -873,9 +873,7 @@ export function TradesScreen() {
               className={cn(
                 'flex items-center gap-2 px-3 sm:px-4 py-2 rounded-lg text-sm transition-colors border',
                 tradeSelectMode
-                  ? (theme !== 'light'
-                      ? 'bg-zinc-100 text-zinc-900 border-zinc-100 hover:bg-zinc-300'
-                      : 'bg-zinc-900 text-white border-zinc-900 hover:bg-zinc-700')
+                  ? 'bg-indigo-500/15 border-indigo-500/40 text-indigo-400 hover:bg-indigo-500/25'
                   : tc.btnSecondary
               )}
             >
@@ -889,7 +887,7 @@ export function TradesScreen() {
               title={isImportingTrades ? 'Importing…' : 'Import MT4/MT5'}
               aria-label={isImportingTrades ? 'Importing…' : 'Import MT4/MT5'}
               className={cn(
-                'flex items-center justify-center w-9 h-9 rounded-lg transition-colors border flex-shrink-0',
+                'flex items-center justify-center w-8 h-8 rounded-lg transition-colors border flex-shrink-0',
                 tc.btnSecondary,
                 isImportingTrades && 'opacity-60 cursor-not-allowed'
               )}
@@ -907,7 +905,7 @@ export function TradesScreen() {
       {tradeSelectMode && (
         <div className={cn(
           'flex items-center justify-between flex-wrap gap-3 px-4 py-3 rounded-xl border sticky top-0 z-20',
-          theme !== 'light' ? 'bg-zinc-900 border-zinc-800' : 'bg-white border-zinc-200'
+          theme !== 'light' ? 'bg-zinc-900/95 border-zinc-800/80' : 'bg-white/95 border-zinc-200'
         )}>
           <div className="flex items-center gap-3">
             <button
@@ -1060,7 +1058,7 @@ export function TradesScreen() {
                               </button>
                             )}
                             <span className={cn(
-                              "inline-flex items-center justify-center min-w-[1.5rem] px-1.5 py-0.5 rounded-md border text-[11px] font-mono font-semibold tabular-nums",
+                              "inline-flex items-center justify-center min-w-[1.5rem] px-2 py-0.5 rounded-md border text-[11px] font-mono font-semibold tabular-nums",
                               theme !== 'light' ? 'bg-zinc-800/80 border-zinc-700/50 text-zinc-300' : 'bg-zinc-100 border-zinc-200 text-zinc-600'
                             )}>
                               {getDisplayTradeNumber(trade)}
@@ -1088,14 +1086,14 @@ export function TradesScreen() {
                             {trade.setupTypes.length > 0 ? trade.setupTypes.slice(0, 2).map(s => (
                               <span key={s} className={cn(
                                 "px-2 py-0.5 rounded text-[10px] whitespace-nowrap truncate max-w-[100px] inline-block",
-                                theme !== 'light' ? 'bg-zinc-500/20 text-zinc-300' : 'bg-zinc-500/20 text-zinc-600'
+                                "bg-zinc-500/20 text-zinc-400"
                               )}>{s}</span>
                             )) : <span className={cn("text-xs", tc.textMuted)}>-</span>}
                           </div>
                         </td>
                         <td className="px-3 py-2.5 text-xs font-medium text-right whitespace-nowrap">
                           {rowRR !== null ? (
-                            <span className={cn('px-1.5 py-0.5 rounded border tabular-nums', rowRR >= 1 ? 'text-emerald-400 border-emerald-500/30 bg-emerald-500/10' : rowRR >= 0 ? cn(tc.textSecondary, theme !== 'light' ? 'border-zinc-700 bg-zinc-800/60' : 'border-zinc-200 bg-zinc-100') : 'text-rose-400 border-rose-500/30 bg-rose-500/10')}>
+                            <span className={cn('px-2 py-0.5 rounded border tabular-nums', rowRR >= 1 ? 'text-emerald-400 border-emerald-500/30 bg-emerald-500/10' : rowRR >= 0 ? cn(tc.textSecondary, theme !== 'light' ? 'border-zinc-700 bg-zinc-800/60' : 'border-zinc-200 bg-zinc-100') : 'text-rose-400 border-rose-500/30 bg-rose-500/10')}>
                               {rowRR >= 1 ? '+' : ''}{rowRR.toFixed(2)}R
                             </span>
                           ) : '-'}
@@ -1283,7 +1281,7 @@ export function TradesScreen() {
               title={isImportingTrades ? 'Importing…' : 'Import MT4/MT5'}
               aria-label={isImportingTrades ? 'Importing…' : 'Import MT4/MT5'}
               className={cn(
-                'flex items-center justify-center w-9 h-9 rounded-lg transition-colors border flex-shrink-0',
+                'flex items-center justify-center w-8 h-8 rounded-lg transition-colors border flex-shrink-0',
                 tc.btnSecondary,
                 isImportingTrades && 'opacity-60 cursor-not-allowed'
               )}
@@ -1543,8 +1541,9 @@ export function TradesScreen() {
           key={tradeImportToast.message}
           style={{ animation: 'tradeImportToastIn 0.25s ease-out' }}
           className={cn(
-            'fixed bottom-6 right-6 z-[60] max-w-sm px-4 py-3 rounded-lg border text-sm font-medium shadow-2xl select-none bg-zinc-900',
-            tradeImportToast.type === 'success' ? 'border-emerald-500/40 text-emerald-300' : 'border-rose-500/40 text-rose-300'
+            'fixed bottom-6 right-6 z-[60] max-w-sm px-4 py-3 rounded-lg border text-sm font-medium shadow-2xl select-none',
+            theme !== 'light' ? 'bg-zinc-900' : 'bg-white',
+            tradeImportToast.type === 'success' ? 'border-emerald-500/40 text-emerald-400' : 'border-rose-500/40 text-rose-400'
           )}
         >
           {tradeImportToast.message}
