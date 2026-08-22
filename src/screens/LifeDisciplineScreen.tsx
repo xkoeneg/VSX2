@@ -464,7 +464,10 @@ export function LifeDisciplineScreen() {
             Motto from the Configure Challenge modal live here, not in the
             static page header above. */}
         <div className={cn(
-          "border rounded-xl px-5 py-4 min-w-0 bg-amber-500/10 border-amber-500/30"
+          "border rounded-xl px-5 py-4 min-w-0",
+          theme !== 'light'
+            ? 'bg-gradient-to-br from-amber-500/10 via-zinc-900/50 to-zinc-900/60 border-amber-500/20'
+            : 'bg-gradient-to-br from-amber-50 via-white to-zinc-50 border-amber-500/30'
         )}>
           <p className={cn("text-base sm:text-lg font-semibold truncate flex items-center gap-2", tc.text)}>
             <Flame className="w-5 h-5 text-amber-400 flex-shrink-0" />
