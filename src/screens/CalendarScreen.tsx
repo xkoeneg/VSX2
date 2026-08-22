@@ -336,7 +336,7 @@ export function CalendarScreen() {
             </div>
             <div>
               <p className={cn('text-[11px] uppercase tracking-wider', tc.textMuted)}>Net P&L This Month</p>
-              <p className={cn('text-2xl font-bold font-mono', totalPnL >= 0 ? 'text-emerald-400' : 'text-rose-400')}>
+              <p className={cn('text-2xl font-bold font-mono tabular-nums', totalPnL >= 0 ? 'text-emerald-400' : 'text-rose-400')}>
                 {formatCurrency(totalPnL, privacyMode)}
               </p>
             </div>
@@ -344,23 +344,23 @@ export function CalendarScreen() {
           <div className="flex flex-wrap items-center gap-x-4 sm:gap-x-8 gap-y-3">
             <div>
               <p className={cn('text-[11px] uppercase tracking-wider mb-0.5', tc.textMuted)}>Trading Days</p>
-              <p className={cn('text-lg font-semibold', tc.text)}>{tradingDays}</p>
+              <p className={cn('text-lg font-semibold tabular-nums', tc.text)}>{tradingDays}</p>
             </div>
             <div>
               <p className={cn('text-[11px] uppercase tracking-wider mb-0.5', tc.textMuted)}>Winning Days</p>
-              <p className="text-lg font-semibold text-emerald-400">{winningDays}</p>
+              <p className="text-lg font-semibold tabular-nums text-emerald-400">{winningDays}</p>
             </div>
             <div>
               <p className={cn('text-[11px] uppercase tracking-wider mb-0.5', tc.textMuted)}>Losing Days</p>
-              <p className="text-lg font-semibold text-rose-400">{losingDays}</p>
+              <p className="text-lg font-semibold tabular-nums text-rose-400">{losingDays}</p>
             </div>
             <div>
               <p className={cn('text-[11px] uppercase tracking-wider mb-0.5', tc.textMuted)}>Win Rate</p>
-              <p className={cn('text-lg font-semibold', tc.text)}>{winRate.toFixed(0)}%</p>
+              <p className={cn('text-lg font-semibold tabular-nums', tc.text)}>{winRate.toFixed(0)}%</p>
             </div>
             <div>
               <p className={cn('text-[11px] uppercase tracking-wider mb-0.5', tc.textMuted)}>Trades</p>
-              <p className={cn('text-lg font-semibold', tc.text)}>{monthTrades.length}</p>
+              <p className={cn('text-lg font-semibold tabular-nums', tc.text)}>{monthTrades.length}</p>
             </div>
           </div>
         </div>
@@ -403,7 +403,7 @@ export function CalendarScreen() {
                             <span className={cn('text-xs font-medium', tc.textMuted)}>{day.day}</span>
                             {day.trades.length > 0 ? (
                               <div className="min-w-0">
-                                <p className={cn('text-sm font-bold font-mono truncate', day.pnl > 0 ? 'text-emerald-400' : day.pnl < 0 ? 'text-rose-400' : tc.textSecondary)}>
+                                <p className={cn('text-sm font-bold font-mono tabular-nums truncate', day.pnl > 0 ? 'text-emerald-400' : day.pnl < 0 ? 'text-rose-400' : tc.textSecondary)}>
                                   {formatCurrency(day.pnl, privacyMode)}
                                 </p>
                                 <p className={cn('text-[10px] mt-0.5', tc.textMuted)}>{day.trades.length} trade{day.trades.length !== 1 ? 's' : ''}</p>
@@ -427,7 +427,7 @@ export function CalendarScreen() {
                       {hasWeekData ? (
                         <>
                           <p className={cn('text-[10px] uppercase tracking-wider', tc.textMuted)}>Week {wi + 1}</p>
-                          <p className={cn('text-sm font-bold font-mono truncate', weekPnl > 0 ? 'text-emerald-400' : weekPnl < 0 ? 'text-rose-400' : tc.textSecondary)}>
+                          <p className={cn('text-sm font-bold font-mono tabular-nums truncate', weekPnl > 0 ? 'text-emerald-400' : weekPnl < 0 ? 'text-rose-400' : tc.textSecondary)}>
                             {formatCurrency(weekPnl, privacyMode)}
                           </p>
                           <p className={cn('text-[10px]', tc.textMuted)}>{weekTradingDays} day{weekTradingDays !== 1 ? 's' : ''}</p>
@@ -477,7 +477,7 @@ export function CalendarScreen() {
                             <>
                               <span className={cn('text-[10px] font-medium', tc.textMuted)}>{day.day}</span>
                               {day.trades.length > 0 ? (
-                                <p className={cn('text-[10px] font-bold font-mono truncate leading-tight', day.pnl > 0 ? 'text-emerald-400' : day.pnl < 0 ? 'text-rose-400' : tc.textSecondary)}>
+                                <p className={cn('text-[10px] font-bold font-mono tabular-nums truncate leading-tight', day.pnl > 0 ? 'text-emerald-400' : day.pnl < 0 ? 'text-rose-400' : tc.textSecondary)}>
                                   {formatCurrencyCompact(day.pnl, privacyMode)}
                                 </p>
                               ) : (
@@ -492,7 +492,7 @@ export function CalendarScreen() {
                     {hasWeekData && (
                       <div className="flex items-center justify-between px-1 text-[10px]">
                         <span className={tc.textMuted}>Week {wi + 1} · {weekTradingDays} day{weekTradingDays !== 1 ? 's' : ''}</span>
-                        <span className={cn('font-mono font-semibold', weekPnl > 0 ? 'text-emerald-400' : weekPnl < 0 ? 'text-rose-400' : tc.textSecondary)}>
+                        <span className={cn('font-mono font-semibold tabular-nums', weekPnl > 0 ? 'text-emerald-400' : weekPnl < 0 ? 'text-rose-400' : tc.textSecondary)}>
                           {formatCurrency(weekPnl, privacyMode)}
                         </span>
                       </div>
@@ -505,13 +505,13 @@ export function CalendarScreen() {
 
           <div className={cn('flex items-center gap-4 mt-4 pt-4 border-t flex-wrap', theme !== 'light' ? 'border-zinc-800/70' : 'border-zinc-200')}>
             <span className={cn('flex items-center gap-1.5 text-xs', tc.textMuted)}>
-              <span className="w-2.5 h-2.5 rounded-sm bg-emerald-500/40 border border-emerald-500/50" /> Profit
+              <span className="w-2 h-2 rounded-full bg-emerald-400 flex-shrink-0" /> Profit
             </span>
             <span className={cn('flex items-center gap-1.5 text-xs', tc.textMuted)}>
-              <span className="w-2.5 h-2.5 rounded-sm bg-rose-500/40 border border-rose-500/50" /> Loss
+              <span className="w-2 h-2 rounded-full bg-rose-400 flex-shrink-0" /> Loss
             </span>
             <span className={cn('flex items-center gap-1.5 text-xs', tc.textMuted)}>
-              <span className={cn('w-2.5 h-2.5 rounded-sm border', theme !== 'light' ? 'bg-zinc-800/60 border-zinc-700/60' : 'bg-zinc-100 border-zinc-200')} /> No trades
+              <span className="w-2 h-2 rounded-full bg-zinc-600 flex-shrink-0" /> No trades
             </span>
           </div>
         </div>
