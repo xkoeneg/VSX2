@@ -489,7 +489,7 @@ export function DashboardScreen() {
         )}
 
         {isFundedFuturesAcct && (
-          <div className={cn(showProfitBar && 'mt-3 pt-3 border-t border-zinc-800/60')}>
+          <div className={cn(showProfitBar && 'mt-3 pt-3 border-t', showProfitBar && (theme !== 'light' ? 'border-zinc-800/60' : 'border-zinc-200'))}>
             {metrics.isLocked && (
               <div className="flex items-center gap-2 mb-2">
                 <span className="text-[10px] px-2 py-0.5 rounded-full bg-cyan-500/15 border border-cyan-500/30 text-cyan-300">Threshold Locked</span>
@@ -565,7 +565,7 @@ export function DashboardScreen() {
         <div className={cn(
           "relative overflow-hidden border rounded-xl p-4 sm:p-6 transition-colors duration-300 min-w-0",
           theme !== 'light'
-            ? 'bg-gradient-to-br from-zinc-900 via-zinc-900/90 to-zinc-900/60 border-zinc-800'
+            ? 'bg-gradient-to-br from-zinc-900 via-zinc-900/90 to-zinc-900/60 border-zinc-800/80'
             : 'bg-gradient-to-br from-white via-zinc-50 to-zinc-100 border-zinc-200'
         )}>
           <div className="absolute inset-0 bg-gradient-to-br from-violet-500/[0.06] via-transparent to-emerald-500/[0.05] pointer-events-none" />
@@ -629,7 +629,8 @@ export function DashboardScreen() {
           return (
             <div
               className={cn(
-                'relative flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 rounded-xl border border-l-4 bg-zinc-900/40 border-zinc-800/80 p-4 sm:px-5 sm:py-3.5 min-w-0 transition-all duration-300',
+                'relative flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 rounded-xl border border-l-4 p-4 sm:px-5 sm:py-3.5 min-w-0 transition-all duration-300',
+                theme !== 'light' ? 'bg-zinc-900/40 border-zinc-800/80' : 'bg-white border-zinc-200',
                 isRed && 'border-l-rose-500',
                 isWarning && 'border-l-amber-500',
                 isGreen && 'border-l-emerald-500',
@@ -671,11 +672,11 @@ export function DashboardScreen() {
 
               {/* Right: minimal status pills + Full button */}
               <div className="flex items-center gap-2 flex-shrink-0">
-                <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-500/10 text-emerald-400">
+                <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full border bg-emerald-500/15 border-emerald-500/30 text-emerald-400">
                   <CheckCircle2 className="w-3.5 h-3.5 flex-shrink-0" />
                   <span className="text-xs font-semibold tabular-nums">{followed}</span>
                 </div>
-                <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-rose-500/10 text-rose-400">
+                <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full border bg-rose-500/15 border-rose-500/30 text-rose-400">
                   <XCircle className="w-3.5 h-3.5 flex-shrink-0" />
                   <span className="text-xs font-semibold tabular-nums">{broken}</span>
                 </div>
@@ -872,7 +873,7 @@ export function DashboardScreen() {
             );
           })}
           {accounts.length === 0 && (
-            <div className={cn("col-span-full text-center py-8 border border-dashed rounded-xl", tc.textMuted, theme !== 'light' ? 'border-zinc-800' : 'border-zinc-300')}>
+            <div className={cn("col-span-full text-center py-8 border border-dashed rounded-xl", tc.textMuted, theme !== 'light' ? 'border-zinc-800/80' : 'border-zinc-200')}>
               No accounts yet. Add your first account to get started.
             </div>
           )}
