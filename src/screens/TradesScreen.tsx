@@ -905,7 +905,7 @@ export function TradesScreen() {
       {tradeSelectMode && (
         <div className={cn(
           'flex items-center justify-between flex-wrap gap-3 px-4 py-3 rounded-xl border sticky top-0 z-20',
-          tc.bg, tc.border
+          theme !== 'light' ? 'bg-zinc-900/40 border-zinc-800/80' : 'bg-white border-zinc-200'
         )}>
           <div className="flex items-center gap-3">
             <button
@@ -1309,7 +1309,8 @@ export function TradesScreen() {
               placeholder="Search trades..."
               className={cn(
                 "w-full pl-9 pr-3 py-2 border rounded-lg text-sm focus:outline-none focus:border-indigo-500/50 transition-colors",
-                theme !== 'light' ? 'bg-zinc-800/60 border-zinc-700/50 text-zinc-100 placeholder-zinc-500' : 'bg-zinc-100 border-zinc-200 text-zinc-900 placeholder-zinc-400'
+                tc.text,
+                theme !== 'light' ? 'bg-zinc-900 border-white/10 placeholder-zinc-500' : 'bg-white border-zinc-200 placeholder-zinc-400'
               )}
             />
           </div>
@@ -1318,7 +1319,8 @@ export function TradesScreen() {
             onChange={(e) => { setDbAccountFilter(e.target.value); setDbPage(0); }}
             className={cn(
               "px-3 py-2 border rounded-lg text-sm focus:outline-none focus:border-indigo-500/50 transition-colors cursor-pointer",
-              theme !== 'light' ? 'bg-zinc-800/60 border-zinc-700/50 text-zinc-300' : 'bg-zinc-100 border-zinc-200 text-zinc-700'
+              tc.text,
+              theme !== 'light' ? 'bg-zinc-900 border-white/10' : 'bg-white border-zinc-200'
             )}
           >
             <option value="all">All Accounts</option>
@@ -1331,7 +1333,8 @@ export function TradesScreen() {
             onChange={(e) => { setDbSessionFilter(e.target.value); setDbPage(0); }}
             className={cn(
               "px-3 py-2 border rounded-lg text-sm focus:outline-none focus:border-indigo-500/50 transition-colors cursor-pointer",
-              theme !== 'light' ? 'bg-zinc-800/60 border-zinc-700/50 text-zinc-300' : 'bg-zinc-100 border-zinc-200 text-zinc-700'
+              tc.text,
+              theme !== 'light' ? 'bg-zinc-900 border-white/10' : 'bg-white border-zinc-200'
             )}
           >
             <option value="all">All Sessions</option>
@@ -1344,7 +1347,8 @@ export function TradesScreen() {
             onChange={(e) => { setDbOutcomeFilter(e.target.value as TradeFilter); setDbPage(0); }}
             className={cn(
               "px-3 py-2 border rounded-lg text-sm focus:outline-none focus:border-indigo-500/50 transition-colors cursor-pointer",
-              theme !== 'light' ? 'bg-zinc-800/60 border-zinc-700/50 text-zinc-300' : 'bg-zinc-100 border-zinc-200 text-zinc-700'
+              tc.text,
+              theme !== 'light' ? 'bg-zinc-900 border-white/10' : 'bg-white border-zinc-200'
             )}
           >
             <option value="all">All Outcomes</option>
@@ -1357,7 +1361,8 @@ export function TradesScreen() {
             onChange={(e) => { setDbRulesFilter(e.target.value as 'all' | 'followed' | 'broken'); setDbPage(0); }}
             className={cn(
               "px-3 py-2 border rounded-lg text-sm focus:outline-none focus:border-indigo-500/50 transition-colors cursor-pointer",
-              theme !== 'light' ? 'bg-zinc-800/60 border-zinc-700/50 text-zinc-300' : 'bg-zinc-100 border-zinc-200 text-zinc-700'
+              tc.text,
+              theme !== 'light' ? 'bg-zinc-900 border-white/10' : 'bg-white border-zinc-200'
             )}
           >
             <option value="all">All Rules</option>
@@ -1542,7 +1547,7 @@ export function TradesScreen() {
           style={{ animation: 'tradeImportToastIn 0.25s ease-out' }}
           className={cn(
             'fixed bottom-6 right-6 z-[60] max-w-sm px-4 py-3 rounded-lg border text-sm font-medium shadow-2xl select-none',
-            tc.bg,
+            theme !== 'light' ? 'bg-zinc-900' : 'bg-white',
             tradeImportToast.type === 'success' ? 'border-emerald-500/40 text-emerald-400' : 'border-rose-500/40 text-rose-400'
           )}
         >
