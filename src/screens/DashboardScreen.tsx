@@ -564,7 +564,7 @@ export function DashboardScreen() {
       <div className="flex flex-col gap-4">
         {/* Total P&L */}
         <div className={cn(
-          "relative overflow-hidden border rounded-xl p-4 sm:p-6 transition-colors duration-300 min-w-0",
+          "relative overflow-hidden border rounded-xl p-5 transition-colors duration-300 min-w-0",
           theme !== 'light'
             ? 'bg-gradient-to-br from-zinc-900 via-zinc-900/90 to-zinc-900/60 border-zinc-800/80'
             : 'bg-gradient-to-br from-white via-zinc-50 to-zinc-100 border-zinc-200'
@@ -883,7 +883,7 @@ export function DashboardScreen() {
 
       {/* Recent trades */}
       <div className={cn(
-        "rounded-xl p-4 sm:p-6 border",
+        "rounded-xl p-5 border",
         theme !== 'light' ? 'bg-zinc-900/40 border-zinc-800/80' : 'bg-white border-zinc-200'
       )}>
         <div className="flex items-center justify-between mb-4 flex-wrap gap-2">
