@@ -566,7 +566,7 @@ export function DisciplineScreen() {
                 <div className="flex-1 flex flex-col items-center justify-center gap-3">
                   <FunkyBear />
                   <span className={cn(
-                    "text-[11px] font-medium px-3 py-1.5 rounded-full border whitespace-nowrap",
+                    "text-[11px] font-medium px-2.5 py-1 rounded-full border whitespace-nowrap",
                     tc.textSecondary,
                     theme !== 'light' ? 'bg-zinc-800/60 border-zinc-700/50' : 'bg-zinc-100 border-zinc-200'
                   )}>
@@ -864,12 +864,12 @@ export function DisciplineScreen() {
                                   {((t.mistakes && t.mistakes.length > 0) || (t.emotions && t.emotions.length > 0)) && (
                                     <div className="flex flex-wrap gap-1.5 mt-2.5">
                                       {(t.emotions || []).map(e => (
-                                        <span key={`e-${e}`} className={cn('px-1.5 py-0.5 rounded-full text-[10px] font-medium', getTagColorStyle(colorForEmotion(e)).chip)}>
+                                        <span key={`e-${e}`} className={cn('px-2 py-0.5 rounded-full text-[10px] font-medium', getTagColorStyle(colorForEmotion(e)).chip)}>
                                           {e}
                                         </span>
                                       ))}
                                       {(t.mistakes || []).map(m => (
-                                        <span key={`m-${m}`} className={cn('px-1.5 py-0.5 rounded-full text-[10px] font-medium', getTagColorStyle(colorForMistake(m)).chip)}>
+                                        <span key={`m-${m}`} className={cn('px-2 py-0.5 rounded-full text-[10px] font-medium', getTagColorStyle(colorForMistake(m)).chip)}>
                                           {m}
                                         </span>
                                       ))}
