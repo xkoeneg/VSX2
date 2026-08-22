@@ -311,13 +311,13 @@ export function CalendarScreen() {
               {renderAccountFilter()}
 
               <div className="flex items-center gap-2 h-9 select-none">
-                <button type="button" onClick={() => { setCalendarMonth(prev => prev.month === 0 ? { year: prev.year - 1, month: 11 } : { ...prev, month: prev.month - 1 }); }} className={cn('h-9 w-9 flex items-center justify-center flex-shrink-0 rounded-lg text-xs font-medium border select-none transition-colors active:scale-95', tc.btnSecondary)}>
+                <button type="button" onClick={() => { setCalendarMonth(prev => prev.month === 0 ? { year: prev.year - 1, month: 11 } : { ...prev, month: prev.month - 1 }); }} className={cn('h-9 w-9 flex items-center justify-center flex-shrink-0 rounded-lg text-xs font-medium border select-none transition-colors active:scale-95', tc.btnSecondary, theme !== 'light' ? 'border-zinc-700/50' : 'border-zinc-200')}>
                   <ChevronLeft className="w-4 h-4" />
                 </button>
-                <div className={cn('h-9 flex items-center px-3 rounded-lg border select-none', tc.btnSecondary)}>
+                <div className={cn('h-9 flex items-center px-3 rounded-lg border select-none', tc.btnSecondary, theme !== 'light' ? 'border-zinc-700/50' : 'border-zinc-200')}>
                   <span className="text-xs font-medium whitespace-nowrap select-none">{monthNames[calendarMonth.month]} {calendarMonth.year}</span>
                 </div>
-                <button type="button" onClick={() => { setCalendarMonth(prev => prev.month === 11 ? { year: prev.year + 1, month: 0 } : { ...prev, month: prev.month + 1 }); }} className={cn('h-9 w-9 flex items-center justify-center flex-shrink-0 rounded-lg text-xs font-medium border select-none transition-colors active:scale-95', tc.btnSecondary)}>
+                <button type="button" onClick={() => { setCalendarMonth(prev => prev.month === 11 ? { year: prev.year + 1, month: 0 } : { ...prev, month: prev.month + 1 }); }} className={cn('h-9 w-9 flex items-center justify-center flex-shrink-0 rounded-lg text-xs font-medium border select-none transition-colors active:scale-95', tc.btnSecondary, theme !== 'light' ? 'border-zinc-700/50' : 'border-zinc-200')}>
                   <ChevronRight className="w-4 h-4" />
                 </button>
               </div>
