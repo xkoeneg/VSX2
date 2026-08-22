@@ -494,7 +494,7 @@ function TradeAnalyticsCard({ trades, stats, privacyMode, theme, tc, tradeFilter
   const cardClass = cn(
     "border rounded-xl p-6 transition-all flex items-center gap-3",
     theme !== 'light'
-      ? 'bg-zinc-900/50 border-white/10 hover:border-white/20'
+      ? 'bg-zinc-900/50 border-zinc-800/80 hover:border-zinc-700'
       : 'bg-white border-zinc-200 hover:border-zinc-300'
   );
   const iconCircleClass = "p-3 rounded-xl flex-shrink-0";
@@ -1303,7 +1303,7 @@ export function TradesScreen() {
               placeholder="Search trades..."
               className={cn(
                 "w-full pl-9 pr-3 py-2 border rounded-lg text-sm focus:outline-none focus:border-indigo-500/50 transition-colors",
-                theme !== 'light' ? 'bg-zinc-900 border-white/10 text-white placeholder-zinc-500' : 'bg-white border-zinc-200 text-zinc-900 placeholder-zinc-400'
+                theme !== 'light' ? 'bg-zinc-800/60 border-zinc-700/50 text-zinc-100 placeholder-zinc-500' : 'bg-zinc-100 border-zinc-200 text-zinc-900 placeholder-zinc-400'
               )}
             />
           </div>
@@ -1312,7 +1312,7 @@ export function TradesScreen() {
             onChange={(e) => { setDbAccountFilter(e.target.value); setDbPage(0); }}
             className={cn(
               "px-3 py-2 border rounded-lg text-sm focus:outline-none focus:border-indigo-500/50 transition-colors cursor-pointer",
-              theme !== 'light' ? 'bg-zinc-900 border-white/10 text-zinc-300' : 'bg-white border-zinc-200 text-zinc-700'
+              theme !== 'light' ? 'bg-zinc-800/60 border-zinc-700/50 text-zinc-300' : 'bg-zinc-100 border-zinc-200 text-zinc-700'
             )}
           >
             <option value="all">All Accounts</option>
@@ -1325,7 +1325,7 @@ export function TradesScreen() {
             onChange={(e) => { setDbSessionFilter(e.target.value); setDbPage(0); }}
             className={cn(
               "px-3 py-2 border rounded-lg text-sm focus:outline-none focus:border-indigo-500/50 transition-colors cursor-pointer",
-              theme !== 'light' ? 'bg-zinc-900 border-white/10 text-zinc-300' : 'bg-white border-zinc-200 text-zinc-700'
+              theme !== 'light' ? 'bg-zinc-800/60 border-zinc-700/50 text-zinc-300' : 'bg-zinc-100 border-zinc-200 text-zinc-700'
             )}
           >
             <option value="all">All Sessions</option>
@@ -1338,7 +1338,7 @@ export function TradesScreen() {
             onChange={(e) => { setDbOutcomeFilter(e.target.value as TradeFilter); setDbPage(0); }}
             className={cn(
               "px-3 py-2 border rounded-lg text-sm focus:outline-none focus:border-indigo-500/50 transition-colors cursor-pointer",
-              theme !== 'light' ? 'bg-zinc-900 border-white/10 text-zinc-300' : 'bg-white border-zinc-200 text-zinc-700'
+              theme !== 'light' ? 'bg-zinc-800/60 border-zinc-700/50 text-zinc-300' : 'bg-zinc-100 border-zinc-200 text-zinc-700'
             )}
           >
             <option value="all">All Outcomes</option>
@@ -1351,7 +1351,7 @@ export function TradesScreen() {
             onChange={(e) => { setDbRulesFilter(e.target.value as 'all' | 'followed' | 'broken'); setDbPage(0); }}
             className={cn(
               "px-3 py-2 border rounded-lg text-sm focus:outline-none focus:border-indigo-500/50 transition-colors cursor-pointer",
-              theme !== 'light' ? 'bg-zinc-900 border-white/10 text-zinc-300' : 'bg-white border-zinc-200 text-zinc-700'
+              theme !== 'light' ? 'bg-zinc-800/60 border-zinc-700/50 text-zinc-300' : 'bg-zinc-100 border-zinc-200 text-zinc-700'
             )}
           >
             <option value="all">All Rules</option>
