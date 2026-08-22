@@ -77,7 +77,7 @@ export const renderAccountTypeBadge = (account: Account) => {
 // control used in the Dashboard, Trade History, and Performance Calendar
 // page headers.
 export const renderAccountFilter = () => {
-  const { accountDropdownRef, showAccountDropdown, setShowAccountDropdown, selectedAccounts, setSelectedAccounts, accounts, theme } = useAppContext();
+  const { accountDropdownRef, showAccountDropdown, setShowAccountDropdown, selectedAccounts, setSelectedAccounts, accounts, theme, tc } = useAppContext();
   return (
     <div className="relative" ref={accountDropdownRef}>
       <button
@@ -95,17 +95,22 @@ export const renderAccountFilter = () => {
       </button>
 
       {showAccountDropdown && (
-        <div className="absolute left-0 mt-2 min-w-[200px] w-64 rounded-lg shadow-xl z-50 p-2 bg-zinc-900 border border-zinc-800">
+        <div className={cn(
+          "absolute left-0 top-full mt-1.5 min-w-[200px] w-64 max-w-[calc(100vw-2rem)] rounded-xl shadow-2xl z-50 p-3.5 border",
+          theme !== 'light' ? 'bg-zinc-900 border-white/10' : 'bg-white border-zinc-200'
+        )}>
           <button
             onClick={() => setSelectedAccounts(['all'])}
             className={cn(
               'w-full text-left px-3 py-2 rounded text-sm truncate transition-colors',
-              selectedAccounts.includes('all') ? 'bg-zinc-800 text-white' : 'text-zinc-400 hover:bg-zinc-800'
+              selectedAccounts.includes('all')
+                ? (theme !== 'light' ? 'bg-zinc-800 text-white' : 'bg-zinc-100 text-zinc-900')
+                : cn(tc.textMuted, theme !== 'light' ? 'hover:bg-zinc-800' : 'hover:bg-zinc-100')
             )}
           >
             All Accounts
           </button>
-          <div className="my-2 border-t border-zinc-800" />
+          <div className={cn("my-2 border-t", theme !== 'light' ? 'border-zinc-800' : 'border-zinc-200')} />
           {accounts.map(acc => (
             <button
               key={acc.id}
@@ -121,7 +126,9 @@ export const renderAccountFilter = () => {
               }}
               className={cn(
                 'w-full text-left px-3 py-2 rounded text-sm flex items-center justify-between transition-colors',
-                selectedAccounts.includes(acc.id) ? 'bg-zinc-800 text-white' : 'text-zinc-400 hover:bg-zinc-800'
+                selectedAccounts.includes(acc.id)
+                  ? (theme !== 'light' ? 'bg-zinc-800 text-white' : 'bg-zinc-100 text-zinc-900')
+                  : cn(tc.textMuted, theme !== 'light' ? 'hover:bg-zinc-800' : 'hover:bg-zinc-100')
               )}
             >
               <span className="truncate flex-1 mr-2">{acc.name}</span>
