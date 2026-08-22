@@ -222,8 +222,8 @@ const TradeFeaturedCard = memo(function TradeFeaturedCard({
     ? (isBreakeven
         ? 'bg-zinc-800/50 group-hover:bg-zinc-800/70'
         : isWin
-          ? 'bg-emerald-500/10 border-t-0 group-hover:bg-emerald-500/15'
-          : 'bg-rose-500/10 border-t-0 group-hover:bg-rose-500/15')
+          ? 'bg-emerald-500/15 border-t-0 group-hover:bg-emerald-500/20'
+          : 'bg-rose-500/15 border-t-0 group-hover:bg-rose-500/20')
     : (isBreakeven
         ? 'bg-zinc-50 group-hover:bg-zinc-100'
         : isWin
@@ -233,8 +233,8 @@ const TradeFeaturedCard = memo(function TradeFeaturedCard({
     ? (isBreakeven
         ? 'border-zinc-700 hover:border-zinc-500'
         : isWin
-          ? 'border-emerald-500/30 hover:border-emerald-500/50'
-          : 'border-rose-500/30 hover:border-rose-500/50')
+          ? 'border-emerald-500/40 hover:border-emerald-500/60'
+          : 'border-rose-500/40 hover:border-rose-500/60')
     : (isBreakeven
         ? 'border-zinc-200 hover:border-zinc-300'
         : isWin
