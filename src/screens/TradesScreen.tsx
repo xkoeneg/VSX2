@@ -13,7 +13,6 @@ import {
   Edit2,
   Trash2,
   Check,
-  ChevronsUpDown,
   Image as ImageIcon,
   TrendingUp,
   TrendingDown,
@@ -21,7 +20,6 @@ import {
   Target,
   AlertCircle,
   Lightbulb,
-  Filter,
   Grid,
   List,
   LayoutGrid,
@@ -166,7 +164,7 @@ WikiEntry
 } from '../types';
 import { cn } from '../utils/format';
 import { useAppContext } from '../context/AppContext';
-import { renderStatCard, renderAccountFilter, renderAccountTypeBadge, renderTradingAccountTypeBadge } from '../components/shared/RenderHelpers';
+import { renderStatCard, renderAccountFilter, renderTradingAccountTypeBadge } from '../components/shared/RenderHelpers';
 
 // ============================================================================
 // Memoized list-item components
@@ -1180,66 +1178,11 @@ export function TradesScreen() {
             <span className={cn("font-medium truncate", tc.text)}>All Trades Database</span>
           </div>
           <div className="flex items-center gap-2 flex-shrink-0">
-            {/* All Accounts — same global account filter used on the Dashboard,
-                exposed here too since it already drives dbFilteredTrades via
-                filteredTrades -> accountFilteredTrades. */}
-            <div className="relative" ref={accountDropdownRef}>
-              <button
-                onClick={() => setShowAccountDropdown(!showAccountDropdown)}
-                className={cn(
-                  'flex items-center gap-2 px-3 py-2 rounded-lg text-sm transition-colors border',
-                  tc.btnSecondary
-                )}
-              >
-                <Filter className="w-4 h-4 flex-shrink-0" />
-                <span className="hidden sm:inline truncate max-w-[120px]">{selectedAccounts.includes('all') ? 'All Accounts' : `${selectedAccounts.length} Selected`}</span>
-                <ChevronsUpDown className="w-4 h-4 flex-shrink-0" />
-              </button>
-
-              {showAccountDropdown && (
-                <div className={cn(
-                  "absolute right-0 sm:left-0 top-full mt-1.5 min-w-[200px] w-64 max-w-[calc(100vw-2rem)] rounded-xl shadow-2xl z-50 p-3.5 border",
-                  theme !== 'light' ? 'bg-zinc-900 border-white/10' : 'bg-white border-zinc-200'
-                )}>
-                  <button
-                    onClick={() => setSelectedAccounts(['all'])}
-                    className={cn(
-                      'w-full text-left px-3 py-2 rounded text-sm truncate transition-colors',
-                      selectedAccounts.includes('all')
-                        ? (theme !== 'light' ? 'bg-zinc-800 text-white' : 'bg-zinc-100 text-zinc-900')
-                        : cn(tc.textMuted, theme !== 'light' ? 'hover:bg-zinc-800' : 'hover:bg-zinc-100')
-                    )}
-                  >
-                    All Accounts
-                  </button>
-                  <div className={cn("my-2 border-t", theme !== 'light' ? 'border-zinc-800' : 'border-zinc-200')} />
-                  {accounts.map(acc => (
-                    <button
-                      key={acc.id}
-                      onClick={() => {
-                        if (selectedAccounts.includes('all')) {
-                          setSelectedAccounts([acc.id]);
-                        } else if (selectedAccounts.includes(acc.id)) {
-                          const newSelection = selectedAccounts.filter(a => a !== acc.id);
-                          setSelectedAccounts(newSelection.length === 0 ? ['all'] : newSelection);
-                        } else {
-                          setSelectedAccounts([...selectedAccounts, acc.id]);
-                        }
-                      }}
-                      className={cn(
-                        'w-full text-left px-3 py-2 rounded text-sm flex items-center justify-between transition-colors',
-                        selectedAccounts.includes(acc.id)
-                          ? (theme !== 'light' ? 'bg-zinc-800 text-white' : 'bg-zinc-100 text-zinc-900')
-                          : cn(tc.textMuted, theme !== 'light' ? 'hover:bg-zinc-800' : 'hover:bg-zinc-100')
-                      )}
-                    >
-                      <span className="truncate flex-1 mr-2">{acc.name}</span>
-                      {renderAccountTypeBadge(acc)}
-                    </button>
-                  ))}
-                </div>
-              )}
-            </div>
+            {/* All Accounts — shared component, single source of truth (also
+                used on Overview/Dashboard/Performance Calendar). Previously
+                this was a hand-duplicated copy that had drifted from the
+                shared button's styling; now it just reuses it directly. */}
+            {renderAccountFilter()}
 
             {/* Table / Gallery view toggle */}
             <div className={cn(
