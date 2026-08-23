@@ -734,7 +734,7 @@ export function LifeDisciplineScreen() {
               <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-sm bg-cyan-500/15 border border-cyan-500/40" /> Re-checked</span>
               <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-sm bg-rose-500/15 border border-rose-500/40" /> Failed</span>
               <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-sm bg-amber-500/15 border border-amber-500/40" /> Today</span>
-              <span className="flex items-center gap-1.5"><span className={cn("w-2.5 h-2.5 rounded-sm border", theme !== 'light' ? 'bg-zinc-800 border-zinc-700' : 'bg-zinc-100 border-zinc-200')} /> Upcoming</span>
+              <span className="flex items-center gap-1.5"><span className={cn("w-2.5 h-2.5 rounded-sm border", theme !== 'light' ? 'bg-zinc-800/30 border-zinc-800/60' : 'bg-zinc-50 border-zinc-200')} /> Upcoming</span>
             </div>
           </div>
 
@@ -743,7 +743,7 @@ export function LifeDisciplineScreen() {
               card above) */}
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4 select-none">
             <div className={cn("flex items-center gap-2.5 px-3.5 py-2.5 rounded-lg border", theme !== 'light' ? 'bg-zinc-800/60 border-zinc-800' : 'bg-zinc-100 border-zinc-200')}>
-              <div className="p-2 rounded-lg bg-violet-500/10 text-violet-400 flex-shrink-0">
+              <div className="p-2 rounded-lg bg-violet-500/20 text-violet-400 flex-shrink-0">
                 <CalendarDays className="w-4 h-4" />
               </div>
               <div className="min-w-0">
@@ -754,7 +754,7 @@ export function LifeDisciplineScreen() {
               </div>
             </div>
             <div className={cn("flex items-center gap-2.5 px-3.5 py-2.5 rounded-lg border", theme !== 'light' ? 'bg-zinc-800/60 border-zinc-800' : 'bg-zinc-100 border-zinc-200')}>
-              <div className="p-2 rounded-lg bg-blue-500/10 text-blue-400 flex-shrink-0">
+              <div className="p-2 rounded-lg bg-blue-500/20 text-blue-400 flex-shrink-0">
                 <Clock className="w-4 h-4" />
               </div>
               <div className="min-w-0">
@@ -763,7 +763,7 @@ export function LifeDisciplineScreen() {
               </div>
             </div>
             <div className={cn("flex items-center gap-2.5 px-3.5 py-2.5 rounded-lg border", theme !== 'light' ? 'bg-zinc-800/60 border-zinc-800' : 'bg-zinc-100 border-zinc-200')}>
-              <div className="p-2 rounded-lg bg-amber-500/10 text-amber-400 flex-shrink-0">
+              <div className="p-2 rounded-lg bg-amber-500/20 text-amber-400 flex-shrink-0">
                 <Flame className="w-4 h-4" />
               </div>
               <div className="min-w-0">
@@ -772,7 +772,7 @@ export function LifeDisciplineScreen() {
               </div>
             </div>
             <div className={cn("flex items-center gap-2.5 px-3.5 py-2.5 rounded-lg border", theme !== 'light' ? 'bg-zinc-800/60 border-zinc-800' : 'bg-zinc-100 border-zinc-200')}>
-              <div className="p-2 rounded-lg bg-emerald-500/10 text-emerald-400 flex-shrink-0">
+              <div className="p-2 rounded-lg bg-emerald-500/20 text-emerald-400 flex-shrink-0">
                 <Target className="w-4 h-4" />
               </div>
               <div className="min-w-0">
