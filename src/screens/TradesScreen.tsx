@@ -491,10 +491,10 @@ function TradeAnalyticsCard({ trades, stats, privacyMode, theme, tc, tradeFilter
   // cards): p-4 card padding, p-2.5 padding-based icon chip (not a fixed
   // w-8 h-8 box) holding a w-4 h-4 icon, text-lg font-semibold value.
   const cardClass = cn(
-    "border rounded-xl p-4 transition-all flex items-center gap-3",
+    "group rounded-xl p-4 flex items-center gap-3 min-w-0 transition-all duration-200",
     theme !== 'light'
-      ? 'bg-zinc-900/50 border-zinc-800/80 hover:border-zinc-700'
-      : 'bg-white border-zinc-200 hover:border-zinc-300'
+      ? 'bg-zinc-900/40 border border-zinc-800/80 hover:border-zinc-700 hover:bg-zinc-900/70'
+      : 'bg-white border border-zinc-200 hover:border-zinc-300 hover:bg-zinc-50'
   );
   const iconCircleClass = "p-2.5 rounded-lg flex-shrink-0";
 
@@ -507,7 +507,7 @@ function TradeAnalyticsCard({ trades, stats, privacyMode, theme, tc, tradeFilter
             ? <TrendingUp className="w-4 h-4 text-emerald-400" />
             : <TrendingDown className="w-4 h-4 text-rose-400" />}
         </div>
-        <div className="min-w-0">
+        <div className="min-w-0 flex-1">
           <p className={cn("text-[11px] uppercase tracking-wider truncate font-medium", tc.textMuted)}>Net P&amp;L</p>
           <p className={cn("text-lg font-semibold truncate tabular-nums", isNetPositive ? 'text-emerald-400' : 'text-rose-400')}>
             {formatCurrency(netPnl, privacyMode)}
@@ -529,7 +529,7 @@ function TradeAnalyticsCard({ trades, stats, privacyMode, theme, tc, tradeFilter
             )}
           </svg>
         </div>
-        <div className="min-w-0 -ml-1">
+        <div className="min-w-0 flex-1 -ml-1">
           <p className={cn("text-[11px] uppercase tracking-wider truncate font-medium", tc.textMuted)}>Win Rate</p>
           <div className="flex items-baseline gap-1.5">
             <p className={cn("text-lg font-semibold truncate tabular-nums", tc.text)}>
@@ -548,7 +548,7 @@ function TradeAnalyticsCard({ trades, stats, privacyMode, theme, tc, tradeFilter
         <div className={cn(iconCircleClass, theme !== 'light' ? 'bg-zinc-800/60' : 'bg-zinc-100')}>
           <Scale className={cn("w-4 h-4", tc.textMuted)} />
         </div>
-        <div className="min-w-0">
+        <div className="min-w-0 flex-1">
           <p className={cn("text-[11px] uppercase tracking-wider truncate font-medium", tc.textMuted)}>Win / Loss Ratio</p>
           <p className="text-lg font-semibold truncate tabular-nums">
             <button
@@ -593,7 +593,7 @@ function TradeAnalyticsCard({ trades, stats, privacyMode, theme, tc, tradeFilter
         <div className={cn(iconCircleClass, theme !== 'light' ? 'bg-zinc-800/60' : 'bg-zinc-100')}>
           <Target className={cn("w-4 h-4", tc.textMuted)} />
         </div>
-        <div className="min-w-0">
+        <div className="min-w-0 flex-1">
           <p className={cn("text-[11px] uppercase tracking-wider truncate font-medium", tc.textMuted)}>Profit Factor</p>
           <p className={cn("text-lg font-semibold truncate tabular-nums", tc.text)}>
             {total > 0 && isFinite(stats.profitFactor) ? stats.profitFactor.toFixed(2) : 'N/A'}
@@ -611,7 +611,7 @@ function TradeAnalyticsCard({ trades, stats, privacyMode, theme, tc, tradeFilter
         <div className={cn(iconCircleClass, theme !== 'light' ? 'bg-zinc-800/60' : 'bg-zinc-100')}>
           <BarChart3 className={cn("w-4 h-4", tc.textMuted)} />
         </div>
-        <div className="min-w-0">
+        <div className="min-w-0 flex-1">
           <p className={cn("text-[11px] uppercase tracking-wider truncate font-medium", tc.textMuted)}>Total Trades</p>
           <p className={cn("text-lg font-semibold truncate tabular-nums", tc.text)}>{total}</p>
         </div>
