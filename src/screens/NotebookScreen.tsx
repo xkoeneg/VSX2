@@ -2210,7 +2210,7 @@ export function NotebookScreen() {
                   </p>
                 )}
                 <p className={cn('text-base leading-relaxed whitespace-pre-wrap', textBody)}>
-                  {stripHtml(selectedEntry.body) || <span className="italic opacity-60">Empty note</span>}
+                  {stripHtml(selectedEntry.body) || <span className={cn('italic', tc.textMuted)}>Empty note</span>}
                 </p>
               </div>
             </div>
@@ -2846,7 +2846,7 @@ export function NotebookScreen() {
       {/* ---- Delete folder confirm ---- */}
       {folderPendingDelete && (
         <div className="fixed inset-0 bg-black/80 z-[70] flex items-center justify-center p-5" onClick={() => setFolderPendingDelete(null)}>
-          <div className={cn('rounded-xl max-w-sm w-full border p-6 shadow-2xl', theme !== 'light' ? 'bg-zinc-900/40 border-zinc-800/80' : 'bg-white border-zinc-200')} onClick={(e) => e.stopPropagation()}>
+          <div className={cn('rounded-xl max-w-sm w-full border p-6 shadow-2xl', theme !== 'light' ? 'bg-zinc-900 border-white/10' : 'bg-white border-zinc-200')} onClick={(e) => e.stopPropagation()}>
             <h3 className={cn('text-base font-semibold mb-2', tc.text)}>Delete "{folderPendingDelete}"?</h3>
             <p className={cn("text-sm mb-4 leading-relaxed", tc.textMuted)}>
               This folder and its notes will move to Recently Deleted together — you can restore them from there, or they'll be permanently removed after 30 days. Sub-folders aren't deleted automatically.
@@ -2866,7 +2866,7 @@ export function NotebookScreen() {
       {/* ---- Restore folder confirm (viewing a trashed folder's notes) ---- */}
       {folderPendingRestore && (
         <div className="fixed inset-0 bg-black/80 z-[70] flex items-center justify-center p-5" onClick={() => setFolderPendingRestore(null)}>
-          <div className={cn('rounded-xl max-w-sm w-full border p-6 shadow-2xl', theme !== 'light' ? 'bg-zinc-900/40 border-zinc-800/80' : 'bg-white border-zinc-200')} onClick={(e) => e.stopPropagation()}>
+          <div className={cn('rounded-xl max-w-sm w-full border p-6 shadow-2xl', theme !== 'light' ? 'bg-zinc-900 border-white/10' : 'bg-white border-zinc-200')} onClick={(e) => e.stopPropagation()}>
             <h3 className={cn('text-base font-semibold mb-2', tc.text)}>Restore "{folderPendingRestore}"?</h3>
             <p className={cn("text-sm mb-4 leading-relaxed", tc.textMuted)}>
               This folder is in Recently Deleted, so its notes are too — restore it to bring the folder and its notes back and open it.
@@ -2894,7 +2894,7 @@ export function NotebookScreen() {
       {/* ---- Permanently delete a trashed folder (+ its still-trashed notes) ---- */}
       {deletedFolderPendingPermanentDelete && (
         <div className="fixed inset-0 bg-black/80 z-[70] flex items-center justify-center p-5" onClick={() => setDeletedFolderPendingPermanentDelete(null)}>
-          <div className={cn('rounded-xl max-w-sm w-full border p-6 shadow-2xl', theme !== 'light' ? 'bg-zinc-900/40 border-zinc-800/80' : 'bg-white border-zinc-200')} onClick={(e) => e.stopPropagation()}>
+          <div className={cn('rounded-xl max-w-sm w-full border p-6 shadow-2xl', theme !== 'light' ? 'bg-zinc-900 border-white/10' : 'bg-white border-zinc-200')} onClick={(e) => e.stopPropagation()}>
             <h3 className={cn('text-base font-semibold mb-2', tc.text)}>Delete "{deletedFolderPendingPermanentDelete}" forever?</h3>
             <p className={cn("text-sm mb-4 leading-relaxed", tc.textMuted)}>
               This permanently deletes this folder and every note still in it. This can't be undone.
@@ -2917,7 +2917,7 @@ export function NotebookScreen() {
       {/* ---- Permanent delete confirm ---- */}
       {entryPendingDelete && (
         <div className="fixed inset-0 bg-black/80 z-[70] flex items-center justify-center p-5" onClick={() => setEntryPendingDelete(null)}>
-          <div className={cn('rounded-xl max-w-sm w-full border p-6 shadow-2xl', theme !== 'light' ? 'bg-zinc-900/40 border-zinc-800/80' : 'bg-white border-zinc-200')} onClick={(e) => e.stopPropagation()}>
+          <div className={cn('rounded-xl max-w-sm w-full border p-6 shadow-2xl', theme !== 'light' ? 'bg-zinc-900 border-white/10' : 'bg-white border-zinc-200')} onClick={(e) => e.stopPropagation()}>
             <h3 className={cn('text-base font-semibold mb-2', tc.text)}>Delete forever?</h3>
             <p className={cn("text-sm mb-4 leading-relaxed", tc.textMuted)}>
               This permanently deletes "{entryPendingDelete.title || 'this note'}". This can't be undone.
@@ -2940,7 +2940,7 @@ export function NotebookScreen() {
       {/* ---- Empty trash confirm ---- */}
       {confirmEmptyTrash && (
         <div className="fixed inset-0 bg-black/80 z-[70] flex items-center justify-center p-5" onClick={() => setConfirmEmptyTrash(false)}>
-          <div className={cn('rounded-xl max-w-sm w-full border p-6 shadow-2xl', theme !== 'light' ? 'bg-zinc-900/40 border-zinc-800/80' : 'bg-white border-zinc-200')} onClick={(e) => e.stopPropagation()}>
+          <div className={cn('rounded-xl max-w-sm w-full border p-6 shadow-2xl', theme !== 'light' ? 'bg-zinc-900 border-white/10' : 'bg-white border-zinc-200')} onClick={(e) => e.stopPropagation()}>
             <h3 className={cn('text-base font-semibold mb-2', tc.text)}>Empty trash?</h3>
             <p className={cn("text-sm mb-4 leading-relaxed", tc.textMuted)}>
               This permanently deletes all {deletedEntries.length} note{deletedEntries.length === 1 ? '' : 's'}
@@ -2964,7 +2964,7 @@ export function NotebookScreen() {
       {/* ---- Single note delete (move to trash) confirm ---- */}
       {entryPendingTrash && (
         <div className="fixed inset-0 bg-black/80 z-[70] flex items-center justify-center p-5" onClick={() => setEntryPendingTrash(null)}>
-          <div className={cn('rounded-xl max-w-sm w-full border p-6 shadow-2xl', theme !== 'light' ? 'bg-zinc-900/40 border-zinc-800/80' : 'bg-white border-zinc-200')} onClick={(e) => e.stopPropagation()}>
+          <div className={cn('rounded-xl max-w-sm w-full border p-6 shadow-2xl', theme !== 'light' ? 'bg-zinc-900 border-white/10' : 'bg-white border-zinc-200')} onClick={(e) => e.stopPropagation()}>
             <h3 className={cn('text-base font-semibold mb-2', tc.text)}>Delete note?</h3>
             <p className={cn("text-sm mb-4 leading-relaxed", tc.textMuted)}>
               "{entryPendingTrash.title || formatNoteHeading(entryPendingTrash)}" will be moved to Recently Deleted, where you can restore it later.
@@ -2987,7 +2987,7 @@ export function NotebookScreen() {
       {/* ---- Bulk delete (select mode) confirm ---- */}
       {confirmBulkDelete && (
         <div className="fixed inset-0 bg-black/80 z-[70] flex items-center justify-center p-5" onClick={() => setConfirmBulkDelete(false)}>
-          <div className={cn('rounded-xl max-w-sm w-full border p-6 shadow-2xl', theme !== 'light' ? 'bg-zinc-900/40 border-zinc-800/80' : 'bg-white border-zinc-200')} onClick={(e) => e.stopPropagation()}>
+          <div className={cn('rounded-xl max-w-sm w-full border p-6 shadow-2xl', theme !== 'light' ? 'bg-zinc-900 border-white/10' : 'bg-white border-zinc-200')} onClick={(e) => e.stopPropagation()}>
             <h3 className={cn('text-base font-semibold mb-2', tc.text)}>
               Delete {selectedIds.size} note{selectedIds.size === 1 ? '' : 's'}?
             </h3>
