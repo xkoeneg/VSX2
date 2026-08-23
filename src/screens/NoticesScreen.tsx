@@ -397,7 +397,7 @@ export function NoticesScreen() {
 
               {(previewNotice.description || previewNotice.whatHappenedTitle || previewNotice.keyTakeawayTitle) && (
                 <div className={cn('rounded-lg border p-3', theme !== 'light' ? 'bg-zinc-800/50 border-zinc-800' : 'bg-zinc-50 border-zinc-200')}>
-                  <p className={cn('text-[11px] font-semibold uppercase tracking-wider mb-1.5 flex items-center gap-1.5', theme !== 'light' ? 'text-zinc-400' : 'text-zinc-500')}>
+                  <p className={cn('text-[10px] font-semibold uppercase tracking-wider mb-1.5 flex items-center gap-1.5', tc.textMuted)}>
                     {previewNotice.type === 'mistake' ? <>❌ What Happened</> : '🔑 What You Noticed'}
                   </p>
                   {previewNotice.type === 'mistake' && previewNotice.whatHappenedTitle && (
@@ -414,14 +414,14 @@ export function NoticesScreen() {
 
               {previewNotice.consequence && (
                 <div className={cn('rounded-lg border p-3', theme !== 'light' ? 'bg-zinc-800/50 border-zinc-800' : 'bg-zinc-50 border-zinc-200')}>
-                  <p className={cn('text-[11px] font-semibold uppercase tracking-wider mb-1.5', theme !== 'light' ? 'text-zinc-400' : 'text-zinc-500')}>Consequence / Risk</p>
+                  <p className={cn('text-[10px] font-semibold uppercase tracking-wider mb-1.5', tc.textMuted)}>Consequence / Risk</p>
                   <p className={cn('text-sm leading-relaxed', theme !== 'light' ? 'text-zinc-300' : 'text-zinc-700')}>{previewNotice.consequence}</p>
                 </div>
               )}
 
               {(previewNotice.prevention || previewNotice.preventionTitle) && (
                 <div className="rounded-lg border border-emerald-500/30 bg-emerald-500/5 p-3">
-                  <p className="text-[11px] font-semibold uppercase tracking-wider mb-1.5 text-emerald-400 flex items-center gap-1.5">
+                  <p className="text-[10px] font-semibold uppercase tracking-wider mb-1.5 text-emerald-400/90 flex items-center gap-1.5">
                     {previewNotice.type === 'mistake' ? <>💡 Rule / Prevention</> : 'How To Use This'}
                   </p>
                   {previewNotice.type === 'mistake' && previewNotice.preventionTitle && (
@@ -526,7 +526,7 @@ export function NoticesScreen() {
           {/* Caption overlay — mirrors the mistake card's overlay so both
               columns feel equally complete at a glance */}
           <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/90 via-black/70 to-transparent px-2 pt-5 pb-1.5">
-            <p className={cn('text-[11px] uppercase tracking-wider', tc.textMuted)}>🔑 Key Takeaway</p>
+            <p className={cn('text-[10px] font-semibold uppercase tracking-wider', tc.textMuted)}>🔑 Key Takeaway</p>
             <p className={cn('text-[10px] leading-snug line-clamp-1', notice.keyTakeawayTitle ? 'text-white/90' : 'text-zinc-500 italic')}>
               {notice.keyTakeawayTitle || 'No title added yet.'}
             </p>
@@ -616,13 +616,13 @@ export function NoticesScreen() {
             {/* Caption overlay — dark scrim at the bottom of the image */}
             <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/90 via-black/70 to-transparent px-2 pt-5 pb-1.5 flex flex-col gap-1">
               <div>
-                <p className={cn('text-[11px] uppercase tracking-wider', tc.textMuted)}>❌ What Happened</p>
+                <p className={cn('text-[10px] font-semibold uppercase tracking-wider', tc.textMuted)}>❌ What Happened</p>
                 <p className={cn('text-[10px] leading-snug line-clamp-1', notice.whatHappenedTitle ? 'text-white/90' : 'text-zinc-500 italic')}>
                   {notice.whatHappenedTitle || 'No title added yet.'}
                 </p>
               </div>
               <div>
-                <p className="text-[11px] uppercase tracking-wider text-emerald-400">💡 Rule / Prevention</p>
+                <p className="text-[10px] font-semibold uppercase tracking-wider text-emerald-400/90">💡 Rule / Prevention</p>
                 <p className={cn('text-[10px] font-semibold leading-snug line-clamp-1', notice.preventionTitle ? 'text-emerald-200' : 'text-emerald-200/50 italic')}>
                   {notice.preventionTitle || 'No title added yet.'}
                 </p>
