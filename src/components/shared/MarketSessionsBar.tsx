@@ -170,16 +170,9 @@ export const MarketSessionsBar: React.FC = () => {
           timeZone: session.clockTimeZone, hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true,
         }).replace(/^(\d):/, '0$1:');
 
-        // Card-level status accent lives on the left edge only (§8a),
-        // matching the Discipline banner pattern — the rest of the card
-        // border stays neutral zinc per the base surface rules.
-        const statusAccentClass =
-          statusKind === 'weekend' ? 'border-l-rose-500'
-          : statusKind === 'holiday' ? 'border-l-orange-500'
-          : inKillzone ? 'border-l-amber-500'
-          : isOpen ? 'border-l-emerald-500'
-          : (theme !== 'light' ? 'border-l-zinc-800/80' : 'border-l-zinc-200');
-
+        // Status is communicated entirely via the badge triplet (below) —
+        // top-level cards keep a standard neutral zinc border per §9 "Card
+        // (top-level)"; no card-level accent border.
         const badgeClass =
           statusKind === 'weekend' ? 'bg-rose-500/15 text-rose-300 border-rose-500/30'
           : statusKind === 'holiday' ? 'bg-orange-500/15 text-orange-300 border-orange-500/30'
@@ -196,15 +189,14 @@ export const MarketSessionsBar: React.FC = () => {
           <div
             key={session.key}
             className={cn(
-              'min-w-0 rounded-xl border border-l-2 p-4 transition-colors',
-              theme !== 'light' ? 'bg-zinc-900/40 border-zinc-800/80' : 'bg-white border-zinc-200',
-              statusAccentClass
+              'min-w-0 rounded-xl border p-4 transition-colors',
+              theme !== 'light' ? 'bg-zinc-900/40 border-zinc-800/80' : 'bg-white border-zinc-200'
             )}
           >
             <div className="flex items-center justify-between gap-2 mb-2.5">
               <h3 className={cn('text-xs font-semibold truncate', tc.text)}>{session.name}</h3>
               <span className={cn(
-                'px-1.5 py-0.5 rounded-full text-[10px] font-medium border flex-shrink-0 whitespace-nowrap',
+                'px-1.5 py-0.5 rounded-full text-[10px] font-semibold border flex-shrink-0 whitespace-nowrap',
                 badgeClass
               )}>
                 {badgeLabel}
