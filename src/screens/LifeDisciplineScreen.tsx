@@ -464,24 +464,21 @@ export function LifeDisciplineScreen() {
             Motto from the Configure Challenge modal live here, not in the
             static page header above. */}
         <div className={cn(
-          "relative overflow-hidden border border-l-2 border-l-amber-500 rounded-xl px-5 py-4 min-w-0 transition-colors duration-300",
+          "border rounded-xl px-5 py-4 min-w-0",
           theme !== 'light'
-            ? 'bg-gradient-to-br from-zinc-900 via-zinc-900/90 to-zinc-900/60 border-zinc-800/80'
-            : 'bg-gradient-to-br from-white via-zinc-50 to-zinc-100 border-zinc-200'
+            ? 'bg-gradient-to-r from-amber-500/10 via-zinc-900/40 to-zinc-900/40 border-amber-500/20'
+            : 'bg-gradient-to-r from-amber-500/10 via-white to-white border-amber-500/30'
         )}>
-          <div className="absolute inset-0 bg-gradient-to-br from-amber-500/[0.06] via-transparent to-transparent pointer-events-none" />
-          <div className="relative">
-            <p className={cn("text-base sm:text-lg font-semibold truncate flex items-center gap-2", tc.text)}>
-              <Flame className="w-5 h-5 text-amber-400 flex-shrink-0" />
-              <span className="text-amber-400">ACTIVE CHALLENGE:</span>
-              <span className="truncate">{challengeConfig.title}</span>
+          <p className={cn("text-base sm:text-lg font-semibold truncate flex items-center gap-2", tc.text)}>
+            <Flame className="w-5 h-5 text-amber-400 flex-shrink-0" />
+            <span className="text-amber-400">ACTIVE CHALLENGE:</span>
+            <span className="truncate">{challengeConfig.title}</span>
+          </p>
+          {challengeConfig.motto && (
+            <p className={cn("mt-1.5 text-sm truncate", tc.textMuted)}>
+              "{challengeConfig.motto}"
             </p>
-            {challengeConfig.motto && (
-              <p className={cn("mt-1.5 text-sm truncate", tc.textMuted)}>
-                "{challengeConfig.motto}"
-              </p>
-            )}
-          </div>
+          )}
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
