@@ -4,7 +4,6 @@ import {
   BookOpen,
   FileText,
   Calendar,
-  ListChecks,
   Eye,
   EyeOff,
   Plus,
