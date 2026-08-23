@@ -310,7 +310,7 @@ const buildFolderTree = (folders: string[]): FolderNode[] => {
 export function NotebookScreen() {
   const {
     theme, tc, notebookEntries, notebookEntriesLoading, notebookFolders, notebookFolderColors,
-    notebookDeletedFolders, notebookDefaultFolders,
+    notebookDeletedFolders,
     handleAddNotebookEntry, handleUpdateNotebookEntry, handleToggleNotebookEntryPin,
     handleToggleNotebookEntryFavorite, handleDuplicateNotebookEntry,
     handleBulkMoveNotebookEntries, handleBulkSoftDeleteNotebookEntries, handleEmptyNotebookTrash,
@@ -2849,11 +2849,7 @@ export function NotebookScreen() {
           <div className={cn('rounded-xl max-w-sm w-full border p-6 shadow-2xl', theme !== 'light' ? 'bg-zinc-900 border-white/10' : 'bg-white border-zinc-200')} onClick={(e) => e.stopPropagation()}>
             <h3 className={cn('text-base font-semibold mb-2', tc.text)}>Delete "{folderPendingDelete}"?</h3>
             <p className={cn("text-sm mb-4 leading-relaxed", tc.textMuted)}>
-              {notebookDefaultFolders.includes(folderPendingDelete) ? (
-                <>"{folderPendingDelete}" is a built-in folder — deleting it is permanent and it won't appear in Recently Deleted. It won't come back unless you restore your account from a full backup. Its notes will still move to Recently Deleted individually.</>
-              ) : (
-                <>This folder and its notes will move to Recently Deleted together — you can restore them from there, or they'll be permanently removed after 30 days. Sub-folders aren't deleted automatically.</>
-              )}
+              This folder and its notes will move to Recently Deleted together — you can restore them from there, or they'll be permanently removed after 30 days. Sub-folders aren't deleted automatically.
             </p>
             <div className="flex items-center justify-end gap-2.5">
               <button onClick={() => setFolderPendingDelete(null)} className={cn('px-4 py-2 rounded-lg text-sm', theme !== 'light' ? 'bg-zinc-800 hover:bg-zinc-700 text-zinc-300' : 'bg-zinc-100 hover:bg-zinc-200 text-zinc-700')}>
