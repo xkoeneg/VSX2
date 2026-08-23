@@ -285,7 +285,7 @@ export function PlaybookScreen() {
       <div className="min-w-0">
         <div className="flex items-center gap-1.5 mb-4 min-w-0">
           <meta.Icon className={cn("w-5 h-5 flex-shrink-0", meta.color)} strokeWidth={2} />
-          <h4 className={cn("text-xs font-semibold uppercase tracking-wider break-words leading-snug", tc.text)}>{getPillarShortLabel(pillar, customPillars)}</h4>
+          <h4 className={cn("text-base font-semibold uppercase tracking-wide break-words leading-snug", tc.text)}>{getPillarShortLabel(pillar, customPillars)}</h4>
         </div>
 
         {pillarRules.length === 0 ? (
