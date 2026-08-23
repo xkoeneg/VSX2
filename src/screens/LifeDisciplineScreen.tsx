@@ -494,7 +494,7 @@ export function LifeDisciplineScreen() {
           theme !== 'light' ? 'bg-zinc-900/40 border-zinc-800/80' : 'bg-white border-zinc-200'
         )}>
           <div className="flex items-center justify-between gap-3 flex-wrap mb-4">
-            <h3 className={cn("text-xs font-semibold flex items-center gap-2 select-none", tc.text)}>
+            <h3 className={cn("text-base font-semibold flex items-center gap-2 select-none", tc.text)}>
               <Shield className={cn("w-4 h-4 flex-shrink-0", tc.textMuted)} />
               <span className="truncate">Daily Checklist — {formatDate(todayKey)}</span>
             </h3>
@@ -725,7 +725,7 @@ export function LifeDisciplineScreen() {
           theme !== 'light' ? 'bg-zinc-900/40 border-zinc-800/80' : 'bg-white border-zinc-200'
         )}>
           <div className="flex items-center justify-between mb-4 flex-wrap gap-2">
-            <h3 className={cn("text-xs font-semibold flex items-center gap-2 select-none", tc.text)}>
+            <h3 className={cn("text-base font-semibold flex items-center gap-2 select-none", tc.text)}>
               <Target className={cn("w-4 h-4 flex-shrink-0", tc.textMuted)} />
               <span className="truncate">{challengeConfig.durationDays}-Day Challenge Progress</span>
             </h3>

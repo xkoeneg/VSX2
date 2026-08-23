@@ -369,7 +369,7 @@ export function PlaybookScreen() {
               theme !== 'light' ? 'bg-zinc-900/40 border-zinc-800/80' : 'bg-white border-zinc-200'
             )}>
               <div className="flex items-center justify-between flex-wrap gap-3">
-                <h3 className={cn("text-xs font-semibold flex items-center gap-1.5 truncate", tc.text)}>
+                <h3 className={cn("text-sm font-semibold flex items-center gap-1.5 truncate", tc.text)}>
                   <Layers className="w-4 h-4 text-emerald-400 flex-shrink-0" strokeWidth={2} />
                   STRATEGY MODELS
                 </h3>
@@ -675,7 +675,7 @@ export function PlaybookScreen() {
                 <ShieldCheck className="w-5 h-5 text-emerald-400" strokeWidth={2} />
               </div>
               <div className="min-w-0">
-                <h3 className={cn("text-sm font-semibold uppercase tracking-wide truncate", tc.text)}>Trading Rules</h3>
+                <h3 className={cn("text-base font-semibold uppercase tracking-wide truncate", tc.text)}>Trading Rules</h3>
               </div>
             </div>
             <div className="flex items-center gap-2 flex-wrap flex-shrink-0">
