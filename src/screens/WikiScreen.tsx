@@ -546,7 +546,7 @@ export function WikiScreen() {
         <div className="flex flex-col h-full min-h-0">
           {/* Header — title, category tag, ideal session badge, actions */}
           <div className={cn(
-            'flex items-start justify-between gap-3 px-5 py-4 border-b flex-shrink-0',
+            'flex items-center justify-between gap-3 px-5 py-4 border-b flex-shrink-0',
             theme !== 'light' ? 'border-zinc-800/80' : 'border-zinc-200'
           )}>
             <div className="min-w-0 flex-1">
