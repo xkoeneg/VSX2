@@ -4,7 +4,7 @@ import {
   BookOpen,
   FileText,
   Calendar,
-  Shield,
+  ListChecks,
   Eye,
   EyeOff,
   Plus,
@@ -497,7 +497,7 @@ export function LifeDisciplineScreen() {
         )}>
           <div className="flex items-center justify-between gap-3 flex-wrap mb-4">
             <h3 className={cn("text-base font-semibold flex items-center gap-2 select-none", tc.text)}>
-              <Shield className={cn("w-4 h-4 flex-shrink-0", tc.textMuted)} />
+              <ListChecks className={cn("w-4 h-4 flex-shrink-0", tc.textMuted)} />
               <span className="truncate">Daily Checklist — {formatDate(todayKey)}</span>
             </h3>
             <div className="flex items-center gap-2 flex-shrink-0">
