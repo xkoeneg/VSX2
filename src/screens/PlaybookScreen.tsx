@@ -667,10 +667,10 @@ export function PlaybookScreen() {
           "min-w-0 rounded-xl p-4 border",
           theme !== 'light' ? 'bg-zinc-900/40 border-zinc-800/80' : 'bg-white border-zinc-200'
         )}>
-          <div className="flex items-center justify-between flex-wrap gap-4 mb-6">
-            <h3 className={cn("text-xs font-semibold uppercase tracking-wider flex items-center gap-2 truncate min-w-0", tc.text)}>
+          <div className="flex items-center justify-between flex-wrap gap-3">
+            <h3 className={cn("text-sm font-semibold flex items-center gap-1.5 truncate", tc.text)}>
               <ShieldCheck className="w-4 h-4 text-emerald-400 flex-shrink-0" strokeWidth={2} />
-              <span className="truncate">Trading Rules</span>
+              TRADING RULES
             </h3>
             <div className="flex items-center gap-2 flex-wrap flex-shrink-0">
               <button
@@ -683,7 +683,7 @@ export function PlaybookScreen() {
             </div>
           </div>
 
-          <div className={cn("grid gap-x-6 gap-y-8 w-full", PILLAR_GRID_COLS_CLASS[pillarsPerRow])}>
+          <div className={cn("grid gap-x-6 gap-y-8 w-full mt-4", PILLAR_GRID_COLS_CLASS[pillarsPerRow])}>
             {getAllPillarIds(customPillars).map(pillar => (
               <div className="min-w-0" key={pillar}>
                 {renderRulePillarColumn(pillar)}
