@@ -106,14 +106,14 @@ const toTextColorClass = (bgClass: string) => FOLDER_COLOR_TEXT_BY_BG[bgClass] ?
 // Static literal map (not computed) so Tailwind's JIT scanner can find
 // every class at build time.
 const FOLDER_SELECTED_BY_BG: Record<string, { dark: string; light: string }> = {
-  'bg-purple-500': { dark: 'bg-purple-500/10 text-purple-300', light: 'bg-purple-50 text-purple-700' },
-  'bg-blue-500': { dark: 'bg-blue-500/10 text-blue-300', light: 'bg-blue-50 text-blue-700' },
-  'bg-emerald-500': { dark: 'bg-emerald-500/10 text-emerald-300', light: 'bg-emerald-50 text-emerald-700' },
-  'bg-pink-500': { dark: 'bg-pink-500/10 text-pink-300', light: 'bg-pink-50 text-pink-700' },
-  'bg-amber-500': { dark: 'bg-amber-500/10 text-amber-300', light: 'bg-amber-50 text-amber-700' },
-  'bg-rose-500': { dark: 'bg-rose-500/10 text-rose-300', light: 'bg-rose-50 text-rose-700' },
-  'bg-cyan-500': { dark: 'bg-cyan-500/10 text-cyan-300', light: 'bg-cyan-50 text-cyan-700' },
-  'bg-indigo-500': { dark: 'bg-indigo-500/10 text-indigo-300', light: 'bg-indigo-50 text-indigo-700' },
+  'bg-purple-500': { dark: 'bg-purple-500/15 border border-purple-500/40 text-purple-400', light: 'bg-purple-50 border border-purple-200 text-purple-700' },
+  'bg-blue-500': { dark: 'bg-blue-500/15 border border-blue-500/40 text-blue-400', light: 'bg-blue-50 border border-blue-200 text-blue-700' },
+  'bg-emerald-500': { dark: 'bg-emerald-500/15 border border-emerald-500/40 text-emerald-400', light: 'bg-emerald-50 border border-emerald-200 text-emerald-700' },
+  'bg-pink-500': { dark: 'bg-pink-500/15 border border-pink-500/40 text-pink-400', light: 'bg-pink-50 border border-pink-200 text-pink-700' },
+  'bg-amber-500': { dark: 'bg-amber-500/15 border border-amber-500/40 text-amber-400', light: 'bg-amber-50 border border-amber-200 text-amber-700' },
+  'bg-rose-500': { dark: 'bg-rose-500/15 border border-rose-500/40 text-rose-400', light: 'bg-rose-50 border border-rose-200 text-rose-700' },
+  'bg-cyan-500': { dark: 'bg-cyan-500/15 border border-cyan-500/40 text-cyan-400', light: 'bg-cyan-50 border border-cyan-200 text-cyan-700' },
+  'bg-indigo-500': { dark: 'bg-indigo-500/15 border border-indigo-500/40 text-indigo-400', light: 'bg-indigo-50 border border-indigo-200 text-indigo-700' },
 };
 const toFolderSelectedClass = (bgClass: string, theme: string) =>
   (FOLDER_SELECTED_BY_BG[bgClass] ?? FOLDER_SELECTED_BY_BG['bg-purple-500'])[theme !== 'light' ? 'dark' : 'light'];
@@ -1330,7 +1330,7 @@ export function NotebookScreen() {
       <div key={node.fullPath}>
         <div
           className={cn(
-            'group/folder relative flex items-center gap-1 rounded-lg pl-2.5 pr-2.5 py-1 transition-colors',
+            'group/folder relative flex items-center gap-1 rounded-lg pl-2.5 pr-2.5 py-1.5 transition-colors',
             isBeingDragged && 'opacity-40',
             isDragOverTarget && (theme !== 'light' ? 'ring-1 ring-purple-500/50' : 'ring-1 ring-purple-400/60'),
             // Selection tint now lives on the whole row (icon included),
@@ -1338,7 +1338,7 @@ export function NotebookScreen() {
             // too when active instead of looking unselected next to it.
             activeFolder === node.fullPath
               ? toFolderSelectedClass(resolveFolderColor(node.fullPath), theme)
-              : cn(textBody, theme !== 'light' ? 'hover:bg-zinc-800/60' : 'hover:bg-zinc-50')
+              : cn(textBody, 'border border-transparent', theme !== 'light' ? 'hover:bg-zinc-800/60' : 'hover:bg-zinc-50')
           )}
           draggable={isDraggable}
           onDragStart={isDraggable ? (e) => { setDraggedFolder(node.fullPath); e.dataTransfer.effectAllowed = 'move'; } : undefined}
@@ -1407,7 +1407,7 @@ export function NotebookScreen() {
 
           <button
             onClick={() => { setActiveFolder(node.fullPath); setActiveTagFilter(null); }}
-            className="flex-1 flex items-center px-1.5 py-1 text-base text-left min-w-0"
+            className="flex-1 flex items-center px-1.5 py-1 text-sm font-medium text-left min-w-0"
           >
             <span className="truncate flex-1">{node.name}</span>
           </button>
@@ -1422,7 +1422,7 @@ export function NotebookScreen() {
               the All notes / Favorites counts use — instead of sitting
               centered in the middle of this wider box. */}
           <div className="relative flex-shrink-0 w-7 h-7 flex items-center justify-end">
-            <span className={cn('absolute right-0 text-xs transition-opacity duration-150', textMuted, 'group-hover/folder:opacity-0')}>
+            <span className={cn('absolute right-0 text-xs font-mono font-semibold tabular-nums transition-opacity duration-150', textMuted, 'group-hover/folder:opacity-0')}>
               {countForFolderPath(node.fullPath)}
             </span>
             <button
@@ -1722,29 +1722,29 @@ export function NotebookScreen() {
             <button
               onClick={() => { setActiveFolder(ALL_NOTES); setActiveTagFilter(null); }}
               className={cn(
-                'w-full flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-base text-left transition-colors',
+                'w-full flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-sm font-medium text-left transition-colors',
                 activeFolder === ALL_NOTES
-                  ? (theme !== 'light' ? 'bg-purple-500/10 text-purple-300' : 'bg-purple-50 text-purple-700')
-                  : cn(textBody, theme !== 'light' ? 'hover:bg-zinc-800/60' : 'hover:bg-zinc-50')
+                  ? (theme !== 'light' ? 'bg-purple-500/15 border border-purple-500/40 text-purple-400' : 'bg-purple-50 border border-purple-200 text-purple-700')
+                  : cn(textBody, 'border border-transparent', theme !== 'light' ? 'hover:bg-zinc-800/60' : 'hover:bg-zinc-50')
               )}
             >
               <StickyNote className="w-4 h-4 flex-shrink-0" />
               <span className="flex-1 truncate">All notes</span>
-              <span className={cn('text-xs', textMuted)}>{liveEntries.length}</span>
+              <span className={cn('text-xs font-mono px-2 py-0.5 rounded-full tabular-nums', tc.textSecondary, theme !== 'light' ? 'bg-zinc-800/60' : 'bg-zinc-100')}>{liveEntries.length}</span>
             </button>
 
             <button
               onClick={() => { setActiveFolder(FAVORITES); setActiveTagFilter(null); }}
               className={cn(
-                'w-full flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-base text-left transition-colors',
+                'w-full flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-sm font-medium text-left transition-colors',
                 isFavoritesView
-                  ? (theme !== 'light' ? 'bg-purple-500/10 text-purple-300' : 'bg-purple-50 text-purple-700')
-                  : cn(textBody, theme !== 'light' ? 'hover:bg-zinc-800/60' : 'hover:bg-zinc-50')
+                  ? (theme !== 'light' ? 'bg-purple-500/15 border border-purple-500/40 text-purple-400' : 'bg-purple-50 border border-purple-200 text-purple-700')
+                  : cn(textBody, 'border border-transparent', theme !== 'light' ? 'hover:bg-zinc-800/60' : 'hover:bg-zinc-50')
               )}
             >
               <Star className="w-4 h-4 flex-shrink-0" />
               <span className="flex-1 truncate">Favorites</span>
-              <span className={cn('text-xs', textMuted)}>{liveEntries.filter(e => e.favorite).length}</span>
+              <span className={cn('text-xs font-mono px-2 py-0.5 rounded-full tabular-nums', tc.textSecondary, theme !== 'light' ? 'bg-zinc-800/60' : 'bg-zinc-100')}>{liveEntries.filter(e => e.favorite).length}</span>
             </button>
 
             {folderTree.map(node => renderFolderNode(node, 0))}
@@ -1761,13 +1761,13 @@ export function NotebookScreen() {
               className={cn(
                 'w-full flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-sm text-left font-medium transition-colors',
                 isTrashView
-                  ? (theme !== 'light' ? 'bg-rose-500/10 text-rose-300' : 'bg-rose-50 text-rose-700')
-                  : cn(textBody, theme !== 'light' ? 'hover:bg-zinc-800/60' : 'hover:bg-zinc-50')
+                  ? (theme !== 'light' ? 'bg-rose-500/15 border border-rose-500/40 text-rose-400' : 'bg-rose-50 border border-rose-200 text-rose-700')
+                  : cn(textBody, 'border border-transparent', theme !== 'light' ? 'hover:bg-zinc-800/60' : 'hover:bg-zinc-50')
               )}
             >
               <Trash2 className="w-4 h-4 flex-shrink-0" />
               <span className="flex-1 truncate">Recently Deleted</span>
-              <span className={cn('text-xs', textMuted)}>{deletedEntries.length}</span>
+              <span className={cn('text-xs font-mono px-2 py-0.5 rounded-full tabular-nums', tc.textSecondary, theme !== 'light' ? 'bg-zinc-800/60' : 'bg-zinc-100')}>{deletedEntries.length}</span>
             </button>
           </div>
           </>
