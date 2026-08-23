@@ -431,11 +431,13 @@ export function LifeDisciplineScreen() {
     const disciplineScore = decidedDays > 0 ? Math.round((completedCount / decidedDays) * 100) : 0;
 
     const statusStyles: Record<string, string> = {
-      complete: 'bg-emerald-500/15 border-emerald-500/40 text-emerald-300 hover:bg-emerald-500/25',
-      grace: 'bg-cyan-500/15 border-cyan-500/40 text-cyan-300 hover:bg-cyan-500/25',
-      failed: 'bg-rose-500/15 border-rose-500/40 text-rose-300 cursor-pointer hover:bg-rose-500/25',
-      pending: 'bg-amber-500/15 border-amber-500/40 text-amber-300',
-      upcoming: theme !== 'light' ? 'bg-zinc-800/30 border-zinc-800/60 text-zinc-600' : 'bg-zinc-50 border-zinc-200 text-zinc-400',
+      complete: 'bg-emerald-500/10 border-emerald-500/30 text-emerald-300',
+      grace: 'bg-cyan-500/10 border-cyan-500/30 text-cyan-300',
+      failed: 'bg-rose-500/10 border-rose-500/30 text-rose-300 cursor-pointer',
+      pending: 'bg-amber-500/10 border-amber-500/30 text-amber-300',
+      upcoming: theme !== 'light'
+        ? 'border-white/5 bg-white/[0.02] hover:bg-white/5 text-zinc-500'
+        : 'border-zinc-200 bg-zinc-50 hover:bg-zinc-100 text-zinc-400',
     };
 
     return (
@@ -529,18 +531,11 @@ export function LifeDisciplineScreen() {
           {lifeDisciplineToast && (
             <div
               key={lifeDisciplineToast}
-              style={{ animation: 'lifeDisciplineToastIn 0.25s ease-out' }}
               className="absolute top-3 right-5 z-10 px-3.5 py-2 rounded-lg bg-emerald-500/15 border border-emerald-500/40 text-emerald-400 text-xs font-semibold shadow-xl select-none"
             >
               {lifeDisciplineToast}
             </div>
           )}
-          <style>{`
-            @keyframes lifeDisciplineToastIn {
-              from { opacity: 0; transform: translateY(-6px); }
-              to { opacity: 1; transform: translateY(0); }
-            }
-          `}</style>
 
           {routineGroups.length === 0 ? (
             <div className="flex flex-col items-center justify-center gap-3 py-10 text-center select-none">
@@ -758,7 +753,7 @@ export function LifeDisciplineScreen() {
               </div>
             </div>
             <div className={cn("flex items-center gap-2.5 p-3 rounded-lg border", theme !== 'light' ? 'bg-zinc-800/60 border-zinc-700/50' : 'bg-zinc-100 border-zinc-200')}>
-              <div className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 bg-blue-500/20 text-blue-400">
+              <div className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 bg-zinc-500/20 text-zinc-400">
                 <Clock className="w-4 h-4" />
               </div>
               <div className="min-w-0">
@@ -831,9 +826,9 @@ export function LifeDisciplineScreen() {
                   title={tooltip}
                   onClick={() => handleLifeDisciplineTileClick(dateKey, day, status)}
                   className={cn(
-                    'relative aspect-square rounded-lg border flex items-center justify-center text-xs font-medium transition-colors select-none',
+                    'relative aspect-square rounded-md border flex items-center justify-center text-xs font-medium transition-colors select-none',
                     statusStyles[status],
-                    isClickable && 'cursor-pointer'
+                    isClickable ? 'cursor-pointer hover:scale-105 transition-transform' : 'cursor-default'
                   )}
                 >
                   {day}
