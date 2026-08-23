@@ -746,7 +746,7 @@ export function LifeDisciplineScreen() {
                 <CalendarDays className="w-4 h-4" />
               </div>
               <div className="min-w-0">
-                <p className={cn("text-lg font-semibold truncate tabular-nums", tc.text)}>
+                <p className={cn("text-sm font-semibold truncate tabular-nums", tc.text)}>
                   {formatDate(lifeDisciplineStartDate)} <span className={cn(tc.textMuted, "font-normal")}>→</span> {formatDate(endDateKey)}
                 </p>
                 <p className={cn("text-[11px]", tc.textMuted)}>Challenge timeline</p>
@@ -760,7 +760,7 @@ export function LifeDisciplineScreen() {
                 <Clock className="w-4 h-4" />
               </div>
               <div className="min-w-0">
-                <p className={cn("text-lg font-semibold truncate tabular-nums", tc.text)}>{daysRemaining} Days Remaining</p>
+                <p className={cn("text-sm font-semibold truncate tabular-nums", tc.text)}>{daysRemaining} Days Remaining</p>
                 <p className={cn("text-[11px]", tc.textMuted)}>Until target end date</p>
               </div>
             </div>
@@ -769,7 +769,7 @@ export function LifeDisciplineScreen() {
                 <Flame className="w-4 h-4" />
               </div>
               <div className="min-w-0">
-                <p className={cn("text-lg font-semibold truncate tabular-nums", tc.text)}>{activeStreak}-Day Streak</p>
+                <p className={cn("text-sm font-semibold truncate tabular-nums", tc.text)}>{activeStreak}-Day Streak</p>
                 <p className={cn("text-[11px]", tc.textMuted)}>Active streak</p>
               </div>
             </div>
@@ -781,7 +781,7 @@ export function LifeDisciplineScreen() {
                 <Target className="w-4 h-4" />
               </div>
               <div className="min-w-0">
-                <p className={cn('text-lg font-semibold truncate tabular-nums', disciplineScore >= 80 ? 'text-emerald-400' : disciplineScore >= 50 ? 'text-amber-400' : 'text-rose-400')}>
+                <p className={cn('text-sm font-semibold truncate tabular-nums', disciplineScore >= 80 ? 'text-emerald-400' : disciplineScore >= 50 ? 'text-amber-400' : 'text-rose-400')}>
                   {disciplineScore}% Discipline Score
                 </p>
                 <p className={cn("text-[11px]", tc.textMuted)}>Execution rate</p>
