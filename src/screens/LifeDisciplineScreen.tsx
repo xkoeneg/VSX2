@@ -433,7 +433,7 @@ export function LifeDisciplineScreen() {
     const statusStyles: Record<string, string> = {
       complete: 'bg-emerald-500/10 border-emerald-500/30 text-emerald-300',
       grace: 'bg-cyan-500/10 border-cyan-500/30 text-cyan-300',
-      failed: 'bg-rose-500/10 border-rose-500/30 text-rose-300 cursor-pointer',
+      failed: 'bg-rose-500/10 border-rose-500/30 text-rose-300',
       pending: 'bg-amber-500/10 border-amber-500/30 text-amber-300',
       upcoming: theme !== 'light'
         ? 'border-white/5 bg-white/[0.02] hover:bg-white/5 text-zinc-500'
