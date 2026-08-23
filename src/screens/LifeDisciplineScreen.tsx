@@ -743,7 +743,7 @@ export function LifeDisciplineScreen() {
               card above) */}
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4 select-none">
             <div className={cn("flex items-center gap-2.5 px-3.5 py-2.5 rounded-lg border", tc.bgSecondary, theme !== 'light' ? 'border-zinc-800' : 'border-zinc-200')}>
-              <div className={cn("p-2 rounded-lg flex-shrink-0", theme !== 'light' ? 'bg-zinc-800/60 text-zinc-400' : 'bg-zinc-100 text-zinc-400')}>
+              <div className="p-2 rounded-lg bg-violet-500/10 text-violet-400 flex-shrink-0">
                 <CalendarDays className="w-4 h-4" />
               </div>
               <div className="min-w-0">
@@ -754,7 +754,7 @@ export function LifeDisciplineScreen() {
               </div>
             </div>
             <div className={cn("flex items-center gap-2.5 px-3.5 py-2.5 rounded-lg border", tc.bgSecondary, theme !== 'light' ? 'border-zinc-800' : 'border-zinc-200')}>
-              <div className={cn("p-2 rounded-lg flex-shrink-0", theme !== 'light' ? 'bg-zinc-800/60 text-zinc-400' : 'bg-zinc-100 text-zinc-400')}>
+              <div className="p-2 rounded-lg bg-blue-500/10 text-blue-400 flex-shrink-0">
                 <Clock className="w-4 h-4" />
               </div>
               <div className="min-w-0">
@@ -763,12 +763,7 @@ export function LifeDisciplineScreen() {
               </div>
             </div>
             <div className={cn("flex items-center gap-2.5 px-3.5 py-2.5 rounded-lg border", tc.bgSecondary, theme !== 'light' ? 'border-zinc-800' : 'border-zinc-200')}>
-              <div className={cn(
-                'p-2 rounded-lg flex-shrink-0',
-                activeStreak > 0
-                  ? 'bg-amber-500/10 text-amber-400'
-                  : theme !== 'light' ? 'bg-zinc-800/60 text-zinc-400' : 'bg-zinc-100 text-zinc-400'
-              )}>
+              <div className="p-2 rounded-lg bg-amber-500/10 text-amber-400 flex-shrink-0">
                 <Flame className="w-4 h-4" />
               </div>
               <div className="min-w-0">
@@ -777,10 +772,7 @@ export function LifeDisciplineScreen() {
               </div>
             </div>
             <div className={cn("flex items-center gap-2.5 px-3.5 py-2.5 rounded-lg border", tc.bgSecondary, theme !== 'light' ? 'border-zinc-800' : 'border-zinc-200')}>
-              <div className={cn(
-                'p-2 rounded-lg flex-shrink-0',
-                disciplineScore >= 80 ? 'bg-emerald-500/10 text-emerald-400' : disciplineScore >= 50 ? 'bg-amber-500/10 text-amber-400' : 'bg-rose-500/10 text-rose-400'
-              )}>
+              <div className="p-2 rounded-lg bg-emerald-500/10 text-emerald-400 flex-shrink-0">
                 <Target className="w-4 h-4" />
               </div>
               <div className="min-w-0">
