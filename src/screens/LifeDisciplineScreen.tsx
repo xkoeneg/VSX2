@@ -544,9 +544,7 @@ export function LifeDisciplineScreen() {
 
           {routineGroups.length === 0 ? (
             <div className="flex flex-col items-center justify-center gap-3 py-10 text-center select-none">
-              <div className={cn("w-12 h-12 rounded-full flex items-center justify-center border", theme !== 'light' ? 'bg-zinc-800/60 border-zinc-700/50' : 'bg-zinc-100 border-zinc-200')}>
-                <ListChecks className={cn("w-5 h-5", tc.textMuted)} />
-              </div>
+              <ListChecks className={cn("w-7 h-7", theme !== 'light' ? 'text-zinc-700' : 'text-zinc-300')} />
               <p className={cn("text-sm max-w-xs", tc.textMuted)}>
                 No routine categories added yet. Click "+ Add Category" to start.
               </p>
@@ -589,10 +587,9 @@ export function LifeDisciplineScreen() {
                 <div
                   key={group.id}
                   className={cn(
-                    'rounded-lg border p-4 transition-colors',
-                    groupComplete
-                      ? 'bg-emerald-500/10 border-emerald-500/30'
-                      : theme !== 'light' ? 'bg-zinc-800/60 border-zinc-700/50' : 'bg-zinc-100 border-zinc-200'
+                    'rounded-lg border border-l-2 p-4 transition-colors',
+                    theme !== 'light' ? 'bg-zinc-800/60 border-zinc-700/50' : 'bg-zinc-100 border-zinc-200',
+                    groupComplete && 'border-l-emerald-500'
                   )}
                 >
                   <div className={cn("flex items-center gap-2 mb-3 pb-3 border-b select-none", theme !== 'light' ? 'border-zinc-800/60' : 'border-zinc-200')}>
@@ -632,11 +629,11 @@ export function LifeDisciplineScreen() {
                             className={cn(
                               'w-5 h-5 rounded-full border flex items-center justify-center flex-shrink-0 cursor-pointer transition-all duration-200 ease-out',
                               checked
-                                ? 'bg-emerald-500 border-emerald-400 scale-100'
+                                ? 'bg-emerald-500/25 border-emerald-400 text-emerald-400 scale-100'
                                 : cn(theme !== 'light' ? 'border-zinc-700' : 'border-zinc-300', theme !== 'light' ? 'group-hover:border-zinc-400' : 'group-hover:border-zinc-500', 'group-active:scale-90')
                             )}
                           >
-                            {checked && <Check className="w-3.5 h-3.5 text-white" />}
+                            {checked && <Check className="w-3.5 h-3.5" />}
                           </span>
                           <span className={cn('text-sm select-none transition-colors', checked ? cn(tc.textMuted, 'line-through') : tc.textSecondary)}>
                             {item.text}
@@ -662,10 +659,9 @@ export function LifeDisciplineScreen() {
             const weeklyCheckedCount = weeklyTargetsToday.filter(({ gI, iI }) => !!todayChecks[gI]?.[iI]).length;
             return (
               <div className={cn(
-                'mt-4 rounded-lg border p-4 transition-colors',
-                weeklyTargetsComplete
-                  ? 'bg-emerald-500/10 border-emerald-500/30'
-                  : theme !== 'light' ? 'bg-zinc-800/60 border-zinc-700/50' : 'bg-zinc-100 border-zinc-200'
+                'mt-4 rounded-lg border border-l-2 p-4 transition-colors',
+                theme !== 'light' ? 'bg-zinc-800/60 border-zinc-700/50' : 'bg-zinc-100 border-zinc-200',
+                weeklyTargetsComplete && 'border-l-emerald-500'
               )}>
                 <div className={cn("flex items-center gap-2 mb-3 pb-3 border-b select-none", theme !== 'light' ? 'border-zinc-800/60' : 'border-zinc-200')}>
                   <CalendarDays className={cn('w-4 h-4 flex-shrink-0', weeklyTargetsComplete ? 'text-emerald-400' : tc.textMuted)} strokeWidth={2} />
@@ -701,11 +697,11 @@ export function LifeDisciplineScreen() {
                           className={cn(
                             'w-5 h-5 rounded-full border flex items-center justify-center flex-shrink-0 cursor-pointer transition-all duration-200 ease-out',
                             checked
-                              ? 'bg-emerald-500 border-emerald-400 scale-100'
+                              ? 'bg-emerald-500/25 border-emerald-400 text-emerald-400 scale-100'
                               : cn(theme !== 'light' ? 'border-zinc-700' : 'border-zinc-300', theme !== 'light' ? 'group-hover:border-zinc-400' : 'group-hover:border-zinc-500', 'group-active:scale-90')
                           )}
                         >
-                          {checked && <Check className="w-3.5 h-3.5 text-white" />}
+                          {checked && <Check className="w-3.5 h-3.5" />}
                         </span>
                         <span className={cn('text-sm select-none transition-colors truncate', checked ? cn(tc.textMuted, 'line-through') : tc.textSecondary)}>
                           {item.text}
@@ -772,7 +768,10 @@ export function LifeDisciplineScreen() {
               </div>
             </div>
             <div className={cn("flex items-center gap-2.5 px-3.5 py-2.5 rounded-lg border", theme !== 'light' ? 'bg-zinc-800/60 border-zinc-700/50' : 'bg-zinc-100 border-zinc-200')}>
-              <div className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 bg-emerald-500/20 text-emerald-400">
+              <div className={cn(
+                'w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0',
+                disciplineScore >= 80 ? 'bg-emerald-500/20 text-emerald-400' : disciplineScore >= 50 ? 'bg-amber-500/20 text-amber-400' : 'bg-rose-500/20 text-rose-400'
+              )}>
                 <Target className="w-4 h-4" />
               </div>
               <div className="min-w-0">
