@@ -586,108 +586,33 @@ export function LifeDisciplineScreen() {
                 <div
                   key={group.id}
                   className={cn(
-                    'relative overflow-hidden rounded-lg border p-4 transition-colors',
-                    theme !== 'light' ? 'bg-zinc-800/60 border-zinc-700/50' : 'bg-zinc-100 border-zinc-200'
+                    'relative rounded-lg border p-4 transition-colors',
+                    theme !== 'light' ? 'bg-zinc-800/60 border-zinc-700/50' : 'bg-zinc-100 border-zinc-200',
+                    groupComplete && 'border-l-4 border-l-emerald-500/70'
                   )}
                 >
-                  {groupComplete && (
-                    <span className="absolute left-0 top-0 bottom-0 w-1.5 bg-emerald-500/70" />
-                  )}
-                  <div className="pl-2">
-                    <div className={cn("flex items-center gap-2 mb-3 pb-3 border-b select-none", theme !== 'light' ? 'border-zinc-800/60' : 'border-zinc-200')}>
-                      {renderCategoryIcon(group, 'w-4 h-4', groupComplete ? 'text-emerald-400' : undefined)}
-                      <span className={cn("text-sm font-semibold truncate", tc.text)}>{group.label}</span>
-                      <span
-                        className={cn(
-                          'ml-auto flex-shrink-0 text-[10px] font-mono font-semibold px-2 py-0.5 rounded-full border whitespace-nowrap',
-                          groupComplete
-                            ? 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30'
-                            : cn(theme !== 'light' ? 'bg-zinc-800/60 border-zinc-700/50' : 'bg-zinc-100 border-zinc-200', tc.textMuted)
-                        )}
-                      >
-                        {groupCheckedCount}/{dailyItemsWithIndex.length}{groupComplete ? ' Ready' : ''}
-                      </span>
-                    </div>
-                    <div className="space-y-2">
-                      {dailyItemsWithIndex.length === 0 && (
-                        <p className={cn("text-xs italic select-none", tc.textMuted)}>
-                          No routine items — add some in Configure Challenge.
-                        </p>
-                      )}
-                      {dailyItemsWithIndex.map(({ item, iI }) => {
-                        const checked = !!groupChecks[iI];
-                        return (
-                          <label
-                            key={item.id}
-                            className="flex items-center gap-2.5 cursor-pointer group select-none"
-                          >
-                            <input
-                              type="checkbox"
-                              checked={checked}
-                              onChange={() => toggleLifeDisciplineItem(todayKey, gI, iI)}
-                              className="sr-only peer cursor-pointer"
-                            />
-                            <span
-                              className={cn(
-                                'w-5 h-5 rounded-full border flex items-center justify-center flex-shrink-0 cursor-pointer transition-all duration-200 ease-out',
-                                checked
-                                  ? 'bg-emerald-500/15 border-emerald-500/40 text-emerald-400 scale-100'
-                                  : cn(theme !== 'light' ? 'border-zinc-700' : 'border-zinc-300', theme !== 'light' ? 'group-hover:border-zinc-400' : 'group-hover:border-zinc-500', 'group-active:scale-90')
-                              )}
-                            >
-                              {checked && <Check className="w-3.5 h-3.5" />}
-                            </span>
-                            <span className={cn('text-xs select-none transition-colors', checked ? cn(tc.textMuted, 'line-through') : tc.textSecondary)}>
-                              {item.text}
-                            </span>
-                          </label>
-                        );
-                      })}
-                    </div>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-          )}
-
-          {/* TODAY'S WEEKLY TARGETS — Specific-Days items scheduled for
-              today's weekday only. Hidden entirely when the feature is off,
-              or when nothing happens to be scheduled today, so days with
-              no weekly targets stay just as clean as before. Mirrors the
-              daily cards' green "complete" styling once every item
-              scheduled for today is checked off. */}
-          {weeklyRoutinesEnabled && weeklyTargetsToday.length > 0 && (() => {
-            const weeklyTargetsComplete = weeklyTargetsToday.every(({ gI, iI }) => !!todayChecks[gI]?.[iI]);
-            const weeklyCheckedCount = weeklyTargetsToday.filter(({ gI, iI }) => !!todayChecks[gI]?.[iI]).length;
-            return (
-              <div className={cn(
-                'relative overflow-hidden mt-4 rounded-lg border p-4 transition-colors',
-                theme !== 'light' ? 'bg-zinc-800/60 border-zinc-700/50' : 'bg-zinc-100 border-zinc-200'
-              )}>
-                {weeklyTargetsComplete && (
-                  <span className="absolute left-0 top-0 bottom-0 w-1.5 bg-emerald-500/70" />
-                )}
-                <div className="pl-2">
                   <div className={cn("flex items-center gap-2 mb-3 pb-3 border-b select-none", theme !== 'light' ? 'border-zinc-800/60' : 'border-zinc-200')}>
-                    <CalendarDays className={cn('w-4 h-4 flex-shrink-0', weeklyTargetsComplete ? 'text-emerald-400' : tc.textMuted)} strokeWidth={2} />
-                    <span className={cn("text-sm font-semibold truncate", tc.text)}>
-                      {WEEKDAY_FULL_NAME[todayWeekday]} Specifics
-                    </span>
+                    {renderCategoryIcon(group, 'w-4 h-4', groupComplete ? 'text-emerald-400' : undefined)}
+                    <span className={cn("text-sm font-semibold truncate", tc.text)}>{group.label}</span>
                     <span
                       className={cn(
                         'ml-auto flex-shrink-0 text-[10px] font-mono font-semibold px-2 py-0.5 rounded-full border whitespace-nowrap',
-                        weeklyTargetsComplete
+                        groupComplete
                           ? 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30'
                           : cn(theme !== 'light' ? 'bg-zinc-800/60 border-zinc-700/50' : 'bg-zinc-100 border-zinc-200', tc.textMuted)
                       )}
                     >
-                      {weeklyCheckedCount}/{weeklyTargetsToday.length}{weeklyTargetsComplete ? ' Ready' : ' Today'}
+                      {groupCheckedCount}/{dailyItemsWithIndex.length}{groupComplete ? ' Ready' : ''}
                     </span>
                   </div>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-2">
-                    {weeklyTargetsToday.map(({ gI, item, iI }) => {
-                      const checked = !!todayChecks[gI]?.[iI];
+                  <div className="space-y-2">
+                    {dailyItemsWithIndex.length === 0 && (
+                      <p className={cn("text-xs italic select-none", tc.textMuted)}>
+                        No routine items — add some in Configure Challenge.
+                      </p>
+                    )}
+                    {dailyItemsWithIndex.map(({ item, iI }) => {
+                      const checked = !!groupChecks[iI];
                       return (
                         <label
                           key={item.id}
@@ -709,13 +634,80 @@ export function LifeDisciplineScreen() {
                           >
                             {checked && <Check className="w-3.5 h-3.5" />}
                           </span>
-                          <span className={cn('text-xs select-none transition-colors truncate', checked ? cn(tc.textMuted, 'line-through') : tc.textSecondary)}>
+                          <span className={cn('text-xs select-none transition-colors', checked ? cn(tc.textMuted, 'line-through') : tc.textSecondary)}>
                             {item.text}
                           </span>
                         </label>
                       );
                     })}
                   </div>
+                </div>
+              );
+            })}
+          </div>
+          )}
+
+          {/* TODAY'S WEEKLY TARGETS — Specific-Days items scheduled for
+              today's weekday only. Hidden entirely when the feature is off,
+              or when nothing happens to be scheduled today, so days with
+              no weekly targets stay just as clean as before. Mirrors the
+              daily cards' green "complete" styling once every item
+              scheduled for today is checked off. */}
+          {weeklyRoutinesEnabled && weeklyTargetsToday.length > 0 && (() => {
+            const weeklyTargetsComplete = weeklyTargetsToday.every(({ gI, iI }) => !!todayChecks[gI]?.[iI]);
+            const weeklyCheckedCount = weeklyTargetsToday.filter(({ gI, iI }) => !!todayChecks[gI]?.[iI]).length;
+            return (
+              <div className={cn(
+                'relative mt-4 rounded-lg border p-4 transition-colors',
+                theme !== 'light' ? 'bg-zinc-800/60 border-zinc-700/50' : 'bg-zinc-100 border-zinc-200',
+                weeklyTargetsComplete && 'border-l-4 border-l-emerald-500/70'
+              )}>
+                <div className={cn("flex items-center gap-2 mb-3 pb-3 border-b select-none", theme !== 'light' ? 'border-zinc-800/60' : 'border-zinc-200')}>
+                  <CalendarDays className={cn('w-4 h-4 flex-shrink-0', weeklyTargetsComplete ? 'text-emerald-400' : tc.textMuted)} strokeWidth={2} />
+                  <span className={cn("text-sm font-semibold truncate", tc.text)}>
+                    {WEEKDAY_FULL_NAME[todayWeekday]} Specifics
+                  </span>
+                  <span
+                    className={cn(
+                      'ml-auto flex-shrink-0 text-[10px] font-mono font-semibold px-2 py-0.5 rounded-full border whitespace-nowrap',
+                      weeklyTargetsComplete
+                        ? 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30'
+                        : cn(theme !== 'light' ? 'bg-zinc-800/60 border-zinc-700/50' : 'bg-zinc-100 border-zinc-200', tc.textMuted)
+                    )}
+                  >
+                    {weeklyCheckedCount}/{weeklyTargetsToday.length}{weeklyTargetsComplete ? ' Ready' : ' Today'}
+                  </span>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-2">
+                  {weeklyTargetsToday.map(({ gI, item, iI }) => {
+                    const checked = !!todayChecks[gI]?.[iI];
+                    return (
+                      <label
+                        key={item.id}
+                        className="flex items-center gap-2.5 cursor-pointer group select-none"
+                      >
+                        <input
+                          type="checkbox"
+                          checked={checked}
+                          onChange={() => toggleLifeDisciplineItem(todayKey, gI, iI)}
+                          className="sr-only peer cursor-pointer"
+                        />
+                        <span
+                          className={cn(
+                            'w-5 h-5 rounded-full border flex items-center justify-center flex-shrink-0 cursor-pointer transition-all duration-200 ease-out',
+                            checked
+                              ? 'bg-emerald-500/15 border-emerald-500/40 text-emerald-400 scale-100'
+                              : cn(theme !== 'light' ? 'border-zinc-700' : 'border-zinc-300', theme !== 'light' ? 'group-hover:border-zinc-400' : 'group-hover:border-zinc-500', 'group-active:scale-90')
+                          )}
+                        >
+                          {checked && <Check className="w-3.5 h-3.5" />}
+                        </span>
+                        <span className={cn('text-xs select-none transition-colors truncate', checked ? cn(tc.textMuted, 'line-through') : tc.textSecondary)}>
+                          {item.text}
+                        </span>
+                      </label>
+                    );
+                  })}
                 </div>
               </div>
             );
