@@ -509,13 +509,12 @@ export function NoticesScreen() {
         key={notice.id}
         onClick={() => openPreviewNotice(notice)}
         className={cn(
-          'group relative rounded-xl border overflow-hidden cursor-pointer transition-all hover:-translate-y-0.5 flex flex-col h-full',
-          theme !== 'light' ? 'bg-zinc-900/50 border-cyan-900/40 hover:border-cyan-500/60' : 'bg-white border-cyan-200 hover:border-cyan-400/70 hover:shadow-md'
+          'group relative rounded-lg border overflow-hidden cursor-pointer transition-all hover:-translate-y-0.5 flex flex-col h-full',
+          theme !== 'light'
+            ? 'bg-zinc-800/30 border-zinc-700/40 hover:bg-zinc-800/50'
+            : 'bg-zinc-50 border-zinc-200 hover:bg-zinc-100 hover:border-zinc-300'
         )}
       >
-        {/* Cyan accent strip — echoes the column's insight color */}
-        <div className="absolute top-0 inset-x-0 h-0.5 bg-cyan-500/70 z-10" />
-
         {/* Chart preview */}
         <div className={cn('relative w-full aspect-[16/10] flex items-center justify-center overflow-hidden', theme !== 'light' ? 'bg-zinc-950' : 'bg-zinc-100')}>
           {notice.images?.[0] ? (
@@ -527,7 +526,7 @@ export function NoticesScreen() {
           {/* Caption overlay — mirrors the mistake card's overlay so both
               columns feel equally complete at a glance */}
           <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/90 via-black/70 to-transparent px-2 pt-5 pb-1.5">
-            <p className="text-[8px] font-semibold uppercase tracking-wide text-cyan-300/90">🔑 Key Takeaway</p>
+            <p className={cn('text-[11px] uppercase tracking-wider', tc.textMuted)}>🔑 Key Takeaway</p>
             <p className={cn('text-[10px] leading-snug line-clamp-1', notice.keyTakeawayTitle ? 'text-white/90' : 'text-zinc-500 italic')}>
               {notice.keyTakeawayTitle || 'No title added yet.'}
             </p>
@@ -555,12 +554,12 @@ export function NoticesScreen() {
           <h3 className={cn('text-xs font-bold leading-snug line-clamp-2 min-h-[2.2em]', theme !== 'light' ? 'text-white' : 'text-zinc-900')}>{notice.title}</h3>
           <div className="flex flex-wrap items-center gap-1 min-h-[17px]">
             {notice.session && (
-              <span className="px-1.5 py-0.5 rounded-full text-[9px] font-medium border bg-cyan-500/10 text-cyan-400 border-cyan-500/30">
+              <span className="px-1.5 py-0.5 rounded-full text-[10px] font-medium border bg-cyan-500/15 text-cyan-400 border-cyan-500/30">
                 {notice.session}
               </span>
             )}
             {notice.tag && (
-              <span className={cn('px-1.5 py-0.5 rounded-full text-[9px] font-medium border', theme !== 'light' ? 'border-zinc-700 text-zinc-400 bg-zinc-800/60' : 'border-zinc-200 text-zinc-500 bg-zinc-100')}>
+              <span className={cn('px-1.5 py-0.5 rounded-full text-[10px] font-medium border', theme !== 'light' ? 'border-zinc-700 text-zinc-400 bg-zinc-800/60' : 'border-zinc-200 text-zinc-500 bg-zinc-100')}>
                 {notice.tag}
               </span>
             )}
@@ -581,14 +580,12 @@ export function NoticesScreen() {
           key={notice.id}
           onClick={() => openPreviewNotice(notice)}
           className={cn(
-            'group relative rounded-xl border overflow-hidden cursor-pointer transition-all hover:-translate-y-0.5 flex flex-col h-full',
-            theme !== 'light' ? 'bg-zinc-900/50 border-rose-900/40 hover:border-rose-500/60' : 'bg-white border-rose-200 hover:border-rose-400/70 hover:shadow-md'
+            'group relative rounded-lg border overflow-hidden cursor-pointer transition-all hover:-translate-y-0.5 flex flex-col h-full',
+            theme !== 'light'
+              ? 'bg-zinc-800/30 border-zinc-700/40 hover:bg-zinc-800/50'
+              : 'bg-zinc-50 border-zinc-200 hover:bg-zinc-100 hover:border-zinc-300'
           )}
         >
-          {/* Rose accent strip — echoes the column's danger color so each
-              card reads as a "mistake" card at a glance, not just on hover */}
-          <div className="absolute top-0 inset-x-0 h-0.5 bg-rose-500/70 z-10" />
-
           {/* Edit / Delete */}
           <div className="absolute top-1.5 right-1.5 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity z-10">
             <button
@@ -619,13 +616,13 @@ export function NoticesScreen() {
             {/* Caption overlay — dark scrim at the bottom of the image */}
             <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/90 via-black/70 to-transparent px-2 pt-5 pb-1.5 flex flex-col gap-1">
               <div>
-                <p className="text-[8px] font-semibold uppercase tracking-wide text-zinc-300/90">❌ What Happened</p>
+                <p className={cn('text-[11px] uppercase tracking-wider', tc.textMuted)}>❌ What Happened</p>
                 <p className={cn('text-[10px] leading-snug line-clamp-1', notice.whatHappenedTitle ? 'text-white/90' : 'text-zinc-500 italic')}>
                   {notice.whatHappenedTitle || 'No title added yet.'}
                 </p>
               </div>
               <div>
-                <p className="text-[8px] font-semibold uppercase tracking-wide text-emerald-400">💡 Rule / Prevention</p>
+                <p className="text-[11px] uppercase tracking-wider text-emerald-400">💡 Rule / Prevention</p>
                 <p className={cn('text-[10px] font-semibold leading-snug line-clamp-1', notice.preventionTitle ? 'text-emerald-200' : 'text-emerald-200/50 italic')}>
                   {notice.preventionTitle || 'No title added yet.'}
                 </p>
@@ -639,7 +636,7 @@ export function NoticesScreen() {
               <h3 className={cn('text-xs font-bold leading-snug line-clamp-2 min-h-[2.2em]', theme !== 'light' ? 'text-white' : 'text-zinc-900')}>{notice.title}</h3>
               <div className="flex flex-wrap gap-1 min-h-[17px]">
                 {tags.length > 0 && tags.map(tag => (
-                  <span key={tag} className="px-1.5 py-0.5 rounded-full text-[9px] font-semibold border bg-rose-500/10 text-rose-400 border-rose-500/30">
+                  <span key={tag} className="px-1.5 py-0.5 rounded-full text-[10px] font-semibold border bg-rose-500/15 text-rose-400 border-rose-500/30">
                     {tag}
                   </span>
                 ))}
