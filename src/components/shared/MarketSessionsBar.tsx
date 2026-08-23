@@ -2,6 +2,7 @@ import { MARKET_SESSIONS, isWithinPHTWindow, formatPHTWindowLabel, getMinutesSin
 import { isObservingDST } from '../../constants/marketSessions';
 import { cn } from '../../utils/format';
 import { useEffect, useState } from 'react';
+import { useAppContext } from '../../context/AppContext';
 
 // ============================================================
 // Public Holiday Integration (Nager.Date API)
@@ -120,6 +121,7 @@ const useSessionHolidays = () => {
 type SessionStatusKind = 'weekend' | 'holiday' | 'open' | 'closed';
 
 export const MarketSessionsBar: React.FC = () => {
+  const { theme, tc } = useAppContext();
   // Ticks every second so the digital clocks genuinely read as "live"
   // rather than refreshing in visible jumps.
   const [now, setNow] = useState(new Date());
@@ -168,18 +170,21 @@ export const MarketSessionsBar: React.FC = () => {
           timeZone: session.clockTimeZone, hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true,
         }).replace(/^(\d):/, '0$1:');
 
-        const cardBorderClass =
-          statusKind === 'weekend' ? 'border-rose-500/30'
-          : statusKind === 'holiday' ? 'border-orange-500/30'
-          : inKillzone ? 'border-amber-500/40'
-          : isOpen ? 'border-emerald-500/30'
-          : 'border-zinc-800';
+        // Card-level status accent lives on the left edge only (§8a),
+        // matching the Discipline banner pattern — the rest of the card
+        // border stays neutral zinc per the base surface rules.
+        const statusAccentClass =
+          statusKind === 'weekend' ? 'border-l-rose-500'
+          : statusKind === 'holiday' ? 'border-l-orange-500'
+          : inKillzone ? 'border-l-amber-500'
+          : isOpen ? 'border-l-emerald-500'
+          : (theme !== 'light' ? 'border-l-zinc-800/80' : 'border-l-zinc-200');
 
         const badgeClass =
-          statusKind === 'weekend' ? 'bg-rose-500/10 text-rose-400 border-rose-500/30'
-          : statusKind === 'holiday' ? 'bg-orange-500/10 text-orange-400 border-orange-500/30'
-          : isOpen ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30'
-          : 'bg-zinc-800/60 text-zinc-500 border-zinc-700';
+          statusKind === 'weekend' ? 'bg-rose-500/15 text-rose-300 border-rose-500/30'
+          : statusKind === 'holiday' ? 'bg-orange-500/15 text-orange-300 border-orange-500/30'
+          : isOpen ? 'bg-emerald-500/15 text-emerald-300 border-emerald-500/30'
+          : (theme !== 'light' ? 'bg-zinc-800/60 text-zinc-500 border-zinc-700/50' : 'bg-zinc-100 text-zinc-400 border-zinc-200');
 
         const badgeLabel =
           statusKind === 'weekend' ? '🔴 WEEKEND CLOSED'
@@ -191,12 +196,13 @@ export const MarketSessionsBar: React.FC = () => {
           <div
             key={session.key}
             className={cn(
-              'min-w-0 rounded-xl border bg-zinc-900/50 p-3.5 transition-colors',
-              cardBorderClass
+              'min-w-0 rounded-xl border border-l-2 p-4 transition-colors',
+              theme !== 'light' ? 'bg-zinc-900/40 border-zinc-800/80' : 'bg-white border-zinc-200',
+              statusAccentClass
             )}
           >
             <div className="flex items-center justify-between gap-2 mb-2.5">
-              <h3 className="text-xs font-semibold text-white truncate">{session.name}</h3>
+              <h3 className={cn('text-xs font-semibold truncate', tc.text)}>{session.name}</h3>
               <span className={cn(
                 'px-1.5 py-0.5 rounded-full text-[10px] font-medium border flex-shrink-0 whitespace-nowrap',
                 badgeClass
@@ -207,27 +213,27 @@ export const MarketSessionsBar: React.FC = () => {
 
             <div className="flex items-center justify-between gap-2 mb-1">
               <span className="flex items-center gap-1.5 min-w-0">
-                <span className="text-[10px] text-zinc-500 truncate">{session.cityLabel} time</span>
+                <span className={cn('text-[10px] truncate', tc.textMuted)}>{session.cityLabel} time</span>
                 {session.dstTimeZone && (
                   <span className={cn(
                     'px-1 py-0.5 rounded text-[9px] font-medium border flex-shrink-0 leading-none whitespace-nowrap',
                     inDST
-                      ? 'bg-amber-500/10 text-amber-300 border-amber-500/30'
-                      : 'bg-sky-500/10 text-sky-300 border-sky-500/30'
+                      ? 'bg-amber-500/15 text-amber-300 border-amber-500/30'
+                      : 'bg-sky-500/15 text-sky-300 border-sky-500/30'
                   )}>
                     {inDST ? '☀️ DST' : '❄️ Standard'}
                   </span>
                 )}
               </span>
-              <span className="font-mono text-sm text-zinc-200 tabular-nums tracking-tight">{localClock}</span>
+              <span className={cn('font-mono text-sm tabular-nums tracking-tight', tc.text)}>{localClock}</span>
             </div>
-            <p className="text-[11px] text-zinc-500 truncate">
+            <p className={cn('text-[11px] truncate', tc.textMuted)}>
               {statusKind === 'holiday' && holidayMatch ? holidayMatch.localName || holidayMatch.name : formatPHTWindowLabel(activeWindow)}
             </p>
 
             <div className="mt-2 h-5 flex items-center">
               {inKillzone && (
-                <span className="inline-flex items-center px-1.5 py-0.5 rounded-full text-[10px] font-semibold bg-amber-500/10 text-amber-300 border border-amber-500/30">
+                <span className="inline-flex items-center px-1.5 py-0.5 rounded-full text-[10px] font-semibold bg-amber-500/15 text-amber-300 border border-amber-500/30">
                   {session.killzoneBadgeLabel}
                 </span>
               )}

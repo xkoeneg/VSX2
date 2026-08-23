@@ -146,7 +146,7 @@ function dateKeyPHT(d: Date): string {
 }
 
 export const EconomicCalendarCard: React.FC = () => {
-  const { theme } = useAppContext();
+  const { theme, tc } = useAppContext();
   const { events, loading, error, lastUpdated, loadCalendar } = useEconomicCalendarFeed();
   // Drives the live "Time Left" countdown column — ticks independently of
   // the data refresh so countdowns stay fresh even between fetches.
@@ -249,34 +249,34 @@ export const EconomicCalendarCard: React.FC = () => {
 
   return (
     <div className={cn(
-      'min-w-0 border rounded-xl p-4 flex flex-col',
-      theme !== 'light' ? 'bg-zinc-900/50 border-zinc-800' : 'bg-white border-zinc-200'
+      'min-w-0 rounded-xl p-4 flex flex-col border',
+      theme !== 'light' ? 'bg-zinc-900/40 border-zinc-800/80' : 'bg-white border-zinc-200'
     )}>
       <div className={cn(
         'flex items-center justify-between gap-2 px-3 py-2 rounded-lg border flex-shrink-0',
-        theme !== 'light' ? 'bg-amber-500/10 border-amber-500/30' : 'bg-amber-50 border-amber-200'
+        theme !== 'light' ? 'bg-zinc-800/60 border-zinc-700/50' : 'bg-zinc-100 border-zinc-200'
       )}>
         <div className="flex items-center gap-2 min-w-0">
-          <Calendar className="w-4 h-4 flex-shrink-0 text-amber-500" />
-          <h2 className={cn('text-sm font-semibold truncate', theme !== 'light' ? 'text-amber-300' : 'text-amber-700')}>Economic Calendar</h2>
+          <Calendar className="w-4 h-4 flex-shrink-0 text-amber-400" />
+          <h2 className={cn('text-sm font-semibold truncate', tc.text)}>Economic Calendar</h2>
           <span className={cn(
-            'px-1.5 py-0.5 rounded-full text-[10px] flex-shrink-0',
-            theme !== 'light' ? 'bg-black/30 text-zinc-300' : 'bg-white/70 text-zinc-600'
+            'px-1.5 py-0.5 rounded-full text-[10px] font-medium flex-shrink-0',
+            theme !== 'light' ? 'bg-zinc-900/40 text-zinc-400' : 'bg-white text-zinc-500'
           )}>
             USD · High Impact
           </span>
           {!loading && !error && (
             <span className={cn(
-              'px-1.5 py-0.5 rounded-full text-[10px] flex-shrink-0',
-              theme !== 'light' ? 'bg-black/30 text-zinc-400' : 'bg-white/70 text-zinc-500'
+              'px-1.5 py-0.5 rounded-full text-[10px] font-medium flex-shrink-0',
+              theme !== 'light' ? 'bg-zinc-900/40 text-zinc-400' : 'bg-white text-zinc-500'
             )}>
               {displayEvents.length}
             </span>
           )}
           {isPastDate && (
             <span className={cn(
-              'px-1.5 py-0.5 rounded-full text-[10px] flex-shrink-0',
-              theme !== 'light' ? 'bg-black/30 text-zinc-400' : 'bg-white/70 text-zinc-500'
+              'px-1.5 py-0.5 rounded-full text-[10px] font-medium flex-shrink-0',
+              theme !== 'light' ? 'bg-zinc-900/40 text-zinc-400' : 'bg-white text-zinc-500'
             )}>
               Historical
             </span>
@@ -284,17 +284,17 @@ export const EconomicCalendarCard: React.FC = () => {
         </div>
         <div className="flex items-center gap-2 flex-shrink-0">
           {lastUpdated && !loading && isToday && (
-            <span className="hidden md:inline text-[10px] text-zinc-500">
+            <span className={cn('hidden md:inline text-[10px]', tc.textMuted)}>
               Updated {lastUpdated.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}
             </span>
           )}
 
-          <div className={cn('flex items-center gap-0.5 rounded-lg p-0.5', theme !== 'light' ? 'bg-black/20' : 'bg-white/70')}>
+          <div className={cn('flex items-center gap-0.5 rounded-lg p-0.5', theme !== 'light' ? 'bg-zinc-900/30' : 'bg-white')}>
             <button
               onClick={goPrevDay}
               className={cn(
                 'p-1 rounded-md transition-colors',
-                theme !== 'light' ? 'text-zinc-400 hover:bg-black/40 hover:text-white' : 'text-zinc-500 hover:bg-white hover:text-zinc-900'
+                theme !== 'light' ? 'text-zinc-400 hover:bg-zinc-800/60 hover:text-white' : 'text-zinc-500 hover:bg-zinc-100 hover:text-zinc-900'
               )}
               aria-label="Previous day"
             >
@@ -306,7 +306,7 @@ export const EconomicCalendarCard: React.FC = () => {
                 'px-2 py-1 rounded-md text-[11px] font-medium transition-colors text-center whitespace-nowrap',
                 isToday
                   ? (theme !== 'light' ? 'text-amber-300' : 'text-amber-700')
-                  : (theme !== 'light' ? 'text-zinc-300 hover:bg-black/40' : 'text-zinc-600 hover:bg-white')
+                  : cn(tc.textMuted, theme !== 'light' ? 'hover:bg-zinc-800/60' : 'hover:bg-zinc-100')
               )}
               aria-label="Jump to today"
             >
@@ -316,7 +316,7 @@ export const EconomicCalendarCard: React.FC = () => {
               onClick={goNextDay}
               className={cn(
                 'p-1 rounded-md transition-colors',
-                theme !== 'light' ? 'text-zinc-400 hover:bg-black/40 hover:text-white' : 'text-zinc-500 hover:bg-white hover:text-zinc-900'
+                theme !== 'light' ? 'text-zinc-400 hover:bg-zinc-800/60 hover:text-white' : 'text-zinc-500 hover:bg-zinc-100 hover:text-zinc-900'
               )}
               aria-label="Next day"
             >
@@ -329,7 +329,7 @@ export const EconomicCalendarCard: React.FC = () => {
             disabled={loading}
             className={cn(
               'p-1.5 rounded-lg transition-colors disabled:opacity-50',
-              theme !== 'light' ? 'bg-black/20 hover:bg-black/40 text-zinc-300 hover:text-white' : 'bg-white/70 hover:bg-white text-zinc-500 hover:text-zinc-900'
+              theme !== 'light' ? 'bg-zinc-900/30 hover:bg-zinc-800/60 text-zinc-300 hover:text-white' : 'bg-white hover:bg-zinc-100 text-zinc-500 hover:text-zinc-900'
             )}
             aria-label="Refresh economic calendar"
           >
