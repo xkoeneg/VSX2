@@ -544,7 +544,7 @@ export function LifeDisciplineScreen() {
 
           {routineGroups.length === 0 ? (
             <div className="flex flex-col items-center justify-center gap-3 py-10 text-center select-none">
-              <div className={cn("w-12 h-12 rounded-full flex items-center justify-center border", theme !== 'light' ? 'bg-zinc-800/60 border-zinc-800' : 'bg-zinc-100 border-zinc-200')}>
+              <div className={cn("w-12 h-12 rounded-full flex items-center justify-center border", theme !== 'light' ? 'bg-zinc-800/60 border-zinc-700/50' : 'bg-zinc-100 border-zinc-200')}>
                 <ListChecks className={cn("w-5 h-5", tc.textMuted)} />
               </div>
               <p className={cn("text-sm max-w-xs", tc.textMuted)}>
@@ -630,7 +630,7 @@ export function LifeDisciplineScreen() {
                           />
                           <span
                             className={cn(
-                              'w-5 h-5 rounded-full border-2 flex items-center justify-center flex-shrink-0 cursor-pointer transition-all duration-200 ease-out',
+                              'w-5 h-5 rounded-full border flex items-center justify-center flex-shrink-0 cursor-pointer transition-all duration-200 ease-out',
                               checked
                                 ? 'bg-emerald-500 border-emerald-400 scale-100'
                                 : cn(theme !== 'light' ? 'border-zinc-700' : 'border-zinc-300', theme !== 'light' ? 'group-hover:border-zinc-400' : 'group-hover:border-zinc-500', 'group-active:scale-90')
@@ -699,7 +699,7 @@ export function LifeDisciplineScreen() {
                         />
                         <span
                           className={cn(
-                            'w-5 h-5 rounded-full border-2 flex items-center justify-center flex-shrink-0 cursor-pointer transition-all duration-200 ease-out',
+                            'w-5 h-5 rounded-full border flex items-center justify-center flex-shrink-0 cursor-pointer transition-all duration-200 ease-out',
                             checked
                               ? 'bg-emerald-500 border-emerald-400 scale-100'
                               : cn(theme !== 'light' ? 'border-zinc-700' : 'border-zinc-300', theme !== 'light' ? 'group-hover:border-zinc-400' : 'group-hover:border-zinc-500', 'group-active:scale-90')
@@ -730,11 +730,11 @@ export function LifeDisciplineScreen() {
               <span className="truncate">{challengeConfig.durationDays}-Day Challenge Progress</span>
             </h3>
             <div className={cn("flex items-center gap-3 text-xs flex-wrap", tc.textMuted)}>
-              <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-sm bg-emerald-500/15 border border-emerald-500/40" /> Complete</span>
-              <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-sm bg-cyan-500/15 border border-cyan-500/40" /> Re-checked</span>
-              <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-sm bg-rose-500/15 border border-rose-500/40" /> Failed</span>
-              <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-sm bg-amber-500/15 border border-amber-500/40" /> Today</span>
-              <span className="flex items-center gap-1.5"><span className={cn("w-2.5 h-2.5 rounded-sm border", theme !== 'light' ? 'bg-zinc-800/30 border-zinc-800/60' : 'bg-zinc-50 border-zinc-200')} /> Upcoming</span>
+              <span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-full bg-emerald-400 flex-shrink-0" /> Complete</span>
+              <span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-full bg-cyan-400 flex-shrink-0" /> Re-checked</span>
+              <span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-full bg-rose-400 flex-shrink-0" /> Failed</span>
+              <span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-full bg-amber-400 flex-shrink-0" /> Today</span>
+              <span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-full bg-zinc-600 flex-shrink-0" /> Upcoming</span>
             </div>
           </div>
 
@@ -742,8 +742,8 @@ export function LifeDisciplineScreen() {
               discipline score (re-check tokens already shown in the stat
               card above) */}
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4 select-none">
-            <div className={cn("flex items-center gap-2.5 px-3.5 py-2.5 rounded-lg border", theme !== 'light' ? 'bg-zinc-800/60 border-zinc-800' : 'bg-zinc-100 border-zinc-200')}>
-              <div className="p-2 rounded-lg bg-violet-500/20 text-violet-400 flex-shrink-0">
+            <div className={cn("flex items-center gap-2.5 px-3.5 py-2.5 rounded-lg border", theme !== 'light' ? 'bg-zinc-800/60 border-zinc-700/50' : 'bg-zinc-100 border-zinc-200')}>
+              <div className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 bg-violet-500/20 text-violet-400">
                 <CalendarDays className="w-4 h-4" />
               </div>
               <div className="min-w-0">
@@ -753,8 +753,8 @@ export function LifeDisciplineScreen() {
                 <p className={cn("text-[11px]", tc.textMuted)}>Challenge timeline</p>
               </div>
             </div>
-            <div className={cn("flex items-center gap-2.5 px-3.5 py-2.5 rounded-lg border", theme !== 'light' ? 'bg-zinc-800/60 border-zinc-800' : 'bg-zinc-100 border-zinc-200')}>
-              <div className="p-2 rounded-lg bg-blue-500/20 text-blue-400 flex-shrink-0">
+            <div className={cn("flex items-center gap-2.5 px-3.5 py-2.5 rounded-lg border", theme !== 'light' ? 'bg-zinc-800/60 border-zinc-700/50' : 'bg-zinc-100 border-zinc-200')}>
+              <div className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 bg-blue-500/20 text-blue-400">
                 <Clock className="w-4 h-4" />
               </div>
               <div className="min-w-0">
@@ -762,8 +762,8 @@ export function LifeDisciplineScreen() {
                 <p className={cn("text-[11px]", tc.textMuted)}>Until target end date</p>
               </div>
             </div>
-            <div className={cn("flex items-center gap-2.5 px-3.5 py-2.5 rounded-lg border", theme !== 'light' ? 'bg-zinc-800/60 border-zinc-800' : 'bg-zinc-100 border-zinc-200')}>
-              <div className="p-2 rounded-lg bg-amber-500/20 text-amber-400 flex-shrink-0">
+            <div className={cn("flex items-center gap-2.5 px-3.5 py-2.5 rounded-lg border", theme !== 'light' ? 'bg-zinc-800/60 border-zinc-700/50' : 'bg-zinc-100 border-zinc-200')}>
+              <div className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 bg-amber-500/20 text-amber-400">
                 <Flame className="w-4 h-4" />
               </div>
               <div className="min-w-0">
@@ -771,8 +771,8 @@ export function LifeDisciplineScreen() {
                 <p className={cn("text-[11px]", tc.textMuted)}>Active streak</p>
               </div>
             </div>
-            <div className={cn("flex items-center gap-2.5 px-3.5 py-2.5 rounded-lg border", theme !== 'light' ? 'bg-zinc-800/60 border-zinc-800' : 'bg-zinc-100 border-zinc-200')}>
-              <div className="p-2 rounded-lg bg-emerald-500/20 text-emerald-400 flex-shrink-0">
+            <div className={cn("flex items-center gap-2.5 px-3.5 py-2.5 rounded-lg border", theme !== 'light' ? 'bg-zinc-800/60 border-zinc-700/50' : 'bg-zinc-100 border-zinc-200')}>
+              <div className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 bg-emerald-500/20 text-emerald-400">
                 <Target className="w-4 h-4" />
               </div>
               <div className="min-w-0">
