@@ -600,7 +600,7 @@ export function LifeDisciplineScreen() {
                     <span className={cn("text-sm font-semibold truncate", tc.text)}>{group.label}</span>
                     <span
                       className={cn(
-                        'ml-auto flex-shrink-0 text-[10px] font-semibold px-2 py-0.5 rounded-full border whitespace-nowrap',
+                        'ml-auto flex-shrink-0 text-[10px] font-mono font-semibold px-2 py-0.5 rounded-full border whitespace-nowrap',
                         groupComplete
                           ? 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30'
                           : cn(tc.bgSecondary, tc.textMuted, theme !== 'light' ? 'border-zinc-700' : 'border-zinc-200')
@@ -674,7 +674,7 @@ export function LifeDisciplineScreen() {
                   </span>
                   <span
                     className={cn(
-                      'ml-auto flex-shrink-0 text-[10px] font-semibold px-2 py-0.5 rounded-full border whitespace-nowrap',
+                      'ml-auto flex-shrink-0 text-[10px] font-mono font-semibold px-2 py-0.5 rounded-full border whitespace-nowrap',
                       weeklyTargetsComplete
                         ? 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30'
                         : cn(tc.bgSecondary, tc.textMuted, theme !== 'light' ? 'border-zinc-700' : 'border-zinc-200')
@@ -743,40 +743,48 @@ export function LifeDisciplineScreen() {
               card above) */}
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4 select-none">
             <div className={cn("flex items-center gap-2.5 px-3.5 py-2.5 rounded-lg border", tc.bgSecondary, theme !== 'light' ? 'border-zinc-800' : 'border-zinc-200')}>
-              <div className="p-2 rounded-lg bg-violet-500/10 border border-violet-500/20 text-violet-400 flex-shrink-0">
+              <div className={cn("p-2 rounded-lg flex-shrink-0", theme !== 'light' ? 'bg-zinc-800/60 text-zinc-400' : 'bg-zinc-100 text-zinc-400')}>
                 <CalendarDays className="w-4 h-4" />
               </div>
               <div className="min-w-0">
-                <p className={cn("text-sm font-semibold truncate", tc.text)}>
+                <p className={cn("text-sm font-semibold truncate tabular-nums", tc.text)}>
                   {formatDate(lifeDisciplineStartDate)} <span className={cn(tc.textMuted, "font-normal")}>→</span> {formatDate(endDateKey)}
                 </p>
                 <p className={cn("text-[11px]", tc.textMuted)}>Challenge timeline</p>
               </div>
             </div>
             <div className={cn("flex items-center gap-2.5 px-3.5 py-2.5 rounded-lg border", tc.bgSecondary, theme !== 'light' ? 'border-zinc-800' : 'border-zinc-200')}>
-              <div className="p-2 rounded-lg bg-blue-500/10 border border-blue-500/20 text-blue-400 flex-shrink-0">
+              <div className={cn("p-2 rounded-lg flex-shrink-0", theme !== 'light' ? 'bg-zinc-800/60 text-zinc-400' : 'bg-zinc-100 text-zinc-400')}>
                 <Clock className="w-4 h-4" />
               </div>
               <div className="min-w-0">
-                <p className={cn("text-sm font-semibold truncate", tc.text)}>{daysRemaining} Days Remaining</p>
+                <p className={cn("text-sm font-semibold truncate tabular-nums", tc.text)}>{daysRemaining} Days Remaining</p>
                 <p className={cn("text-[11px]", tc.textMuted)}>Until target end date</p>
               </div>
             </div>
             <div className={cn("flex items-center gap-2.5 px-3.5 py-2.5 rounded-lg border", tc.bgSecondary, theme !== 'light' ? 'border-zinc-800' : 'border-zinc-200')}>
-              <div className="p-2 rounded-lg bg-amber-500/10 border border-amber-500/20 text-amber-400 flex-shrink-0">
+              <div className={cn(
+                'p-2 rounded-lg flex-shrink-0',
+                activeStreak > 0
+                  ? 'bg-amber-500/10 text-amber-400'
+                  : theme !== 'light' ? 'bg-zinc-800/60 text-zinc-400' : 'bg-zinc-100 text-zinc-400'
+              )}>
                 <Flame className="w-4 h-4" />
               </div>
               <div className="min-w-0">
-                <p className={cn("text-sm font-semibold truncate", tc.text)}>{activeStreak}-Day Streak</p>
+                <p className={cn("text-sm font-semibold truncate tabular-nums", tc.text)}>{activeStreak}-Day Streak</p>
                 <p className={cn("text-[11px]", tc.textMuted)}>Active streak</p>
               </div>
             </div>
             <div className={cn("flex items-center gap-2.5 px-3.5 py-2.5 rounded-lg border", tc.bgSecondary, theme !== 'light' ? 'border-zinc-800' : 'border-zinc-200')}>
-              <div className="p-2 rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 flex-shrink-0">
+              <div className={cn(
+                'p-2 rounded-lg flex-shrink-0',
+                disciplineScore >= 80 ? 'bg-emerald-500/10 text-emerald-400' : disciplineScore >= 50 ? 'bg-amber-500/10 text-amber-400' : 'bg-rose-500/10 text-rose-400'
+              )}>
                 <Target className="w-4 h-4" />
               </div>
               <div className="min-w-0">
-                <p className={cn('text-sm font-semibold truncate', disciplineScore >= 80 ? 'text-emerald-400' : disciplineScore >= 50 ? 'text-amber-400' : 'text-rose-400')}>
+                <p className={cn('text-sm font-semibold truncate tabular-nums', disciplineScore >= 80 ? 'text-emerald-400' : disciplineScore >= 50 ? 'text-amber-400' : 'text-rose-400')}>
                   {disciplineScore}% Discipline Score
                 </p>
                 <p className={cn("text-[11px]", tc.textMuted)}>Execution rate</p>
