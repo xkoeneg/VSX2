@@ -469,7 +469,7 @@ export function LifeDisciplineScreen() {
             ? 'bg-gradient-to-r from-amber-500/10 via-zinc-900/40 to-zinc-900/40 border-amber-500/20'
             : 'bg-gradient-to-r from-amber-500/10 via-white to-white border-amber-500/30'
         )}>
-          <p className={cn("text-base sm:text-lg font-bold truncate flex items-center gap-2", tc.text)}>
+          <p className={cn("text-base sm:text-lg font-semibold truncate flex items-center gap-2", tc.text)}>
             <Flame className="w-5 h-5 text-amber-400 flex-shrink-0" />
             <span className="text-amber-400">ACTIVE CHALLENGE:</span>
             <span className="truncate">{challengeConfig.title}</span>
@@ -747,7 +747,7 @@ export function LifeDisciplineScreen() {
                 <CalendarDays className="w-4 h-4" />
               </div>
               <div className="min-w-0">
-                <p className={cn("text-sm font-bold truncate", tc.text)}>
+                <p className={cn("text-sm font-semibold truncate", tc.text)}>
                   {formatDate(lifeDisciplineStartDate)} <span className={cn(tc.textMuted, "font-normal")}>→</span> {formatDate(endDateKey)}
                 </p>
                 <p className={cn("text-[11px]", tc.textMuted)}>Challenge timeline</p>
@@ -758,7 +758,7 @@ export function LifeDisciplineScreen() {
                 <Clock className="w-4 h-4" />
               </div>
               <div className="min-w-0">
-                <p className={cn("text-sm font-bold truncate", tc.text)}>{daysRemaining} Days Remaining</p>
+                <p className={cn("text-sm font-semibold truncate", tc.text)}>{daysRemaining} Days Remaining</p>
                 <p className={cn("text-[11px]", tc.textMuted)}>Until target end date</p>
               </div>
             </div>
@@ -767,7 +767,7 @@ export function LifeDisciplineScreen() {
                 <Flame className="w-4 h-4" />
               </div>
               <div className="min-w-0">
-                <p className={cn("text-sm font-bold truncate", tc.text)}>{activeStreak}-Day Streak</p>
+                <p className={cn("text-sm font-semibold truncate", tc.text)}>{activeStreak}-Day Streak</p>
                 <p className={cn("text-[11px]", tc.textMuted)}>Active streak</p>
               </div>
             </div>
@@ -776,7 +776,7 @@ export function LifeDisciplineScreen() {
                 <Target className="w-4 h-4" />
               </div>
               <div className="min-w-0">
-                <p className={cn('text-sm font-bold truncate', disciplineScore >= 80 ? 'text-emerald-400' : disciplineScore >= 50 ? 'text-amber-400' : 'text-rose-400')}>
+                <p className={cn('text-sm font-semibold truncate', disciplineScore >= 80 ? 'text-emerald-400' : disciplineScore >= 50 ? 'text-amber-400' : 'text-rose-400')}>
                   {disciplineScore}% Discipline Score
                 </p>
                 <p className={cn("text-[11px]", tc.textMuted)}>Execution rate</p>

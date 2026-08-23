@@ -285,7 +285,7 @@ export function PlaybookScreen() {
       <div className="min-w-0">
         <div className="flex items-center gap-1.5 mb-4 min-w-0">
           <meta.Icon className={cn("w-5 h-5 flex-shrink-0", meta.color)} strokeWidth={2} />
-          <h4 className={cn("text-base font-bold uppercase tracking-wide break-words leading-snug", tc.text)}>{getPillarShortLabel(pillar, customPillars)}</h4>
+          <h4 className={cn("text-base font-semibold uppercase tracking-wide break-words leading-snug", tc.text)}>{getPillarShortLabel(pillar, customPillars)}</h4>
         </div>
 
         {pillarRules.length === 0 ? (
@@ -298,7 +298,7 @@ export function PlaybookScreen() {
                   <div key={rule.id} className="flex items-center gap-2 py-0.5">
                     <span className={cn("flex-1 h-px", theme !== 'light' ? 'bg-zinc-800' : 'bg-zinc-200')} />
                     {rule.dividerLabel && (
-                      <span className={cn("text-[10px] font-bold uppercase tracking-wider flex-shrink-0", tc.textMuted)}>{rule.dividerLabel}</span>
+                      <span className={cn("text-[10px] font-semibold uppercase tracking-wider flex-shrink-0", tc.textMuted)}>{rule.dividerLabel}</span>
                     )}
                     <span className={cn("flex-1 h-px", theme !== 'light' ? 'bg-zinc-800' : 'bg-zinc-200')} />
                   </div>
@@ -321,7 +321,7 @@ export function PlaybookScreen() {
                         : <RuleIcon className={cn("w-4 h-4", accent.text)} strokeWidth={2.5} />}
                     </span>
                   ) : bulletStyle === 'number' ? (
-                    <span className={cn("flex items-center justify-center w-5 h-5 rounded-full text-[10px] font-bold flex-shrink-0 mt-0.5", accent.bg, accent.text)}>
+                    <span className={cn("flex items-center justify-center w-5 h-5 rounded-full text-[10px] font-mono font-semibold flex-shrink-0 mt-0.5", accent.bg, accent.text)}>
                       {index + 1}
                     </span>
                   ) : (
@@ -330,7 +330,7 @@ export function PlaybookScreen() {
 
                   <div className="min-w-0 flex-1 leading-relaxed">
                     <div className="flex flex-col sm:flex-row sm:items-center items-start gap-1 sm:gap-1.5">
-                      <h5 className={cn("font-bold whitespace-normal break-words leading-snug", tc.text, large ? "text-base" : "text-sm")}>{rule.title}</h5>
+                      <h5 className={cn("font-semibold whitespace-normal break-words leading-snug", tc.text, large ? "text-base" : "text-sm")}>{rule.title}</h5>
                       <span className={cn("text-[10px] px-1 py-0.5 rounded font-semibold uppercase tracking-wide leading-none flex-shrink-0 whitespace-normal break-words", severityMeta.badge)}>{severityMeta.label}</span>
                     </div>
                     {rule.description && (
