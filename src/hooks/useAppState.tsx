@@ -587,6 +587,17 @@ export function useAppState() {
   // live in journal_data right alongside notebookFolders itself.
   const [notebookFolderColors, setNotebookFolderColors] = useState<Record<string, string>>({});
   const [notebookDeletedFolders, setNotebookDeletedFolders] = useState<NotebookDeletedFolder[]>([]);
+  // Names from DEFAULT_NOTEBOOK_FOLDERS the user has explicitly deleted.
+  // Default folders are baked into every account (not part of
+  // notebookFolders itself), so "deleting" one can't just filter it out of
+  // a list the way a custom folder delete does — instead we remember that
+  // it's been removed and notebookFoldersWithDefaults below hides it going
+  // forward. This is intentionally NOT reversible via the Recently
+  // Deleted / restore-folder flow like a custom folder — the only way a
+  // removed default folder comes back is a full account restore from a
+  // backup that predates the removal (see importBackup) or reload of
+  // server data that doesn't have it recorded.
+  const [notebookRemovedDefaultFolders, setNotebookRemovedDefaultFolders] = useState<string[]>([]);
   const [notebookEntries, setNotebookEntries] = useState<NotebookEntry[]>([]);
   // True while the initial Supabase fetch for notebook entries is in
   // flight — mirrors accountsTradesLoading's purpose for this table.
@@ -1079,6 +1090,14 @@ export function useAppState() {
       setNotebookFolders(migrated.notebookFolders);
       setNotebookFolderColors(migrated.notebookFolderColors);
       setNotebookDeletedFolders(migrated.notebookDeletedFolders);
+      // Not part of StoredData/migrateStoredData, so read directly off the
+      // raw row like the backup-restore path below does for the same
+      // reason — older/untouched rows simply won't have it, defaulting to
+      // "nothing removed".
+      const rawJournalRow = (row?.data as any) ?? {};
+      setNotebookRemovedDefaultFolders(
+        Array.isArray(rawJournalRow.notebookRemovedDefaultFolders) ? rawJournalRow.notebookRemovedDefaultFolders : []
+      );
     } catch (e) {
       console.error('Failed to load journal data from Supabase:', e);
       showTradeImportToast('error', 'Failed to load your Playbook/Notices/Wiki/Tags — check your connection and reload.');
@@ -1099,7 +1118,7 @@ export function useAppState() {
   // saved server-side before it's even been fetched.
   useEffect(() => {
     if (!userId || !hasLoadedJournalDataRef.current) return;
-    const payload = { rules, strategies, notices, wikiEntries, setupTypes, confluences, mistakesList, emotionsList, customSymbols, customPillars, notebookFolders, notebookFolderColors, notebookDeletedFolders };
+    const payload = { rules, strategies, notices, wikiEntries, setupTypes, confluences, mistakesList, emotionsList, customSymbols, customPillars, notebookFolders, notebookFolderColors, notebookDeletedFolders, notebookRemovedDefaultFolders };
     writeJournalData(
       async () => {
         const { error } = await supabase
@@ -1112,7 +1131,7 @@ export function useAppState() {
         showTradeImportToast('error', 'Failed to save your changes — they may not sync to other devices. Check your connection.');
       }
     );
-  }, [userId, rules, strategies, notices, wikiEntries, setupTypes, confluences, mistakesList, emotionsList, customSymbols, customPillars, notebookFolders, notebookFolderColors, notebookDeletedFolders, writeJournalData]);
+  }, [userId, rules, strategies, notices, wikiEntries, setupTypes, confluences, mistakesList, emotionsList, customSymbols, customPillars, notebookFolders, notebookFolderColors, notebookDeletedFolders, notebookRemovedDefaultFolders, writeJournalData]);
 
   // ==========================================================================
   // Accounts & Trades: Supabase (per-user, synced across devices)
@@ -1498,38 +1517,58 @@ export function useAppState() {
   // automatically via its effect dependency array.
   const notebookFoldersWithDefaults = useMemo(() => {
     const custom = notebookFolders.filter(f => !(DEFAULT_NOTEBOOK_FOLDERS as readonly string[]).includes(f));
-    return [...DEFAULT_NOTEBOOK_FOLDERS, ...custom];
-  }, [notebookFolders]);
+    const visibleDefaults = (DEFAULT_NOTEBOOK_FOLDERS as readonly string[]).filter(f => !notebookRemovedDefaultFolders.includes(f));
+    return [...visibleDefaults, ...custom];
+  }, [notebookFolders, notebookRemovedDefaultFolders]);
 
   const handleAddNotebookFolder = useCallback((name: string, color?: string) => {
     const trimmed = name.trim();
     if (!trimmed) return;
+    // A default folder name only blocks re-creation while it's still an
+    // active default — once removed (see handleDeleteNotebookFolder), the
+    // name is free to reuse as an ordinary custom folder.
+    const isActiveDefault = (DEFAULT_NOTEBOOK_FOLDERS as readonly string[]).includes(trimmed) && !notebookRemovedDefaultFolders.includes(trimmed);
     setNotebookFolders(prev => {
-      if (prev.includes(trimmed) || (DEFAULT_NOTEBOOK_FOLDERS as readonly string[]).includes(trimmed)) return prev;
+      if (prev.includes(trimmed) || isActiveDefault) return prev;
       return [...prev, trimmed];
     });
     if (color) setNotebookFolderColors(prev => ({ ...prev, [trimmed]: color }));
-  }, []);
+  }, [notebookRemovedDefaultFolders]);
 
-  // Deleting a folder now moves it AND every note inside it to "Recently
+  // Deleting a folder moves it AND every note inside it to "Recently
   // Deleted" together (see the confirm-dialog copy in NotebookScreen.tsx),
   // instead of the old behavior of stripping the folder off its notes and
   // discarding it outright. The folder's color is carried into
   // notebookDeletedFolders so a restore doesn't lose it, and cleared out of
   // notebookFolderColors while the folder is gone so re-creating a
   // different folder with the same name doesn't inherit a stale color.
+  //
+  // Default folders (Mindset, Daily Reflections) are a special case: they
+  // aren't in notebookFolders to begin with (see notebookFoldersWithDefaults
+  // above), so there's nothing to filter out of that list, and they were
+  // never meant to be restorable the way a custom folder is — deleting one
+  // just permanently records it in notebookRemovedDefaultFolders so it stops
+  // being reconstituted on every load. It does NOT get a notebookDeletedFolders
+  // entry (so it won't show up in the Recently Deleted folder-restore UI at
+  // all) — the only way it comes back is a full account restore from a
+  // backup taken before the removal. Its notes still go through the normal
+  // per-entry soft-delete below, so they remain individually recoverable.
   const handleDeleteNotebookFolder = useCallback((name: string) => {
-    if ((DEFAULT_NOTEBOOK_FOLDERS as readonly string[]).includes(name)) return; // default folders aren't removable
-    setNotebookFolders(prev => prev.filter(f => f !== name));
-    setNotebookFolderColors(prev => {
-      if (!(name in prev)) return prev;
-      const { [name]: _removed, ...rest } = prev;
-      return rest;
-    });
-    setNotebookDeletedFolders(prev => {
-      if (prev.some(f => f.name === name)) return prev;
-      return [...prev, { name, color: notebookFolderColors[name], deletedAt: new Date().toISOString() }];
-    });
+    const isDefault = (DEFAULT_NOTEBOOK_FOLDERS as readonly string[]).includes(name);
+    if (isDefault) {
+      setNotebookRemovedDefaultFolders(prev => prev.includes(name) ? prev : [...prev, name]);
+    } else {
+      setNotebookFolders(prev => prev.filter(f => f !== name));
+      setNotebookFolderColors(prev => {
+        if (!(name in prev)) return prev;
+        const { [name]: _removed, ...rest } = prev;
+        return rest;
+      });
+      setNotebookDeletedFolders(prev => {
+        if (prev.some(f => f.name === name)) return prev;
+        return [...prev, { name, color: notebookFolderColors[name], deletedAt: new Date().toISOString() }];
+      });
+    }
     // Notes that were in the deleted folder are soft-deleted right along
     // with it (not stripped of their folder / kept live) — each entry is
     // its own Supabase row, so this has to be pushed per-entry, not just
@@ -4900,6 +4939,9 @@ Return ONLY a JSON object — no markdown, no code fences, no commentary — wit
       // still belongs in a FULL system backup, so it's added here rather
       // than to the shared StoredData shape.
       notebookEntries: NotebookEntry[];
+      // Also not part of StoredData (see notebookEntries comment just
+      // above) — same reasoning applies.
+      notebookRemovedDefaultFolders: string[];
       lifeDisciplineData: ReturnType<typeof buildLifeDisciplineSnapshot>;
       appPreferencesData: ReturnType<typeof buildAppPreferencesSnapshot>;
     } = {
@@ -4921,6 +4963,7 @@ Return ONLY a JSON object — no markdown, no code fences, no commentary — wit
       notebookFolders,
       notebookFolderColors,
       notebookDeletedFolders,
+      notebookRemovedDefaultFolders,
       lifeDisciplineData: buildLifeDisciplineSnapshot(),
       appPreferencesData: buildAppPreferencesSnapshot(),
     };
@@ -4976,6 +5019,13 @@ Return ONLY a JSON object — no markdown, no code fences, no commentary — wit
           ? raw.notebookDeletedFolders.map(normalizeNotebookDeletedFolder)
           : null;
         if (restoredNotebookDeletedFolders) setNotebookDeletedFolders(restoredNotebookDeletedFolders);
+        // Same reasoning as the three slices above: read straight off the
+        // raw backup so an older backup that predates this field just
+        // no-ops (leaves whatever the account currently has untouched)
+        // instead of wiping it via a migrated default of [].
+        const restoredNotebookRemovedDefaultFolders: string[] | null =
+          Array.isArray(raw.notebookRemovedDefaultFolders) ? raw.notebookRemovedDefaultFolders : null;
+        if (restoredNotebookRemovedDefaultFolders) setNotebookRemovedDefaultFolders(restoredNotebookRemovedDefaultFolders);
 
         // Everything now lives in Supabase (accounts/trades, journal data,
         // and preferences), so a full restore replaces this user's
@@ -5015,6 +5065,7 @@ Return ONLY a JSON object — no markdown, no code fences, no commentary — wit
                 ...(restoredNotebookFolders ? { notebookFolders: restoredNotebookFolders } : {}),
                 ...(restoredNotebookFolderColors ? { notebookFolderColors: restoredNotebookFolderColors } : {}),
                 ...(restoredNotebookDeletedFolders ? { notebookDeletedFolders: restoredNotebookDeletedFolders } : {}),
+                ...(restoredNotebookRemovedDefaultFolders ? { notebookRemovedDefaultFolders: restoredNotebookRemovedDefaultFolders } : {}),
               },
             }, { onConflict: 'user_id' });
             if (journalErr) throw journalErr;
@@ -5475,6 +5526,11 @@ Return ONLY a JSON object — no markdown, no code fences, no commentary — wit
     // Notebook
     setNotebookEntries([]);
     setNotebookFolders([]);
+    setNotebookFolderColors({});
+    setNotebookDeletedFolders([]);
+    // Brings back any default folders (Mindset, Daily Reflections) the
+    // user had previously removed — see handleDeleteNotebookFolder.
+    setNotebookRemovedDefaultFolders([]);
 
     // Journal Data: Rules/Playbook, Notices, Wiki, Tags
     setRules([]);
