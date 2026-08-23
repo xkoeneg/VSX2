@@ -317,7 +317,7 @@ export function PlaybookScreen() {
                   {bulletStyle === 'icon' ? (
                     <span className={cn("inline-flex items-center justify-center w-8 h-8 rounded-lg flex-shrink-0 mt-0.5", accent.bg)}>
                       {rule.iconKind === 'emoji' && rule.iconValue
-                        ? <span className="text-[13px] leading-none">{rule.iconValue}</span>
+                        ? <span className="text-xs leading-none">{rule.iconValue}</span>
                         : <RuleIcon className={cn("w-4 h-4", accent.text)} strokeWidth={2.5} />}
                     </span>
                   ) : bulletStyle === 'number' ? (
@@ -478,7 +478,7 @@ export function PlaybookScreen() {
                             <span className="text-[10px]">No image</span>
                           </div>
                         )}
-                        <div className="absolute top-1.5 left-1.5 flex items-center gap-0.5 px-1 py-0.5 rounded bg-zinc-950/70 text-white opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
+                        <div className="absolute top-1.5 left-1.5 flex items-center gap-0.5 px-1 py-0.5 rounded bg-zinc-900/80 text-white opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
                           <GripVertical className="w-3 h-3" />
                         </div>
                       </div>
