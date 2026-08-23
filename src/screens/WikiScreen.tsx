@@ -433,7 +433,7 @@ export function WikiScreen() {
             'relative w-full text-left rounded-lg pl-3.5 pr-3 py-2.5 border transition-all',
             isActive
               ? cn(
-                  theme !== 'light' ? 'bg-white/[0.06] border-zinc-700/80' : 'bg-sky-50/60 border-zinc-200',
+                  theme !== 'light' ? 'bg-white/[0.06] border-zinc-700/80' : 'bg-zinc-100/70 border-zinc-200',
                   style.glow
                 )
               : (theme !== 'light'
@@ -446,18 +446,16 @@ export function WikiScreen() {
           )}
           <div className="flex items-start justify-between gap-2">
             <h4 className={cn(
-              'text-[15px] font-semibold leading-snug line-clamp-1 min-w-0',
-              isActive
-                ? (theme !== 'light' ? 'text-white' : 'text-zinc-900')
-                : (theme !== 'light' ? 'text-zinc-300' : 'text-zinc-600')
+              'text-sm font-semibold leading-snug line-clamp-1 min-w-0',
+              isActive ? tc.text : tc.textSecondary
             )}>
               {entry.title}
             </h4>
-            {code && <span className="font-mono text-[9px] text-zinc-500 flex-shrink-0 mt-0.5">{code}</span>}
+            {code && <span className={cn('font-mono text-[10px] flex-shrink-0 mt-0.5', tc.textMuted)}>{code}</span>}
           </div>
           <div className="flex items-center gap-1.5 mt-1.5 flex-wrap">
             {entry.category && (
-              <span className={cn('inline-flex items-center gap-1 text-[9px] px-1.5 py-0.5 rounded-full font-semibold whitespace-nowrap', style.badge)}>
+              <span className={cn('inline-flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded-full font-semibold whitespace-nowrap', style.badge)}>
                 <span className={cn('w-1 h-1 rounded-full', style.dot)} />
                 {entry.category}
               </span>
@@ -488,8 +486,8 @@ export function WikiScreen() {
               )}>
                 <Search className={cn('w-6 h-6', theme !== 'light' ? 'text-zinc-700' : 'text-zinc-400')} />
               </div>
-              <h3 className="text-sm font-semibold text-zinc-400">No concepts match</h3>
-              <p className="text-xs text-zinc-500 mt-1 max-w-[240px]">Try a different search term or category filter.</p>
+              <h3 className={cn('text-sm font-semibold', tc.textSecondary)}>No concepts match</h3>
+              <p className={cn('text-xs mt-1 max-w-[240px]', tc.textMuted)}>Try a different search term or category filter.</p>
             </div>
           );
         }
@@ -505,8 +503,8 @@ export function WikiScreen() {
             )}>
               <BookOpen className={cn('w-6 h-6', theme !== 'light' ? 'text-zinc-700' : 'text-zinc-400')} />
             </div>
-            <h3 className={cn('text-sm font-semibold', theme !== 'light' ? 'text-zinc-300' : 'text-zinc-600')}>No concept selected</h3>
-            <p className="text-xs text-zinc-500 mt-1 max-w-[280px]">
+            <h3 className={cn('text-sm font-semibold', tc.textSecondary)}>No concept selected</h3>
+            <p className={cn('text-xs mt-1 max-w-[280px]', tc.textMuted)}>
               Select a concept from the left panel or create a new entry to get started.
             </p>
             <div className="flex items-center justify-center gap-2 flex-wrap mt-4">
@@ -521,10 +519,10 @@ export function WikiScreen() {
                 <button
                   onClick={handleClickImportStandardConcepts}
                   className={cn(
-                    'inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm transition-colors border',
+                    'inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold transition-colors border',
                     theme !== 'light'
-                      ? 'bg-sky-500/10 hover:bg-sky-500/20 text-sky-400 border-sky-500/30'
-                      : 'bg-sky-50 hover:bg-sky-100 text-sky-600 border-sky-200'
+                      ? 'bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-400 border-emerald-500/40'
+                      : 'bg-emerald-100 hover:bg-emerald-200/70 text-emerald-700 border-emerald-300'
                   )}
                 >
                   <Download className="w-4 h-4" />
@@ -553,8 +551,8 @@ export function WikiScreen() {
           )}>
             <div className="min-w-0 flex-1">
               <div className="flex items-center gap-2 mb-1">
-                <h2 className={cn('text-xl font-bold leading-tight truncate', theme !== 'light' ? 'text-white' : 'text-zinc-900')}>{entry.title}</h2>
-                {code && <span className="font-mono text-xs text-zinc-500 tracking-wider flex-shrink-0">{code}</span>}
+                <h2 className={cn('text-lg font-semibold leading-tight truncate', tc.text)}>{entry.title}</h2>
+                {code && <span className={cn('font-mono text-xs tracking-wider flex-shrink-0', tc.textMuted)}>{code}</span>}
               </div>
             </div>
             {/* Category badge + session badge + action icons are one grouped
@@ -580,8 +578,8 @@ export function WikiScreen() {
                 <button
                   onClick={() => setLightboxImage(activeImage.url)}
                   className={cn(
-                    'p-2 rounded-lg transition-colors',
-                    theme !== 'light' ? 'text-zinc-500 hover:text-white hover:bg-zinc-800' : 'text-zinc-500 hover:text-zinc-900 hover:bg-zinc-100'
+                    'p-2 rounded-lg transition-colors', tc.textMuted,
+                    theme !== 'light' ? 'hover:text-white hover:bg-zinc-800' : 'hover:text-zinc-900 hover:bg-zinc-100'
                   )}
                   title="Zoom diagram"
                 >
@@ -591,8 +589,8 @@ export function WikiScreen() {
               <button
                 onClick={() => handleOpenEditWiki(entry)}
                 className={cn(
-                  'p-2 rounded-lg transition-colors',
-                  theme !== 'light' ? 'text-zinc-500 hover:text-white hover:bg-zinc-800' : 'text-zinc-500 hover:text-zinc-900 hover:bg-zinc-100'
+                  'p-2 rounded-lg transition-colors', tc.textMuted,
+                  theme !== 'light' ? 'hover:text-white hover:bg-zinc-800' : 'hover:text-zinc-900 hover:bg-zinc-100'
                 )}
                 title="Edit entry"
               >
@@ -601,8 +599,8 @@ export function WikiScreen() {
               <button
                 onClick={() => handleDeleteWiki(entry.id)}
                 className={cn(
-                  'p-2 rounded-lg transition-colors',
-                  theme !== 'light' ? 'text-zinc-500 hover:text-rose-400 hover:bg-rose-500/10' : 'text-zinc-500 hover:text-rose-500 hover:bg-rose-50'
+                  'p-2 rounded-lg transition-colors', tc.textMuted,
+                  theme !== 'light' ? 'hover:text-rose-400 hover:bg-rose-500/10' : 'hover:text-rose-500 hover:bg-rose-50'
                 )}
                 title="Delete entry"
               >
@@ -616,7 +614,10 @@ export function WikiScreen() {
           <div className="flex-1 overflow-y-auto min-h-0">
             {/* Chart viewport — carousel when there's more than one image */}
             <div className="p-5 pb-0">
-              <div className="group relative w-full h-[450px] flex items-center justify-center bg-slate-950/80 rounded-xl border border-slate-800/80 p-6 overflow-hidden">
+              <div className={cn(
+                'group relative w-full h-[450px] flex items-center justify-center rounded-xl border p-6 overflow-hidden',
+                theme !== 'light' ? 'bg-zinc-950/80 border-zinc-800/80' : 'bg-zinc-100 border-zinc-200'
+              )}>
                 {activeImage ? (
                   <>
                     <button
@@ -628,7 +629,7 @@ export function WikiScreen() {
                       <img
                         src={activeImage.url}
                         alt={entry.title}
-                        className="max-h-full max-w-full w-auto h-auto object-contain rounded-lg shadow-2xl transition-transform duration-200 group-hover:scale-[1.01]"
+                        className="max-h-full max-w-full w-auto h-auto object-contain rounded-lg transition-transform duration-200 group-hover:scale-[1.01]"
                       />
                     </button>
                     {/* Overlay control actions removed per request — zoom/edit
@@ -652,7 +653,7 @@ export function WikiScreen() {
                         >
                           <ChevronRight className="w-5 h-5" />
                         </button>
-                        <div className="absolute top-3 left-3 px-1.5 py-0.5 rounded-md bg-black/60 backdrop-blur-md text-white text-[10px] font-bold border border-white/10 shadow-sm pointer-events-none">
+                        <div className="absolute top-3 left-3 px-1.5 py-0.5 rounded-md bg-black/60 backdrop-blur-md text-white text-[10px] font-bold border border-white/10 pointer-events-none">
                           {activeImageIdx + 1} / {images.length}
                         </div>
                         <div className="absolute bottom-3 left-1/2 -translate-x-1/2 flex gap-1.5">
@@ -676,11 +677,14 @@ export function WikiScreen() {
                     type="button"
                     onClick={() => handleOpenEditWiki(entry, true)}
                     title="Add a diagram image (click to upload, or paste/drop one right here)"
-                    className="w-full h-full flex flex-col items-center justify-center gap-2 text-zinc-700 hover:text-zinc-500 transition-colors cursor-pointer"
+                    className={cn(
+                      'w-full h-full flex flex-col items-center justify-center gap-2 transition-colors cursor-pointer',
+                      tc.textMuted, theme !== 'light' ? 'hover:text-zinc-300' : 'hover:text-zinc-600'
+                    )}
                   >
                     <ImageIcon className="w-8 h-8" />
                     <span className="text-xs">No chart diagram uploaded</span>
-                    <span className="text-xs text-zinc-600">Click to add — or paste (Ctrl+V) an image here</span>
+                    <span className={cn('text-xs', tc.textMuted)}>Click to add — or paste (Ctrl+V) an image here</span>
                   </button>
                 )}
               </div>
@@ -701,8 +705,8 @@ export function WikiScreen() {
                     className={cn(
                       'flex items-center gap-1.5 px-3 py-2.5 text-xs font-semibold border-b-2 -mb-px whitespace-nowrap transition-colors',
                       isActiveTab
-                        ? (theme !== 'light' ? 'text-white border-sky-400' : 'text-zinc-900 border-sky-500')
-                        : (theme !== 'light' ? 'text-zinc-500 border-transparent hover:text-zinc-300' : 'text-zinc-500 border-transparent hover:text-zinc-800')
+                        ? cn(tc.text, 'border-emerald-500')
+                        : cn(tc.textMuted, 'border-transparent', theme !== 'light' ? 'hover:text-zinc-300' : 'hover:text-zinc-800')
                     )}
                   >
                     <TabIcon className="w-3.5 h-3.5" />
@@ -718,27 +722,27 @@ export function WikiScreen() {
                 <div className="space-y-4">
                   {entry.content ? (
                     <div>
-                      <p className="text-xs uppercase tracking-wide text-zinc-500 font-semibold mb-2">Core Definition</p>
+                      <p className={cn('text-[11px] uppercase tracking-wider font-semibold mb-2', tc.textMuted)}>Core Definition</p>
                       <div className={cn(
                         'rounded-lg border p-4',
                         theme !== 'light' ? 'bg-zinc-900/60 border-zinc-800/70' : 'bg-zinc-50 border-zinc-200'
                       )}>
-                        <p className={cn('text-[13px] leading-relaxed whitespace-pre-line', theme !== 'light' ? 'text-zinc-300' : 'text-zinc-700')}>{entry.content}</p>
+                        <p className={cn('text-xs leading-relaxed whitespace-pre-line', tc.textSecondary)}>{entry.content}</p>
                       </div>
                     </div>
                   ) : (
-                    <p className="text-xs text-zinc-500 italic">No description logged yet.</p>
+                    <p className={cn('text-xs italic', tc.textMuted)}>No description logged yet.</p>
                   )}
                   {entry.contextNotes ? (
                     <div className={cn(
                       'flex items-start gap-2.5 rounded-lg border p-3.5',
-                      theme !== 'light' ? 'bg-sky-500/[0.06] border-sky-500/20' : 'bg-sky-50 border-sky-200'
+                      theme !== 'light' ? 'bg-violet-500/[0.06] border-violet-500/20' : 'bg-violet-50 border-violet-200'
                     )}>
-                      <Lightbulb className="w-4 h-4 text-sky-500 flex-shrink-0 mt-0.5" />
-                      <p className={cn('text-[12px] leading-relaxed whitespace-pre-line', theme !== 'light' ? 'text-sky-200/90' : 'text-sky-800')}>{entry.contextNotes}</p>
+                      <Lightbulb className="w-4 h-4 text-violet-400 flex-shrink-0 mt-0.5" />
+                      <p className={cn('text-xs leading-relaxed whitespace-pre-line', theme !== 'light' ? 'text-violet-200/90' : 'text-violet-800')}>{entry.contextNotes}</p>
                     </div>
                   ) : (
-                    <p className="text-xs text-zinc-500 italic">No additional context notes yet.</p>
+                    <p className={cn('text-xs italic', tc.textMuted)}>No additional context notes yet.</p>
                   )}
                 </div>
               )}
@@ -752,12 +756,12 @@ export function WikiScreen() {
                         theme !== 'light' ? 'bg-zinc-900/50 border-zinc-800/60' : 'bg-zinc-50 border-zinc-200'
                       )}>
                         <CheckCircle2 className={cn('w-4 h-4 flex-shrink-0 mt-0.5', style.icon)} />
-                        <span className={cn('text-[13px] leading-relaxed', theme !== 'light' ? 'text-zinc-300' : 'text-zinc-700')}>{rule}</span>
+                        <span className={cn('text-xs leading-relaxed', tc.textSecondary)}>{rule}</span>
                       </li>
                     ))}
                   </ul>
                 ) : (
-                  <p className="text-xs text-zinc-500 italic">No entry criteria logged yet.</p>
+                  <p className={cn('text-xs italic', tc.textMuted)}>No entry criteria logged yet.</p>
                 )
               )}
 
@@ -767,24 +771,24 @@ export function WikiScreen() {
                     'rounded-lg border p-4',
                     theme !== 'light' ? 'bg-zinc-900/50 border-zinc-800/60' : 'bg-zinc-50 border-zinc-200'
                   )}>
-                    <p className="flex items-center gap-1.5 text-xs uppercase tracking-wide text-zinc-500 font-semibold mb-2">
+                    <p className={cn('flex items-center gap-1.5 text-[11px] uppercase tracking-wider font-semibold mb-2', tc.textMuted)}>
                       <Clock className="w-3 h-3" />
                       Ideal Timeframe
                     </p>
-                    <p className={cn('text-sm font-mono', theme !== 'light' ? 'text-white' : 'text-zinc-900')}>{entry.timeframe || '—'}</p>
+                    <p className={cn('text-sm font-mono tabular-nums', tc.text)}>{entry.timeframe || '—'}</p>
                   </div>
                   <div className={cn(
                     'rounded-lg border p-4',
                     theme !== 'light' ? 'bg-zinc-900/50 border-zinc-800/60' : 'bg-zinc-50 border-zinc-200'
                   )}>
-                    <p className="flex items-center gap-1.5 text-xs uppercase tracking-wide text-zinc-500 font-semibold mb-2">
+                    <p className={cn('flex items-center gap-1.5 text-[11px] uppercase tracking-wider font-semibold mb-2', tc.textMuted)}>
                       <Compass className="w-3 h-3" />
                       Ideal Session
                     </p>
-                    <p className={cn('text-sm font-mono', theme !== 'light' ? 'text-white' : 'text-zinc-900')}>{entry.bestSession || '—'}</p>
+                    <p className={cn('text-sm font-mono tabular-nums', tc.text)}>{entry.bestSession || '—'}</p>
                   </div>
                   {!entry.timeframe && !entry.bestSession && (
-                    <p className="sm:col-span-2 text-xs text-zinc-500 italic">No session or timeframe confluence set for this concept.</p>
+                    <p className={cn('sm:col-span-2 text-xs italic', tc.textMuted)}>No session or timeframe confluence set for this concept.</p>
                   )}
                 </div>
               )}
@@ -818,10 +822,7 @@ export function WikiScreen() {
                   )}
                 >
                   <Download className="w-4 h-4" />
-                  <span className={cn(
-                    'absolute -top-1.5 -right-1.5 text-[9px] font-semibold w-4 h-4 flex items-center justify-center rounded-full',
-                    theme !== 'light' ? 'bg-sky-500 text-white' : 'bg-sky-600 text-white'
-                  )}>
+                  <span className="absolute -top-1.5 -right-1.5 text-[10px] font-mono font-semibold text-amber-300 min-w-[18px] h-[18px] px-1 flex items-center justify-center rounded-full bg-amber-500/15 border border-amber-500/30">
                     {missingStandardConcepts.length}
                   </span>
                 </button>
@@ -838,65 +839,13 @@ export function WikiScreen() {
           }
         />
 
-        {/* Top stats bar — 3 mini cards, Discipline Tracker-style. */}
+        {/* Top stats bar — shared renderStatCard recipe, same helper used by
+            Dashboard/Discipline (neutral zinc icon chip, tc.textMuted label,
+            tabular-nums value) rather than a one-off reimplementation. */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-          {/* Card 1 — Total Concepts */}
-          <div className={cn(
-            'rounded-xl border p-4 flex items-center gap-3',
-            theme !== 'light' ? 'bg-[#111113] border-zinc-800/80' : 'bg-white border-zinc-200'
-          )}>
-            <div className={cn(
-              'w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0',
-              theme !== 'light' ? 'bg-emerald-500/10 text-emerald-400' : 'bg-emerald-50 text-emerald-600'
-            )}>
-              <BookOpen className="w-5 h-5" />
-            </div>
-            <div className="min-w-0">
-              <p className="text-xs uppercase tracking-wide text-zinc-500 font-semibold">Total Concepts</p>
-              <p className={cn('text-xl font-bold leading-tight', theme !== 'light' ? 'text-white' : 'text-zinc-900')}>
-                {wikiEntries.length}
-              </p>
-            </div>
-          </div>
-
-          {/* Card 2 — Categories */}
-          <div className={cn(
-            'rounded-xl border p-4 flex items-center gap-3',
-            theme !== 'light' ? 'bg-[#111113] border-zinc-800/80' : 'bg-white border-zinc-200'
-          )}>
-            <div className={cn(
-              'w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0',
-              theme !== 'light' ? 'bg-violet-500/10 text-violet-400' : 'bg-violet-50 text-violet-600'
-            )}>
-              <Grid className="w-5 h-5" />
-            </div>
-            <div className="min-w-0">
-              <p className="text-xs uppercase tracking-wide text-zinc-500 font-semibold">Categories</p>
-              <p className={cn('text-xl font-bold leading-tight', theme !== 'light' ? 'text-white' : 'text-zinc-900')}>
-                {presentCategoryNames.length}
-              </p>
-            </div>
-          </div>
-
-          {/* Card 3 — Active Filter / Coverage */}
-          <div className={cn(
-            'rounded-xl border p-4 flex items-center gap-3',
-            theme !== 'light' ? 'bg-[#111113] border-zinc-800/80' : 'bg-white border-zinc-200'
-          )}>
-            <div className={cn(
-              'w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0',
-              theme !== 'light' ? 'bg-amber-500/10 text-amber-400' : 'bg-amber-50 text-amber-600'
-            )}>
-              <Filter className="w-5 h-5" />
-            </div>
-            <div className="min-w-0">
-              <p className="text-xs uppercase tracking-wide text-zinc-500 font-semibold">Active Filter</p>
-              <p className={cn('text-xl font-bold leading-tight truncate', theme !== 'light' ? 'text-white' : 'text-zinc-900')}>
-                {activeCategory}
-              </p>
-            </div>
-          </div>
-
+          {renderStatCard('Total Concepts', wikiEntries.length, <BookOpen className="w-5 h-5" />, 'text-emerald-400')}
+          {renderStatCard('Categories', presentCategoryNames.length, <Grid className="w-5 h-5" />, 'text-violet-400')}
+          {renderStatCard('Active Filter', activeCategory, <Filter className="w-5 h-5" />, 'text-amber-400')}
         </div>
 
         {/* Split-pane workbench — category list on the left, full
@@ -908,19 +857,19 @@ export function WikiScreen() {
           {/* Left sidebar — nav list (~35%) */}
           <div className={cn(
             'lg:w-[35%] lg:min-w-[300px] lg:max-w-[420px] flex flex-col border rounded-xl overflow-hidden lg:h-full',
-            theme !== 'light' ? 'bg-[#111113] border-zinc-800/80' : 'bg-white border-zinc-200'
+            theme !== 'light' ? 'bg-zinc-900/40 border-zinc-800/80' : 'bg-white border-zinc-200'
           )}>
             {/* Search — scoped to the concept list it filters */}
             <div className={cn('p-3 border-b flex-shrink-0', theme !== 'light' ? 'border-zinc-800/80' : 'border-zinc-200')}>
               <div className="relative">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-zinc-500 pointer-events-none" />
+                <Search className={cn('absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 pointer-events-none', tc.textMuted)} />
                 <input
                   type="text"
                   value={wikiSearch}
                   onChange={(e) => setWikiSearch(e.target.value)}
                   placeholder="Search concepts, rules, sessions..."
                   className={cn(
-                    'w-full rounded-lg pl-9 pr-3 py-2 text-sm focus:outline-none focus:border-sky-500/50 border',
+                    'w-full rounded-lg pl-9 pr-3 py-2 text-sm focus:outline-none focus:border-indigo-500/50 border',
                     theme !== 'light'
                       ? 'bg-zinc-950 border-zinc-800 text-white placeholder:text-zinc-600'
                       : 'bg-zinc-50 border-zinc-200 text-zinc-900 placeholder:text-zinc-400'
@@ -990,11 +939,11 @@ export function WikiScreen() {
               ) : (
                 <div className="text-center py-10 px-4">
                   <Search className={cn('w-6 h-6 mx-auto mb-2', theme !== 'light' ? 'text-zinc-700' : 'text-zinc-300')} />
-                  <p className="text-xs text-zinc-500">{wikiEntries.length === 0 ? 'No concepts yet' : 'No concepts match'}</p>
+                  <p className={cn('text-xs', tc.textMuted)}>{wikiEntries.length === 0 ? 'No concepts yet' : 'No concepts match'}</p>
                   {isFiltering && (
                     <button
                       onClick={() => { setActiveCategory('All'); setWikiSearch(''); }}
-                      className="mt-2 text-xs text-sky-500 hover:text-sky-600 transition-colors"
+                      className="mt-2 text-xs text-emerald-500 hover:text-emerald-600 transition-colors"
                     >
                       Clear filters
                     </button>
@@ -1007,7 +956,7 @@ export function WikiScreen() {
           {/* Right main panel — detail workbench (~65%) */}
           <div className={cn(
             'flex-1 min-w-0 flex flex-col border rounded-xl overflow-hidden lg:h-full',
-            theme !== 'light' ? 'bg-[#111113] border-zinc-800/80' : 'bg-white border-zinc-200'
+            theme !== 'light' ? 'bg-zinc-900/40 border-zinc-800/80' : 'bg-white border-zinc-200'
           )}>
             {renderWikiDetailPanel()}
           </div>
