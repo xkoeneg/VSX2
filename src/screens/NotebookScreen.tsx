@@ -1292,13 +1292,6 @@ export function NotebookScreen() {
 
   const confirmDeleteFolder = () => {
     if (!folderPendingDelete) return;
-    // Default folders can't be deleted (handleDeleteNotebookFolder no-ops
-    // on them) — the trash icon is hidden for them in the UI, but guard
-    // here too in case this is ever reached some other way.
-    if (notebookDefaultFolders.includes(folderPendingDelete)) {
-      setFolderPendingDelete(null);
-      return;
-    }
     if (activeFolder === folderPendingDelete) setActiveFolder(ALL_NOTES);
     handleDeleteNotebookFolder(folderPendingDelete);
     setFolderPendingDelete(null);
@@ -1333,12 +1326,6 @@ export function NotebookScreen() {
     const isDragOverTarget = dragOverFolder === node.fullPath && draggedFolder !== null && draggedFolder !== node.fullPath;
     const hasChildren = node.children.length > 0;
     const collapsed = collapsedFolders.has(node.fullPath);
-    // Default folders (e.g. "Mindset", "Daily Reflections") can never
-    // actually be deleted — handleDeleteNotebookFolder no-ops on them — so
-    // don't show a trash icon that would confirm a delete and then quietly
-    // do nothing. Only applies at depth 0 since that's the only level
-    // default folders exist at.
-    const isDefaultFolder = depth === 0 && notebookDefaultFolders.includes(node.fullPath);
     return (
       <div key={node.fullPath}>
         <div
@@ -1435,22 +1422,16 @@ export function NotebookScreen() {
               the All notes / Favorites counts use — instead of sitting
               centered in the middle of this wider box. */}
           <div className="relative flex-shrink-0 w-7 h-7 flex items-center justify-end">
-            <span className={cn(
-              'absolute right-0 text-xs font-mono font-semibold tabular-nums transition-opacity duration-150',
-              textMuted,
-              !isDefaultFolder && 'group-hover/folder:opacity-0'
-            )}>
+            <span className={cn('absolute right-0 text-xs font-mono font-semibold tabular-nums transition-opacity duration-150', textMuted, 'group-hover/folder:opacity-0')}>
               {countForFolderPath(node.fullPath)}
             </span>
-            {!isDefaultFolder && (
-              <button
-                onClick={() => setFolderPendingDelete(node.fullPath)}
-                title="Delete folder"
-                className="absolute right-0 top-1/2 -translate-y-1/2 w-6 h-6 flex items-center justify-center rounded-md text-rose-400/70 hover:text-rose-400 hover:bg-rose-500/10 transition-opacity duration-150 opacity-0 group-hover/folder:opacity-100 focus:opacity-100"
-              >
-                <Trash2 className="w-3.5 h-3.5" />
-              </button>
-            )}
+            <button
+              onClick={() => setFolderPendingDelete(node.fullPath)}
+              title="Delete folder"
+              className="absolute right-0 top-1/2 -translate-y-1/2 w-6 h-6 flex items-center justify-center rounded-md text-rose-400/70 hover:text-rose-400 hover:bg-rose-500/10 transition-opacity duration-150 opacity-0 group-hover/folder:opacity-100 focus:opacity-100"
+            >
+              <Trash2 className="w-3.5 h-3.5" />
+            </button>
           </div>
 
 
@@ -2868,7 +2849,11 @@ export function NotebookScreen() {
           <div className={cn('rounded-xl max-w-sm w-full border p-6 shadow-2xl', theme !== 'light' ? 'bg-zinc-900 border-white/10' : 'bg-white border-zinc-200')} onClick={(e) => e.stopPropagation()}>
             <h3 className={cn('text-base font-semibold mb-2', tc.text)}>Delete "{folderPendingDelete}"?</h3>
             <p className={cn("text-sm mb-4 leading-relaxed", tc.textMuted)}>
-              This folder and its notes will move to Recently Deleted together — you can restore them from there, or they'll be permanently removed after 30 days. Sub-folders aren't deleted automatically.
+              {notebookDefaultFolders.includes(folderPendingDelete) ? (
+                <>"{folderPendingDelete}" is a built-in folder — deleting it is permanent and it won't appear in Recently Deleted. It won't come back unless you restore your account from a full backup. Its notes will still move to Recently Deleted individually.</>
+              ) : (
+                <>This folder and its notes will move to Recently Deleted together — you can restore them from there, or they'll be permanently removed after 30 days. Sub-folders aren't deleted automatically.</>
+              )}
             </p>
             <div className="flex items-center justify-end gap-2.5">
               <button onClick={() => setFolderPendingDelete(null)} className={cn('px-4 py-2 rounded-lg text-sm', theme !== 'light' ? 'bg-zinc-800 hover:bg-zinc-700 text-zinc-300' : 'bg-zinc-100 hover:bg-zinc-200 text-zinc-700')}>
