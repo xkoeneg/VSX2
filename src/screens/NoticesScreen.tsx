@@ -663,20 +663,12 @@ export function NoticesScreen() {
           'min-w-0 h-[450px] border rounded-xl p-4 flex flex-col',
           theme !== 'light' ? 'bg-zinc-900/50 border-zinc-800' : 'bg-white border-zinc-200'
         )}>
-          <div className={cn(
-            'flex items-center justify-between gap-2 px-3 py-2 rounded-lg border flex-shrink-0',
-            theme !== 'light' ? 'border-zinc-800 bg-zinc-800/40' : 'border-zinc-200 bg-zinc-50'
-          )}>
+          <div className="flex items-center justify-between gap-2 mb-3 flex-shrink-0">
             <div className="flex items-center gap-2 min-w-0">
-              <meta.headerIcon className={cn('w-4 h-4 flex-shrink-0', type === 'mistake' ? 'text-rose-400' : 'text-cyan-400')} />
-              <h2 className={cn(
-                'text-sm font-semibold truncate',
-                type === 'mistake'
-                  ? (theme !== 'light' ? 'text-rose-300' : 'text-rose-600')
-                  : (theme !== 'light' ? 'text-cyan-300' : 'text-cyan-600')
-              )}>
+              <h3 className={cn('text-sm font-semibold flex items-center gap-2 truncate', tc.text)}>
+                <meta.headerIcon className={cn('w-4 h-4 flex-shrink-0', type === 'mistake' ? 'text-rose-400' : 'text-cyan-400')} />
                 {meta.tabLabel}
-              </h2>
+              </h3>
               <span className={cn(
                 'px-1.5 py-0.5 rounded-full text-[10px] border flex-shrink-0',
                 type === 'mistake' ? 'bg-rose-500/15 text-rose-300 border-rose-500/30' : 'bg-cyan-500/15 text-cyan-300 border-cyan-500/30'
@@ -686,10 +678,7 @@ export function NoticesScreen() {
             </div>
             <button
               onClick={() => handleOpenAddNotice(type)}
-              className={cn(
-                'p-1.5 rounded-lg transition-colors flex-shrink-0',
-                theme !== 'light' ? 'bg-black/20 hover:bg-black/40 text-zinc-300 hover:text-white' : 'bg-zinc-200/60 hover:bg-zinc-200 text-zinc-600 hover:text-zinc-900'
-              )}
+              className={cn('p-1.5 rounded-md transition-colors flex-shrink-0', tc.btnSecondary)}
             >
               <Plus className="w-3.5 h-3.5" />
             </button>
@@ -697,7 +686,7 @@ export function NoticesScreen() {
 
           <div
             className={cn(
-              'flex-1 overflow-y-auto overscroll-contain mt-3',
+              'flex-1 overflow-y-auto overscroll-contain',
               type === 'mistake'
                 ? 'notice-column-scroll-mistake [direction:rtl] pl-1'
                 : 'notice-column-scroll-insight pr-1'
