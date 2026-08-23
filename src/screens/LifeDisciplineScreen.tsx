@@ -540,7 +540,7 @@ export function LifeDisciplineScreen() {
           {routineGroups.length === 0 ? (
             <div className="flex flex-col items-center justify-center gap-3 py-10 text-center select-none">
               <ListChecks className={cn("w-7 h-7", theme !== 'light' ? 'text-zinc-700' : 'text-zinc-300')} />
-              <p className={cn("text-sm italic max-w-xs", tc.textMuted)}>
+              <p className={cn("text-xs italic max-w-xs", tc.textMuted)}>
                 No routine categories added yet. Click "+ Add Category" to start.
               </p>
               <button
@@ -552,7 +552,7 @@ export function LifeDisciplineScreen() {
               </button>
             </div>
           ) : dailyOnlyGroups.length === 0 ? (
-            <p className={cn("text-sm italic py-2 select-none", tc.textMuted)}>
+            <p className={cn("text-xs italic py-2 select-none", tc.textMuted)}>
               All routines live in the Weekly card — see {WEEKDAY_FULL_NAME[todayWeekday]} Specifics below.
             </p>
           ) : (
@@ -633,7 +633,7 @@ export function LifeDisciplineScreen() {
                             >
                               {checked && <Check className="w-3.5 h-3.5" />}
                             </span>
-                            <span className={cn('text-sm select-none transition-colors', checked ? cn(tc.textMuted, 'line-through') : tc.textSecondary)}>
+                            <span className={cn('text-xs select-none transition-colors', checked ? cn(tc.textMuted, 'line-through') : tc.textSecondary)}>
                               {item.text}
                             </span>
                           </label>
@@ -705,7 +705,7 @@ export function LifeDisciplineScreen() {
                           >
                             {checked && <Check className="w-3.5 h-3.5" />}
                           </span>
-                          <span className={cn('text-sm select-none transition-colors truncate', checked ? cn(tc.textMuted, 'line-through') : tc.textSecondary)}>
+                          <span className={cn('text-xs select-none transition-colors truncate', checked ? cn(tc.textMuted, 'line-through') : tc.textSecondary)}>
                             {item.text}
                           </span>
                         </label>
@@ -755,7 +755,7 @@ export function LifeDisciplineScreen() {
             <div className={cn("flex items-center gap-2.5 p-3 rounded-lg border", theme !== 'light' ? 'bg-zinc-800/60 border-zinc-700/50' : 'bg-zinc-100 border-zinc-200')}>
               <div className={cn(
                 'w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0',
-                theme !== 'light' ? 'bg-zinc-800/60 text-zinc-400' : 'bg-zinc-100 text-zinc-400'
+                theme !== 'light' ? 'bg-zinc-800/60' : 'bg-zinc-100', tc.textMuted
               )}>
                 <Clock className="w-4 h-4" />
               </div>
