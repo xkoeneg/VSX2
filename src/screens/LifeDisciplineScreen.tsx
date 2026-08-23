@@ -545,7 +545,7 @@ export function LifeDisciplineScreen() {
           {routineGroups.length === 0 ? (
             <div className="flex flex-col items-center justify-center gap-3 py-10 text-center select-none">
               <ListChecks className={cn("w-7 h-7", theme !== 'light' ? 'text-zinc-700' : 'text-zinc-300')} />
-              <p className={cn("text-sm max-w-xs", tc.textMuted)}>
+              <p className={cn("text-sm italic max-w-xs", tc.textMuted)}>
                 No routine categories added yet. Click "+ Add Category" to start.
               </p>
               <button
@@ -587,60 +587,64 @@ export function LifeDisciplineScreen() {
                 <div
                   key={group.id}
                   className={cn(
-                    'rounded-lg border border-l-2 p-4 transition-colors',
-                    theme !== 'light' ? 'bg-zinc-800/60 border-zinc-700/50' : 'bg-zinc-100 border-zinc-200',
-                    groupComplete && 'border-l-emerald-500'
+                    'relative overflow-hidden rounded-lg border p-4 transition-colors',
+                    theme !== 'light' ? 'bg-zinc-800/60 border-zinc-700/50' : 'bg-zinc-100 border-zinc-200'
                   )}
                 >
-                  <div className={cn("flex items-center gap-2 mb-3 pb-3 border-b select-none", theme !== 'light' ? 'border-zinc-800/60' : 'border-zinc-200')}>
-                    {renderCategoryIcon(group, 'w-4 h-4', groupComplete ? 'text-emerald-400' : undefined)}
-                    <span className={cn("text-sm font-semibold truncate", tc.text)}>{group.label}</span>
-                    <span
-                      className={cn(
-                        'ml-auto flex-shrink-0 text-[10px] font-mono font-semibold px-2 py-0.5 rounded-full border whitespace-nowrap',
-                        groupComplete
-                          ? 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30'
-                          : cn(theme !== 'light' ? 'bg-zinc-800/60 border-zinc-700/50' : 'bg-zinc-100 border-zinc-200', tc.textMuted)
+                  {groupComplete && (
+                    <span className="absolute left-0 top-0 bottom-0 w-1 bg-emerald-500/60" />
+                  )}
+                  <div className="pl-2">
+                    <div className={cn("flex items-center gap-2 mb-3 pb-3 border-b select-none", theme !== 'light' ? 'border-zinc-800/60' : 'border-zinc-200')}>
+                      {renderCategoryIcon(group, 'w-4 h-4', groupComplete ? 'text-emerald-400' : undefined)}
+                      <span className={cn("text-sm font-semibold truncate", tc.text)}>{group.label}</span>
+                      <span
+                        className={cn(
+                          'ml-auto flex-shrink-0 text-[10px] font-mono font-semibold px-2 py-0.5 rounded-full border whitespace-nowrap',
+                          groupComplete
+                            ? 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30'
+                            : cn(theme !== 'light' ? 'bg-zinc-800/60 border-zinc-700/50' : 'bg-zinc-100 border-zinc-200', tc.textMuted)
+                        )}
+                      >
+                        {groupCheckedCount}/{dailyItemsWithIndex.length}{groupComplete ? ' Ready' : ''}
+                      </span>
+                    </div>
+                    <div className="space-y-2">
+                      {dailyItemsWithIndex.length === 0 && (
+                        <p className={cn("text-xs italic select-none", tc.textMuted)}>
+                          No routine items — add some in Configure Challenge.
+                        </p>
                       )}
-                    >
-                      {groupCheckedCount}/{dailyItemsWithIndex.length}{groupComplete ? ' Ready' : ''}
-                    </span>
-                  </div>
-                  <div className="space-y-2">
-                    {dailyItemsWithIndex.length === 0 && (
-                      <p className={cn("text-xs italic select-none", tc.textMuted)}>
-                        No routine items — add some in Configure Challenge.
-                      </p>
-                    )}
-                    {dailyItemsWithIndex.map(({ item, iI }) => {
-                      const checked = !!groupChecks[iI];
-                      return (
-                        <label
-                          key={item.id}
-                          className="flex items-center gap-2.5 cursor-pointer group select-none"
-                        >
-                          <input
-                            type="checkbox"
-                            checked={checked}
-                            onChange={() => toggleLifeDisciplineItem(todayKey, gI, iI)}
-                            className="sr-only peer cursor-pointer"
-                          />
-                          <span
-                            className={cn(
-                              'w-5 h-5 rounded-full border flex items-center justify-center flex-shrink-0 cursor-pointer transition-all duration-200 ease-out',
-                              checked
-                                ? 'bg-emerald-500/25 border-emerald-400 text-emerald-400 scale-100'
-                                : cn(theme !== 'light' ? 'border-zinc-700' : 'border-zinc-300', theme !== 'light' ? 'group-hover:border-zinc-400' : 'group-hover:border-zinc-500', 'group-active:scale-90')
-                            )}
+                      {dailyItemsWithIndex.map(({ item, iI }) => {
+                        const checked = !!groupChecks[iI];
+                        return (
+                          <label
+                            key={item.id}
+                            className="flex items-center gap-2.5 cursor-pointer group select-none"
                           >
-                            {checked && <Check className="w-3.5 h-3.5" />}
-                          </span>
-                          <span className={cn('text-sm select-none transition-colors', checked ? cn(tc.textMuted, 'line-through') : tc.textSecondary)}>
-                            {item.text}
-                          </span>
-                        </label>
-                      );
-                    })}
+                            <input
+                              type="checkbox"
+                              checked={checked}
+                              onChange={() => toggleLifeDisciplineItem(todayKey, gI, iI)}
+                              className="sr-only peer cursor-pointer"
+                            />
+                            <span
+                              className={cn(
+                                'w-5 h-5 rounded-full border flex items-center justify-center flex-shrink-0 cursor-pointer transition-all duration-200 ease-out',
+                                checked
+                                  ? 'bg-emerald-500/15 border-emerald-500/40 text-emerald-400 scale-100'
+                                  : cn(theme !== 'light' ? 'border-zinc-700' : 'border-zinc-300', theme !== 'light' ? 'group-hover:border-zinc-400' : 'group-hover:border-zinc-500', 'group-active:scale-90')
+                              )}
+                            >
+                              {checked && <Check className="w-3.5 h-3.5" />}
+                            </span>
+                            <span className={cn('text-sm select-none transition-colors', checked ? cn(tc.textMuted, 'line-through') : tc.textSecondary)}>
+                              {item.text}
+                            </span>
+                          </label>
+                        );
+                      })}
+                    </div>
                   </div>
                 </div>
               );
@@ -659,56 +663,60 @@ export function LifeDisciplineScreen() {
             const weeklyCheckedCount = weeklyTargetsToday.filter(({ gI, iI }) => !!todayChecks[gI]?.[iI]).length;
             return (
               <div className={cn(
-                'mt-4 rounded-lg border border-l-2 p-4 transition-colors',
-                theme !== 'light' ? 'bg-zinc-800/60 border-zinc-700/50' : 'bg-zinc-100 border-zinc-200',
-                weeklyTargetsComplete && 'border-l-emerald-500'
+                'relative overflow-hidden mt-4 rounded-lg border p-4 transition-colors',
+                theme !== 'light' ? 'bg-zinc-800/60 border-zinc-700/50' : 'bg-zinc-100 border-zinc-200'
               )}>
-                <div className={cn("flex items-center gap-2 mb-3 pb-3 border-b select-none", theme !== 'light' ? 'border-zinc-800/60' : 'border-zinc-200')}>
-                  <CalendarDays className={cn('w-4 h-4 flex-shrink-0', weeklyTargetsComplete ? 'text-emerald-400' : tc.textMuted)} strokeWidth={2} />
-                  <span className={cn("text-sm font-semibold truncate", tc.text)}>
-                    {WEEKDAY_FULL_NAME[todayWeekday]} Specifics
-                  </span>
-                  <span
-                    className={cn(
-                      'ml-auto flex-shrink-0 text-[10px] font-mono font-semibold px-2 py-0.5 rounded-full border whitespace-nowrap',
-                      weeklyTargetsComplete
-                        ? 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30'
-                        : cn(theme !== 'light' ? 'bg-zinc-800/60 border-zinc-700/50' : 'bg-zinc-100 border-zinc-200', tc.textMuted)
-                    )}
-                  >
-                    {weeklyCheckedCount}/{weeklyTargetsToday.length}{weeklyTargetsComplete ? ' Ready' : ' Today'}
-                  </span>
-                </div>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-2">
-                  {weeklyTargetsToday.map(({ gI, item, iI }) => {
-                    const checked = !!todayChecks[gI]?.[iI];
-                    return (
-                      <label
-                        key={item.id}
-                        className="flex items-center gap-2.5 cursor-pointer group select-none"
-                      >
-                        <input
-                          type="checkbox"
-                          checked={checked}
-                          onChange={() => toggleLifeDisciplineItem(todayKey, gI, iI)}
-                          className="sr-only peer cursor-pointer"
-                        />
-                        <span
-                          className={cn(
-                            'w-5 h-5 rounded-full border flex items-center justify-center flex-shrink-0 cursor-pointer transition-all duration-200 ease-out',
-                            checked
-                              ? 'bg-emerald-500/25 border-emerald-400 text-emerald-400 scale-100'
-                              : cn(theme !== 'light' ? 'border-zinc-700' : 'border-zinc-300', theme !== 'light' ? 'group-hover:border-zinc-400' : 'group-hover:border-zinc-500', 'group-active:scale-90')
-                          )}
+                {weeklyTargetsComplete && (
+                  <span className="absolute left-0 top-0 bottom-0 w-1 bg-emerald-500/60" />
+                )}
+                <div className="pl-2">
+                  <div className={cn("flex items-center gap-2 mb-3 pb-3 border-b select-none", theme !== 'light' ? 'border-zinc-800/60' : 'border-zinc-200')}>
+                    <CalendarDays className={cn('w-4 h-4 flex-shrink-0', weeklyTargetsComplete ? 'text-emerald-400' : tc.textMuted)} strokeWidth={2} />
+                    <span className={cn("text-sm font-semibold truncate", tc.text)}>
+                      {WEEKDAY_FULL_NAME[todayWeekday]} Specifics
+                    </span>
+                    <span
+                      className={cn(
+                        'ml-auto flex-shrink-0 text-[10px] font-mono font-semibold px-2 py-0.5 rounded-full border whitespace-nowrap',
+                        weeklyTargetsComplete
+                          ? 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30'
+                          : cn(theme !== 'light' ? 'bg-zinc-800/60 border-zinc-700/50' : 'bg-zinc-100 border-zinc-200', tc.textMuted)
+                      )}
+                    >
+                      {weeklyCheckedCount}/{weeklyTargetsToday.length}{weeklyTargetsComplete ? ' Ready' : ' Today'}
+                    </span>
+                  </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-2">
+                    {weeklyTargetsToday.map(({ gI, item, iI }) => {
+                      const checked = !!todayChecks[gI]?.[iI];
+                      return (
+                        <label
+                          key={item.id}
+                          className="flex items-center gap-2.5 cursor-pointer group select-none"
                         >
-                          {checked && <Check className="w-3.5 h-3.5" />}
-                        </span>
-                        <span className={cn('text-sm select-none transition-colors truncate', checked ? cn(tc.textMuted, 'line-through') : tc.textSecondary)}>
-                          {item.text}
-                        </span>
-                      </label>
-                    );
-                  })}
+                          <input
+                            type="checkbox"
+                            checked={checked}
+                            onChange={() => toggleLifeDisciplineItem(todayKey, gI, iI)}
+                            className="sr-only peer cursor-pointer"
+                          />
+                          <span
+                            className={cn(
+                              'w-5 h-5 rounded-full border flex items-center justify-center flex-shrink-0 cursor-pointer transition-all duration-200 ease-out',
+                              checked
+                                ? 'bg-emerald-500/15 border-emerald-500/40 text-emerald-400 scale-100'
+                                : cn(theme !== 'light' ? 'border-zinc-700' : 'border-zinc-300', theme !== 'light' ? 'group-hover:border-zinc-400' : 'group-hover:border-zinc-500', 'group-active:scale-90')
+                            )}
+                          >
+                            {checked && <Check className="w-3.5 h-3.5" />}
+                          </span>
+                          <span className={cn('text-sm select-none transition-colors truncate', checked ? cn(tc.textMuted, 'line-through') : tc.textSecondary)}>
+                            {item.text}
+                          </span>
+                        </label>
+                      );
+                    })}
+                  </div>
                 </div>
               </div>
             );
@@ -738,7 +746,7 @@ export function LifeDisciplineScreen() {
               discipline score (re-check tokens already shown in the stat
               card above) */}
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4 select-none">
-            <div className={cn("flex items-center gap-2.5 px-3.5 py-2.5 rounded-lg border", theme !== 'light' ? 'bg-zinc-800/60 border-zinc-700/50' : 'bg-zinc-100 border-zinc-200')}>
+            <div className={cn("flex items-center gap-2.5 p-3 rounded-lg border", theme !== 'light' ? 'bg-zinc-800/60 border-zinc-700/50' : 'bg-zinc-100 border-zinc-200')}>
               <div className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 bg-violet-500/20 text-violet-400">
                 <CalendarDays className="w-4 h-4" />
               </div>
@@ -749,7 +757,7 @@ export function LifeDisciplineScreen() {
                 <p className={cn("text-[11px]", tc.textMuted)}>Challenge timeline</p>
               </div>
             </div>
-            <div className={cn("flex items-center gap-2.5 px-3.5 py-2.5 rounded-lg border", theme !== 'light' ? 'bg-zinc-800/60 border-zinc-700/50' : 'bg-zinc-100 border-zinc-200')}>
+            <div className={cn("flex items-center gap-2.5 p-3 rounded-lg border", theme !== 'light' ? 'bg-zinc-800/60 border-zinc-700/50' : 'bg-zinc-100 border-zinc-200')}>
               <div className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 bg-blue-500/20 text-blue-400">
                 <Clock className="w-4 h-4" />
               </div>
@@ -758,7 +766,7 @@ export function LifeDisciplineScreen() {
                 <p className={cn("text-[11px]", tc.textMuted)}>Until target end date</p>
               </div>
             </div>
-            <div className={cn("flex items-center gap-2.5 px-3.5 py-2.5 rounded-lg border", theme !== 'light' ? 'bg-zinc-800/60 border-zinc-700/50' : 'bg-zinc-100 border-zinc-200')}>
+            <div className={cn("flex items-center gap-2.5 p-3 rounded-lg border", theme !== 'light' ? 'bg-zinc-800/60 border-zinc-700/50' : 'bg-zinc-100 border-zinc-200')}>
               <div className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 bg-amber-500/20 text-amber-400">
                 <Flame className="w-4 h-4" />
               </div>
@@ -767,7 +775,7 @@ export function LifeDisciplineScreen() {
                 <p className={cn("text-[11px]", tc.textMuted)}>Active streak</p>
               </div>
             </div>
-            <div className={cn("flex items-center gap-2.5 px-3.5 py-2.5 rounded-lg border", theme !== 'light' ? 'bg-zinc-800/60 border-zinc-700/50' : 'bg-zinc-100 border-zinc-200')}>
+            <div className={cn("flex items-center gap-2.5 p-3 rounded-lg border", theme !== 'light' ? 'bg-zinc-800/60 border-zinc-700/50' : 'bg-zinc-100 border-zinc-200')}>
               <div className={cn(
                 'w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0',
                 disciplineScore >= 80 ? 'bg-emerald-500/20 text-emerald-400' : disciplineScore >= 50 ? 'bg-amber-500/20 text-amber-400' : 'bg-rose-500/20 text-rose-400'
@@ -823,7 +831,7 @@ export function LifeDisciplineScreen() {
                   title={tooltip}
                   onClick={() => handleLifeDisciplineTileClick(dateKey, day, status)}
                   className={cn(
-                    'relative aspect-square rounded-lg border flex items-center justify-center text-[10px] font-mono font-medium transition-colors select-none',
+                    'relative aspect-square rounded-lg border flex items-center justify-center text-xs font-medium transition-colors select-none',
                     statusStyles[status],
                     isClickable && 'cursor-pointer'
                   )}
