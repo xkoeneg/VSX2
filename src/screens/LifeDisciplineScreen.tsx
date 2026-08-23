@@ -586,7 +586,7 @@ export function LifeDisciplineScreen() {
                 <div
                   key={group.id}
                   className={cn(
-                    'relative rounded-lg border p-4 transition-colors',
+                    'relative rounded-lg border p-3 transition-colors',
                     theme !== 'light' ? 'bg-zinc-800/60 border-zinc-700/50' : 'bg-zinc-100 border-zinc-200',
                     groupComplete && 'border-l-4 border-l-emerald-500/70'
                   )}
@@ -658,7 +658,7 @@ export function LifeDisciplineScreen() {
             const weeklyCheckedCount = weeklyTargetsToday.filter(({ gI, iI }) => !!todayChecks[gI]?.[iI]).length;
             return (
               <div className={cn(
-                'relative mt-4 rounded-lg border p-4 transition-colors',
+                'relative mt-4 rounded-lg border p-3 transition-colors',
                 theme !== 'light' ? 'bg-zinc-800/60 border-zinc-700/50' : 'bg-zinc-100 border-zinc-200',
                 weeklyTargetsComplete && 'border-l-4 border-l-emerald-500/70'
               )}>
