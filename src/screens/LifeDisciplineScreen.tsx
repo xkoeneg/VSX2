@@ -454,7 +454,7 @@ export function LifeDisciplineScreen() {
           actions={
             <button
               onClick={() => openChallengeConfigModal('configure')}
-              className={cn("flex-shrink-0 flex items-center gap-2 px-3.5 py-2 rounded-lg text-sm font-medium transition-all", tc.btnSecondary)}
+              className={cn("flex-shrink-0 flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-medium transition-all", tc.btnSecondary)}
             >
               <Settings className="w-4 h-4" />
               Configure Challenge
@@ -515,7 +515,7 @@ export function LifeDisciplineScreen() {
                 onClick={() => completeAllLifeDisciplineToday(todayKey)}
                 disabled={todayComplete || totalItems === 0}
                 className={cn(
-                  'flex-shrink-0 flex items-center gap-1.5 px-3.5 py-2 rounded-lg text-sm font-semibold transition-all select-none border',
+                  'flex-shrink-0 flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-semibold transition-all select-none border',
                   todayComplete || totalItems === 0
                     ? cn(theme !== 'light' ? 'bg-zinc-800/60 border-zinc-700/50' : 'bg-zinc-100 border-zinc-200', tc.textMuted, 'cursor-not-allowed')
                     : 'bg-emerald-500/15 border-emerald-500/40 text-emerald-400 hover:bg-emerald-500/25 cursor-pointer'
@@ -531,7 +531,7 @@ export function LifeDisciplineScreen() {
           {lifeDisciplineToast && (
             <div
               key={lifeDisciplineToast}
-              className="absolute top-3 right-5 z-10 px-3.5 py-2 rounded-lg bg-emerald-500/15 border border-emerald-500/40 text-emerald-400 text-xs font-semibold shadow-xl select-none"
+              className="absolute top-3 right-5 z-10 px-3 py-2 rounded-lg bg-emerald-500/15 border border-emerald-500/40 text-emerald-400 text-xs font-semibold shadow-xl select-none"
             >
               {lifeDisciplineToast}
             </div>
@@ -545,7 +545,7 @@ export function LifeDisciplineScreen() {
               </p>
               <button
                 onClick={() => openChallengeConfigModal(hasActiveChallengeProgress ? 'edit' : 'configure')}
-                className={cn("flex items-center gap-1.5 px-3.5 py-2 rounded-lg text-sm font-medium transition-all", tc.btnSecondary)}
+                className={cn("flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-medium transition-all", tc.btnSecondary)}
               >
                 <Plus className="w-4 h-4" />
                 Add Category
@@ -746,7 +746,7 @@ export function LifeDisciplineScreen() {
                 <CalendarDays className="w-4 h-4" />
               </div>
               <div className="min-w-0">
-                <p className={cn("text-sm font-semibold truncate tabular-nums", tc.text)}>
+                <p className={cn("text-lg font-semibold truncate tabular-nums", tc.text)}>
                   {formatDate(lifeDisciplineStartDate)} <span className={cn(tc.textMuted, "font-normal")}>→</span> {formatDate(endDateKey)}
                 </p>
                 <p className={cn("text-[11px]", tc.textMuted)}>Challenge timeline</p>
@@ -760,7 +760,7 @@ export function LifeDisciplineScreen() {
                 <Clock className="w-4 h-4" />
               </div>
               <div className="min-w-0">
-                <p className={cn("text-sm font-semibold truncate tabular-nums", tc.text)}>{daysRemaining} Days Remaining</p>
+                <p className={cn("text-lg font-semibold truncate tabular-nums", tc.text)}>{daysRemaining} Days Remaining</p>
                 <p className={cn("text-[11px]", tc.textMuted)}>Until target end date</p>
               </div>
             </div>
@@ -769,7 +769,7 @@ export function LifeDisciplineScreen() {
                 <Flame className="w-4 h-4" />
               </div>
               <div className="min-w-0">
-                <p className={cn("text-sm font-semibold truncate tabular-nums", tc.text)}>{activeStreak}-Day Streak</p>
+                <p className={cn("text-lg font-semibold truncate tabular-nums", tc.text)}>{activeStreak}-Day Streak</p>
                 <p className={cn("text-[11px]", tc.textMuted)}>Active streak</p>
               </div>
             </div>
@@ -781,7 +781,7 @@ export function LifeDisciplineScreen() {
                 <Target className="w-4 h-4" />
               </div>
               <div className="min-w-0">
-                <p className={cn('text-sm font-semibold truncate tabular-nums', disciplineScore >= 80 ? 'text-emerald-400' : disciplineScore >= 50 ? 'text-amber-400' : 'text-rose-400')}>
+                <p className={cn('text-lg font-semibold truncate tabular-nums', disciplineScore >= 80 ? 'text-emerald-400' : disciplineScore >= 50 ? 'text-amber-400' : 'text-rose-400')}>
                   {disciplineScore}% Discipline Score
                 </p>
                 <p className={cn("text-[11px]", tc.textMuted)}>Execution rate</p>
@@ -829,20 +829,13 @@ export function LifeDisciplineScreen() {
                   title={tooltip}
                   onClick={() => handleLifeDisciplineTileClick(dateKey, day, status)}
                   className={cn(
-                    'relative aspect-square rounded-md border flex items-center justify-center text-xs font-medium transition-colors select-none',
+                    'w-full aspect-square flex flex-col items-center justify-center gap-0.5 rounded-md border text-xs font-medium transition-colors select-none',
                     statusStyles[status],
                     isClickable ? 'cursor-pointer hover:scale-105 transition-transform' : 'cursor-default'
                   )}
                 >
-                  {day}
-                  {loggedReason && (
-                    <span className={cn(
-                      "absolute -top-1 -right-1 w-2.5 h-2.5 rounded-full border flex items-center justify-center",
-                      theme !== 'light' ? 'bg-zinc-900 border-white/10' : 'bg-white border-zinc-200'
-                    )}>
-                      <span className="w-1 h-1 rounded-full bg-amber-400" />
-                    </span>
-                  )}
+                  <span>{day}</span>
+                  {loggedReason && <span className="w-1 h-1 rounded-full bg-amber-400" />}
                 </div>
               );
             })}
