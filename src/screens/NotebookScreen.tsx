@@ -309,7 +309,7 @@ const buildFolderTree = (folders: string[]): FolderNode[] => {
 
 export function NotebookScreen() {
   const {
-    theme, notebookEntries, notebookEntriesLoading, notebookFolders, notebookFolderColors,
+    theme, tc, notebookEntries, notebookEntriesLoading, notebookFolders, notebookFolderColors,
     notebookDeletedFolders,
     handleAddNotebookEntry, handleUpdateNotebookEntry, handleToggleNotebookEntryPin,
     handleToggleNotebookEntryFavorite, handleDuplicateNotebookEntry,
@@ -1299,10 +1299,10 @@ export function NotebookScreen() {
 
   const suggestibleTags = allTags.filter(t => !selectedEntry?.tags.includes(t) && t.toLowerCase().includes(tagInput.toLowerCase()));
 
-  const border = theme !== 'light' ? 'border-zinc-800' : 'border-zinc-200';
-  const panelBg = theme !== 'light' ? 'bg-zinc-900/50' : 'bg-white';
-  const textMuted = theme !== 'light' ? 'text-zinc-500' : 'text-zinc-400';
-  const textBody = theme !== 'light' ? 'text-zinc-300' : 'text-zinc-700';
+  const border = tc.border;
+  const panelBg = theme !== 'light' ? 'bg-zinc-900/40' : 'bg-white';
+  const textMuted = tc.textMuted;
+  const textBody = tc.textSecondary;
 
   const SORT_OPTIONS: { id: 'updated' | 'title' | 'created'; label: string }[] = [
     { id: 'updated', label: 'Last updated' },
@@ -1444,8 +1444,8 @@ export function NotebookScreen() {
               <div
                 style={{ position: 'fixed', top: colorPickerPos.top, left: colorPickerPos.left }}
                 className={cn(
-                  'w-36 p-2 rounded-lg border shadow-xl z-30',
-                  theme !== 'light' ? 'bg-zinc-900 border-zinc-800' : 'bg-white border-zinc-200'
+                  'w-36 p-2 rounded-xl border shadow-2xl z-30',
+                  theme !== 'light' ? 'bg-zinc-900 border-white/10' : 'bg-white border-zinc-200'
                 )}
               >
                 <div className="grid grid-cols-4 gap-1.5">
@@ -1458,7 +1458,7 @@ export function NotebookScreen() {
                       className={cn(
                         'w-5 h-5 rounded-full flex-shrink-0 transition-transform',
                         FOLDER_COLOR_DOT_BY_ID[c],
-                        notebookFolderColors[node.fullPath] === c ? 'ring-2 ring-offset-1 ring-purple-400 scale-110' : 'hover:scale-110'
+                        notebookFolderColors[node.fullPath] === c ? 'ring-2 ring-offset-1 ring-indigo-400 scale-110' : 'hover:scale-110'
                       )}
                     />
                   ))}
@@ -1472,7 +1472,7 @@ export function NotebookScreen() {
                     className={cn(
                       'w-5 h-5 rounded-full flex-shrink-0 flex items-center justify-center border-2 border-dashed transition-transform',
                       theme !== 'light' ? 'border-zinc-600' : 'border-zinc-300',
-                      !notebookFolderColors[node.fullPath] ? 'ring-2 ring-offset-1 ring-purple-400 scale-110' : 'hover:scale-110'
+                      !notebookFolderColors[node.fullPath] ? 'ring-2 ring-offset-1 ring-indigo-400 scale-110' : 'hover:scale-110'
                     )}
                   >
                     <X className={cn('w-3 h-3', textMuted)} />
@@ -1529,14 +1529,14 @@ export function NotebookScreen() {
               </button>
             </div>
             {showTemplateMenu && (
-              <div className={cn('absolute right-0 top-full mt-1.5 w-60 rounded-lg border shadow-xl z-20 py-1.5', theme !== 'light' ? 'bg-zinc-900 border-zinc-800' : 'bg-white border-zinc-200')}>
+              <div className={cn('absolute right-0 top-full mt-1.5 w-60 rounded-xl border shadow-2xl z-20 py-1.5', theme !== 'light' ? 'bg-zinc-900 border-white/10' : 'bg-white border-zinc-200')}>
                 {NOTEBOOK_TEMPLATES.map(t => (
                   <button
                     key={t.id}
                     onClick={() => createNote(t)}
                     className={cn('w-full text-left px-3.5 py-2 transition-colors', theme !== 'light' ? 'hover:bg-zinc-800' : 'hover:bg-zinc-50')}
                   >
-                    <p className={cn('text-sm font-medium', theme !== 'light' ? 'text-white' : 'text-zinc-900')}>{t.name}</p>
+                    <p className={cn('text-sm font-medium', tc.text)}>{t.name}</p>
                     <p className={cn('text-xs', textMuted)}>{t.description}</p>
                   </button>
                 ))}
@@ -1681,7 +1681,7 @@ export function NotebookScreen() {
                       className={cn(
                         'w-5 h-5 rounded-full flex-shrink-0 transition-transform',
                         FOLDER_COLOR_DOT_BY_ID[c],
-                        newFolderColor === c ? 'ring-2 ring-offset-1 ring-purple-400 scale-110' : 'opacity-70 hover:opacity-100'
+                        newFolderColor === c ? 'ring-2 ring-offset-1 ring-indigo-400 scale-110' : 'opacity-70 hover:opacity-100'
                       )}
                     />
                   ))}
@@ -1806,7 +1806,7 @@ export function NotebookScreen() {
                   <Filter className="w-4 h-4" />
                 </button>
                 {showFilter && (
-                  <div className={cn('absolute right-0 mt-1.5 w-56 rounded-lg border shadow-xl z-20 p-2.5', theme !== 'light' ? 'bg-zinc-900 border-zinc-800' : 'bg-white border-zinc-200')}>
+                  <div className={cn('absolute right-0 mt-1.5 w-56 rounded-xl border shadow-2xl z-20 p-2.5', theme !== 'light' ? 'bg-zinc-900 border-white/10' : 'bg-white border-zinc-200')}>
                     <p className={cn('text-xs font-semibold uppercase tracking-wider px-2 pb-1.5', textMuted)}>Filter by tag</p>
                     {allTags.length === 0 ? (
                       <p className={cn('text-sm px-2 py-1.5', textMuted)}>No tags yet</p>
@@ -1851,7 +1851,7 @@ export function NotebookScreen() {
             ) : (
               <>
                 <div className="min-w-0 flex flex-col">
-                  <span className={cn('text-sm font-semibold truncate', theme !== 'light' ? 'text-white' : 'text-zinc-900')}>
+                  <span className={cn('text-sm font-semibold truncate', tc.text)}>
                     {activeFolder === ALL_NOTES ? 'All Notes' : activeFolder === FAVORITES ? 'Favorites' : activeFolder}
                   </span>
                   {/* Slim stand-in for the old stat cards — just a count
@@ -1898,7 +1898,7 @@ export function NotebookScreen() {
                       <ArrowUpDown className="w-3.5 h-3.5" />
                     </button>
                     {showSortMenu && (
-                      <div className={cn('absolute right-0 top-full mt-1.5 w-44 rounded-lg border shadow-xl z-20 py-1.5', theme !== 'light' ? 'bg-zinc-900 border-zinc-800' : 'bg-white border-zinc-200')}>
+                      <div className={cn('absolute right-0 top-full mt-1.5 w-44 rounded-xl border shadow-2xl z-20 py-1.5', theme !== 'light' ? 'bg-zinc-900 border-white/10' : 'bg-white border-zinc-200')}>
                         <p className={cn('text-xs font-semibold uppercase tracking-wider px-3.5 pb-1', textMuted)}>Sort by</p>
                         {SORT_OPTIONS.map(opt => (
                           <button
@@ -1951,7 +1951,7 @@ export function NotebookScreen() {
                     <Folder className="w-4 h-4" />
                   </button>
                   {showMoveMenu && (
-                    <div className={cn('absolute right-0 top-full mt-1.5 w-48 rounded-lg border shadow-xl z-20 py-1.5', theme !== 'light' ? 'bg-zinc-900 border-zinc-800' : 'bg-white border-zinc-200')}>
+                    <div className={cn('absolute right-0 top-full mt-1.5 w-48 rounded-xl border shadow-2xl z-20 py-1.5', theme !== 'light' ? 'bg-zinc-900 border-white/10' : 'bg-white border-zinc-200')}>
                       <p className={cn('text-xs font-semibold uppercase tracking-wider px-3.5 pb-1', textMuted)}>Move to</p>
                       <div className="themed-scrollbar max-h-56 overflow-y-auto">
                         <button
@@ -2076,7 +2076,7 @@ export function NotebookScreen() {
                         {selectMode && (selectedIds.has(entry.id) ? <CheckSquare className="w-3.5 h-3.5 text-purple-400 flex-shrink-0" /> : <Square className={cn('w-3.5 h-3.5 flex-shrink-0', textMuted)} />)}
                         {entry.pinned && <Pin className="w-3 h-3 text-amber-400 flex-shrink-0" />}
                         {entry.favorite && <Star className="w-3 h-3 text-amber-400 fill-amber-400 flex-shrink-0" />}
-                        <p className={cn('text-base font-semibold truncate flex-1', theme !== 'light' ? 'text-white' : 'text-zinc-900')}>
+                        <p className={cn('text-base font-semibold truncate flex-1', tc.text)}>
                           {formatNoteHeading(entry)}
                         </p>
                       </div>
@@ -2120,7 +2120,7 @@ export function NotebookScreen() {
                       <div className="flex items-center gap-2 mb-1">
                         {entry.pinned && !isTrashView && <Pin className="w-3 h-3 text-amber-400 flex-shrink-0" />}
                         {entry.favorite && !isTrashView && <Star className="w-3 h-3 text-amber-400 fill-amber-400 flex-shrink-0" />}
-                        <p className={cn('text-base font-semibold truncate', theme !== 'light' ? 'text-white' : 'text-zinc-900')}>
+                        <p className={cn('text-base font-semibold truncate', tc.text)}>
                           {formatNoteHeading(entry)}
                         </p>
                       </div>
@@ -2182,7 +2182,7 @@ export function NotebookScreen() {
                   >
                     {isNoteListCollapsed ? <PanelLeft className="w-4 h-4" /> : <PanelLeftClose className="w-4 h-4" />}
                   </button>
-                  <h2 className={cn('text-xl font-semibold truncate', theme !== 'light' ? 'text-white' : 'text-zinc-900')}>
+                  <h2 className={cn('text-xl font-semibold truncate', tc.text)}>
                     {formatNoteHeading(selectedEntry)}
                   </h2>
                 </div>
@@ -2196,7 +2196,7 @@ export function NotebookScreen() {
                   </button>
                   <button
                     onClick={() => setEntryPendingDelete(selectedEntry)}
-                    className="flex items-center gap-2 px-3.5 py-2 rounded-lg text-sm font-medium bg-rose-600 hover:bg-rose-500 text-white transition-colors"
+                    className="flex items-center gap-2 px-3.5 py-2 rounded-lg text-sm font-semibold bg-rose-500/15 border border-rose-500/40 text-rose-300 hover:bg-rose-500/25 transition-colors"
                   >
                     <Trash2 className="w-4 h-4" />
                     Delete forever
@@ -2244,7 +2244,7 @@ export function NotebookScreen() {
                       <MoreHorizontal className="w-5 h-5" />
                     </button>
                     {showMoreMenu && (
-                      <div className={cn('absolute right-0 mt-1 w-64 rounded-lg border shadow-xl z-20 py-1.5', theme !== 'light' ? 'bg-zinc-900 border-zinc-800' : 'bg-white border-zinc-200')}>
+                      <div className={cn('absolute right-0 mt-1 w-64 rounded-xl border shadow-2xl z-20 py-1.5', theme !== 'light' ? 'bg-zinc-900 border-white/10' : 'bg-white border-zinc-200')}>
                         <button
                           onClick={() => { handleToggleNotebookEntryPin(selectedEntry.id); setShowMoreMenu(false); }}
                           className={cn('w-full flex items-center gap-2.5 px-3.5 py-2 text-sm text-left transition-colors', textBody, theme !== 'light' ? 'hover:bg-zinc-800' : 'hover:bg-zinc-50')}
@@ -2279,7 +2279,7 @@ export function NotebookScreen() {
                             <ChevronDown className="w-3.5 h-3.5 flex-shrink-0 -rotate-90" />
                           </button>
                           {showEntryFolderMenu && (
-                            <div className={cn('absolute right-full top-0 mr-1 w-52 rounded-lg border shadow-xl z-30 py-1.5', theme !== 'light' ? 'bg-zinc-900 border-zinc-800' : 'bg-white border-zinc-200')}>
+                            <div className={cn('absolute right-full top-0 mr-1 w-52 rounded-xl border shadow-2xl z-30 py-1.5', theme !== 'light' ? 'bg-zinc-900 border-white/10' : 'bg-white border-zinc-200')}>
                               <div className="themed-scrollbar max-h-56 overflow-y-auto">
                                 <button
                                   onClick={() => { flushSave({ folder: '' }); setShowEntryFolderMenu(false); setShowMoreMenu(false); }}
@@ -2335,7 +2335,7 @@ export function NotebookScreen() {
                             <button
                               onClick={() => flushSave({ color: undefined })}
                               title="No color"
-                              className={cn('w-5 h-5 rounded-full border flex items-center justify-center', border, !selectedEntry.color && 'ring-2 ring-offset-1 ring-purple-400')}
+                              className={cn('w-5 h-5 rounded-full border flex items-center justify-center', border, !selectedEntry.color && 'ring-2 ring-offset-1 ring-indigo-400')}
                             >
                               <X className={cn('w-3 h-3', textMuted)} />
                             </button>
@@ -2344,7 +2344,7 @@ export function NotebookScreen() {
                                 key={c}
                                 onClick={() => flushSave({ color: c })}
                                 title={c}
-                                className={cn('w-5 h-5 rounded-full', COVER_COLOR_CLASSES[c].dot, selectedEntry.color === c && 'ring-2 ring-offset-1 ring-purple-400')}
+                                className={cn('w-5 h-5 rounded-full', COVER_COLOR_CLASSES[c].dot, selectedEntry.color === c && 'ring-2 ring-offset-1 ring-indigo-400')}
                               />
                             ))}
                           </div>
@@ -2421,7 +2421,7 @@ export function NotebookScreen() {
                       <div className="fixed inset-0 z-20" onClick={() => setShowStyleMenu(false)} />
                       <div
                         style={{ position: 'fixed', top: styleMenuPos.top, left: styleMenuPos.left }}
-                        className={cn('w-40 rounded-lg border shadow-xl z-30 py-1.5', theme !== 'light' ? 'bg-zinc-900 border-zinc-800' : 'bg-white border-zinc-200')}
+                        className={cn('w-40 rounded-xl border shadow-2xl z-30 py-1.5', theme !== 'light' ? 'bg-zinc-900 border-white/10' : 'bg-white border-zinc-200')}
                       >
                         {STYLE_OPTIONS.map(({ value, label }) => (
                           <button
@@ -2461,7 +2461,7 @@ export function NotebookScreen() {
                       <div className="fixed inset-0 z-20" onClick={() => setShowFontFamilyMenu(false)} />
                       <div
                         style={{ position: 'fixed', top: fontFamilyMenuPos.top, left: fontFamilyMenuPos.left }}
-                        className={cn('w-48 rounded-lg border shadow-xl z-30 py-1.5 max-h-72 overflow-y-auto', theme !== 'light' ? 'bg-zinc-900 border-zinc-800' : 'bg-white border-zinc-200')}
+                        className={cn('w-48 rounded-xl border shadow-2xl z-30 py-1.5 max-h-72 overflow-y-auto', theme !== 'light' ? 'bg-zinc-900 border-white/10' : 'bg-white border-zinc-200')}
                       >
                         {FONT_FAMILY_OPTIONS.map(({ value, label }) => (
                           <button
@@ -2507,7 +2507,7 @@ export function NotebookScreen() {
                       <div className="fixed inset-0 z-20" onClick={() => setShowFontSizeMenu(false)} />
                       <div
                         style={{ position: 'fixed', top: fontSizeMenuPos.top, left: fontSizeMenuPos.left }}
-                        className={cn('w-24 rounded-lg border shadow-xl z-30 py-1.5 max-h-72 overflow-y-auto', theme !== 'light' ? 'bg-zinc-900 border-zinc-800' : 'bg-white border-zinc-200')}
+                        className={cn('w-24 rounded-xl border shadow-2xl z-30 py-1.5 max-h-72 overflow-y-auto', theme !== 'light' ? 'bg-zinc-900 border-white/10' : 'bg-white border-zinc-200')}
                       >
                         {FONT_SIZE_OPTIONS.map((px) => (
                           <button
@@ -2588,8 +2588,8 @@ export function NotebookScreen() {
                     <div
                       style={{ position: 'fixed', top: richColorMenuPos.top, left: richColorMenuPos.left }}
                       className={cn(
-                        'w-44 p-2.5 rounded-lg border shadow-xl z-30',
-                        theme !== 'light' ? 'bg-zinc-900 border-zinc-800' : 'bg-white border-zinc-200'
+                        'w-44 p-2.5 rounded-xl border shadow-2xl z-30',
+                        theme !== 'light' ? 'bg-zinc-900 border-white/10' : 'bg-white border-zinc-200'
                       )}
                     >
                       <div className="grid grid-cols-4 gap-1.5">
@@ -2752,7 +2752,7 @@ export function NotebookScreen() {
                     </button>
                   )}
                   {showTagSuggestions && suggestibleTags.length > 0 && (
-                    <div className={cn('themed-scrollbar absolute bottom-full left-0 mb-1.5 w-44 rounded-lg border shadow-xl z-20 py-1.5 max-h-40 overflow-y-auto', theme !== 'light' ? 'bg-zinc-900 border-zinc-800' : 'bg-white border-zinc-200')}>
+                    <div className={cn('themed-scrollbar absolute bottom-full left-0 mb-1.5 w-44 rounded-xl border shadow-2xl z-20 py-1.5 max-h-40 overflow-y-auto', theme !== 'light' ? 'bg-zinc-900 border-white/10' : 'bg-white border-zinc-200')}>
                       {suggestibleTags.map(tag => (
                         <button
                           key={tag}
@@ -2845,17 +2845,17 @@ export function NotebookScreen() {
 
       {/* ---- Delete folder confirm ---- */}
       {folderPendingDelete && (
-        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-[70] flex items-center justify-center p-5" onClick={() => setFolderPendingDelete(null)}>
-          <div className={cn('rounded-xl max-w-sm w-full border p-6', theme !== 'light' ? 'bg-zinc-900 border-zinc-800' : 'bg-white border-zinc-200')} onClick={(e) => e.stopPropagation()}>
-            <h3 className={cn('text-base font-semibold mb-2', theme !== 'light' ? 'text-white' : 'text-zinc-900')}>Delete "{folderPendingDelete}"?</h3>
-            <p className="text-sm text-zinc-500 mb-4 leading-relaxed">
+        <div className="fixed inset-0 bg-black/80 z-[70] flex items-center justify-center p-5" onClick={() => setFolderPendingDelete(null)}>
+          <div className={cn('rounded-xl max-w-sm w-full border p-6 shadow-2xl', theme !== 'light' ? 'bg-zinc-900/40 border-zinc-800/80' : 'bg-white border-zinc-200')} onClick={(e) => e.stopPropagation()}>
+            <h3 className={cn('text-base font-semibold mb-2', tc.text)}>Delete "{folderPendingDelete}"?</h3>
+            <p className={cn("text-sm mb-4 leading-relaxed", tc.textMuted)}>
               This folder and its notes will move to Recently Deleted together — you can restore them from there, or they'll be permanently removed after 30 days. Sub-folders aren't deleted automatically.
             </p>
             <div className="flex items-center justify-end gap-2.5">
               <button onClick={() => setFolderPendingDelete(null)} className={cn('px-4 py-2 rounded-lg text-sm', theme !== 'light' ? 'bg-zinc-800 hover:bg-zinc-700 text-zinc-300' : 'bg-zinc-100 hover:bg-zinc-200 text-zinc-700')}>
                 Cancel
               </button>
-              <button onClick={confirmDeleteFolder} className="px-4 py-2 rounded-lg text-sm font-medium bg-rose-600 hover:bg-rose-500 text-white">
+              <button onClick={confirmDeleteFolder} className="px-4 py-2 rounded-lg text-sm font-semibold bg-rose-500/15 border border-rose-500/40 text-rose-300 hover:bg-rose-500/25 transition-colors">
                 Delete Folder
               </button>
             </div>
@@ -2865,10 +2865,10 @@ export function NotebookScreen() {
 
       {/* ---- Restore folder confirm (viewing a trashed folder's notes) ---- */}
       {folderPendingRestore && (
-        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-[70] flex items-center justify-center p-5" onClick={() => setFolderPendingRestore(null)}>
-          <div className={cn('rounded-xl max-w-sm w-full border p-6', theme !== 'light' ? 'bg-zinc-900 border-zinc-800' : 'bg-white border-zinc-200')} onClick={(e) => e.stopPropagation()}>
-            <h3 className={cn('text-base font-semibold mb-2', theme !== 'light' ? 'text-white' : 'text-zinc-900')}>Restore "{folderPendingRestore}"?</h3>
-            <p className="text-sm text-zinc-500 mb-4 leading-relaxed">
+        <div className="fixed inset-0 bg-black/80 z-[70] flex items-center justify-center p-5" onClick={() => setFolderPendingRestore(null)}>
+          <div className={cn('rounded-xl max-w-sm w-full border p-6 shadow-2xl', theme !== 'light' ? 'bg-zinc-900/40 border-zinc-800/80' : 'bg-white border-zinc-200')} onClick={(e) => e.stopPropagation()}>
+            <h3 className={cn('text-base font-semibold mb-2', tc.text)}>Restore "{folderPendingRestore}"?</h3>
+            <p className={cn("text-sm mb-4 leading-relaxed", tc.textMuted)}>
               This folder is in Recently Deleted, so its notes are too — restore it to bring the folder and its notes back and open it.
             </p>
             <div className="flex items-center justify-end gap-2.5">
@@ -2893,10 +2893,10 @@ export function NotebookScreen() {
 
       {/* ---- Permanently delete a trashed folder (+ its still-trashed notes) ---- */}
       {deletedFolderPendingPermanentDelete && (
-        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-[70] flex items-center justify-center p-5" onClick={() => setDeletedFolderPendingPermanentDelete(null)}>
-          <div className={cn('rounded-xl max-w-sm w-full border p-6', theme !== 'light' ? 'bg-zinc-900 border-zinc-800' : 'bg-white border-zinc-200')} onClick={(e) => e.stopPropagation()}>
-            <h3 className={cn('text-base font-semibold mb-2', theme !== 'light' ? 'text-white' : 'text-zinc-900')}>Delete "{deletedFolderPendingPermanentDelete}" forever?</h3>
-            <p className="text-sm text-zinc-500 mb-4 leading-relaxed">
+        <div className="fixed inset-0 bg-black/80 z-[70] flex items-center justify-center p-5" onClick={() => setDeletedFolderPendingPermanentDelete(null)}>
+          <div className={cn('rounded-xl max-w-sm w-full border p-6 shadow-2xl', theme !== 'light' ? 'bg-zinc-900/40 border-zinc-800/80' : 'bg-white border-zinc-200')} onClick={(e) => e.stopPropagation()}>
+            <h3 className={cn('text-base font-semibold mb-2', tc.text)}>Delete "{deletedFolderPendingPermanentDelete}" forever?</h3>
+            <p className={cn("text-sm mb-4 leading-relaxed", tc.textMuted)}>
               This permanently deletes this folder and every note still in it. This can't be undone.
             </p>
             <div className="flex items-center justify-end gap-2.5">
@@ -2905,7 +2905,7 @@ export function NotebookScreen() {
               </button>
               <button
                 onClick={() => { handlePermanentDeleteNotebookFolder(deletedFolderPendingPermanentDelete); setDeletedFolderPendingPermanentDelete(null); }}
-                className="px-4 py-2 rounded-lg text-sm font-medium bg-rose-600 hover:bg-rose-500 text-white"
+                className="px-4 py-2 rounded-lg text-sm font-semibold bg-rose-500/15 border border-rose-500/40 text-rose-300 hover:bg-rose-500/25 transition-colors"
               >
                 Delete Forever
               </button>
@@ -2916,10 +2916,10 @@ export function NotebookScreen() {
 
       {/* ---- Permanent delete confirm ---- */}
       {entryPendingDelete && (
-        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-[70] flex items-center justify-center p-5" onClick={() => setEntryPendingDelete(null)}>
-          <div className={cn('rounded-xl max-w-sm w-full border p-6', theme !== 'light' ? 'bg-zinc-900 border-zinc-800' : 'bg-white border-zinc-200')} onClick={(e) => e.stopPropagation()}>
-            <h3 className={cn('text-base font-semibold mb-2', theme !== 'light' ? 'text-white' : 'text-zinc-900')}>Delete forever?</h3>
-            <p className="text-sm text-zinc-500 mb-4 leading-relaxed">
+        <div className="fixed inset-0 bg-black/80 z-[70] flex items-center justify-center p-5" onClick={() => setEntryPendingDelete(null)}>
+          <div className={cn('rounded-xl max-w-sm w-full border p-6 shadow-2xl', theme !== 'light' ? 'bg-zinc-900/40 border-zinc-800/80' : 'bg-white border-zinc-200')} onClick={(e) => e.stopPropagation()}>
+            <h3 className={cn('text-base font-semibold mb-2', tc.text)}>Delete forever?</h3>
+            <p className={cn("text-sm mb-4 leading-relaxed", tc.textMuted)}>
               This permanently deletes "{entryPendingDelete.title || 'this note'}". This can't be undone.
             </p>
             <div className="flex items-center justify-end gap-2.5">
@@ -2928,7 +2928,7 @@ export function NotebookScreen() {
               </button>
               <button
                 onClick={() => { handlePermanentDeleteNotebookEntry(entryPendingDelete.id); setEntryPendingDelete(null); }}
-                className="px-4 py-2 rounded-lg text-sm font-medium bg-rose-600 hover:bg-rose-500 text-white"
+                className="px-4 py-2 rounded-lg text-sm font-semibold bg-rose-500/15 border border-rose-500/40 text-rose-300 hover:bg-rose-500/25 transition-colors"
               >
                 Delete Forever
               </button>
@@ -2939,10 +2939,10 @@ export function NotebookScreen() {
 
       {/* ---- Empty trash confirm ---- */}
       {confirmEmptyTrash && (
-        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-[70] flex items-center justify-center p-5" onClick={() => setConfirmEmptyTrash(false)}>
-          <div className={cn('rounded-xl max-w-sm w-full border p-6', theme !== 'light' ? 'bg-zinc-900 border-zinc-800' : 'bg-white border-zinc-200')} onClick={(e) => e.stopPropagation()}>
-            <h3 className={cn('text-base font-semibold mb-2', theme !== 'light' ? 'text-white' : 'text-zinc-900')}>Empty trash?</h3>
-            <p className="text-sm text-zinc-500 mb-4 leading-relaxed">
+        <div className="fixed inset-0 bg-black/80 z-[70] flex items-center justify-center p-5" onClick={() => setConfirmEmptyTrash(false)}>
+          <div className={cn('rounded-xl max-w-sm w-full border p-6 shadow-2xl', theme !== 'light' ? 'bg-zinc-900/40 border-zinc-800/80' : 'bg-white border-zinc-200')} onClick={(e) => e.stopPropagation()}>
+            <h3 className={cn('text-base font-semibold mb-2', tc.text)}>Empty trash?</h3>
+            <p className={cn("text-sm mb-4 leading-relaxed", tc.textMuted)}>
               This permanently deletes all {deletedEntries.length} note{deletedEntries.length === 1 ? '' : 's'}
               {notebookDeletedFolders.length > 0 && <> and {notebookDeletedFolders.length} folder{notebookDeletedFolders.length === 1 ? '' : 's'}</>} in Recently Deleted. This can't be undone.
             </p>
@@ -2952,7 +2952,7 @@ export function NotebookScreen() {
               </button>
               <button
                 onClick={() => { handleEmptyNotebookTrash(); setConfirmEmptyTrash(false); }}
-                className="px-4 py-2 rounded-lg text-sm font-medium bg-rose-600 hover:bg-rose-500 text-white"
+                className="px-4 py-2 rounded-lg text-sm font-semibold bg-rose-500/15 border border-rose-500/40 text-rose-300 hover:bg-rose-500/25 transition-colors"
               >
                 Empty Trash
               </button>
@@ -2963,10 +2963,10 @@ export function NotebookScreen() {
 
       {/* ---- Single note delete (move to trash) confirm ---- */}
       {entryPendingTrash && (
-        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-[70] flex items-center justify-center p-5" onClick={() => setEntryPendingTrash(null)}>
-          <div className={cn('rounded-xl max-w-sm w-full border p-6', theme !== 'light' ? 'bg-zinc-900 border-zinc-800' : 'bg-white border-zinc-200')} onClick={(e) => e.stopPropagation()}>
-            <h3 className={cn('text-base font-semibold mb-2', theme !== 'light' ? 'text-white' : 'text-zinc-900')}>Delete note?</h3>
-            <p className="text-sm text-zinc-500 mb-4 leading-relaxed">
+        <div className="fixed inset-0 bg-black/80 z-[70] flex items-center justify-center p-5" onClick={() => setEntryPendingTrash(null)}>
+          <div className={cn('rounded-xl max-w-sm w-full border p-6 shadow-2xl', theme !== 'light' ? 'bg-zinc-900/40 border-zinc-800/80' : 'bg-white border-zinc-200')} onClick={(e) => e.stopPropagation()}>
+            <h3 className={cn('text-base font-semibold mb-2', tc.text)}>Delete note?</h3>
+            <p className={cn("text-sm mb-4 leading-relaxed", tc.textMuted)}>
               "{entryPendingTrash.title || formatNoteHeading(entryPendingTrash)}" will be moved to Recently Deleted, where you can restore it later.
             </p>
             <div className="flex items-center justify-end gap-2.5">
@@ -2975,7 +2975,7 @@ export function NotebookScreen() {
               </button>
               <button
                 onClick={() => { handleSoftDeleteNotebookEntry(entryPendingTrash.id); setEntryPendingTrash(null); }}
-                className="px-4 py-2 rounded-lg text-sm font-medium bg-rose-600 hover:bg-rose-500 text-white"
+                className="px-4 py-2 rounded-lg text-sm font-semibold bg-rose-500/15 border border-rose-500/40 text-rose-300 hover:bg-rose-500/25 transition-colors"
               >
                 Delete
               </button>
@@ -2986,12 +2986,12 @@ export function NotebookScreen() {
 
       {/* ---- Bulk delete (select mode) confirm ---- */}
       {confirmBulkDelete && (
-        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-[70] flex items-center justify-center p-5" onClick={() => setConfirmBulkDelete(false)}>
-          <div className={cn('rounded-xl max-w-sm w-full border p-6', theme !== 'light' ? 'bg-zinc-900 border-zinc-800' : 'bg-white border-zinc-200')} onClick={(e) => e.stopPropagation()}>
-            <h3 className={cn('text-base font-semibold mb-2', theme !== 'light' ? 'text-white' : 'text-zinc-900')}>
+        <div className="fixed inset-0 bg-black/80 z-[70] flex items-center justify-center p-5" onClick={() => setConfirmBulkDelete(false)}>
+          <div className={cn('rounded-xl max-w-sm w-full border p-6 shadow-2xl', theme !== 'light' ? 'bg-zinc-900/40 border-zinc-800/80' : 'bg-white border-zinc-200')} onClick={(e) => e.stopPropagation()}>
+            <h3 className={cn('text-base font-semibold mb-2', tc.text)}>
               Delete {selectedIds.size} note{selectedIds.size === 1 ? '' : 's'}?
             </h3>
-            <p className="text-sm text-zinc-500 mb-4 leading-relaxed">
+            <p className={cn("text-sm mb-4 leading-relaxed", tc.textMuted)}>
               {selectedIds.size === 1 ? 'This note' : `These ${selectedIds.size} notes`} will be moved to Recently Deleted, where you can restore {selectedIds.size === 1 ? 'it' : 'them'} later.
             </p>
             <div className="flex items-center justify-end gap-2.5">
@@ -3004,7 +3004,7 @@ export function NotebookScreen() {
                   setSelectedIds(new Set());
                   setConfirmBulkDelete(false);
                 }}
-                className="px-4 py-2 rounded-lg text-sm font-medium bg-rose-600 hover:bg-rose-500 text-white"
+                className="px-4 py-2 rounded-lg text-sm font-semibold bg-rose-500/15 border border-rose-500/40 text-rose-300 hover:bg-rose-500/25 transition-colors"
               >
                 Delete
               </button>
