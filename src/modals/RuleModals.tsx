@@ -1,4 +1,5 @@
 import type React from 'react';
+import { useState } from 'react';
 import {
   LayoutDashboard,
   BookOpen,
@@ -671,6 +672,11 @@ export function ManageRulesModal() {
     exportBackup, importBackup,
   } = useAppContext();
 
+  // Local confirm state for deleting a rule/divider inside a pillar — mirrors
+  // pillarPendingDelete's pattern but kept local since it's purely a
+  // same-modal confirmation step, not something other screens need to read.
+  const [rulePendingDelete, setRulePendingDelete] = useState<{ id: string; isDivider: boolean; title: string } | null>(null);
+
   const renderManageRulePillarSection = (pillar: RulePillar) => {
     const meta = getPillarMeta(pillar, customPillars);
     const pillarRules = rules.filter(r => r.pillar === pillar);
@@ -727,7 +733,7 @@ export function ManageRulesModal() {
                     />
                     <span className="flex-1 h-px bg-zinc-600" />
                     <button
-                      onClick={() => handleDeleteRule(rule.id)}
+                      onClick={() => setRulePendingDelete({ id: rule.id, isDivider: true, title: rule.dividerLabel || 'this divider' })}
                       title="Delete divider"
                       className="absolute right-0 top-1/2 -translate-y-1/2 p-1 rounded bg-zinc-800 text-zinc-500 hover:text-rose-400 hover:bg-rose-500/10 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0"
                     >
@@ -759,7 +765,7 @@ export function ManageRulesModal() {
                         <button onClick={() => openEditRuleModal(rule)} className="p-0.5 rounded text-zinc-500 hover:text-white">
                           <Edit2 className="w-3 h-3" />
                         </button>
-                        <button onClick={() => handleDeleteRule(rule.id)} className="p-0.5 rounded text-zinc-500 hover:text-rose-400">
+                        <button onClick={() => setRulePendingDelete({ id: rule.id, isDivider: false, title: rule.title })} className="p-0.5 rounded text-zinc-500 hover:text-rose-400">
                           <Trash2 className="w-3 h-3" />
                         </button>
                       </div>
@@ -775,63 +781,109 @@ export function ManageRulesModal() {
   };
 
   return (
-    showManageRulesModal && (
-      <ModalBackdrop
-        onClose={() => setShowManageRulesModal(false)}
-        className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-start justify-center overflow-y-auto p-4 py-8"
-      >
-        <div className="bg-zinc-900 border border-zinc-800 rounded-xl max-w-3xl w-full max-h-[90vh] flex flex-col" onClick={(e) => e.stopPropagation()}>
-          <div className="sticky top-0 bg-zinc-900 border-b border-zinc-800 px-6 py-4 flex items-center justify-between flex-shrink-0 z-20">
-            <div className="flex items-center gap-2 min-w-0">
-              <ShieldCheck className="w-5 h-5 text-emerald-400 flex-shrink-0" strokeWidth={2} />
-              <h3 className="text-xl font-bold text-white truncate">Manage Rules</h3>
+    <>
+      {showManageRulesModal && (
+        <ModalBackdrop
+          onClose={() => setShowManageRulesModal(false)}
+          className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-start justify-center overflow-y-auto p-4 py-8"
+        >
+          <div className="bg-zinc-900 border border-zinc-800 rounded-xl max-w-3xl w-full max-h-[90vh] flex flex-col" onClick={(e) => e.stopPropagation()}>
+            <div className="sticky top-0 bg-zinc-900 border-b border-zinc-800 px-6 py-4 flex items-center justify-between flex-shrink-0 z-20">
+              <div className="flex items-center gap-2 min-w-0">
+                <ShieldCheck className="w-5 h-5 text-emerald-400 flex-shrink-0" strokeWidth={2} />
+                <h3 className="text-xl font-bold text-white truncate">Manage Rules</h3>
+              </div>
+              <button onClick={() => setShowManageRulesModal(false)} className="p-2 text-zinc-400 hover:text-white transition-colors">
+                <X className="w-5 h-5" />
+              </button>
             </div>
-            <button onClick={() => setShowManageRulesModal(false)} className="p-2 text-zinc-400 hover:text-white transition-colors">
-              <X className="w-5 h-5" />
-            </button>
-          </div>
 
-          {/* Layout controls — pillars-per-row on the main card, plus adding new pillars */}
-          <div className="px-6 py-3 border-b border-zinc-800 flex items-center justify-between flex-wrap gap-3 flex-shrink-0">
-            <div className="flex items-center gap-1.5">
-              <label htmlFor="pillars-per-row" className="text-[11px] font-semibold uppercase tracking-wider text-zinc-500 whitespace-nowrap">
-                Pillars Per Row
-              </label>
-              <select
-                id="pillars-per-row"
-                value={pillarsPerRow}
-                onChange={(e) => setPillarsPerRow(Number(e.target.value) as PillarsPerRow)}
-                className="text-xs font-semibold rounded-lg pl-2.5 pr-7 py-2 border bg-zinc-800 border-zinc-700 text-white focus:outline-none cursor-pointer"
-              >
-                {PILLARS_PER_ROW_OPTIONS.map(n => (
-                  <option key={n} value={n}>{n} / row</option>
-                ))}
-              </select>
-            </div>
-            <button
-              onClick={openAddPillarModal}
-              className="inline-flex items-center px-3.5 py-2 rounded-lg text-xs font-semibold bg-zinc-800 hover:bg-zinc-700 text-white transition-colors"
-            >
-              <Plus className="w-4 h-4 mr-2" strokeWidth={2} />
-              Add Pillar
-            </button>
-          </div>
-
-          <div className="p-6 overflow-y-auto">
-            <div className="grid grid-cols-1 gap-4">
-              {getAllPillarIds(customPillars).map(pillar => (
-                <div
-                  className="min-w-0 bg-zinc-800 border border-zinc-700 rounded-xl p-4 shadow-[0_1px_0_0_rgba(255,255,255,0.02)_inset]"
-                  key={pillar}
+            {/* Layout controls — pillars-per-row on the main card, plus adding new pillars */}
+            <div className="px-6 py-3 border-b border-zinc-800 flex items-center justify-between flex-wrap gap-3 flex-shrink-0">
+              <div className="flex items-center gap-1.5">
+                <label htmlFor="pillars-per-row" className="text-[11px] font-semibold uppercase tracking-wider text-zinc-500 whitespace-nowrap">
+                  Pillars Per Row
+                </label>
+                <select
+                  id="pillars-per-row"
+                  value={pillarsPerRow}
+                  onChange={(e) => setPillarsPerRow(Number(e.target.value) as PillarsPerRow)}
+                  className="text-xs font-semibold rounded-lg pl-2.5 pr-7 py-2 border bg-zinc-800 border-zinc-700 text-white focus:outline-none cursor-pointer"
                 >
-                  {renderManageRulePillarSection(pillar)}
-                </div>
-              ))}
+                  {PILLARS_PER_ROW_OPTIONS.map(n => (
+                    <option key={n} value={n}>{n} / row</option>
+                  ))}
+                </select>
+              </div>
+              <button
+                onClick={openAddPillarModal}
+                className="inline-flex items-center px-3.5 py-2 rounded-lg text-xs font-semibold bg-zinc-800 hover:bg-zinc-700 text-white transition-colors"
+              >
+                <Plus className="w-4 h-4 mr-2" strokeWidth={2} />
+                Add Pillar
+              </button>
+            </div>
+
+            <div className="p-6 overflow-y-auto">
+              <div className="grid grid-cols-1 gap-4">
+                {getAllPillarIds(customPillars).map(pillar => (
+                  <div
+                    className="min-w-0 bg-zinc-800 border border-zinc-700 rounded-xl p-4 shadow-[0_1px_0_0_rgba(255,255,255,0.02)_inset]"
+                    key={pillar}
+                  >
+                    {renderManageRulePillarSection(pillar)}
+                  </div>
+                ))}
+              </div>
             </div>
           </div>
-        </div>
-      </ModalBackdrop>
-    )
+        </ModalBackdrop>
+      )}
+
+      {/* Delete rule/divider confirm — same shape as DeletePillarConfirm,
+          layered above the Manage Rules modal (z-[70] > z-50). */}
+      {rulePendingDelete && (
+        <ModalBackdrop
+          onClose={() => setRulePendingDelete(null)}
+          className="fixed inset-0 bg-black/80 backdrop-blur-sm z-[70] flex items-center justify-center p-4"
+        >
+          <div className="bg-zinc-900 border border-zinc-800 rounded-xl max-w-sm w-full p-6" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center gap-3 mb-3">
+              <div className="w-10 h-10 rounded-full bg-rose-500/15 flex items-center justify-center flex-shrink-0">
+                <Trash2 className="w-5 h-5 text-rose-400" />
+              </div>
+              <h3 className="text-lg font-bold text-white truncate">
+                Delete "{rulePendingDelete.title}"?
+              </h3>
+            </div>
+            <p className="text-sm text-zinc-400 mb-6">
+              {rulePendingDelete.isDivider
+                ? 'This permanently deletes this divider. This cannot be undone.'
+                : 'This permanently deletes this rule. This cannot be undone.'}
+            </p>
+            <div className="flex justify-end gap-3">
+              <button
+                type="button"
+                onClick={() => setRulePendingDelete(null)}
+                className="px-4 py-2 bg-zinc-800 hover:bg-zinc-700 text-white rounded-lg text-sm transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  handleDeleteRule(rulePendingDelete.id);
+                  setRulePendingDelete(null);
+                }}
+                className="px-4 py-2 bg-rose-500/90 hover:bg-rose-500 text-white rounded-lg text-sm font-medium transition-colors"
+              >
+                Delete
+              </button>
+            </div>
+          </div>
+        </ModalBackdrop>
+      )}
+    </>
   );
 }
 
