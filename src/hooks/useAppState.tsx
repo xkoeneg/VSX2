@@ -5586,6 +5586,11 @@ Return ONLY a JSON object — no markdown, no code fences, no commentary — wit
     notebookFolders: notebookFoldersWithDefaults,
     notebookFolderColors,
     notebookDeletedFolders,
+    // Exposed so the UI can hide/disable "delete folder" for the built-in
+    // folders — handleDeleteNotebookFolder silently no-ops on these, so
+    // without this the trash icon looks broken (dialog confirms, nothing
+    // happens, no error).
+    notebookDefaultFolders: DEFAULT_NOTEBOOK_FOLDERS as readonly string[],
     handleAddNotebookEntry,
     handleUpdateNotebookEntry,
     handleToggleNotebookEntryPin,
