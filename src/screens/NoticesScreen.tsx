@@ -290,6 +290,12 @@ export function NoticesScreen() {
       setPreviewNotice(notice);
     };
 
+    // Which notice (if any) is pending a delete confirmation — covers both
+    // the hover-delete button on insight/mistake cards and the Delete
+    // button inside the full preview modal.
+    const [noticePendingDelete, setNoticePendingDelete] = useState<MarketNotice | null>(null);
+    const noticeTypeLabel = noticePendingDelete?.type === 'mistake' ? 'mistake' : 'insight';
+
     // Full-detail preview modal — opened by clicking any card. Shows the
     // high-res chart image on top and every note/lesson field underneath.
     // Kept as local state (not global context) since it's purely a
@@ -489,13 +495,66 @@ export function NoticesScreen() {
                   Edit
                 </button>
                 <button
-                  onClick={() => { handleDeleteNotice(previewNotice.id); setPreviewNotice(null); }}
+                  onClick={() => setNoticePendingDelete(previewNotice)}
                   className="flex items-center gap-1.5 px-3.5 py-2 rounded-lg text-xs font-medium bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 transition-colors"
                 >
                   <Trash2 className="w-3.5 h-3.5" />
                   Delete
                 </button>
               </div>
+            </div>
+          </div>
+        </div>
+      )
+    );
+
+    // Delete confirmation — shared by the preview modal's Delete button and
+    // both card hover-delete buttons. Sits above the preview modal (z-[70]
+    // > z-[60]) since it can be triggered from inside it.
+    const renderDeleteNoticeConfirm = () => (
+      noticePendingDelete && (
+        <div
+          className="fixed inset-0 bg-black/80 backdrop-blur-sm z-[70] flex items-center justify-center p-4"
+          onClick={() => setNoticePendingDelete(null)}
+        >
+          <div
+            className={cn(
+              'rounded-xl max-w-sm w-full border p-6',
+              theme !== 'light' ? 'bg-zinc-900 border-zinc-800' : 'bg-white border-zinc-200'
+            )}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center gap-3 mb-3">
+              <div className="w-10 h-10 rounded-full bg-rose-500/15 flex items-center justify-center flex-shrink-0">
+                <Trash2 className="w-5 h-5 text-rose-400" />
+              </div>
+              <h3 className={cn('text-lg font-bold truncate', theme !== 'light' ? 'text-white' : 'text-zinc-900')}>
+                Delete this {noticeTypeLabel}?
+              </h3>
+            </div>
+            <p className={cn('text-sm mb-6', theme !== 'light' ? 'text-zinc-400' : 'text-zinc-500')}>
+              {noticePendingDelete.title ? `"${noticePendingDelete.title}" will be permanently deleted. ` : 'This will be permanently deleted. '}
+              This cannot be undone.
+            </p>
+            <div className="flex justify-end gap-3">
+              <button
+                type="button"
+                onClick={() => setNoticePendingDelete(null)}
+                className={cn('px-4 py-2 rounded-lg text-sm transition-colors', theme !== 'light' ? 'bg-zinc-800 hover:bg-zinc-700 text-white' : 'bg-zinc-100 hover:bg-zinc-200 text-zinc-800')}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  handleDeleteNotice(noticePendingDelete.id);
+                  setNoticePendingDelete(null);
+                  setPreviewNotice(null);
+                }}
+                className="px-4 py-2 bg-rose-500/90 hover:bg-rose-500 text-white rounded-lg text-sm font-medium transition-colors"
+              >
+                Delete
+              </button>
             </div>
           </div>
         </div>
@@ -542,7 +601,7 @@ export function NoticesScreen() {
             <Edit2 className="w-2.5 h-2.5" />
           </button>
           <button
-            onClick={(e) => { e.stopPropagation(); handleDeleteNotice(notice.id); }}
+            onClick={(e) => { e.stopPropagation(); setNoticePendingDelete(notice); }}
             className="p-1 rounded-md backdrop-blur-sm bg-black/60 text-zinc-400 hover:text-rose-400 transition-colors"
           >
             <Trash2 className="w-2.5 h-2.5" />
@@ -595,7 +654,7 @@ export function NoticesScreen() {
               <Edit2 className="w-2.5 h-2.5" />
             </button>
             <button
-              onClick={(e) => { e.stopPropagation(); handleDeleteNotice(notice.id); }}
+              onClick={(e) => { e.stopPropagation(); setNoticePendingDelete(notice); }}
               className="p-1 rounded-md backdrop-blur-sm bg-black/60 text-zinc-400 hover:text-rose-400 transition-colors"
             >
               <Trash2 className="w-2.5 h-2.5" />
@@ -769,6 +828,7 @@ export function NoticesScreen() {
         <EconomicCalendarCard />
 
         {renderPreviewModal()}
+        {renderDeleteNoticeConfirm()}
 
       </div>
     );
