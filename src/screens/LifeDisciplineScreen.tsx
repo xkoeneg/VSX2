@@ -753,7 +753,10 @@ export function LifeDisciplineScreen() {
               </div>
             </div>
             <div className={cn("flex items-center gap-2.5 p-3 rounded-lg border", theme !== 'light' ? 'bg-zinc-800/60 border-zinc-700/50' : 'bg-zinc-100 border-zinc-200')}>
-              <div className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 bg-zinc-500/20 text-zinc-400">
+              <div className={cn(
+                'w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0',
+                theme !== 'light' ? 'bg-zinc-800/60 text-zinc-400' : 'bg-zinc-100 text-zinc-400'
+              )}>
                 <Clock className="w-4 h-4" />
               </div>
               <div className="min-w-0">
