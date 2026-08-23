@@ -545,8 +545,8 @@ function TradeAnalyticsCard({ trades, stats, privacyMode, theme, tc, tradeFilter
       {/* Card 3 — Win / Loss / Break-Even breakdown; chips stay clickable
           against `tradeFilter`, same as the old bar. */}
       <div className={cardClass}>
-        <div className={cn(iconCircleClass, theme !== 'light' ? 'bg-zinc-800/60' : 'bg-zinc-100')}>
-          <Scale className={cn("w-4 h-4", tc.textMuted)} />
+        <div className={cn(iconCircleClass, 'bg-violet-500/10')}>
+          <Scale className="w-4 h-4 text-violet-400" />
         </div>
         <div className="min-w-0 flex-1">
           <p className={cn("text-[11px] uppercase tracking-wider truncate font-medium", tc.textMuted)}>Win / Loss Ratio</p>
@@ -590,8 +590,8 @@ function TradeAnalyticsCard({ trades, stats, privacyMode, theme, tc, tradeFilter
 
       {/* Card 4 — Profit Factor / Avg Win & Loss */}
       <div className={cardClass}>
-        <div className={cn(iconCircleClass, theme !== 'light' ? 'bg-zinc-800/60' : 'bg-zinc-100')}>
-          <Target className={cn("w-4 h-4", tc.textMuted)} />
+        <div className={cn(iconCircleClass, 'bg-cyan-500/10')}>
+          <Target className="w-4 h-4 text-cyan-400" />
         </div>
         <div className="min-w-0 flex-1">
           <p className={cn("text-[11px] uppercase tracking-wider truncate font-medium", tc.textMuted)}>Profit Factor</p>
