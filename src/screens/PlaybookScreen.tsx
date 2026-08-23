@@ -285,7 +285,7 @@ export function PlaybookScreen() {
       <div className="min-w-0">
         <div className="flex items-center gap-1.5 mb-4 min-w-0">
           <meta.Icon className={cn("w-5 h-5 flex-shrink-0", meta.color)} strokeWidth={2} />
-          <h4 className={cn("text-base font-semibold uppercase tracking-wide break-words leading-snug", tc.text)}>{getPillarShortLabel(pillar, customPillars)}</h4>
+          <h4 className={cn("text-xs font-semibold uppercase tracking-wider break-words leading-snug", tc.text)}>{getPillarShortLabel(pillar, customPillars)}</h4>
         </div>
 
         {pillarRules.length === 0 ? (
@@ -296,11 +296,11 @@ export function PlaybookScreen() {
               if (rule.itemType === 'divider') {
                 return (
                   <div key={rule.id} className="flex items-center gap-2 py-0.5">
-                    <span className={cn("flex-1 h-px", theme !== 'light' ? 'bg-zinc-800' : 'bg-zinc-200')} />
+                    <span className={cn("flex-1 h-px", theme !== 'light' ? 'bg-white/10' : 'bg-zinc-200')} />
                     {rule.dividerLabel && (
                       <span className={cn("text-[10px] font-semibold uppercase tracking-wider flex-shrink-0", tc.textMuted)}>{rule.dividerLabel}</span>
                     )}
-                    <span className={cn("flex-1 h-px", theme !== 'light' ? 'bg-zinc-800' : 'bg-zinc-200')} />
+                    <span className={cn("flex-1 h-px", theme !== 'light' ? 'bg-white/10' : 'bg-zinc-200')} />
                   </div>
                 );
               }
@@ -365,7 +365,7 @@ export function PlaybookScreen() {
           {/* SECTION 1: ACTIVE STRATEGY MODELS — wrapped in a system card container to match other dashboard widgets */}
           <div className="min-w-0 lg:col-span-2 h-full">
             <div className={cn(
-              "h-full flex flex-col rounded-xl p-6 border",
+              "h-full flex flex-col rounded-xl p-4 border",
               theme !== 'light' ? 'bg-zinc-900/40 border-zinc-800/80' : 'bg-white border-zinc-200'
             )}>
               <div className="flex items-center justify-between flex-wrap gap-3">
@@ -385,7 +385,7 @@ export function PlaybookScreen() {
                         className={cn(
                           "p-1.5 rounded-lg border transition-colors",
                           canScrollLeftStrategy
-                            ? cn(tc.text, theme !== 'light' ? 'bg-white/10 hover:bg-white/20 border-white/20' : 'bg-zinc-100 hover:bg-zinc-200 border-zinc-300', 'cursor-pointer')
+                            ? cn(tc.btnSecondary, 'cursor-pointer')
                             : theme !== 'light'
                               ? 'text-white/20 bg-transparent border-white/5 cursor-not-allowed pointer-events-none'
                               : 'text-zinc-300 bg-transparent border-zinc-100 cursor-not-allowed pointer-events-none'
@@ -402,7 +402,7 @@ export function PlaybookScreen() {
                         className={cn(
                           "p-1.5 rounded-lg border transition-colors",
                           canScrollRightStrategy
-                            ? cn(tc.text, theme !== 'light' ? 'bg-white/10 hover:bg-white/20 border-white/20' : 'bg-zinc-100 hover:bg-zinc-200 border-zinc-300', 'cursor-pointer')
+                            ? cn(tc.btnSecondary, 'cursor-pointer')
                             : theme !== 'light'
                               ? 'text-white/20 bg-transparent border-white/5 cursor-not-allowed pointer-events-none'
                               : 'text-zinc-300 bg-transparent border-zinc-100 cursor-not-allowed pointer-events-none'
@@ -607,7 +607,7 @@ export function PlaybookScreen() {
               <ListChecks className="w-4 h-4 text-emerald-400 flex-shrink-0" strokeWidth={2} />
               <h3 className={cn("text-xs font-semibold uppercase tracking-wider whitespace-nowrap", tc.textMuted)}>Pre-Session Protocol</h3>
               <span className={cn(
-                "text-[11px] font-mono font-semibold px-2 py-0.5 rounded-full border flex-shrink-0 whitespace-nowrap",
+                "text-[11px] font-mono font-semibold tabular-nums px-2 py-0.5 rounded-full border flex-shrink-0 whitespace-nowrap",
                 preSessionCompletedCount === PRE_SESSION_CHECKLIST_ITEMS.length
                   ? "bg-emerald-500/15 border-emerald-500/30 text-emerald-400"
                   : cn(tc.bgSecondary, tc.textMuted, theme !== 'light' ? 'border-zinc-700/50' : 'border-zinc-200')
@@ -664,11 +664,11 @@ export function PlaybookScreen() {
 
         {/* SECTION 2: TRADING CHARTER & MANDATES — single unified, read-only card */}
         <div className={cn(
-          "min-w-0 rounded-xl p-6 border",
+          "min-w-0 rounded-xl p-4 border",
           theme !== 'light' ? 'bg-zinc-900/40 border-zinc-800/80' : 'bg-white border-zinc-200'
         )}>
           <div className="flex items-center justify-between flex-wrap gap-4 mb-6">
-            <h3 className={cn("text-base font-semibold uppercase tracking-wide flex items-center gap-2 truncate min-w-0", tc.text)}>
+            <h3 className={cn("text-xs font-semibold uppercase tracking-wider flex items-center gap-2 truncate min-w-0", tc.text)}>
               <ShieldCheck className="w-4 h-4 text-emerald-400 flex-shrink-0" strokeWidth={2} />
               <span className="truncate">Trading Rules</span>
             </h3>
