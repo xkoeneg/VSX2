@@ -453,10 +453,15 @@ export function LifeDisciplineScreen() {
           actions={
             <button
               onClick={() => openChallengeConfigModal('configure')}
-              className={cn("flex-shrink-0 flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-medium transition-all", tc.btnSecondary)}
+              className={cn(
+                "flex items-center gap-2 px-4 py-2 rounded-lg text-sm transition-colors flex-shrink-0",
+                theme !== 'light'
+                  ? 'bg-zinc-800 hover:bg-zinc-700 text-white'
+                  : 'bg-zinc-100 hover:bg-zinc-200 text-zinc-900'
+              )}
             >
               <Settings className="w-4 h-4" />
-              Configure Challenge
+              <span className="hidden sm:inline">Configure Challenge</span>
             </button>
           }
         />
