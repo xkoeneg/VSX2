@@ -502,7 +502,7 @@ function TradeAnalyticsCard({ trades, stats, privacyMode, theme, tc, tradeFilter
     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4 mb-6 items-start">
       {/* Card 1 — Net P&L, now leading the row. */}
       <div className={cardClass}>
-        <div className={cn(iconCircleClass, isNetPositive ? "bg-emerald-500/10" : "bg-rose-500/10")}>
+        <div className={cn(iconCircleClass, theme !== 'light' ? 'bg-zinc-800/60' : 'bg-zinc-100')}>
           {isNetPositive
             ? <TrendingUp className="w-4 h-4 text-emerald-400" />
             : <TrendingDown className="w-4 h-4 text-rose-400" />}
@@ -545,7 +545,7 @@ function TradeAnalyticsCard({ trades, stats, privacyMode, theme, tc, tradeFilter
       {/* Card 3 — Win / Loss / Break-Even breakdown; chips stay clickable
           against `tradeFilter`, same as the old bar. */}
       <div className={cardClass}>
-        <div className={cn(iconCircleClass, 'bg-violet-500/10')}>
+        <div className={cn(iconCircleClass, theme !== 'light' ? 'bg-zinc-800/60' : 'bg-zinc-100')}>
           <Scale className="w-4 h-4 text-violet-400" />
         </div>
         <div className="min-w-0 flex-1">
@@ -590,7 +590,7 @@ function TradeAnalyticsCard({ trades, stats, privacyMode, theme, tc, tradeFilter
 
       {/* Card 4 — Profit Factor / Avg Win & Loss */}
       <div className={cardClass}>
-        <div className={cn(iconCircleClass, 'bg-cyan-500/10')}>
+        <div className={cn(iconCircleClass, theme !== 'light' ? 'bg-zinc-800/60' : 'bg-zinc-100')}>
           <Target className="w-4 h-4 text-cyan-400" />
         </div>
         <div className="min-w-0 flex-1">
