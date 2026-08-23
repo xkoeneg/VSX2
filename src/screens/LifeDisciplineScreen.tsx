@@ -591,7 +591,7 @@ export function LifeDisciplineScreen() {
                   )}
                 >
                   {groupComplete && (
-                    <span className="absolute left-0 top-0 bottom-0 w-1 bg-emerald-500/60" />
+                    <span className="absolute left-0 top-0 bottom-0 w-1.5 bg-emerald-500/70" />
                   )}
                   <div className="pl-2">
                     <div className={cn("flex items-center gap-2 mb-3 pb-3 border-b select-none", theme !== 'light' ? 'border-zinc-800/60' : 'border-zinc-200')}>
@@ -666,7 +666,7 @@ export function LifeDisciplineScreen() {
                 theme !== 'light' ? 'bg-zinc-800/60 border-zinc-700/50' : 'bg-zinc-100 border-zinc-200'
               )}>
                 {weeklyTargetsComplete && (
-                  <span className="absolute left-0 top-0 bottom-0 w-1 bg-emerald-500/60" />
+                  <span className="absolute left-0 top-0 bottom-0 w-1.5 bg-emerald-500/70" />
                 )}
                 <div className="pl-2">
                   <div className={cn("flex items-center gap-2 mb-3 pb-3 border-b select-none", theme !== 'light' ? 'border-zinc-800/60' : 'border-zinc-200')}>
