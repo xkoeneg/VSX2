@@ -660,9 +660,8 @@ export function NoticesScreen() {
       const list = notices.filter(n => n.type === type);
       return (
         <div className={cn(
-          'min-w-0 h-[450px] border rounded-xl p-4 flex flex-col border-l-2',
-          theme !== 'light' ? 'bg-zinc-900/50 border-zinc-800' : 'bg-white border-zinc-200',
-          type === 'mistake' ? 'border-l-rose-500' : 'border-l-cyan-500'
+          'min-w-0 h-[450px] border rounded-xl p-4 flex flex-col',
+          theme !== 'light' ? 'bg-zinc-900/50 border-zinc-800' : 'bg-white border-zinc-200'
         )}>
           <div className={cn(
             'flex items-center justify-between gap-2 px-3 py-2 rounded-lg border flex-shrink-0',
