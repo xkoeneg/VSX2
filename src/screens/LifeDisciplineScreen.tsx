@@ -603,7 +603,7 @@ export function LifeDisciplineScreen() {
                         'ml-auto flex-shrink-0 text-[10px] font-mono font-semibold px-2 py-0.5 rounded-full border whitespace-nowrap',
                         groupComplete
                           ? 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30'
-                          : cn(theme !== 'light' ? 'bg-zinc-800/60 border-zinc-700' : 'bg-zinc-100 border-zinc-200', tc.textMuted)
+                          : cn(theme !== 'light' ? 'bg-zinc-800/60 border-zinc-700/50' : 'bg-zinc-100 border-zinc-200', tc.textMuted)
                       )}
                     >
                       {groupCheckedCount}/{dailyItemsWithIndex.length}{groupComplete ? ' Ready' : ''}
@@ -677,7 +677,7 @@ export function LifeDisciplineScreen() {
                       'ml-auto flex-shrink-0 text-[10px] font-mono font-semibold px-2 py-0.5 rounded-full border whitespace-nowrap',
                       weeklyTargetsComplete
                         ? 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30'
-                        : cn(theme !== 'light' ? 'bg-zinc-800/60 border-zinc-700' : 'bg-zinc-100 border-zinc-200', tc.textMuted)
+                        : cn(theme !== 'light' ? 'bg-zinc-800/60 border-zinc-700/50' : 'bg-zinc-100 border-zinc-200', tc.textMuted)
                     )}
                   >
                     {weeklyCheckedCount}/{weeklyTargetsToday.length}{weeklyTargetsComplete ? ' Ready' : ' Today'}
@@ -833,7 +833,7 @@ export function LifeDisciplineScreen() {
                   {loggedReason && (
                     <span className={cn(
                       "absolute -top-1 -right-1 w-2.5 h-2.5 rounded-full border flex items-center justify-center",
-                      theme !== 'light' ? 'bg-zinc-900 border-zinc-700' : 'bg-white border-zinc-300'
+                      theme !== 'light' ? 'bg-zinc-900 border-white/10' : 'bg-white border-zinc-200'
                     )}>
                       <span className="w-1 h-1 rounded-full bg-amber-400" />
                     </span>
