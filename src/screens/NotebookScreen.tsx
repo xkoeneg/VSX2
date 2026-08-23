@@ -1299,7 +1299,7 @@ export function NotebookScreen() {
 
   const suggestibleTags = allTags.filter(t => !selectedEntry?.tags.includes(t) && t.toLowerCase().includes(tagInput.toLowerCase()));
 
-  const border = tc.border;
+  const border = theme !== 'light' ? 'border-zinc-800/80' : 'border-zinc-200';
   const panelBg = theme !== 'light' ? 'bg-zinc-900/40' : 'bg-white';
   const textMuted = tc.textMuted;
   const textBody = tc.textSecondary;
