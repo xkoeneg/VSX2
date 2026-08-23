@@ -302,7 +302,7 @@ export function NoticesScreen() {
     const renderPreviewModal = () => (
       previewNotice && previewMeta && (
         <div
-          className="fixed inset-0 bg-black/80 backdrop-blur-sm z-[60] flex items-start justify-center overflow-y-auto p-4 py-8"
+          className="fixed inset-0 bg-black/80 z-[60] flex items-start justify-center overflow-y-auto p-4 py-8"
           onClick={() => setPreviewNotice(null)}
         >
           <div
@@ -373,14 +373,14 @@ export function NoticesScreen() {
                 <div className="flex flex-wrap items-center gap-1.5 mb-1.5">
                   {previewNotice.type === 'mistake' ? (
                     previewTags.map(tag => (
-                      <span key={tag} className="px-2 py-0.5 rounded-full text-[10px] font-semibold border bg-rose-500/10 text-rose-400 border-rose-500/30">
+                      <span key={tag} className="px-2 py-0.5 rounded-full text-[10px] font-semibold border bg-rose-500/15 text-rose-300 border-rose-500/30">
                         {tag}
                       </span>
                     ))
                   ) : (
                     <>
                       {previewNotice.session && (
-                        <span className="px-2 py-0.5 rounded-full text-[10px] font-medium border bg-cyan-500/10 text-cyan-400 border-cyan-500/30">
+                        <span className="px-2 py-0.5 rounded-full text-[10px] font-medium border bg-cyan-500/15 text-cyan-300 border-cyan-500/30">
                           {previewNotice.session}
                         </span>
                       )}
@@ -392,7 +392,7 @@ export function NoticesScreen() {
                     </>
                   )}
                 </div>
-                <h2 className={cn('text-lg font-bold leading-snug', theme !== 'light' ? 'text-white' : 'text-zinc-900')}>{previewNotice.title}</h2>
+                <h2 className={cn('text-lg font-bold leading-snug', tc.text)}>{previewNotice.title}</h2>
               </div>
 
               {(previewNotice.description || previewNotice.whatHappenedTitle || previewNotice.keyTakeawayTitle) && (
@@ -401,10 +401,10 @@ export function NoticesScreen() {
                     {previewNotice.type === 'mistake' ? <>❌ What Happened</> : '🔑 What You Noticed'}
                   </p>
                   {previewNotice.type === 'mistake' && previewNotice.whatHappenedTitle && (
-                    <p className={cn('text-sm font-semibold mb-1', theme !== 'light' ? 'text-white' : 'text-zinc-900')}>{previewNotice.whatHappenedTitle}</p>
+                    <p className={cn('text-sm font-semibold mb-1', tc.text)}>{previewNotice.whatHappenedTitle}</p>
                   )}
                   {previewNotice.type === 'insight' && previewNotice.keyTakeawayTitle && (
-                    <p className={cn('text-sm font-semibold mb-1', theme !== 'light' ? 'text-white' : 'text-zinc-900')}>{previewNotice.keyTakeawayTitle}</p>
+                    <p className={cn('text-sm font-semibold mb-1', tc.text)}>{previewNotice.keyTakeawayTitle}</p>
                   )}
                   {previewNotice.description && (
                     <p className={cn('text-sm leading-relaxed whitespace-pre-wrap', theme !== 'light' ? 'text-zinc-300' : 'text-zinc-700')}>{previewNotice.description}</p>
@@ -457,7 +457,7 @@ export function NoticesScreen() {
                                   className="w-full h-full object-cover aspect-video"
                                 />
                                 {step.images.length > 1 && (
-                                  <div className="absolute top-2 left-2 bg-black/60 backdrop-blur-md text-white text-[10px] font-bold px-1.5 py-0.5 rounded-md border border-white/10 shadow-sm pointer-events-none">
+                                  <div className="absolute top-2 left-2 bg-black/60 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-md border border-white/10 pointer-events-none">
                                     #{imgIdx + 1}
                                   </div>
                                 )}
@@ -468,7 +468,7 @@ export function NoticesScreen() {
                         <div className="p-3 space-y-1">
                           <p className={cn('text-[10px] font-bold uppercase tracking-wider', previewNotice.type === 'mistake' ? 'text-rose-400' : 'text-cyan-400')}>Part {idx + 1}</p>
                           {step.title && (
-                            <p className={cn('text-sm font-semibold', theme !== 'light' ? 'text-white' : 'text-zinc-900')}>{step.title}</p>
+                            <p className={cn('text-sm font-semibold', tc.text)}>{step.title}</p>
                           )}
                           {step.notes && (
                             <p className={cn('text-sm leading-relaxed whitespace-pre-wrap', theme !== 'light' ? 'text-zinc-300' : 'text-zinc-700')}>{step.notes}</p>
@@ -509,8 +509,8 @@ export function NoticesScreen() {
         key={notice.id}
         onClick={() => openPreviewNotice(notice)}
         className={cn(
-          'group relative rounded-xl border overflow-hidden cursor-pointer transition-all hover:-translate-y-0.5 flex flex-col h-full',
-          theme !== 'light' ? 'bg-zinc-900/50 border-cyan-900/40 hover:border-cyan-500/60' : 'bg-white border-cyan-200 hover:border-cyan-400/70 hover:shadow-md'
+          'group relative rounded-xl border overflow-hidden cursor-pointer transition-colors flex flex-col h-full',
+          theme !== 'light' ? 'bg-zinc-900/50 border-cyan-500/20 hover:border-cyan-500/60' : 'bg-white border-cyan-200 hover:border-cyan-400/70'
         )}
       >
         {/* Cyan accent strip — echoes the column's insight color */}
@@ -527,7 +527,7 @@ export function NoticesScreen() {
           {/* Caption overlay — mirrors the mistake card's overlay so both
               columns feel equally complete at a glance */}
           <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/90 via-black/70 to-transparent px-2 pt-5 pb-1.5">
-            <p className="text-[8px] font-semibold uppercase tracking-wide text-cyan-300/90">🔑 Key Takeaway</p>
+            <p className="text-[10px] font-semibold uppercase tracking-wide text-cyan-300/90">🔑 Key Takeaway</p>
             <p className={cn('text-[10px] leading-snug line-clamp-1', notice.keyTakeawayTitle ? 'text-white/90' : 'text-zinc-500 italic')}>
               {notice.keyTakeawayTitle || 'No title added yet.'}
             </p>
@@ -538,13 +538,13 @@ export function NoticesScreen() {
         <div className="absolute top-1.5 right-1.5 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
           <button
             onClick={(e) => { e.stopPropagation(); handleEditNotice(notice); }}
-            className="p-1 rounded-md backdrop-blur-sm bg-black/60 text-zinc-300 hover:text-white transition-colors"
+            className="p-1 rounded-md bg-black/60 text-zinc-300 hover:text-white transition-colors"
           >
             <Edit2 className="w-2.5 h-2.5" />
           </button>
           <button
             onClick={(e) => { e.stopPropagation(); handleDeleteNotice(notice.id); }}
-            className="p-1 rounded-md backdrop-blur-sm bg-black/60 text-zinc-400 hover:text-rose-400 transition-colors"
+            className="p-1 rounded-md bg-black/60 text-zinc-400 hover:text-rose-400 transition-colors"
           >
             <Trash2 className="w-2.5 h-2.5" />
           </button>
@@ -552,15 +552,15 @@ export function NoticesScreen() {
 
         {/* Content */}
         <div className="p-2 flex flex-col gap-1 flex-1">
-          <h3 className={cn('text-xs font-bold leading-snug line-clamp-2 min-h-[2.2em]', theme !== 'light' ? 'text-white' : 'text-zinc-900')}>{notice.title}</h3>
+          <h3 className={cn('text-xs font-bold leading-snug line-clamp-2 min-h-[2.2em]', tc.text)}>{notice.title}</h3>
           <div className="flex flex-wrap items-center gap-1 min-h-[17px]">
             {notice.session && (
-              <span className="px-1.5 py-0.5 rounded-full text-[9px] font-medium border bg-cyan-500/10 text-cyan-400 border-cyan-500/30">
+              <span className="px-1.5 py-0.5 rounded-full text-[10px] font-medium border bg-cyan-500/15 text-cyan-300 border-cyan-500/30">
                 {notice.session}
               </span>
             )}
             {notice.tag && (
-              <span className={cn('px-1.5 py-0.5 rounded-full text-[9px] font-medium border', theme !== 'light' ? 'border-zinc-700 text-zinc-400 bg-zinc-800/60' : 'border-zinc-200 text-zinc-500 bg-zinc-100')}>
+              <span className={cn('px-1.5 py-0.5 rounded-full text-[10px] font-medium border', theme !== 'light' ? 'border-zinc-700 text-zinc-400 bg-zinc-800/60' : 'border-zinc-200 text-zinc-500 bg-zinc-100')}>
                 {notice.tag}
               </span>
             )}
@@ -581,8 +581,8 @@ export function NoticesScreen() {
           key={notice.id}
           onClick={() => openPreviewNotice(notice)}
           className={cn(
-            'group relative rounded-xl border overflow-hidden cursor-pointer transition-all hover:-translate-y-0.5 flex flex-col h-full',
-            theme !== 'light' ? 'bg-zinc-900/50 border-rose-900/40 hover:border-rose-500/60' : 'bg-white border-rose-200 hover:border-rose-400/70 hover:shadow-md'
+            'group relative rounded-xl border overflow-hidden cursor-pointer transition-colors flex flex-col h-full',
+            theme !== 'light' ? 'bg-zinc-900/50 border-rose-500/20 hover:border-rose-500/60' : 'bg-white border-rose-200 hover:border-rose-400/70'
           )}
         >
           {/* Rose accent strip — echoes the column's danger color so each
@@ -593,13 +593,13 @@ export function NoticesScreen() {
           <div className="absolute top-1.5 right-1.5 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity z-10">
             <button
               onClick={(e) => { e.stopPropagation(); handleEditNotice(notice); }}
-              className="p-1 rounded-md backdrop-blur-sm bg-black/60 text-zinc-300 hover:text-white transition-colors"
+              className="p-1 rounded-md bg-black/60 text-zinc-300 hover:text-white transition-colors"
             >
               <Edit2 className="w-2.5 h-2.5" />
             </button>
             <button
               onClick={(e) => { e.stopPropagation(); handleDeleteNotice(notice.id); }}
-              className="p-1 rounded-md backdrop-blur-sm bg-black/60 text-zinc-400 hover:text-rose-400 transition-colors"
+              className="p-1 rounded-md bg-black/60 text-zinc-400 hover:text-rose-400 transition-colors"
             >
               <Trash2 className="w-2.5 h-2.5" />
             </button>
@@ -619,13 +619,13 @@ export function NoticesScreen() {
             {/* Caption overlay — dark scrim at the bottom of the image */}
             <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/90 via-black/70 to-transparent px-2 pt-5 pb-1.5 flex flex-col gap-1">
               <div>
-                <p className="text-[8px] font-semibold uppercase tracking-wide text-zinc-300/90">❌ What Happened</p>
+                <p className="text-[10px] font-semibold uppercase tracking-wide text-zinc-300/90">❌ What Happened</p>
                 <p className={cn('text-[10px] leading-snug line-clamp-1', notice.whatHappenedTitle ? 'text-white/90' : 'text-zinc-500 italic')}>
                   {notice.whatHappenedTitle || 'No title added yet.'}
                 </p>
               </div>
               <div>
-                <p className="text-[8px] font-semibold uppercase tracking-wide text-emerald-400">💡 Rule / Prevention</p>
+                <p className="text-[10px] font-semibold uppercase tracking-wide text-emerald-400">💡 Rule / Prevention</p>
                 <p className={cn('text-[10px] font-semibold leading-snug line-clamp-1', notice.preventionTitle ? 'text-emerald-200' : 'text-emerald-200/50 italic')}>
                   {notice.preventionTitle || 'No title added yet.'}
                 </p>
@@ -636,10 +636,10 @@ export function NoticesScreen() {
           <div className="p-2 flex-1 flex flex-col gap-1">
             {/* Header: title + mistake tag pills — pill row height reserved even when empty */}
             <div className="space-y-1 pr-6">
-              <h3 className={cn('text-xs font-bold leading-snug line-clamp-2 min-h-[2.2em]', theme !== 'light' ? 'text-white' : 'text-zinc-900')}>{notice.title}</h3>
+              <h3 className={cn('text-xs font-bold leading-snug line-clamp-2 min-h-[2.2em]', tc.text)}>{notice.title}</h3>
               <div className="flex flex-wrap gap-1 min-h-[17px]">
                 {tags.length > 0 && tags.map(tag => (
-                  <span key={tag} className="px-1.5 py-0.5 rounded-full text-[9px] font-semibold border bg-rose-500/10 text-rose-400 border-rose-500/30">
+                  <span key={tag} className="px-1.5 py-0.5 rounded-full text-[10px] font-semibold border bg-rose-500/15 text-rose-300 border-rose-500/30">
                     {tag}
                   </span>
                 ))}
@@ -660,9 +660,9 @@ export function NoticesScreen() {
       const list = notices.filter(n => n.type === type);
       return (
         <div className={cn(
-          'min-w-0 h-[450px] border rounded-xl p-4 flex flex-col border-t-2',
+          'min-w-0 h-[450px] border rounded-xl p-4 flex flex-col border-l-2',
           theme !== 'light' ? 'bg-zinc-900/50 border-zinc-800' : 'bg-white border-zinc-200',
-          type === 'mistake' ? 'border-t-rose-500/50' : 'border-t-cyan-500/50'
+          type === 'mistake' ? 'border-l-rose-500' : 'border-l-cyan-500'
         )}>
           <div className={cn(
             'flex items-center justify-between gap-2 px-3 py-2 rounded-lg border flex-shrink-0',
@@ -680,7 +680,7 @@ export function NoticesScreen() {
               </h2>
               <span className={cn(
                 'px-1.5 py-0.5 rounded-full text-[10px] border flex-shrink-0',
-                type === 'mistake' ? 'bg-rose-500/10 text-rose-500 border-rose-500/20' : 'bg-cyan-500/10 text-cyan-500 border-cyan-500/20'
+                type === 'mistake' ? 'bg-rose-500/15 text-rose-300 border-rose-500/30' : 'bg-cyan-500/15 text-cyan-300 border-cyan-500/30'
               )}>
                 {list.length}
               </span>
@@ -749,7 +749,7 @@ export function NoticesScreen() {
               onClick={() => handleOpenAddNotice('mistake')}
               className={cn(
                 'flex items-center gap-2 px-4 py-2 rounded-lg text-sm transition-colors flex-shrink-0',
-                theme !== 'light' ? 'bg-zinc-800 hover:bg-zinc-700 text-white' : 'bg-zinc-900 hover:bg-zinc-800 text-white'
+                theme !== 'light' ? 'bg-zinc-800 hover:bg-zinc-700 text-white' : 'bg-zinc-100 hover:bg-zinc-200 text-zinc-900'
               )}
             >
               <Plus className="w-4 h-4" />
