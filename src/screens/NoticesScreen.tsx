@@ -660,27 +660,21 @@ export function NoticesScreen() {
       const list = notices.filter(n => n.type === type);
       return (
         <div className={cn(
-          'min-w-0 h-[450px] border rounded-xl p-4 flex flex-col border-t-2',
-          theme !== 'light' ? 'bg-zinc-900/50 border-zinc-800' : 'bg-white border-zinc-200',
-          type === 'mistake' ? 'border-t-rose-500/50' : 'border-t-cyan-500/50'
+          'min-w-0 h-[450px] rounded-xl p-4 flex flex-col border',
+          theme !== 'light' ? 'bg-zinc-900/40 border-zinc-800/80' : 'bg-white border-zinc-200'
         )}>
           <div className={cn(
             'flex items-center justify-between gap-2 px-3 py-2 rounded-lg border flex-shrink-0',
-            theme !== 'light' ? 'border-zinc-800 bg-zinc-800/40' : 'border-zinc-200 bg-zinc-50'
+            theme !== 'light' ? 'bg-zinc-800/60 border-zinc-700/50' : 'bg-zinc-100 border-zinc-200'
           )}>
             <div className="flex items-center gap-2 min-w-0">
               <meta.headerIcon className={cn('w-4 h-4 flex-shrink-0', type === 'mistake' ? 'text-rose-400' : 'text-cyan-400')} />
-              <h2 className={cn(
-                'text-sm font-semibold truncate',
-                type === 'mistake'
-                  ? (theme !== 'light' ? 'text-rose-300' : 'text-rose-600')
-                  : (theme !== 'light' ? 'text-cyan-300' : 'text-cyan-600')
-              )}>
+              <h2 className={cn('text-sm font-semibold truncate', tc.text)}>
                 {meta.tabLabel}
               </h2>
               <span className={cn(
-                'px-1.5 py-0.5 rounded-full text-[10px] border flex-shrink-0',
-                type === 'mistake' ? 'bg-rose-500/10 text-rose-500 border-rose-500/20' : 'bg-cyan-500/10 text-cyan-500 border-cyan-500/20'
+                'px-1.5 py-0.5 rounded-full text-[10px] font-medium border flex-shrink-0',
+                type === 'mistake' ? 'bg-rose-500/15 text-rose-400 border-rose-500/30' : 'bg-cyan-500/15 text-cyan-400 border-cyan-500/30'
               )}>
                 {list.length}
               </span>
