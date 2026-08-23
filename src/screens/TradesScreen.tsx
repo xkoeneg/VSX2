@@ -496,7 +496,7 @@ function TradeAnalyticsCard({ trades, stats, privacyMode, theme, tc, tradeFilter
       ? 'bg-zinc-900/40 border border-zinc-800/80 hover:border-zinc-700 hover:bg-zinc-900/70'
       : 'bg-white border border-zinc-200 hover:border-zinc-300 hover:bg-zinc-50'
   );
-  const iconCircleClass = "p-2.5 rounded-lg flex-shrink-0";
+  const iconCircleClass = "p-2.5 rounded-xl flex-shrink-0";
 
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4 mb-6 items-start">
