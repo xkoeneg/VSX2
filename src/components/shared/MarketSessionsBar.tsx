@@ -217,19 +217,18 @@ export const MarketSessionsBar: React.FC = () => {
                   </span>
                 )}
               </span>
-              <span className={cn('font-mono text-sm tabular-nums tracking-tight', tc.text)}>{localClock}</span>
+              <span className="flex flex-col items-end gap-1">
+                <span className={cn('font-mono text-sm tabular-nums tracking-tight', tc.text)}>{localClock}</span>
+                {inKillzone && (
+                  <span className="inline-flex items-center px-1.5 py-0.5 rounded-full text-[10px] font-semibold bg-amber-500/15 text-amber-300 border border-amber-500/30 whitespace-nowrap">
+                    {session.killzoneBadgeLabel}
+                  </span>
+                )}
+              </span>
             </div>
             <p className={cn('text-[11px] truncate', tc.textMuted)}>
               {statusKind === 'holiday' && holidayMatch ? holidayMatch.localName || holidayMatch.name : formatPHTWindowLabel(activeWindow)}
             </p>
-
-            <div className="mt-2 h-5 flex items-center">
-              {inKillzone && (
-                <span className="inline-flex items-center px-1.5 py-0.5 rounded-full text-[10px] font-semibold bg-amber-500/15 text-amber-300 border border-amber-500/30">
-                  {session.killzoneBadgeLabel}
-                </span>
-              )}
-            </div>
           </div>
         );
       })}
