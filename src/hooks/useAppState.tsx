@@ -1919,11 +1919,22 @@ export function useAppState() {
       setHasStartedChallenge(typeof ld.hasStarted === 'boolean' ? ld.hasStarted : false);
 
       setUserChallengePresets(Array.isArray(p.userChallengePresets) ? p.userChallengePresets : []);
+
+      // Only flip this once the fetch has actually succeeded and every
+      // piece of state above has been set from the real, saved data. The
+      // debounced auto-save effect below is gated on this ref alone — if
+      // we set it on a FAILED load too (as this used to, via `finally`),
+      // a transient network hiccup on reopen would leave every field at
+      // its fresh-mount default (no challenge, empty checks) while still
+      // "unlocking" the save effect, which would then silently upsert
+      // those defaults over the real data in Supabase and wipe it for
+      // good. On failure we deliberately leave this false so the save
+      // effect stays blocked until a load actually succeeds.
+      hasLoadedPreferencesRef.current = true;
     } catch (e) {
       console.error('Failed to load preferences from Supabase:', e);
       showTradeImportToast('error', 'Failed to load your settings/Life Discipline Hub — check your connection and reload.');
     } finally {
-      hasLoadedPreferencesRef.current = true;
       setPreferencesLoading(false);
       setCustomCreedQuotesLoaded(true);
     }
