@@ -4685,6 +4685,48 @@ Return ONLY a JSON object — no markdown, no code fences, no commentary — wit
     setMistakesList(prev => prev.map(m => (m.id === id ? { ...m, color } : m)));
   };
 
+  // Drag-and-drop reordering for the Strategy & Tagging option lists —
+  // lets the user drag a Setup Type / Confluence / Mistake to wherever
+  // they want it in the dropdown, so their most-used tags sit up top.
+  const moveSetupType = (fromId: string, toId: string) => {
+    if (fromId === toId) return;
+    setSetupTypes(prev => {
+      const list = [...prev];
+      const fromIdx = list.findIndex(s => s.id === fromId);
+      const toIdx = list.findIndex(s => s.id === toId);
+      if (fromIdx === -1 || toIdx === -1) return prev;
+      const [moved] = list.splice(fromIdx, 1);
+      list.splice(toIdx, 0, moved);
+      return list;
+    });
+  };
+
+  const moveConfluence = (fromId: string, toId: string) => {
+    if (fromId === toId) return;
+    setConfluences(prev => {
+      const list = [...prev];
+      const fromIdx = list.findIndex(c => c.id === fromId);
+      const toIdx = list.findIndex(c => c.id === toId);
+      if (fromIdx === -1 || toIdx === -1) return prev;
+      const [moved] = list.splice(fromIdx, 1);
+      list.splice(toIdx, 0, moved);
+      return list;
+    });
+  };
+
+  const moveMistakeType = (fromId: string, toId: string) => {
+    if (fromId === toId) return;
+    setMistakesList(prev => {
+      const list = [...prev];
+      const fromIdx = list.findIndex(m => m.id === fromId);
+      const toIdx = list.findIndex(m => m.id === toId);
+      if (fromIdx === -1 || toIdx === -1) return prev;
+      const [moved] = list.splice(fromIdx, 1);
+      list.splice(toIdx, 0, moved);
+      return list;
+    });
+  };
+
   const handleDeleteEmotion = (id: string, name: string) => {
     setEmotionsList(prev => prev.filter(e => e.id !== id));
     setDisciplineReviewDraft(prev => ({ ...prev, emotions: prev.emotions.filter(e => e !== name) }));
@@ -6126,6 +6168,9 @@ Return ONLY a JSON object — no markdown, no code fences, no commentary — wit
     handleChangeSetupTypeColor,
     handleChangeConfluenceColor,
     handleChangeMistakeColor,
+    moveSetupType,
+    moveConfluence,
+    moveMistakeType,
     handleDeleteEmotion,
     handleChangeEmotionColor,
     colorForEmotion,
