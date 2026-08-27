@@ -1665,7 +1665,7 @@ export function AddTradeModal() {
                 <h4 className="text-xs font-semibold text-slate-300 uppercase tracking-wider">Strategy &amp; Tagging</h4>
               </div>
               {/* Tag groups: Setup Types + Confluences side by side, Mistakes Made full width below */}
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <TagSelectDropdown
                   label="Setup Types"
                   options={setupTypes}
@@ -1713,7 +1713,7 @@ export function AddTradeModal() {
                 <h4 className="text-xs font-semibold text-slate-300 uppercase tracking-wider">Chart Screenshots</h4>
               </div>
               <p className="text-xs text-zinc-500">Attach images for each timeframe</p>
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 {TIMEFRAMES.map(tf => {
                   const tfData = (newTrade.timeframes || []).find(t => t.name === tf) || { name: tf, images: [], notes: '' };
                   return (
@@ -2232,7 +2232,7 @@ export function EditTradeModal() {
                 <h4 className="text-xs font-semibold text-slate-300 uppercase tracking-wider">Strategy &amp; Tagging</h4>
               </div>
               {/* Tag groups: Setup Types + Confluences side by side, Mistakes Made full width below */}
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <TagSelectDropdown
                   label="Setup Types"
                   options={setupTypes}
@@ -2280,7 +2280,7 @@ export function EditTradeModal() {
                 <h4 className="text-xs font-semibold text-slate-300 uppercase tracking-wider">Chart Screenshots</h4>
               </div>
               <p className="text-xs text-zinc-500">Attach images for each timeframe</p>
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 {TIMEFRAMES.map(tf => {
                   const tfData = (newTrade.timeframes || []).find(t => t.name === tf) || { name: tf, images: [], notes: '' };
                   return (
