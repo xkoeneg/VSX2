@@ -95,7 +95,7 @@ export const renderAccountFilter = () => {
 
       {showAccountDropdown && (
         <div className={cn(
-          "absolute left-0 top-full mt-1.5 min-w-[200px] w-64 max-w-[calc(100vw-2rem)] rounded-xl shadow-2xl z-50 p-3.5 border",
+          "absolute right-0 top-full mt-1.5 min-w-[200px] w-64 max-w-[calc(100vw-2rem)] rounded-xl shadow-2xl z-50 p-3.5 border",
           theme !== 'light' ? 'bg-zinc-900 border-white/10' : 'bg-white border-zinc-200'
         )}>
           <button
