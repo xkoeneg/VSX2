@@ -102,14 +102,29 @@ import { cn } from '../../utils/format';
 // `actions` renders any right-side controls (buttons, dropdowns) on the
 // same row, right-aligned.
 //
-// LAYOUT LOCK: this row is a hard `h-14` — a fixed height, not a min-height.
-// Some tabs pass `actions` (buttons) and/or a `description`, others pass
-// neither; without a fixed height those differences used to change the
-// header's rendered height per tab, which pushed the first card below it
-// up or down and made its top border "jump" when switching tabs. Locking
-// the row to h-14 with `items-center` means every tab's header occupies
-// identical space regardless of its content, so the first card's top
-// border lands in the exact same pixel position on every view.
+// LAYOUT LOCK: on sm+ screens this row is a hard `h-14` — a fixed height,
+// not a min-height. Some tabs pass `actions` (buttons) and/or a
+// `description`, others pass neither; without a fixed height those
+// differences used to change the header's rendered height per tab, which
+// pushed the first card below it up or down and made its top border
+// "jump" when switching tabs. Locking the row to h-14 with `items-center`
+// means every tab's header occupies identical space regardless of its
+// content, so the first card's top border lands in the exact same pixel
+// position on every view — on desktop and any window wide enough for a
+// single row.
+//
+// MOBILE EXCEPTION (<640px): the h-14 lock is intentionally dropped below
+// the `sm` breakpoint. Screens like Trade History pass 3-4 action buttons
+// (account filter, select, import, add trade) whose combined width can
+// exceed a phone's content width. The old single-row `flex-shrink-0`
+// actions block had nowhere to go in that case — no wrap, no shrink — and
+// silently overflowed the viewport horizontally. Below `sm` the header now
+// stacks (title on top, actions below) via `flex-col`, and the actions row
+// itself carries `flex-wrap` as a second line of defense if it's still too
+// wide even stacked. This means header height is no longer pixel-identical
+// across tabs on mobile (a tab with 4 actions is taller than one with
+// none) — that's an accepted trade-off for "never overflows" over "every
+// tab is exactly the same height," and only applies below `sm`.
 //
 // NOTE ON PADDING/MARGIN: PageHeader intentionally owns NO margin or
 // padding of its own (no `pb-*`/`mb-*`). The single shared content wrapper
@@ -128,7 +143,7 @@ export const PageHeader: React.FC<{
   description?: string;
   actions?: React.ReactNode;
 }> = ({ title, description, actions }) => (
-  <div className="h-14 flex items-center justify-between gap-4">
+  <div className="min-h-14 sm:h-14 flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4">
     <div className="min-w-0">
       {/* leading-snug (not leading-none) + pb-0.5 give descenders (g/y/p/q/j)
           enough room inside the line box before `truncate`'s overflow-hidden
@@ -146,7 +161,7 @@ export const PageHeader: React.FC<{
         </p>
       )}
     </div>
-    {actions && <div className="flex items-center gap-3 flex-shrink-0">{actions}</div>}
+    {actions && <div className="flex items-center gap-2 sm:gap-3 flex-wrap sm:flex-shrink-0">{actions}</div>}
   </div>
 );
 
