@@ -108,6 +108,51 @@ export const NotificationBell: React.FC<{ onViewAll: () => void }> = ({ onViewAl
   const [isOpen, setIsOpen] = useState(false);
   const [readIds, setReadIds] = useState<string[]>([]);
   const containerRef = useRef<HTMLDivElement>(null);
+  const buttonRef = useRef<HTMLButtonElement>(null);
+
+  // The bell isn't guaranteed to sit at the true right edge of the screen —
+  // it can have other header buttons (account filter, add account, etc.)
+  // to its right, and their combined width varies per screen and per
+  // breakpoint. A static `right-0`/`left-0` anchor on the popover
+  // therefore has no reliable relationship to the actual viewport edges,
+  // and can push the panel off-screen on narrow widths. Instead we measure
+  // the button's real on-screen position and clamp the panel to always
+  // stay fully within the viewport, recomputed on open and on resize so a
+  // live window-resize (not just a fresh mobile load) also stays correct.
+  const [panelPos, setPanelPos] = useState<{ top: number; left: number; width: number } | null>(null);
+  const VIEWPORT_MARGIN = 12;
+  const PREFERRED_PANEL_WIDTH = 320; // matches the w-80 the panel used to render at
+
+  const computePanelPos = useCallback(() => {
+    const btn = buttonRef.current;
+    if (!btn) return;
+    const rect = btn.getBoundingClientRect();
+    const width = Math.min(PREFERRED_PANEL_WIDTH, window.innerWidth - VIEWPORT_MARGIN * 2);
+    // Prefer right-aligning the panel to the button (matches the original
+    // dropdown-under-the-icon look), then clamp so neither edge can ever
+    // land outside the viewport regardless of where the button sits.
+    const idealLeft = rect.right - width;
+    const maxLeft = window.innerWidth - width - VIEWPORT_MARGIN;
+    const left = Math.max(VIEWPORT_MARGIN, Math.min(idealLeft, maxLeft));
+    setPanelPos({ top: rect.bottom + 8, left, width });
+  }, []);
+
+  // Keep the panel correctly positioned through a live window resize (e.g.
+  // un-maximizing/shrinking the desktop window) while it's open, not just
+  // at the moment it was opened.
+  useEffect(() => {
+    if (!isOpen) return;
+    computePanelPos();
+    window.addEventListener('resize', computePanelPos);
+    // capture:true so this also catches scroll events bubbling from a
+    // nested scroll container (e.g. the app's main content area), not
+    // just window-level scrolling.
+    window.addEventListener('scroll', computePanelPos, { capture: true, passive: true });
+    return () => {
+      window.removeEventListener('resize', computePanelPos);
+      window.removeEventListener('scroll', computePanelPos, true);
+    };
+  }, [isOpen, computePanelPos]);
 
   // Today's (PHT) USD high-impact events, earliest first — the same
   // filter the Economic Calendar card uses, narrowed to today only.
@@ -147,7 +192,10 @@ export const NotificationBell: React.FC<{ onViewAll: () => void }> = ({ onViewAl
   const handleToggle = () => {
     setIsOpen(prev => {
       const next = !prev;
-      if (next) markAllRead();
+      if (next) {
+        markAllRead();
+        computePanelPos();
+      }
       return next;
     });
   };
@@ -179,6 +227,7 @@ export const NotificationBell: React.FC<{ onViewAll: () => void }> = ({ onViewAl
   return (
     <div className="relative flex-shrink-0" ref={containerRef}>
       <button
+        ref={buttonRef}
         onClick={handleToggle}
         aria-label="Notifications"
         aria-expanded={isOpen}
@@ -198,11 +247,14 @@ export const NotificationBell: React.FC<{ onViewAll: () => void }> = ({ onViewAl
         )}
       </button>
 
-      {isOpen && (
-        <div className={cn(
-          'absolute right-0 mt-2 w-80 max-w-[90vw] rounded-xl shadow-2xl z-50 overflow-hidden border',
-          theme !== 'light' ? 'bg-zinc-900 border-zinc-800' : 'bg-white border-zinc-200'
-        )}>
+      {isOpen && panelPos && (
+        <div
+          style={{ position: 'fixed', top: panelPos.top, left: panelPos.left, width: panelPos.width }}
+          className={cn(
+            'rounded-xl shadow-2xl z-50 overflow-hidden border',
+            theme !== 'light' ? 'bg-zinc-900 border-zinc-800' : 'bg-white border-zinc-200'
+          )}
+        >
           <div className={cn(
             'flex items-center justify-between gap-2 px-3 py-2.5 border-b',
             theme !== 'light' ? 'border-zinc-800 bg-zinc-900/95' : 'border-zinc-200 bg-white'
