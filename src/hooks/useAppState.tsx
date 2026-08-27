@@ -4727,6 +4727,19 @@ Return ONLY a JSON object — no markdown, no code fences, no commentary — wit
     });
   };
 
+  const moveEmotion = (fromId: string, toId: string) => {
+    if (fromId === toId) return;
+    setEmotionsList(prev => {
+      const list = [...prev];
+      const fromIdx = list.findIndex(e => e.id === fromId);
+      const toIdx = list.findIndex(e => e.id === toId);
+      if (fromIdx === -1 || toIdx === -1) return prev;
+      const [moved] = list.splice(fromIdx, 1);
+      list.splice(toIdx, 0, moved);
+      return list;
+    });
+  };
+
   const handleDeleteEmotion = (id: string, name: string) => {
     setEmotionsList(prev => prev.filter(e => e.id !== id));
     setDisciplineReviewDraft(prev => ({ ...prev, emotions: prev.emotions.filter(e => e !== name) }));
@@ -6171,6 +6184,7 @@ Return ONLY a JSON object — no markdown, no code fences, no commentary — wit
     moveSetupType,
     moveConfluence,
     moveMistakeType,
+    moveEmotion,
     handleDeleteEmotion,
     handleChangeEmotionColor,
     colorForEmotion,
