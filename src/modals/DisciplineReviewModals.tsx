@@ -277,7 +277,7 @@ export function DisciplinePsychologyReviewModal() {
     WIKI_FORM_DEFAULT, handleAddWiki, handleOpenAddWiki, handleOpenEditWiki, handleDeleteWiki,
     handleWikiImagePick, addWikiKeyRule, updateWikiKeyRule, removeWikiKeyRule, handleDeleteSetupType,
     handleDeleteConfluence, handleDeleteMistakeType, handleChangeSetupTypeColor, handleChangeConfluenceColor,
-    handleChangeMistakeColor, handleDeleteEmotion, handleChangeEmotionColor, colorForEmotion, colorForMistake,
+    handleChangeMistakeColor, moveMistakeType, moveEmotion, handleDeleteEmotion, handleChangeEmotionColor, colorForEmotion, colorForMistake,
     handleFileUpload, handleAddImageUrl, handleRemoveImage, handleReorderImages, updateTimeframeNotes,
     exportBackup, importBackup,
   } = useAppContext();
@@ -350,6 +350,7 @@ export function DisciplinePsychologyReviewModal() {
                   onAddNew={(name) => setEmotionsList(prev => [...prev, { id: generateId(), name, color: 'purple' }])}
                   onDeleteOption={handleDeleteEmotion}
                   onColorChange={handleChangeEmotionColor}
+                  onReorder={moveEmotion}
                   placeholder="Select Emotions..."
                   colorScheme="rose"
                 />
@@ -364,6 +365,7 @@ export function DisciplinePsychologyReviewModal() {
                   onAddNew={(name) => setMistakesList(prev => [...prev, { id: generateId(), name, color: 'red' }])}
                   onDeleteOption={handleDeleteMistakeType}
                   onColorChange={handleChangeMistakeColor}
+                  onReorder={moveMistakeType}
                   placeholder="Select Mistakes..."
                   colorScheme="rose"
                 />
@@ -518,7 +520,7 @@ export function RuleAdherenceReviewModal() {
     WIKI_FORM_DEFAULT, handleAddWiki, handleOpenAddWiki, handleOpenEditWiki, handleDeleteWiki,
     handleWikiImagePick, addWikiKeyRule, updateWikiKeyRule, removeWikiKeyRule, handleDeleteSetupType,
     handleDeleteConfluence, handleDeleteMistakeType, handleChangeSetupTypeColor, handleChangeConfluenceColor,
-    handleChangeMistakeColor, handleDeleteEmotion, handleChangeEmotionColor, colorForEmotion, colorForMistake,
+    handleChangeMistakeColor, moveMistakeType, moveEmotion, handleDeleteEmotion, handleChangeEmotionColor, colorForEmotion, colorForMistake,
     handleFileUpload, handleAddImageUrl, handleRemoveImage, handleReorderImages, updateTimeframeNotes,
     exportBackup, importBackup,
   } = useAppContext();
@@ -663,6 +665,7 @@ export function RuleAdherenceReviewModal() {
                       onAddNew={(name) => setEmotionsList(prev => [...prev, { id: generateId(), name, color: 'purple' }])}
                       onDeleteOption={handleDeleteEmotion}
                       onColorChange={handleChangeEmotionColor}
+                      onReorder={moveEmotion}
                       placeholder="Select Emotions..."
                       colorScheme="rose"
                     />
@@ -677,6 +680,7 @@ export function RuleAdherenceReviewModal() {
                       onAddNew={(name) => setMistakesList(prev => [...prev, { id: generateId(), name, color: 'red' }])}
                       onDeleteOption={handleDeleteMistakeType}
                       onColorChange={handleChangeMistakeColor}
+                      onReorder={moveMistakeType}
                       placeholder="Select Mistakes..."
                       colorScheme="rose"
                     />
