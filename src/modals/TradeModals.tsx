@@ -1342,7 +1342,7 @@ export function AddTradeModal() {
     WIKI_FORM_DEFAULT, handleAddWiki, handleOpenAddWiki, handleOpenEditWiki, handleDeleteWiki,
     handleWikiImagePick, addWikiKeyRule, updateWikiKeyRule, removeWikiKeyRule, handleDeleteSetupType,
     handleDeleteConfluence, handleDeleteMistakeType, handleChangeSetupTypeColor, handleChangeConfluenceColor,
-    handleChangeMistakeColor, handleDeleteEmotion, handleChangeEmotionColor, colorForEmotion, colorForMistake,
+    handleChangeMistakeColor, moveSetupType, moveConfluence, moveMistakeType, handleDeleteEmotion, handleChangeEmotionColor, colorForEmotion, colorForMistake,
     handleFileUpload, handleAddImageUrl, handleRemoveImage, handleReorderImages, updateTimeframeNotes,
     exportBackup, importBackup,
   } = useAppContext();
@@ -1674,6 +1674,7 @@ export function AddTradeModal() {
                   onAddNew={(name) => setSetupTypes(prev => [...prev, { id: generateId(), name, color: 'gray' }])}
                   onDeleteOption={handleDeleteSetupType}
                   onColorChange={handleChangeSetupTypeColor}
+                  onReorder={moveSetupType}
                   placeholder="Select Setup Types..."
                   colorScheme="emerald"
                 />
@@ -1685,6 +1686,7 @@ export function AddTradeModal() {
                   onAddNew={(name) => setConfluences(prev => [...prev, { id: generateId(), name, color: 'gray' }])}
                   onDeleteOption={handleDeleteConfluence}
                   onColorChange={handleChangeConfluenceColor}
+                  onReorder={moveConfluence}
                   placeholder="Select Confluences..."
                   colorScheme="emerald"
                 />
@@ -1698,6 +1700,7 @@ export function AddTradeModal() {
                 onAddNew={(name) => setMistakesList(prev => [...prev, { id: generateId(), name, color: 'red' }])}
                 onDeleteOption={handleDeleteMistakeType}
                 onColorChange={handleChangeMistakeColor}
+                onReorder={moveMistakeType}
                 placeholder="Select Mistakes Made..."
                 colorScheme="rose"
               />
@@ -1906,7 +1909,7 @@ export function EditTradeModal() {
     WIKI_FORM_DEFAULT, handleAddWiki, handleOpenAddWiki, handleOpenEditWiki, handleDeleteWiki,
     handleWikiImagePick, addWikiKeyRule, updateWikiKeyRule, removeWikiKeyRule, handleDeleteSetupType,
     handleDeleteConfluence, handleDeleteMistakeType, handleChangeSetupTypeColor, handleChangeConfluenceColor,
-    handleChangeMistakeColor, handleDeleteEmotion, handleChangeEmotionColor, colorForEmotion, colorForMistake,
+    handleChangeMistakeColor, moveSetupType, moveConfluence, moveMistakeType, handleDeleteEmotion, handleChangeEmotionColor, colorForEmotion, colorForMistake,
     handleFileUpload, handleAddImageUrl, handleRemoveImage, handleReorderImages, updateTimeframeNotes,
     exportBackup, importBackup,
   } = useAppContext();
@@ -2238,6 +2241,7 @@ export function EditTradeModal() {
                   onAddNew={(name) => setSetupTypes(prev => [...prev, { id: generateId(), name, color: 'gray' }])}
                   onDeleteOption={handleDeleteSetupType}
                   onColorChange={handleChangeSetupTypeColor}
+                  onReorder={moveSetupType}
                   placeholder="Select Setup Types..."
                   colorScheme="emerald"
                 />
@@ -2249,6 +2253,7 @@ export function EditTradeModal() {
                   onAddNew={(name) => setConfluences(prev => [...prev, { id: generateId(), name, color: 'gray' }])}
                   onDeleteOption={handleDeleteConfluence}
                   onColorChange={handleChangeConfluenceColor}
+                  onReorder={moveConfluence}
                   placeholder="Select Confluences..."
                   colorScheme="emerald"
                 />
@@ -2262,6 +2267,7 @@ export function EditTradeModal() {
                 onAddNew={(name) => setMistakesList(prev => [...prev, { id: generateId(), name, color: 'red' }])}
                 onDeleteOption={handleDeleteMistakeType}
                 onColorChange={handleChangeMistakeColor}
+                onReorder={moveMistakeType}
                 placeholder="Select Mistakes Made..."
                 colorScheme="rose"
               />
