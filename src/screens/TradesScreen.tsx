@@ -391,21 +391,21 @@ const TradeRow = memo(function TradeRow({ trade, accountDisplayName, privacyMode
           {isBreakeven ? 'B/E' : isWin ? 'Win' : 'Loss'}
         </span>
       </td>
-      <td className={cn("px-3 py-2.5 text-sm whitespace-nowrap", tc.textMuted)}>{formatDate(trade.date)}</td>
+      <td className={cn("hidden sm:table-cell px-3 py-2.5 text-sm whitespace-nowrap", tc.textMuted)}>{formatDate(trade.date)}</td>
       <td className="px-3 py-2.5">
         <div className="flex items-center gap-1.5 min-w-0">
           <span className={cn("text-sm font-mono tabular-nums flex-shrink-0", tc.textMuted)}>{displayNumber}</span>
           {trade.trackingNumber && <TrackingBadge value={trade.trackingNumber} size="sm" />}
         </div>
       </td>
-      <td className={cn("px-3 py-2.5 text-sm", tc.textMuted)}>
+      <td className={cn("hidden sm:table-cell px-3 py-2.5 text-sm", tc.textMuted)}>
         {trade.session ? (SESSION_SHORT_LABEL[trade.session] || trade.session.toLowerCase()) : '-'}
       </td>
-      <td className={cn("px-3 py-2.5 text-sm", tc.textMuted)}>{position}</td>
+      <td className={cn("hidden sm:table-cell px-3 py-2.5 text-sm", tc.textMuted)}>{position}</td>
       <td className="px-3 py-2.5 text-sm font-mono tabular-nums text-right font-bold whitespace-nowrap">
         <span className={isWin ? 'text-emerald-400' : 'text-rose-400'}>{formatCurrency(trade.profitLoss, privacyMode)}</span>
       </td>
-      <td className="px-3 py-2.5 text-xs font-medium text-right whitespace-nowrap">
+      <td className="hidden sm:table-cell px-3 py-2.5 text-xs font-medium text-right whitespace-nowrap">
         {rowRR !== null ? (
           <span className={cn(
             'px-2 py-0.5 rounded border tabular-nums',
@@ -419,12 +419,12 @@ const TradeRow = memo(function TradeRow({ trade, accountDisplayName, privacyMode
           </span>
         ) : '-'}
       </td>
-      <td className={cn("px-3 py-2.5 text-sm text-right tabular-nums whitespace-nowrap", tc.textMuted)}>
+      <td className={cn("hidden sm:table-cell px-3 py-2.5 text-sm text-right tabular-nums whitespace-nowrap", tc.textMuted)}>
         {trade.riskAmount > 0 ? formatCurrencyAbsolute(trade.riskAmount, privacyMode) : '-'}
       </td>
       <td className={cn("px-3 py-2.5 text-sm font-semibold truncate max-w-[100px]", tc.text)}>{trade.symbol}</td>
-      <td className={cn("px-3 py-2.5 text-sm truncate max-w-[120px]", tc.textMuted)}>{trade.setupTypes.join(', ') || '-'}</td>
-      <td className={cn("px-3 py-2.5 text-sm truncate max-w-[120px]", tc.textMuted)}>{accountDisplayName || '-'}</td>
+      <td className={cn("hidden sm:table-cell px-3 py-2.5 text-sm truncate max-w-[120px]", tc.textMuted)}>{trade.setupTypes.join(', ') || '-'}</td>
+      <td className={cn("hidden sm:table-cell px-3 py-2.5 text-sm truncate max-w-[120px]", tc.textMuted)}>{accountDisplayName || '-'}</td>
     </tr>
   );
 }, tradeRowPropsAreEqual);
@@ -996,17 +996,17 @@ export function TradesScreen() {
         )}>
           {recentPreviewTrades.length > 0 ? (
             <div className="overflow-x-auto">
-              <table className="w-full min-w-[980px]">
+              <table className="w-full sm:min-w-[980px]">
                 <thead>
                   <tr className={cn("text-left", theme !== 'light' ? 'border-b border-zinc-800/70 bg-white/[0.02]' : 'border-b border-zinc-200 bg-zinc-50')}>
                     <th className={cn("px-3 py-2.5 text-[11px] uppercase tracking-wider font-medium", tc.textMuted)}>#</th>
-                    <th className={cn("px-3 py-2.5 text-[11px] uppercase tracking-wider font-medium", tc.textMuted)}>Date</th>
-                    <th className={cn("px-3 py-2.5 text-[11px] uppercase tracking-wider font-medium", tc.textMuted)}>Account</th>
+                    <th className={cn("hidden sm:table-cell px-3 py-2.5 text-[11px] uppercase tracking-wider font-medium", tc.textMuted)}>Date</th>
+                    <th className={cn("hidden sm:table-cell px-3 py-2.5 text-[11px] uppercase tracking-wider font-medium", tc.textMuted)}>Account</th>
                     <th className={cn("px-3 py-2.5 text-[11px] uppercase tracking-wider font-medium", tc.textMuted)}>Symbol</th>
                     <th className={cn("px-3 py-2.5 text-[11px] uppercase tracking-wider font-medium", tc.textMuted)}>Side</th>
-                    <th className={cn("px-3 py-2.5 text-[11px] uppercase tracking-wider font-medium", tc.textMuted)}>Session</th>
-                    <th className={cn("px-3 py-2.5 text-[11px] uppercase tracking-wider font-medium", tc.textMuted)}>Setups</th>
-                    <th className={cn("px-3 py-2.5 text-[11px] uppercase tracking-wider font-medium text-right", tc.textMuted)}>R-Multiple</th>
+                    <th className={cn("hidden sm:table-cell px-3 py-2.5 text-[11px] uppercase tracking-wider font-medium", tc.textMuted)}>Session</th>
+                    <th className={cn("hidden sm:table-cell px-3 py-2.5 text-[11px] uppercase tracking-wider font-medium", tc.textMuted)}>Setups</th>
+                    <th className={cn("hidden sm:table-cell px-3 py-2.5 text-[11px] uppercase tracking-wider font-medium text-right", tc.textMuted)}>R-Multiple</th>
                     <th className={cn("px-3 py-2.5 text-[11px] uppercase tracking-wider font-medium text-right", tc.textMuted)}>P&amp;L</th>
                     <th className={cn("px-3 py-2.5 text-[11px] uppercase tracking-wider font-medium text-right", tc.textMuted)}>Actions</th>
                   </tr>
@@ -1063,8 +1063,8 @@ export function TradesScreen() {
                             </span>
                           </div>
                         </td>
-                        <td className={cn("px-3 py-2.5 text-sm whitespace-nowrap", tc.textSecondary)}>{formatDate(trade.date)}</td>
-                        <td className={cn("px-3 py-2.5 text-sm whitespace-nowrap truncate max-w-[160px]", tc.textSecondary)}>
+                        <td className={cn("hidden sm:table-cell px-3 py-2.5 text-sm whitespace-nowrap", tc.textSecondary)}>{formatDate(trade.date)}</td>
+                        <td className={cn("hidden sm:table-cell px-3 py-2.5 text-sm whitespace-nowrap truncate max-w-[160px]", tc.textSecondary)}>
                           {accountName || '-'}
                         </td>
                         <td className={cn("px-3 py-2.5 text-sm font-semibold truncate max-w-[100px]", tc.text)}>{trade.symbol}</td>
@@ -1076,10 +1076,10 @@ export function TradesScreen() {
                             {side}
                           </span>
                         </td>
-                        <td className={cn("px-3 py-2.5 text-xs whitespace-nowrap", tc.textMuted)}>
+                        <td className={cn("hidden sm:table-cell px-3 py-2.5 text-xs whitespace-nowrap", tc.textMuted)}>
                           {trade.session ? (SESSION_SHORT_LABEL[trade.session] || trade.session.toLowerCase()) : '-'}
                         </td>
-                        <td className="px-3 py-2.5 whitespace-nowrap">
+                        <td className="hidden sm:table-cell px-3 py-2.5 whitespace-nowrap">
                           <div className="flex items-center gap-1.5 flex-wrap max-w-[220px]">
                             {trade.setupTypes.length > 0 ? trade.setupTypes.slice(0, 2).map(s => (
                               <span key={s} className={cn(
@@ -1089,7 +1089,7 @@ export function TradesScreen() {
                             )) : <span className={cn("text-xs", tc.textMuted)}>-</span>}
                           </div>
                         </td>
-                        <td className="px-3 py-2.5 text-xs font-medium text-right whitespace-nowrap">
+                        <td className="hidden sm:table-cell px-3 py-2.5 text-xs font-medium text-right whitespace-nowrap">
                           {rowRR !== null ? (
                             <span className={cn('px-2 py-0.5 rounded border tabular-nums', rowRR >= 1 ? 'text-emerald-400 border-emerald-500/30 bg-emerald-500/10' : rowRR >= 0 ? cn(tc.textSecondary, theme !== 'light' ? 'border-zinc-700 bg-zinc-800/60' : 'border-zinc-200 bg-zinc-100') : 'text-rose-400 border-rose-500/30 bg-rose-500/10')}>
                               {rowRR >= 1 ? '+' : ''}{rowRR.toFixed(2)}R
@@ -1380,20 +1380,20 @@ export function TradesScreen() {
           ) : (
           <div className={cn("rounded-xl overflow-hidden border", theme !== 'light' ? 'bg-zinc-900/40 border-zinc-800/80' : 'bg-white border-zinc-200')}>
             <div className="overflow-x-auto">
-              <table className="w-full min-w-[1100px]">
+              <table className="w-full sm:min-w-[1100px]">
                 <thead>
                   <tr className={cn("text-left", theme !== 'light' ? 'border-b border-zinc-800/70 bg-white/[0.02]' : 'border-b border-zinc-200 bg-zinc-50')}>
                     <th className={cn("px-3 py-2.5 text-[11px] uppercase tracking-wider font-medium", tc.textMuted)}>Outcome</th>
-                    <th className={cn("px-3 py-2.5 text-[11px] uppercase tracking-wider font-medium", tc.textMuted)}>Date</th>
+                    <th className={cn("hidden sm:table-cell px-3 py-2.5 text-[11px] uppercase tracking-wider font-medium", tc.textMuted)}>Date</th>
                     <th className={cn("px-3 py-2.5 text-[11px] uppercase tracking-wider font-medium", tc.textMuted)}>Trade #</th>
-                    <th className={cn("px-3 py-2.5 text-[11px] uppercase tracking-wider font-medium", tc.textMuted)}>Session</th>
-                    <th className={cn("px-3 py-2.5 text-[11px] uppercase tracking-wider font-medium", tc.textMuted)}>Position</th>
+                    <th className={cn("hidden sm:table-cell px-3 py-2.5 text-[11px] uppercase tracking-wider font-medium", tc.textMuted)}>Session</th>
+                    <th className={cn("hidden sm:table-cell px-3 py-2.5 text-[11px] uppercase tracking-wider font-medium", tc.textMuted)}>Position</th>
                     <th className={cn("px-3 py-2.5 text-[11px] uppercase tracking-wider font-medium text-right", tc.textMuted)}>Net P&L</th>
-                    <th className={cn("px-3 py-2.5 text-[11px] uppercase tracking-wider font-medium text-right", tc.textMuted)}>R Multiple</th>
-                    <th className={cn("px-3 py-2.5 text-[11px] uppercase tracking-wider font-medium text-right", tc.textMuted)}>Risk ($)</th>
+                    <th className={cn("hidden sm:table-cell px-3 py-2.5 text-[11px] uppercase tracking-wider font-medium text-right", tc.textMuted)}>R Multiple</th>
+                    <th className={cn("hidden sm:table-cell px-3 py-2.5 text-[11px] uppercase tracking-wider font-medium text-right", tc.textMuted)}>Risk ($)</th>
                     <th className={cn("px-3 py-2.5 text-[11px] uppercase tracking-wider font-medium", tc.textMuted)}>Symbol</th>
-                    <th className={cn("px-3 py-2.5 text-[11px] uppercase tracking-wider font-medium", tc.textMuted)}>Strategy</th>
-                    <th className={cn("px-3 py-2.5 text-[11px] uppercase tracking-wider font-medium", tc.textMuted)}>Account</th>
+                    <th className={cn("hidden sm:table-cell px-3 py-2.5 text-[11px] uppercase tracking-wider font-medium", tc.textMuted)}>Strategy</th>
+                    <th className={cn("hidden sm:table-cell px-3 py-2.5 text-[11px] uppercase tracking-wider font-medium", tc.textMuted)}>Account</th>
                   </tr>
                 </thead>
                 <tbody>
