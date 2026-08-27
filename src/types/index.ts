@@ -527,6 +527,7 @@ export interface TagSelectDropdownProps {
   onAddNew?: (name: string) => void;
   onDeleteOption?: (id: string, name: string) => void;
   onColorChange?: (id: string, color: TagColor) => void;
+  onReorder?: (fromId: string, toId: string) => void;
   placeholder?: string;
   colorScheme?: 'emerald' | 'rose';
 }
