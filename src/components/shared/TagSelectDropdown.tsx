@@ -111,6 +111,7 @@ export const TagSelectDropdown: React.FC<TagSelectDropdownProps> = ({
   onAddNew,
   onDeleteOption,
   onColorChange,
+  onReorder,
   placeholder = 'Select...',
   colorScheme = 'emerald',
 }) => {
@@ -119,6 +120,11 @@ export const TagSelectDropdown: React.FC<TagSelectDropdownProps> = ({
   const [newItem, setNewItem] = useState('');
   const [deleteConfirm, setDeleteConfirm] = useState<{ id: string; name: string } | null>(null);
   const [colorPickerFor, setColorPickerFor] = useState<{ id: string; rect: DOMRect } | null>(null);
+  // Drag-to-reorder state for the option list itself — lets the user drag
+  // any saved tag (e.g. Setup Types, Confluences, Mistakes) to sit wherever
+  // they want it, so their most-used tags can live at the top.
+  const [draggingOptionId, setDraggingOptionId] = useState<string | null>(null);
+  const [dragOverOptionId, setDragOverOptionId] = useState<string | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const addInputRef = useRef<HTMLInputElement>(null);
 
@@ -166,6 +172,32 @@ export const TagSelectDropdown: React.FC<TagSelectDropdownProps> = ({
     setDeleteConfirm(null);
   };
 
+  // Native HTML5 drag-and-drop for the option list — only active when the
+  // parent gave us a way to persist the new order.
+  const handleOptionDragStart = (e: React.DragEvent, id: string) => {
+    setDraggingOptionId(id);
+    e.dataTransfer.effectAllowed = 'move';
+  };
+
+  const handleOptionDragOver = (e: React.DragEvent, id: string) => {
+    e.preventDefault();
+    if (id !== draggingOptionId) setDragOverOptionId(id);
+  };
+
+  const handleOptionDrop = (e: React.DragEvent, targetId: string) => {
+    e.preventDefault();
+    if (draggingOptionId && draggingOptionId !== targetId) {
+      onReorder?.(draggingOptionId, targetId);
+    }
+    setDraggingOptionId(null);
+    setDragOverOptionId(null);
+  };
+
+  const handleOptionDragEnd = () => {
+    setDraggingOptionId(null);
+    setDragOverOptionId(null);
+  };
+
   return (
     <div ref={containerRef} className="relative">
       <label className="block text-xs text-zinc-400 mb-1.5">{label}</label>
@@ -208,13 +240,33 @@ export const TagSelectDropdown: React.FC<TagSelectDropdownProps> = ({
           {options.map(opt => {
             const isSelected = selected.includes(opt.name);
             const optColorStyle = getTagColorStyle(opt.color || schemeFallback);
+            const isDragging = draggingOptionId === opt.id;
+            const isDragOver = dragOverOptionId === opt.id;
             return (
               <div
                 key={opt.id}
+                draggable={!!onReorder}
+                onDragStart={(e) => handleOptionDragStart(e, opt.id)}
+                onDragOver={(e) => handleOptionDragOver(e, opt.id)}
+                onDrop={(e) => handleOptionDrop(e, opt.id)}
+                onDragEnd={handleOptionDragEnd}
                 onClick={() => toggleItem(opt.name)}
-                className="group flex items-center justify-between gap-2 px-3 py-2 hover:bg-zinc-700 cursor-pointer transition-colors"
+                className={cn(
+                  "group flex items-center justify-between gap-2 px-3 py-2 hover:bg-zinc-700 cursor-pointer transition-colors",
+                  isDragging && "opacity-40",
+                  isDragOver && "bg-zinc-700 ring-1 ring-inset ring-zinc-500"
+                )}
               >
                 <div className="flex items-center gap-2 text-sm min-w-0">
+                  {onReorder && (
+                    <span
+                      onClick={(e) => e.stopPropagation()}
+                      className="cursor-grab active:cursor-grabbing text-zinc-600 hover:text-zinc-400 shrink-0 -ml-0.5"
+                      title="Drag to reorder"
+                    >
+                      <GripVertical className="w-3.5 h-3.5" />
+                    </span>
+                  )}
                   <div className={cn(
                     'w-4 h-4 rounded border flex items-center justify-center shrink-0 transition-colors',
                     isSelected ? cn(optColorStyle.swatch, 'border-transparent') : 'border-zinc-600'
