@@ -100,6 +100,17 @@ import { sanitizeNumericInput } from '../../utils/format';
 import type { NumericInputProps } from '../../types';
 
 
+// Touch devices (phones/tablets) get the native numeric keyboard via
+// inputMode="decimal" below and don't need the floating PopupCalculator —
+// that widget is positioned from click/focus coordinates with no viewport
+// clamping, so on a narrow phone it can render partially or fully off
+// the right/bottom edge of the screen. Desktop/mouse users keep it.
+// `(pointer: coarse)` targets touch input specifically, so a desktop
+// browser window resized down narrow (still a fine/mouse pointer) is not
+// affected — only genuine touch devices are gated here.
+const isCoarsePointerDevice = () =>
+  typeof window !== 'undefined' && window.matchMedia?.('(pointer: coarse)').matches;
+
 export const NumericInput: React.FC<NumericInputProps> = ({
   value,
   onChange,
@@ -110,6 +121,11 @@ export const NumericInput: React.FC<NumericInputProps> = ({
   allowNegative = false,
   label,
 }) => {
+  const handleFocus = (e: React.FocusEvent<HTMLInputElement>) => {
+    if (isCoarsePointerDevice()) return; // let the native keyboard handle it, skip the popup calculator
+    onFocus?.(e);
+  };
+
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const rawValue = e.target.value;
     // STRICT VALIDATION: Strip everything except digits, decimal, and negative (if allowed)
@@ -147,7 +163,7 @@ export const NumericInput: React.FC<NumericInputProps> = ({
         onChange={handleChange}
         onKeyDown={handleKeyDown}
         onPaste={handlePaste}
-        onFocus={onFocus}
+        onFocus={handleFocus}
         onBlur={onBlur}
         placeholder={placeholder}
         className={cn(

@@ -105,6 +105,23 @@ export const PopupCalculator: React.FC<CalculatorProps> = ({ value, onChange, on
   const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
   const calculatorRef = useRef<HTMLDivElement>(null);
 
+  // CALC_WIDTH/HEIGHT are approximate rendered dimensions (w-52 = 208px,
+  // plus internal padding — matches the -220/-280 margins already used
+  // below in the drag-clamp math). Clamped once on mount, since
+  // `initialPosition` is computed by the caller from click/focus
+  // coordinates and previously had no viewport-boundary protection —
+  // only dragging was clamped, so the very first render of the popup
+  // could land partially or fully off-screen on a narrow viewport.
+  useEffect(() => {
+    const CALC_WIDTH = 220;
+    const CALC_HEIGHT = 280;
+    setPosition(prev => ({
+      left: Math.max(8, Math.min(prev.left, window.innerWidth - CALC_WIDTH)),
+      top: Math.max(8, Math.min(prev.top, window.innerHeight - CALC_HEIGHT)),
+    }));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   const handleMouseDown = (e: React.MouseEvent) => {
     if ((e.target as HTMLElement).closest('button')) return;
     setIsDragging(true);
