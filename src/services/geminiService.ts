@@ -12,8 +12,16 @@
 // that wiring lives in copilotTools.ts / AICopilotWidget.tsx.
 // ============================================================================
 
-const GEMINI_ENDPOINT =
-  'https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent';
+// Google retires/renames Gemini model IDs fairly often — as of this
+// writing gemini-1.5-flash (and the rest of the 1.5 family) has been
+// fully retired and returns 404 on generateContent. Keeping the model
+// name as a single constant here means bumping it later is a one-line
+// change instead of a find-and-replace. Check
+// https://ai.google.dev/gemini-api/docs/models for the current lineup
+// if this starts 404ing again.
+const GEMINI_MODEL = 'gemini-2.5-flash';
+
+const GEMINI_ENDPOINT = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent`;
 
 // Same storage key used by the Settings panel (GeminiApiKeySection.tsx).
 // Deliberately localStorage, not Supabase: this is the one piece of app
