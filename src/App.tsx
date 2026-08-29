@@ -137,6 +137,7 @@ const CalendarScreen = lazyNamed<typeof import('./screens/CalendarScreen').Calen
 const NotebookScreen = lazyNamed<typeof import('./screens/NotebookScreen').NotebookScreen>(() => import('./screens/NotebookScreen'), 'NotebookScreen');
 
 const SettingsModal = lazyNamed<typeof import('./modals/SettingsModal').SettingsModal>(() => import('./modals/SettingsModal'), 'SettingsModal');
+import { AICopilotWidget } from './components/shared/AICopilotWidget';
 const DayDetailsModal = lazyNamed<typeof import('./modals/LifeDisciplineModals').DayDetailsModal>(() => import('./modals/LifeDisciplineModals'), 'DayDetailsModal');
 const ChallengeConfigModal = lazyNamed<typeof import('./modals/LifeDisciplineModals').ChallengeConfigModal>(() => import('./modals/LifeDisciplineModals'), 'ChallengeConfigModal');
 const DisciplinePsychologyReviewModal = lazyNamed<typeof import('./modals/DisciplineReviewModals').DisciplinePsychologyReviewModal>(() => import('./modals/DisciplineReviewModals'), 'DisciplinePsychologyReviewModal');
@@ -922,6 +923,8 @@ function AppShell() {
         {<ChallengeConfigModal />}
         {<DayDetailsModal />}
       </Suspense>
+
+      <AICopilotWidget />
 
       {isExportConfirmOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm backdrop-enter gpu-layer">
