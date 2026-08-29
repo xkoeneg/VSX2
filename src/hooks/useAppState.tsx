@@ -364,7 +364,7 @@ export function useAppState() {
   // Sleek Settings Modal — houses everything that used to live as loose
   // clutter at the bottom of the sidebar (theme/privacy + data backup).
   const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false);
-  const [settingsModalTab, setSettingsModalTab] = useState<'appearance' | 'backup'>('appearance');
+  const [settingsModalTab, setSettingsModalTab] = useState<'appearance' | 'backup' | 'copilot'>('appearance');
   // PHASE 0 (Mobile Instrumentation): tracks whether the off-canvas mobile
   // sidebar drawer is open. Fully independent from `sidebarCollapsed`, which
   // remains the desktop-only expand/collapse control.
