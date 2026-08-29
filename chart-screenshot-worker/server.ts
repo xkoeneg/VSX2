@@ -43,6 +43,13 @@
 import express from 'express';
 import { chromium, type Browser, type Page } from 'playwright';
 import { createClient } from '@supabase/supabase-js';
+import ws from 'ws';
+// The Playwright base image (see Dockerfile) runs Node 20, which has no
+// native WebSocket global — @supabase/supabase-js's realtime client needs
+// one even though this worker never actually uses realtime subscriptions
+// (it's initialized unconditionally inside createClient). Passing the "ws"
+// package as the transport avoids the crash: "Node.js 20 detected without
+// native WebSocket support."
 
 // ---------------------------------------------------------------------------
 // Config
@@ -62,7 +69,9 @@ if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
   throw new Error('SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY env vars are required.');
 }
 
-const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
+const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
+  realtime: { transport: ws as any },
+});
 
 // Map your app's canonical symbols (post normalizeMTSymbol) to TradingView
 // tickers. Extend this as you add more instruments.
