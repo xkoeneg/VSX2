@@ -103,6 +103,13 @@ export interface Trade {
   trackingNumber?: string; // Manual Trade # (e.g. Notion log ref, day marker)
   session?: SessionOption; // Trading session the trade was taken in
   importTicketId?: string; // MT4/MT5 broker ticket ID — set on import, used to dedupe re-uploads of the same report
+  // Raw MT4/MT5 broker-server ISO timestamp at trade open (e.g.
+  // "2024-01-15T13:30:00"), captured BEFORE the PH-time shift applied in
+  // convertBrokerTimeToPH. Used only by the background chart-screenshot
+  // worker to compute the correct New York time for locating the trade's
+  // candle on the chart — never displayed anywhere in the app itself,
+  // which continues to show date/startTime/timestamp (PH time) as before.
+  brokerOpenTime?: string;
 }
 
 export type RuleSeverity = 'critical' | 'warning' | 'guide';
