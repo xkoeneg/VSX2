@@ -124,10 +124,12 @@ export function AICopilotWidget() {
           const outcome = dispatchCopilotAction(call.name, call.args, ctx);
           pushBubble({ role: 'system', ok: outcome.ok, text: outcome.message });
           functionResponseParts.push({
-            functionResponse: { name: call.name, response: { result: outcome.message, ok: outcome.ok } },
+            functionResponse: { id: call.id, name: call.name, response: { result: outcome.message, ok: outcome.ok } },
           });
         }
-        historyRef.current = [...historyRef.current, { role: 'function', parts: functionResponseParts }];
+        // Gemini 3.x wants tool results sent back with role 'user', with
+        // each functionResponse.id matching the functionCall.id it answers.
+        historyRef.current = [...historyRef.current, { role: 'user', parts: functionResponseParts }];
         // loop again so the model can turn the function result into a
         // natural-language confirmation, or chain a follow-up action
       }
