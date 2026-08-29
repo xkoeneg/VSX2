@@ -8,7 +8,7 @@
 // ============================================================================
 
 import { useEffect, useRef, useState } from 'react';
-import { Sparkles, X, Minus, Send, Loader2, CheckCircle2, AlertCircle, KeyRound } from 'lucide-react';
+import { Sparkles, X, Send, Loader2, CheckCircle2, AlertCircle, KeyRound } from 'lucide-react';
 import { useAppContext } from '../../context/AppContext';
 import {
   callGemini,
@@ -46,7 +46,6 @@ export function AICopilotWidget() {
   const ctx = useAppContext();
 
   const [isOpen, setIsOpen] = useState(false);
-  const [isMinimized, setIsMinimized] = useState(false);
   const [messages, setMessages] = useState<ChatBubble[]>([]);
   const [input, setInput] = useState('');
   const [isSending, setIsSending] = useState(false);
@@ -163,13 +162,7 @@ export function AICopilotWidget() {
   }
 
   return (
-    <div
-      className={[
-        'fixed bottom-5 right-5 z-40 flex w-[380px] flex-col overflow-hidden rounded-xl border border-zinc-700 bg-zinc-900 shadow-2xl',
-        isMinimized ? 'h-14' : 'h-[560px]',
-        'transition-[height] duration-150',
-      ].join(' ')}
-    >
+    <div className="fixed bottom-5 right-5 z-40 flex h-[560px] w-[380px] flex-col overflow-hidden rounded-xl border border-zinc-700 bg-zinc-900 shadow-2xl">
       {/* Header */}
       <div className="flex shrink-0 items-center justify-between border-b border-zinc-800 px-4 py-3">
         <div className="flex items-center gap-2 min-w-0">
@@ -187,100 +180,87 @@ export function AICopilotWidget() {
             {hasKey ? 'Ready' : 'No key'}
           </span>
         </div>
-        <div className="flex items-center gap-1 shrink-0">
-          <button
-            onClick={() => setIsMinimized(m => !m)}
-            aria-label={isMinimized ? 'Expand' : 'Minimize'}
-            className="rounded-md p-1 text-zinc-500 hover:bg-zinc-800 hover:text-zinc-200"
-          >
-            <Minus size={14} />
-          </button>
-          <button
-            onClick={() => setIsOpen(false)}
-            aria-label="Close System Copilot"
-            className="rounded-md p-1 text-zinc-500 hover:bg-zinc-800 hover:text-zinc-200"
-          >
-            <X size={14} />
-          </button>
-        </div>
+        <button
+          onClick={() => setIsOpen(false)}
+          aria-label="Close System Copilot"
+          className="shrink-0 rounded-md p-1 text-zinc-500 hover:bg-zinc-800 hover:text-zinc-200"
+        >
+          <X size={14} />
+        </button>
       </div>
 
-      {!isMinimized && (
-        <>
-          {/* Body */}
-          <div ref={scrollRef} className="flex-1 space-y-2.5 overflow-y-auto px-3 py-3">
-            {!hasKey && (
-              <div className="flex items-start gap-2 rounded-lg border border-amber-800/60 bg-amber-950/30 px-3 py-2.5 text-xs text-amber-300">
-                <KeyRound size={14} className="mt-0.5 shrink-0" />
-                <span>
-                  Add your Gemini API key in{' '}
-                  <button
-                    className="underline underline-offset-2 hover:text-amber-200"
-                    onClick={() => {
-                      ctx.setIsSettingsModalOpen(true);
-                      ctx.setSettingsModalTab('copilot');
-                    }}
-                  >
-                    Settings → System Copilot
-                  </button>{' '}
-                  to start chatting.
-                </span>
-              </div>
-            )}
-
-            {messages.length === 0 && hasKey && (
-              <div className="rounded-lg border border-zinc-800 bg-zinc-800/30 px-3 py-2.5 text-xs leading-relaxed text-zinc-400">
-                Ask me about your stats, or tell me to log a trade, filter your history, or jump to a screen.
-              </div>
-            )}
-
-            {messages.map(m => (
-              <ChatBubbleView key={m.id} bubble={m} />
-            ))}
-
-            {isSending && (
-              <div className="flex items-center gap-2 px-1 text-xs text-zinc-500">
-                <Loader2 size={12} className="animate-spin" />
-                Thinking…
-              </div>
-            )}
-          </div>
-
-          {/* Quick actions */}
-          <div className="flex shrink-0 flex-wrap gap-1.5 border-t border-zinc-800 px-3 py-2">
-            {QUICK_ACTIONS.map(action => (
+      {/* Body */}
+      <div ref={scrollRef} className="flex-1 space-y-2.5 overflow-y-auto px-3 py-3">
+        {!hasKey && (
+          <div className="flex items-start gap-2 rounded-lg border border-amber-800/60 bg-amber-950/30 px-3 py-2.5 text-xs text-amber-300">
+            <KeyRound size={14} className="mt-0.5 shrink-0" />
+            <span>
+              Add your Gemini API key in{' '}
               <button
-                key={action}
-                disabled={isSending}
-                onClick={() => sendMessage(action)}
-                className="rounded-full border border-zinc-700 bg-zinc-800/60 px-2.5 py-1 text-[11px] text-zinc-300 transition-colors hover:border-zinc-600 hover:bg-zinc-800 disabled:opacity-40"
+                className="underline underline-offset-2 hover:text-amber-200"
+                onClick={() => {
+                  ctx.setIsSettingsModalOpen(true);
+                  ctx.setSettingsModalTab('copilot');
+                }}
               >
-                {action}
-              </button>
-            ))}
+                Settings → System Copilot
+              </button>{' '}
+              to start chatting.
+            </span>
           </div>
+        )}
 
-          {/* Input */}
-          <div className="flex shrink-0 items-center gap-2 border-t border-zinc-800 p-2.5">
-            <input
-              value={input}
-              onChange={e => setInput(e.target.value)}
-              onKeyDown={handleKeyDown}
-              disabled={isSending}
-              placeholder={hasKey ? 'Ask System Copilot…' : 'Set your API key first…'}
-              className="min-w-0 flex-1 rounded-lg border border-zinc-700 bg-zinc-950 px-3 py-2 text-sm text-white placeholder-zinc-600 outline-none focus:border-zinc-500 disabled:opacity-50"
-            />
-            <button
-              onClick={() => sendMessage(input)}
-              disabled={isSending || !input.trim()}
-              aria-label="Send"
-              className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-emerald-600 text-white transition-colors hover:bg-emerald-500 disabled:cursor-not-allowed disabled:bg-zinc-800 disabled:text-zinc-600"
-            >
-              <Send size={15} />
-            </button>
+        {messages.length === 0 && hasKey && (
+          <div className="rounded-lg border border-zinc-800 bg-zinc-800/30 px-3 py-2.5 text-xs leading-relaxed text-zinc-400">
+            Ask me about your stats, or tell me to log a trade, filter your history, or jump to a screen.
           </div>
-        </>
-      )}
+        )}
+
+        {messages.map(m => (
+          <ChatBubbleView key={m.id} bubble={m} />
+        ))}
+
+        {isSending && (
+          <div className="flex items-center gap-2 px-1 text-xs text-zinc-500">
+            <Loader2 size={12} className="animate-spin" />
+            Thinking…
+          </div>
+        )}
+      </div>
+
+      {/* Quick actions */}
+      <div className="flex shrink-0 flex-wrap gap-1.5 border-t border-zinc-800 px-3 py-2">
+        {QUICK_ACTIONS.map(action => (
+          <button
+            key={action}
+            disabled={isSending}
+            onClick={() => sendMessage(action)}
+            className="rounded-full border border-zinc-700 bg-zinc-800/60 px-2.5 py-1 text-[11px] text-zinc-300 transition-colors hover:border-zinc-600 hover:bg-zinc-800 disabled:opacity-40"
+          >
+            {action}
+          </button>
+        ))}
+      </div>
+
+      {/* Input */}
+      <div className="flex shrink-0 items-center gap-2 border-t border-zinc-800 p-2.5">
+        <input
+          value={input}
+          onChange={e => setInput(e.target.value)}
+          onKeyDown={handleKeyDown}
+          disabled={isSending}
+          placeholder={hasKey ? 'Ask System Copilot…' : 'Set your API key first…'}
+          className="min-w-0 flex-1 rounded-lg border border-zinc-700 bg-zinc-950 px-3 py-2 text-sm text-white placeholder-zinc-600 outline-none focus:border-zinc-500 disabled:opacity-50"
+        />
+        <button
+          onClick={() => sendMessage(input)}
+          disabled={isSending || !input.trim()}
+          aria-label="Send"
+          className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-emerald-600 text-white transition-colors hover:bg-emerald-500 disabled:cursor-not-allowed disabled:bg-zinc-800 disabled:text-zinc-600"
+        >
+          <Send size={15} />
+        </button>
+      </div>
     </div>
   );
 }
