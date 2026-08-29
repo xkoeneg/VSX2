@@ -1,0 +1,320 @@
+// ============================================================================
+// VSX Trading Journal — Automated Background Chart Screenshot Worker
+// ----------------------------------------------------------------------------
+// Trigger flow (see README.md for the exact wiring):
+//   1. Frontend imports an MT5 CSV -> trades saved to Supabase (as today).
+//   2. Frontend fires a NON-BLOCKING POST to this worker: /screenshot-batch
+//      with the newly-inserted trade IDs. The import UI does NOT wait for it.
+//   3. This worker looks each trade up, opens a headless browser pointed at
+//      a public TradingView chart for that symbol, jumps the chart to the
+//      trade's entry timestamp, screenshots it, uploads the PNG to the
+//      Supabase Storage `trade-charts` bucket, and writes the public URL
+//      back onto the trade row.
+//
+// CONFIRMED against your actual useAppState.tsx / index.ts:
+//   - Table `trades` has only `id`, `user_id`, `account_id`, and `data`
+//     (jsonb — the entire Trade object). There are no flat symbol/time/
+//     image_url columns, so this worker does a read-modify-write on `data`:
+//     it appends a TradeImage into `data.executionImages` rather than
+//     writing a flat image_url column.
+//   - Timestamp: `trade.data.timestamp`/`startTime` are PH-shifted for
+//     display (see convertBrokerTimeToPH in useAppState.tsx) and do NOT
+//     match the exchange timezone the TradingView chart renders in. This
+//     worker instead reads `trade.data.brokerOpenTime` — the RAW broker-
+//     server timestamp from ParsedMTTrade.openTime, pre-shift — which you
+//     need to add to the Trade object on import (see the patch notes given
+//     alongside this file). If brokerOpenTime is missing (e.g. a manually
+//     entered trade with no import data), it falls back to `timestamp`,
+//     which may be off by whatever the broker->PH shift was.
+//
+// IMPORTANT CAVEAT: TradingView's public widget has no URL parameter for
+// "load this exact historical bar." This script drives the widget's
+// Alt+G "Go to date" shortcut to jump there, which depends on TradingView's
+// current UI/keyboard shortcuts and can break if they change it. Also check
+// TradingView's Terms of Service before running this against their site in
+// production — automated scraping/screenshotting of their charts may not be
+// permitted depending on how you use it. If that's a concern, the cleanest
+// long-term fix is swapping the `openChartAtTimestamp()` function below for
+// your own chart render (e.g. a lightweight-charts / TradingView Charting
+// Library instance you host yourself, fed by your own OHLC data) — everything
+// else in this worker (screenshot -> upload -> DB update) stays the same.
+// ============================================================================
+
+import express from 'express';
+import { chromium, type Browser, type Page } from 'playwright';
+import { createClient } from '@supabase/supabase-js';
+
+// ---------------------------------------------------------------------------
+// Config
+// ---------------------------------------------------------------------------
+const PORT = process.env.PORT || 8787;
+const SUPABASE_URL = process.env.SUPABASE_URL!;
+const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY!; // service role, NOT anon key — needed to write storage + bypass RLS
+const STORAGE_BUCKET = 'trade-charts';
+
+const TRADES_TABLE = 'trades';
+const ID_COLUMN = 'id';
+// Everything trade-specific lives inside the jsonb `data` column — there
+// are no flat symbol/time/image columns on this table.
+const DATA_COLUMN = 'data';
+
+if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
+  throw new Error('SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY env vars are required.');
+}
+
+const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
+
+// Map your app's canonical symbols (post normalizeMTSymbol) to TradingView
+// tickers. Extend this as you add more instruments.
+const SYMBOL_TO_TV_TICKER: Record<string, string> = {
+  NQ: 'CME_MINI:NQ1!',
+  ES: 'CME_MINI:ES1!',
+  GC: 'COMEX:GC1!',
+  EURUSD: 'FX:EURUSD',
+  GBPUSD: 'FX:GBPUSD',
+  XAUUSD: 'OANDA:XAUUSD',
+};
+
+function toTradingViewSymbol(appSymbol: string): string {
+  return SYMBOL_TO_TV_TICKER[appSymbol.toUpperCase()] || appSymbol;
+}
+
+// Mirrors the constant in useAppState.tsx's convertBrokerTimeToPH — your
+// broker's MT5 server clock is a FIXED UTC+3 with no DST of its own. Keep
+// this in sync if you ever change brokers.
+const MT5_SERVER_UTC_OFFSET_HOURS = 3;
+
+// Converts a naive broker-server timestamp ("YYYY-MM-DDTHH:mm:ss", no
+// timezone marker, wall-clock reading on a server fixed at UTC+3) into the
+// New York wall-clock date/time string TradingView's "Go to date" dialog
+// expects, e.g. "2024-01-15 05:23". Unlike the broker's fixed +3, New York
+// observes DST (EST UTC-5 / EDT UTC-4), so this can't be a constant-hour
+// shift like the PH conversion — it goes through a real UTC instant first,
+// then lets Intl.DateTimeFormat apply the correct NY offset for that date.
+function brokerTimeToNewYork(isoNaive: string): string {
+  // Step 1: read the broker's wall-clock digits as if UTC, giving us an
+  // epoch value that's numerically the broker wall-clock time.
+  const brokerWallAsUtcMs = Date.parse(`${isoNaive.slice(0, 19)}Z`);
+  if (isNaN(brokerWallAsUtcMs)) throw new Error(`Unparseable broker timestamp: ${isoNaive}`);
+
+  // Step 2: the broker's wall clock reads UTC+3, so the TRUE utc instant is
+  // the broker wall-clock reading MINUS 3 hours.
+  const trueUtcMs = brokerWallAsUtcMs - MT5_SERVER_UTC_OFFSET_HOURS * 60 * 60 * 1000;
+
+  // Step 3: format that true instant in America/New_York — Intl handles
+  // EST/EDT for us, no manual DST-date-math needed.
+  const parts = new Intl.DateTimeFormat('en-US', {
+    timeZone: 'America/New_York',
+    year: 'numeric', month: '2-digit', day: '2-digit',
+    hour: '2-digit', minute: '2-digit', hour12: false,
+  }).formatToParts(new Date(trueUtcMs));
+
+  const get = (type: string) => parts.find(p => p.type === type)?.value ?? '00';
+  return `${get('year')}-${get('month')}-${get('day')} ${get('hour')}:${get('minute')}`;
+}
+
+// ---------------------------------------------------------------------------
+// Browser lifecycle — one shared browser instance, fresh page per screenshot
+// ---------------------------------------------------------------------------
+let browserPromise: Promise<Browser> | null = null;
+async function getBrowser(): Promise<Browser> {
+  if (!browserPromise) {
+    browserPromise = chromium.launch({
+      headless: true,
+      args: ['--no-sandbox', '--disable-setuid-sandbox'],
+    });
+  }
+  return browserPromise;
+}
+
+// ---------------------------------------------------------------------------
+// Core: open the TradingView widget, jump it to the trade timestamp, and
+// return a PNG buffer of the chart element.
+// ---------------------------------------------------------------------------
+async function screenshotChartAt(tvSymbol: string, nyGoToValue: string): Promise<Buffer> {
+  const browser = await getBrowser();
+  const page: Page = await browser.newPage({ viewport: { width: 1280, height: 720 } } as any);
+
+  try {
+    // Explicit America/New_York rather than TradingView's generic
+    // "exchange" timezone — some CME futures widgets default to Chicago
+    // time, and NY is the session reference you actually want.
+    const widgetUrl =
+      `https://s.tradingview.com/widgetembed/?symbol=${encodeURIComponent(tvSymbol)}` +
+      `&interval=1&hidesidetoolbar=1&hidetoptoolbar=0&saveimage=0&theme=dark&style=1` +
+      `&timezone=${encodeURIComponent('America/New_York')}`;
+
+    await page.goto(widgetUrl, { waitUntil: 'networkidle', timeout: 30_000 });
+
+    // The chart renders on a <canvas>; wait for it to exist and settle.
+    await page.waitForSelector('.chart-container, canvas', { timeout: 15_000 });
+    await page.waitForTimeout(2_000); // let the initial paint / data load finish
+
+    // Jump the chart to the trade's date/time (already expressed in NY wall
+    // clock, matching the widget's timezone param above) using
+    // TradingView's "Go to date and time" shortcut (Alt+G).
+    await page.keyboard.press('Alt+G');
+    await page.waitForTimeout(500);
+    // TradingView's go-to-date input is usually the only visible textbox in
+    // the dialog that just opened — if this selector stops matching, open
+    // the widget in a headed browser once and re-check the actual input's
+    // selector/placeholder, then update this line.
+    const dateInput = await page.waitForSelector('input[data-name="date-input"], .goToDate input, input[type="text"]', { timeout: 5_000 });
+    await dateInput.fill(nyGoToValue); // e.g. "2024-01-15 05:23"
+    await page.keyboard.press('Enter');
+    await page.waitForTimeout(1_500); // let the chart scroll/redraw
+
+    const target = await page.$('.chart-container') || page;
+    const buffer = await (target as any).screenshot({ type: 'png' });
+    return buffer as Buffer;
+  } finally {
+    await page.close();
+  }
+}
+
+// Formats any real Date/epoch instant as the NY wall-clock string the
+// "Go to date" dialog expects. Used for the fallback path (trades with no
+// brokerOpenTime), where `trade.timestamp` is already a true absolute ISO
+// instant (just derived via a confusing PH round-trip) — no broker-offset
+// math needed here, unlike brokerTimeToNewYork() above.
+function utcInstantToNewYorkGoToValue(isoInstant: string): string {
+  const ms = Date.parse(isoInstant);
+  if (isNaN(ms)) throw new Error(`Unparseable timestamp: ${isoInstant}`);
+  const parts = new Intl.DateTimeFormat('en-US', {
+    timeZone: 'America/New_York',
+    year: 'numeric', month: '2-digit', day: '2-digit',
+    hour: '2-digit', minute: '2-digit', hour12: false,
+  }).formatToParts(new Date(ms));
+  const get = (type: string) => parts.find(p => p.type === type)?.value ?? '00';
+  return `${get('year')}-${get('month')}-${get('day')} ${get('hour')}:${get('minute')}`;
+}
+
+// ---------------------------------------------------------------------------
+// Supabase Storage upload + DB write-back
+// ---------------------------------------------------------------------------
+async function uploadScreenshot(tradeId: string, buffer: Buffer): Promise<string> {
+  const path = `${tradeId}/${Date.now()}.png`;
+
+  const { error: uploadError } = await supabase.storage
+    .from(STORAGE_BUCKET)
+    .upload(path, buffer, { contentType: 'image/png', upsert: true });
+
+  if (uploadError) throw new Error(`Storage upload failed: ${uploadError.message}`);
+
+  const { data } = supabase.storage.from(STORAGE_BUCKET).getPublicUrl(path);
+  return data.publicUrl;
+}
+
+// Appends a TradeImage ({ id, url, type: 'url' }, matching the shape in
+// your index.ts) onto trade.data.executionImages, then writes the WHOLE
+// data object back — jsonb columns don't support partial array-append via
+// supabase-js, so this is read (already have it from processTrade) ->
+// mutate in JS -> write back.
+async function appendExecutionImage(tradeId: string, currentData: any, publicUrl: string): Promise<void> {
+  const newImage = { id: `chart_${Date.now()}`, url: publicUrl, type: 'url' as const };
+  const updatedData = {
+    ...currentData,
+    executionImages: [...(currentData.executionImages || []), newImage],
+  };
+
+  const { error } = await supabase
+    .from(TRADES_TABLE)
+    .update({ [DATA_COLUMN]: updatedData })
+    .eq(ID_COLUMN, tradeId);
+
+  if (error) throw new Error(`DB update failed for trade ${tradeId}: ${error.message}`);
+}
+
+// ---------------------------------------------------------------------------
+// Per-trade pipeline
+// ---------------------------------------------------------------------------
+async function processTrade(tradeId: string): Promise<{ tradeId: string; ok: boolean; error?: string; imageUrl?: string }> {
+  try {
+    const { data: row, error } = await supabase
+      .from(TRADES_TABLE)
+      .select(`${ID_COLUMN}, ${DATA_COLUMN}`)
+      .eq(ID_COLUMN, tradeId)
+      .single();
+
+    if (error || !row) throw new Error(error?.message || 'Trade not found');
+
+    const trade = row[DATA_COLUMN]; // the full Trade object
+    if (!trade?.symbol) throw new Error('Trade has no symbol');
+
+    // Prefer the raw broker-server timestamp (needs the fixed +3 broker-
+    // offset math) over the PH-shifted `timestamp` field (already a true
+    // absolute instant, just needs re-formatting into NY wall clock).
+    let nyGoToValue: string;
+    if (trade.brokerOpenTime) {
+      nyGoToValue = brokerTimeToNewYork(trade.brokerOpenTime);
+    } else if (trade.timestamp) {
+      nyGoToValue = utcInstantToNewYorkGoToValue(trade.timestamp);
+    } else {
+      throw new Error('Trade has no usable timestamp (brokerOpenTime/timestamp both missing)');
+    }
+
+    const tvSymbol = toTradingViewSymbol(trade.symbol);
+    const buffer = await screenshotChartAt(tvSymbol, nyGoToValue);
+    const publicUrl = await uploadScreenshot(tradeId, buffer);
+    await appendExecutionImage(tradeId, trade, publicUrl);
+
+    return { tradeId, ok: true, imageUrl: publicUrl };
+  } catch (err: any) {
+    console.error(`[chart-screenshot] trade ${tradeId} failed:`, err.message);
+    return { tradeId, ok: false, error: err.message };
+  }
+}
+
+// Small sequential queue so we don't open N headless browser pages at once
+// on a big CSV import (MT5 reports can have hundreds of trades).
+async function processTradesSequentially(tradeIds: string[]) {
+  const results = [];
+  for (const id of tradeIds) {
+    results.push(await processTrade(id));
+  }
+  return results;
+}
+
+// ---------------------------------------------------------------------------
+// HTTP surface
+// ---------------------------------------------------------------------------
+const app = express();
+app.use(express.json({ limit: '1mb' }));
+
+// Single trade — handy for retry-from-UI ("regenerate screenshot" button).
+app.post('/screenshot', async (req, res) => {
+  const { tradeId } = req.body || {};
+  if (!tradeId) return res.status(400).json({ error: 'tradeId is required' });
+
+  const result = await processTrade(tradeId);
+  res.status(result.ok ? 200 : 500).json(result);
+});
+
+// Batch — this is what the CSV import flow should call after saving trades.
+// Responds immediately (202) and processes in the background so the import
+// UI never blocks waiting for screenshots.
+app.post('/screenshot-batch', (req, res) => {
+  const { tradeIds } = req.body || {};
+  if (!Array.isArray(tradeIds) || tradeIds.length === 0) {
+    return res.status(400).json({ error: 'tradeIds must be a non-empty array' });
+  }
+
+  res.status(202).json({ accepted: tradeIds.length });
+
+  processTradesSequentially(tradeIds).then((results) => {
+    const failed = results.filter(r => !r.ok);
+    console.log(`[chart-screenshot] batch done: ${results.length - failed.length}/${results.length} succeeded`);
+    if (failed.length) console.warn('[chart-screenshot] failures:', failed);
+  });
+});
+
+app.get('/health', (_req, res) => res.json({ ok: true }));
+
+app.listen(PORT, () => {
+  console.log(`[chart-screenshot] worker listening on :${PORT}`);
+});
+
+process.on('SIGTERM', async () => {
+  if (browserPromise) (await browserPromise).close();
+  process.exit(0);
+});
