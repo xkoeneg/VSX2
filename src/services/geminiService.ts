@@ -19,7 +19,7 @@
 // change instead of a find-and-replace. Check
 // https://ai.google.dev/gemini-api/docs/models for the current lineup
 // if this starts 404ing again.
-const GEMINI_MODEL = 'gemini-2.5-flash';
+const GEMINI_MODEL = 'gemini-3.6-flash';
 
 const GEMINI_ENDPOINT = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent`;
 
@@ -82,11 +82,14 @@ export interface GeminiFunctionDeclaration {
 
 export type GeminiPart =
   | { text: string }
-  | { functionCall: { name: string; args: Record<string, unknown> } }
-  | { functionResponse: { name: string; response: Record<string, unknown> } };
+  | { functionCall: { id?: string; name: string; args: Record<string, unknown> }; thoughtSignature?: string }
+  | { functionResponse: { id?: string; name: string; response: Record<string, unknown> } };
 
 export interface GeminiContent {
-  role: 'user' | 'model' | 'function';
+  // Gemini 3.x expects function results to come back with role 'user'
+  // (not the older 'function' role) — see the "Send the tool's result
+  // back" pattern in Google's current function-calling docs.
+  role: 'user' | 'model';
   parts: GeminiPart[];
 }
 
@@ -103,7 +106,7 @@ export interface CopilotTurnResult {
   /** Plain-text reply from the model, if any (may be empty if it only called functions). */
   text: string;
   /** Any function/tool calls the model wants executed. */
-  functionCalls: Array<{ name: string; args: Record<string, unknown> }>;
+  functionCalls: Array<{ id?: string; name: string; args: Record<string, unknown> }>;
   /** The raw model content block, needed to append to history / send functionResponses back. */
   rawContent: GeminiContent | null;
 }
@@ -172,7 +175,7 @@ export async function callGemini(params: {
     .trim();
 
   const functionCalls = parts
-    .filter((p): p is { functionCall: { name: string; args: Record<string, unknown> } } => 'functionCall' in p)
+    .filter((p): p is { functionCall: { id?: string; name: string; args: Record<string, unknown> } } => 'functionCall' in p)
     .map(p => p.functionCall);
 
   return {
