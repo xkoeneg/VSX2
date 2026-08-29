@@ -93,9 +93,11 @@ import {
   Dumbbell,
   Coffee,
   Heart,
+  Sparkles,
   type LucideIcon,
 } from 'lucide-react';
 import { ModalBackdrop } from '../components/shared/ModalBackdrop';
+import { GeminiApiKeySection } from '../components/settings/GeminiApiKeySection';
 import type {
   Account,
 AccountMetrics,
@@ -388,6 +390,18 @@ export function SettingsModal() {
               <HardDrive className="w-3.5 h-3.5" />
               Data Backup
             </button>
+            <button
+              onClick={() => setSettingsModalTab('copilot')}
+              className={cn(
+                'flex-1 flex items-center justify-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-all',
+                settingsModalTab === 'copilot'
+                  ? 'bg-zinc-700 text-white'
+                  : 'text-zinc-400 hover:text-zinc-200'
+              )}
+            >
+              <Sparkles className="w-3.5 h-3.5" />
+              System Copilot
+            </button>
           </div>
 
           {/* TAB 1: Appearance & Privacy */}
@@ -577,6 +591,15 @@ export function SettingsModal() {
               </div>
             </div>
 
+          )}
+
+          {/* TAB 3: System Copilot */}
+          {settingsModalTab === 'copilot' && (
+            <div className="flex flex-col gap-3">
+              <div className="px-4 py-3.5 rounded-xl bg-zinc-800/50 border border-zinc-800">
+                <GeminiApiKeySection />
+              </div>
+            </div>
           )}
         </div>
       </ModalBackdrop>
