@@ -26,6 +26,7 @@ import {
 } from 'lucide-react';
 import { signInWithGoogle, signInWithEmail, signUpWithEmail, supabase } from '../lib/supabaseClient';
 import { cn } from '../utils/format';
+import VSXLogo from '../components/shared/VSXLogo';
 
 // ============================================================================
 // LoginPage — full-screen auth gate shown whenever there's no active
@@ -1200,7 +1201,9 @@ export function LoginPage() {
         {/* Header — brand mark plus dynamic Sign In / Create Account copy
             so it never claims "welcome back" for a first-time visitor. */}
         <div className="mb-7 text-center">
-          <p className="text-xs font-semibold tracking-[0.2em] text-emerald-500 uppercase mb-3">VSX</p>
+          <div className="flex justify-center mb-4">
+            <VSXLogo className="w-9 h-9" showText subtext="TRADING JOURNAL" />
+          </div>
           <h2 className="text-2xl font-semibold tracking-tight text-white">
             {mode === 'signIn' ? 'Sign In' : 'Create Account'}
           </h2>
