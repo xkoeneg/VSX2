@@ -30,6 +30,7 @@ import {
   BarChart3,
   Brain,
   Percent,
+  Activity,
   ArrowUpRight,
   ArrowDownRight,
   Save,
@@ -165,7 +166,6 @@ import { cn } from '../utils/format';
 import { supabase } from '../lib/supabaseClient';
 import { useAppContext } from '../context/AppContext';
 import { renderStatCard, renderAccountFilter, renderAccountTypeBadge, renderTradingAccountTypeBadge } from '../components/shared/RenderHelpers';
-import VSXLogo from '../components/shared/VSXLogo';
 import { UserProfileModal, loadHideEmailPref, loadCachedAuthUser, saveCachedAuthUser, clearCachedAuthUser, AVATAR_PRESETS, getInitials, type AuthUser } from '../modals/UserProfileModal';
 
 // authUser.hideEmail (synced from the public.profiles table) is the
@@ -458,17 +458,27 @@ export function Sidebar({ isMobile }: { isMobile: boolean }) {
         <div className="flex flex-col gap-1 w-full min-h-0">
           <div className={cn("pb-4 mb-2 border-b w-full", theme !== 'light' ? 'border-zinc-800' : 'border-zinc-200')}>
             <div className={cn("flex items-center", collapsed ? "flex-col gap-2" : "justify-between")}>
-              <button
-                type="button"
-                onClick={() => {
-                  setView('dashboard' as ViewType);
-                  setIsMobileSidebarOpen(false);
-                }}
-                title="Go to dashboard"
-                className={cn("flex items-center gap-3 min-w-0 rounded-lg transition-opacity hover:opacity-80 cursor-pointer", collapsed && "justify-center")}
-              >
-                <VSXLogo className="w-8 h-8" showText={!collapsed} subtext="TRADING JOURNAL" theme={theme !== 'light' ? 'dark' : 'light'} />
-              </button>
+              <div className={cn("flex items-center gap-3 min-w-0", collapsed && "justify-center")}>
+                <div className={cn(
+                  "relative w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0",
+                  theme !== 'light' ? 'bg-gradient-to-br from-zinc-800 to-zinc-900 border border-emerald-500/20' : 'bg-gradient-to-br from-zinc-100 to-zinc-200'
+                )}>
+                  <Activity className={cn(
+                    "w-[18px] h-[18px]",
+                    theme !== 'light' ? 'text-emerald-400 drop-shadow-[0_0_6px_rgba(52,211,153,0.55)]' : 'text-emerald-600'
+                  )} />
+                </div>
+                {!collapsed && (
+                  <div className="min-w-0 flex-1">
+                    <h1 className={cn("font-bold text-lg uppercase tracking-wider leading-none truncate select-none", theme !== 'light' ? 'text-white' : 'text-zinc-900')}>
+                      VSX
+                    </h1>
+                    <p className={cn("text-[10px] font-medium uppercase tracking-widest truncate mt-0.5 select-none", theme !== 'light' ? 'text-zinc-500' : 'text-zinc-500')}>
+                      Trading Journal
+                    </p>
+                  </div>
+                )}
+              </div>
               {isMobile ? (
                 <button
                   type="button"
