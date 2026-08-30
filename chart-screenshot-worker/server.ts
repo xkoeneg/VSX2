@@ -336,27 +336,37 @@ app.get('/health', (_req, res) => res.json({ ok: true }));
 //   GET /debug-goto-dialog?symbol=CME_MINI:NQ1!
 app.get('/debug-goto-dialog', async (req, res) => {
   const symbol = (req.query.symbol as string) || 'CME_MINI:NQ1!';
+  // 'widget' = the simplified public embed (confirmed: no Go-to-date dialog).
+  // 'fullchart' = the actual tradingview.com/chart/ page, which TradingView's
+  // own docs describe as having the Go to date feature in its bottom bar.
+  const mode = (req.query.mode as string) === 'fullchart' ? 'fullchart' : 'widget';
   let page: Page | null = null;
   try {
     const browser = await getBrowser();
     page = await browser.newPage({ viewport: { width: 1280, height: 720 } } as any);
 
-    const widgetUrl =
-      `https://s.tradingview.com/widgetembed/?symbol=${encodeURIComponent(symbol)}` +
-      `&interval=1&hidesidetoolbar=1&hidetoptoolbar=0&saveimage=0&theme=dark&style=1` +
-      `&timezone=${encodeURIComponent('America/New_York')}`;
+    const url =
+      mode === 'fullchart'
+        ? `https://www.tradingview.com/chart/?symbol=${encodeURIComponent(symbol)}`
+        : `https://s.tradingview.com/widgetembed/?symbol=${encodeURIComponent(symbol)}` +
+          `&interval=1&hidesidetoolbar=1&hidetoptoolbar=0&saveimage=0&theme=dark&style=1` +
+          `&timezone=${encodeURIComponent('America/New_York')}`;
 
-    await page.goto(widgetUrl, { waitUntil: 'networkidle', timeout: 30_000 });
-    await page.waitForSelector('.chart-container, canvas', { timeout: 15_000 });
-    await page.waitForTimeout(2_000);
+    await page.goto(url, { waitUntil: 'networkidle', timeout: 45_000 });
+    await page.waitForSelector('.chart-container, canvas', { timeout: 20_000 });
+    await page.waitForTimeout(3_000); // fullchart has more UI chrome to settle
+
+    // Click the chart area first — keyboard shortcuts often only fire once
+    // the chart pane actually has focus, which a fresh page load may not have.
+    const chartEl = await page.$('.chart-container, canvas');
+    if (chartEl) await chartEl.click({ position: { x: 400, y: 300 } }).catch(() => {});
+    await page.waitForTimeout(300);
 
     await page.keyboard.press('Alt+G');
-    await page.waitForTimeout(1_500); // give any dialog time to render
+    await page.waitForTimeout(1_500);
 
     const screenshotBuffer = await page.screenshot({ type: 'png' });
 
-    // Every visible <input> on the page right now, with the attributes
-    // that matter for building a real selector.
     const inputs = await page.evaluate(() => {
       return Array.from(document.querySelectorAll('input')).map((el) => {
         const rect = el.getBoundingClientRect();
@@ -373,10 +383,11 @@ app.get('/debug-goto-dialog', async (req, res) => {
     });
 
     res.json({
+      mode,
       symbol,
       inputCount: inputs.length,
       inputs,
-      screenshotBase64: screenshotBuffer.toString('base64'), // paste into browser address bar as data:image/png;base64,<this>
+      screenshotBase64: screenshotBuffer.toString('base64'),
     });
   } catch (err: any) {
     res.status(500).json({ error: err.message });
