@@ -209,6 +209,18 @@ async function screenshotChartAt(tvSymbol: string, nyGoToValue: string): Promise
     await dateInput.press('Control+A').catch(() => {}); // clear any prefilled value
     await page.keyboard.type(datePart, { delay: 50 });
 
+    // CONFIRMED via /debug-goto-dialog: typing into the date input only
+    // syncs the calendar's displayed month/highlighted day — it does NOT
+    // "commit" the selection. The time field stays disabled until the
+    // highlighted day cell (role="cell", aria-selected="true") is actually
+    // clicked. Without this click, timeInput never enables and the
+    // subsequent waitForElementState below times out after 8s.
+    const selectedDayCell = await page.$('[role="cell"][aria-selected="true"]');
+    if (selectedDayCell) {
+      await selectedDayCell.click({ timeout: 5_000 }).catch(() => {});
+      await page.waitForTimeout(300);
+    }
+
     if (timeInput) {
       await timeInput.waitForElementState('enabled', { timeout: 8_000 }).catch(() => {});
       await timeInput.click({ timeout: 8_000 });
@@ -436,6 +448,16 @@ app.get('/debug-goto-dialog', async (req, res) => {
         await dateInput.click({ timeout: 8_000 });
         await dateInput.press('Control+A').catch(() => {});
         await page.keyboard.type(testDate, { delay: 50 });
+
+        // Same fix as screenshotChartAt(): typing only syncs the calendar's
+        // highlighted day, it does not commit the selection. Click the
+        // highlighted day cell to unlock the time field.
+        const selectedDayCell = await page.$('[role="cell"][aria-selected="true"]');
+        if (selectedDayCell) {
+          await selectedDayCell.click({ timeout: 5_000 }).catch(() => {});
+          await page.waitForTimeout(300);
+        }
+
         if (timeInput) {
           await timeInput.waitForElementState('enabled', { timeout: 8_000 }).catch(() => {});
           await timeInput.click({ timeout: 8_000 });
