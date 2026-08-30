@@ -173,7 +173,7 @@ async function screenshotChartAt(tvSymbol: string, nyGoToValue: string): Promise
     await page.waitForTimeout(300);
 
     await page.keyboard.press('Alt+G');
-    await page.waitForTimeout(1_000);
+    await page.waitForTimeout(2_000); // dialog + calendar render takes a moment
 
     // nyGoToValue comes in as "YYYY-MM-DD HH:mm" — split it for the two
     // separate inputs the dialog actually has.
@@ -201,17 +201,17 @@ async function screenshotChartAt(tvSymbol: string, nyGoToValue: string): Promise
     // trigger TradingView's own input validation — and that validation is
     // what enables the (initially disabled) time field. Simulate real
     // keystrokes instead via click + type, which does trigger it.
-    await dateInput.click();
+    // Both fields can start briefly disabled right after the dialog opens
+    // (render/animation delay), so wait for "enabled" on both before
+    // interacting rather than clicking immediately.
+    await dateInput.waitForElementState('enabled', { timeout: 8_000 }).catch(() => {});
+    await dateInput.click({ timeout: 8_000 });
     await dateInput.press('Control+A').catch(() => {}); // clear any prefilled value
     await page.keyboard.type(datePart, { delay: 50 });
 
     if (timeInput) {
-      // Wait for the time field to actually become enabled (it starts
-      // disabled until the date field passes validation) before typing
-      // into it — this is what the endless "element is not enabled"
-      // retries were hitting.
-      await timeInput.waitForElementState('enabled', { timeout: 10_000 }).catch(() => {});
-      await timeInput.click();
+      await timeInput.waitForElementState('enabled', { timeout: 8_000 }).catch(() => {});
+      await timeInput.click({ timeout: 8_000 });
       await timeInput.press('Control+A').catch(() => {});
       await page.keyboard.type(timePart, { delay: 50 });
     }
@@ -405,7 +405,7 @@ app.get('/debug-goto-dialog', async (req, res) => {
     await page.waitForTimeout(300);
 
     await page.keyboard.press('Alt+G');
-    await page.waitForTimeout(1_000);
+    await page.waitForTimeout(2_000); // dialog + calendar render takes a moment
 
     // CONFIRMED shape on the fullchart page: 2 separate inputs — a date
     // field with placeholder "YYYY-MM-DD", and a time field right after
@@ -427,14 +427,18 @@ app.get('/debug-goto-dialog', async (req, res) => {
     let fillError: string | null = null;
     if (dateInput) {
       try {
-        // Short 5s timeouts here — this is a debug probe, not the real
-        // pipeline. If the date field itself isn't clickable, we want to
-        // find that out fast and still return a screenshot, not hang.
-        await dateInput.click({ timeout: 5_000 });
+        // Both fields can start briefly disabled right after the dialog
+        // opens — wait for "enabled" before interacting, same as the real
+        // pipeline. 8s timeouts here — this is a debug probe, so if it's
+        // still not clickable after that, we want to find out fast and
+        // still return a screenshot, not hang.
+        await dateInput.waitForElementState('enabled', { timeout: 8_000 }).catch(() => {});
+        await dateInput.click({ timeout: 8_000 });
         await dateInput.press('Control+A').catch(() => {});
         await page.keyboard.type(testDate, { delay: 50 });
         if (timeInput) {
-          await timeInput.click({ timeout: 5_000 });
+          await timeInput.waitForElementState('enabled', { timeout: 8_000 }).catch(() => {});
+          await timeInput.click({ timeout: 8_000 });
           await timeInput.press('Control+A').catch(() => {});
           await page.keyboard.type(testTime, { delay: 50 });
         }
