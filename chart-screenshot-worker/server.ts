@@ -327,6 +327,64 @@ app.post('/screenshot-batch', (req, res) => {
 
 app.get('/health', (_req, res) => res.json({ ok: true }));
 
+// DEBUG ONLY — not part of the normal pipeline. Opens the widget for a
+// symbol, presses Alt+G, then returns (1) a screenshot of whatever's on
+// screen at that point and (2) every currently-visible <input> element's
+// attributes. Use this to actually see whether TradingView's "Go to date"
+// dialog opens at all in this embed, and if so, what its real input
+// selector is — instead of guessing. Call it like:
+//   GET /debug-goto-dialog?symbol=CME_MINI:NQ1!
+app.get('/debug-goto-dialog', async (req, res) => {
+  const symbol = (req.query.symbol as string) || 'CME_MINI:NQ1!';
+  let page: Page | null = null;
+  try {
+    const browser = await getBrowser();
+    page = await browser.newPage({ viewport: { width: 1280, height: 720 } } as any);
+
+    const widgetUrl =
+      `https://s.tradingview.com/widgetembed/?symbol=${encodeURIComponent(symbol)}` +
+      `&interval=1&hidesidetoolbar=1&hidetoptoolbar=0&saveimage=0&theme=dark&style=1` +
+      `&timezone=${encodeURIComponent('America/New_York')}`;
+
+    await page.goto(widgetUrl, { waitUntil: 'networkidle', timeout: 30_000 });
+    await page.waitForSelector('.chart-container, canvas', { timeout: 15_000 });
+    await page.waitForTimeout(2_000);
+
+    await page.keyboard.press('Alt+G');
+    await page.waitForTimeout(1_500); // give any dialog time to render
+
+    const screenshotBuffer = await page.screenshot({ type: 'png' });
+
+    // Every visible <input> on the page right now, with the attributes
+    // that matter for building a real selector.
+    const inputs = await page.evaluate(() => {
+      return Array.from(document.querySelectorAll('input')).map((el) => {
+        const rect = el.getBoundingClientRect();
+        return {
+          type: el.getAttribute('type'),
+          className: el.className,
+          dataName: el.getAttribute('data-name'),
+          placeholder: el.getAttribute('placeholder'),
+          ariaLabel: el.getAttribute('aria-label'),
+          id: el.id || null,
+          visible: rect.width > 0 && rect.height > 0,
+        };
+      });
+    });
+
+    res.json({
+      symbol,
+      inputCount: inputs.length,
+      inputs,
+      screenshotBase64: screenshotBuffer.toString('base64'), // paste into browser address bar as data:image/png;base64,<this>
+    });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  } finally {
+    if (page) await page.close();
+  }
+});
+
 app.listen(PORT, () => {
   console.log(`[chart-screenshot] worker listening on :${PORT}`);
 });

@@ -1,17 +1,19 @@
-# Official Playwright image already has Chromium + every system dependency
-# it needs pre-installed — far more reliable on Railway/Render than trying
-# to `npx playwright install --with-deps` on a generic node:20 image.
-#
-# IMPORTANT: this tag's version (v1.48.0) MUST exactly match the "playwright"
-# version pinned in package.json. The npm package version and the browser
-# binaries baked into this image have to agree exactly — a mismatch causes
-# "Executable doesn't exist" at runtime. If you ever bump one, bump both.
-FROM mcr.microsoft.com/playwright:v1.48.0-jammy
+# Plain Node image + explicit `playwright install`, instead of the
+# pre-baked mcr.microsoft.com/playwright image. This guarantees the browser
+# binaries always match whatever "playwright" version npm actually resolves
+# from package.json — no more manually keeping a base-image tag in sync with
+# a package.json version by hand (that's what caused the previous
+# "Executable doesn't exist... Playwright was just updated" crash).
+FROM node:22-slim
 
 WORKDIR /app
 
 COPY package.json ./
 RUN npm install
+
+# Installs Chromium + all required OS-level libraries (fonts, codecs, etc)
+# for whatever Playwright version was just installed above.
+RUN npx playwright install --with-deps chromium
 
 COPY server.ts ./
 COPY tsconfig.json ./
