@@ -209,21 +209,20 @@ async function screenshotChartAt(tvSymbol: string, nyGoToValue: string): Promise
     await dateInput.press('Control+A').catch(() => {}); // clear any prefilled value
     await page.keyboard.type(datePart, { delay: 50 });
 
-    // CONFIRMED via /debug-goto-dialog: typing into the date input only
-    // syncs the calendar's displayed month/highlighted day — it does NOT
-    // "commit" the selection. The time field stays disabled until the
-    // highlighted day cell (role="cell", aria-selected="true") is actually
-    // clicked. Without this click, timeInput never enables and the
-    // subsequent waitForElementState below times out after 8s.
-    const selectedDayCell = await page.$('[role="cell"][aria-selected="true"]');
-    if (selectedDayCell) {
-      await selectedDayCell.click({ timeout: 5_000 }).catch(() => {});
-      await page.waitForTimeout(300);
-    }
+    // CONFIRMED via /debug-goto-dialog (2nd probe): neither typing into the
+    // date input NOR clicking the highlighted calendar day cell unlocks the
+    // time field — it stays disabled either way. What actually unlocks it is
+    // a real focus-change event, i.e. pressing Tab to move focus from the
+    // date field to the time field, the same way a human would. A mouse
+    // click on some other element does not fire the same event TradingView
+    // is listening for.
+    await page.keyboard.press('Tab');
+    await page.waitForTimeout(300);
 
     if (timeInput) {
       await timeInput.waitForElementState('enabled', { timeout: 8_000 }).catch(() => {});
-      await timeInput.click({ timeout: 8_000 });
+      // Focus should already be on timeInput after Tab — avoid an extra
+      // click (which previously proved unreliable) and select+type directly.
       await timeInput.press('Control+A').catch(() => {});
       await page.keyboard.type(timePart, { delay: 50 });
     }
@@ -449,18 +448,15 @@ app.get('/debug-goto-dialog', async (req, res) => {
         await dateInput.press('Control+A').catch(() => {});
         await page.keyboard.type(testDate, { delay: 50 });
 
-        // Same fix as screenshotChartAt(): typing only syncs the calendar's
-        // highlighted day, it does not commit the selection. Click the
-        // highlighted day cell to unlock the time field.
-        const selectedDayCell = await page.$('[role="cell"][aria-selected="true"]');
-        if (selectedDayCell) {
-          await selectedDayCell.click({ timeout: 5_000 }).catch(() => {});
-          await page.waitForTimeout(300);
-        }
+        // Same fix as screenshotChartAt(): neither typing nor clicking the
+        // calendar day cell unlocks the time field. Press Tab to move focus
+        // from date -> time the way a human would; that's what actually
+        // triggers TradingView's enable logic.
+        await page.keyboard.press('Tab');
+        await page.waitForTimeout(300);
 
         if (timeInput) {
           await timeInput.waitForElementState('enabled', { timeout: 8_000 }).catch(() => {});
-          await timeInput.click({ timeout: 8_000 });
           await timeInput.press('Control+A').catch(() => {});
           await page.keyboard.type(testTime, { delay: 50 });
         }
