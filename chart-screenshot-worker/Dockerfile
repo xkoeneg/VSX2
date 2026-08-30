@@ -1,6 +1,11 @@
 # Official Playwright image already has Chromium + every system dependency
 # it needs pre-installed — far more reliable on Railway/Render than trying
 # to `npx playwright install --with-deps` on a generic node:20 image.
+#
+# IMPORTANT: this tag's version (v1.48.0) MUST exactly match the "playwright"
+# version pinned in package.json. The npm package version and the browser
+# binaries baked into this image have to agree exactly — a mismatch causes
+# "Executable doesn't exist" at runtime. If you ever bump one, bump both.
 FROM mcr.microsoft.com/playwright:v1.48.0-jammy
 
 WORKDIR /app
