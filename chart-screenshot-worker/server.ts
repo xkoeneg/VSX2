@@ -424,19 +424,26 @@ app.get('/debug-goto-dialog', async (req, res) => {
     }
 
     let fillAttempted = false;
+    let fillError: string | null = null;
     if (dateInput) {
-      await dateInput.click();
-      await dateInput.press('Control+A').catch(() => {});
-      await page.keyboard.type(testDate, { delay: 50 });
-      if (timeInput) {
-        await timeInput.waitForElementState('enabled', { timeout: 10_000 }).catch(() => {});
-        await timeInput.click();
-        await timeInput.press('Control+A').catch(() => {});
-        await page.keyboard.type(testTime, { delay: 50 });
+      try {
+        // Short 5s timeouts here — this is a debug probe, not the real
+        // pipeline. If the date field itself isn't clickable, we want to
+        // find that out fast and still return a screenshot, not hang.
+        await dateInput.click({ timeout: 5_000 });
+        await dateInput.press('Control+A').catch(() => {});
+        await page.keyboard.type(testDate, { delay: 50 });
+        if (timeInput) {
+          await timeInput.click({ timeout: 5_000 });
+          await timeInput.press('Control+A').catch(() => {});
+          await page.keyboard.type(testTime, { delay: 50 });
+        }
+        await page.keyboard.press('Enter');
+        await page.waitForTimeout(1_500);
+        fillAttempted = true;
+      } catch (err: any) {
+        fillError = err.message;
       }
-      await page.keyboard.press('Enter');
-      await page.waitForTimeout(1_500);
-      fillAttempted = true;
     }
 
     const screenshotBuffer = await page.screenshot({ type: 'png' });
@@ -450,8 +457,24 @@ app.get('/debug-goto-dialog', async (req, res) => {
           placeholder: el.getAttribute('placeholder'),
           value: (el as HTMLInputElement).value,
           visible: rect.width > 0 && rect.height > 0,
+          disabled: el.disabled,
+          ariaDisabled: el.getAttribute('aria-disabled'),
         };
       });
+    });
+
+    // Look for tab-like buttons near the dialog (e.g. "Bars" vs "Date"
+    // mode toggles) — if the date input is disabled, it's likely because
+    // a different tab/mode is currently selected and needs clicking first.
+    const nearbyButtons = await page.evaluate(() => {
+      return Array.from(document.querySelectorAll('button, [role="tab"], [role="radio"]'))
+        .map((el) => ({
+          text: (el.textContent || '').trim(),
+          role: el.getAttribute('role'),
+          ariaSelected: el.getAttribute('aria-selected'),
+          className: el.className,
+        }))
+        .filter((b) => b.text && b.text.length < 40); // drop icon-only/huge buttons
     });
 
     res.json({
@@ -460,10 +483,12 @@ app.get('/debug-goto-dialog', async (req, res) => {
       dateInputFound: !!dateInput,
       timeInputFound: !!timeInput,
       fillAttempted,
+      fillError,
       testDate,
       testTime,
       inputCount: inputInfo.length,
       inputs: inputInfo,
+      nearbyButtons,
       screenshotBase64: screenshotBuffer.toString('base64'),
     });
   } catch (err: any) {
