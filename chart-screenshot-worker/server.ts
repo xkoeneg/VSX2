@@ -41,6 +41,7 @@
 // ============================================================================
 
 import express from 'express';
+import cors from 'cors';
 import { chromium, type Browser, type Page } from 'playwright';
 import { createClient } from '@supabase/supabase-js';
 import ws from 'ws';
@@ -288,6 +289,13 @@ async function processTradesSequentially(tradeIds: string[]) {
 // HTTP surface
 // ---------------------------------------------------------------------------
 const app = express();
+// Without this, the browser blocks the fetch() call from your Vercel
+// frontend before it ever reaches Railway (a silent failure — the
+// fire-and-forget .catch() in useAppState.tsx swallows it, so you'd never
+// see anything happen after import). Wide open (*) since this only accepts
+// a tradeId, not sensitive data — tighten to your actual Vercel domain if
+// you want to lock it down later.
+app.use(cors());
 app.use(express.json({ limit: '1mb' }));
 
 // Single trade — handy for retry-from-UI ("regenerate screenshot" button).
