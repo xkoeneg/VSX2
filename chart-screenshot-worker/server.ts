@@ -197,9 +197,23 @@ async function screenshotChartAt(tvSymbol: string, nyGoToValue: string): Promise
       throw new Error('Go-to-date dialog did not open (date input not found) — TradingView may have changed the full chart page UI, re-run /debug-goto-dialog?mode=fullchart to check.');
     }
 
-    await dateInput.fill(datePart);
+    // IMPORTANT: .fill() sets the value directly via JS, which does NOT
+    // trigger TradingView's own input validation — and that validation is
+    // what enables the (initially disabled) time field. Simulate real
+    // keystrokes instead via click + type, which does trigger it.
+    await dateInput.click();
+    await dateInput.press('Control+A').catch(() => {}); // clear any prefilled value
+    await page.keyboard.type(datePart, { delay: 50 });
+
     if (timeInput) {
-      await timeInput.fill(timePart);
+      // Wait for the time field to actually become enabled (it starts
+      // disabled until the date field passes validation) before typing
+      // into it — this is what the endless "element is not enabled"
+      // retries were hitting.
+      await timeInput.waitForElementState('enabled', { timeout: 10_000 }).catch(() => {});
+      await timeInput.click();
+      await timeInput.press('Control+A').catch(() => {});
+      await page.keyboard.type(timePart, { delay: 50 });
     }
     await page.keyboard.press('Enter');
     await page.waitForTimeout(1_500); // let the chart scroll/redraw
@@ -411,8 +425,15 @@ app.get('/debug-goto-dialog', async (req, res) => {
 
     let fillAttempted = false;
     if (dateInput) {
-      await dateInput.fill(testDate);
-      if (timeInput) await timeInput.fill(testTime);
+      await dateInput.click();
+      await dateInput.press('Control+A').catch(() => {});
+      await page.keyboard.type(testDate, { delay: 50 });
+      if (timeInput) {
+        await timeInput.waitForElementState('enabled', { timeout: 10_000 }).catch(() => {});
+        await timeInput.click();
+        await timeInput.press('Control+A').catch(() => {});
+        await page.keyboard.type(testTime, { delay: 50 });
+      }
       await page.keyboard.press('Enter');
       await page.waitForTimeout(1_500);
       fillAttempted = true;
