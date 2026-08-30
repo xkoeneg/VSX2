@@ -199,7 +199,12 @@ async function screenshotChartAt(tvSymbol: string, nyGoToValue: string): Promise
     // below to inspect what's actually rendered).
     const url = `https://www.tradingview.com/chart/?symbol=${encodeURIComponent(tvSymbol)}`;
 
-    await page.goto(url, { waitUntil: 'networkidle', timeout: 45_000 });
+    // NOTE: 'networkidle' never resolves once a logged-in TradingView session
+    // (see TV_SESSION_STATE_BASE64 above) is active — real-time data feeds,
+    // notifications, etc. keep the network "busy" indefinitely, so goto()
+    // would just time out. 'domcontentloaded' plus the explicit
+    // waitForSelector below is enough to know the chart is actually ready.
+    await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 45_000 });
     await page.waitForSelector('.chart-container, canvas', { timeout: 20_000 });
     await page.waitForTimeout(3_000); // full chart page has more UI chrome to settle
 
@@ -452,7 +457,10 @@ app.get('/debug-goto-dialog', async (req, res) => {
           `&interval=1&hidesidetoolbar=1&hidetoptoolbar=0&saveimage=0&theme=dark&style=1` +
           `&timezone=${encodeURIComponent('America/New_York')}`;
 
-    await page.goto(url, { waitUntil: 'networkidle', timeout: 45_000 });
+    // See note in screenshotChartAt() — 'networkidle' never resolves with a
+    // logged-in session active, so use 'domcontentloaded' + explicit selector
+    // wait instead.
+    await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 45_000 });
     await page.waitForSelector('.chart-container, canvas', { timeout: 20_000 });
     await page.waitForTimeout(3_000); // fullchart has more UI chrome to settle
 
