@@ -124,6 +124,43 @@ function brokerTimeToNewYork(isoNaive: string): string {
 }
 
 // ---------------------------------------------------------------------------
+// TradingView login session — continuous futures contracts (NQ1!, ES1!, etc.)
+// return "This symbol doesn't have data" when loaded from a logged-out /
+// anonymous browser session, even though the chart page itself is public.
+// Regular stock symbols (AAPL, etc.) work fine anonymously — confirmed via
+// /debug-goto-dialog testing. To fix this, a real TradingView account's
+// session (cookies + localStorage) is exported once via a local Playwright
+// script (see tv-session-export/export-session.js) and stored as a base64
+// string in the TV_SESSION_STATE_BASE64 env var. We decode it once here and
+// pass it as `storageState` when creating each new page/context below, so
+// the worker's headless browser is effectively "logged in" the same way.
+// If the env var isn't set, storageState is simply undefined and Playwright
+// falls back to a normal logged-out context (stock symbols will still work,
+// futures symbols will not).
+// ---------------------------------------------------------------------------
+let cachedStorageState: any = undefined;
+let storageStateLoaded = false;
+function getStorageState(): any {
+  if (!storageStateLoaded) {
+    storageStateLoaded = true;
+    const raw = process.env.TV_SESSION_STATE_BASE64;
+    if (raw) {
+      try {
+        const json = Buffer.from(raw, 'base64').toString('utf-8');
+        cachedStorageState = JSON.parse(json);
+        console.log('[chart-screenshot] loaded TradingView session from TV_SESSION_STATE_BASE64');
+      } catch (err: any) {
+        console.error('[chart-screenshot] failed to parse TV_SESSION_STATE_BASE64:', err.message);
+        cachedStorageState = undefined;
+      }
+    } else {
+      console.warn('[chart-screenshot] TV_SESSION_STATE_BASE64 not set — futures symbols (NQ1!, ES1!, etc.) will likely fail with "doesn\'t have data".');
+    }
+  }
+  return cachedStorageState;
+}
+
+// ---------------------------------------------------------------------------
 // Browser lifecycle — one shared browser instance, fresh page per screenshot
 // ---------------------------------------------------------------------------
 let browserPromise: Promise<Browser> | null = null;
@@ -143,7 +180,10 @@ async function getBrowser(): Promise<Browser> {
 // ---------------------------------------------------------------------------
 async function screenshotChartAt(tvSymbol: string, nyGoToValue: string): Promise<Buffer> {
   const browser = await getBrowser();
-  const page: Page = await browser.newPage({ viewport: { width: 1280, height: 720 } } as any);
+  const page: Page = await browser.newPage({
+    viewport: { width: 1280, height: 720 },
+    storageState: getStorageState(),
+  } as any);
 
   try {
     // CONFIRMED via /debug-goto-dialog: the simplified widget embed does
@@ -380,7 +420,10 @@ app.post('/screenshot-batch', (req, res) => {
   });
 });
 
-app.get('/health', (_req, res) => res.json({ ok: true }));
+app.get('/health', (_req, res) => res.json({
+  ok: true,
+  tvSessionLoaded: !!getStorageState(),
+}));
 
 // DEBUG ONLY — not part of the normal pipeline. Opens the widget for a
 // symbol, presses Alt+G, then returns (1) a screenshot of whatever's on
@@ -397,7 +440,10 @@ app.get('/debug-goto-dialog', async (req, res) => {
   let page: Page | null = null;
   try {
     const browser = await getBrowser();
-    page = await browser.newPage({ viewport: { width: 1280, height: 720 } } as any);
+    page = await browser.newPage({
+      viewport: { width: 1280, height: 720 },
+      storageState: getStorageState(),
+    } as any);
 
     const url =
       mode === 'fullchart'
