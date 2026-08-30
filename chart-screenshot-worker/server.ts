@@ -146,31 +146,61 @@ async function screenshotChartAt(tvSymbol: string, nyGoToValue: string): Promise
   const page: Page = await browser.newPage({ viewport: { width: 1280, height: 720 } } as any);
 
   try {
-    // Explicit America/New_York rather than TradingView's generic
-    // "exchange" timezone — some CME futures widgets default to Chicago
-    // time, and NY is the session reference you actually want.
-    const widgetUrl =
-      `https://s.tradingview.com/widgetembed/?symbol=${encodeURIComponent(tvSymbol)}` +
-      `&interval=1&hidesidetoolbar=1&hidetoptoolbar=0&saveimage=0&theme=dark&style=1` +
-      `&timezone=${encodeURIComponent('America/New_York')}`;
+    // CONFIRMED via /debug-goto-dialog: the simplified widget embed does
+    // NOT support Alt+G at all (0 inputs found). The full chart page DOES
+    // (2 inputs found: a date field with placeholder "YYYY-MM-DD" and a
+    // time field right after it, no placeholder). So we use the full
+    // chart page here, not s.tradingview.com/widgetembed.
+    // NOTE: unlike the old widgetembed URL, the full chart page has no
+    // confirmed &timezone= param — it may default to the exchange's own
+    // timezone or the browser/account default instead of NY. Verify this
+    // is correct by comparing a screenshot's visible time axis against a
+    // known trade before trusting it at scale (see debug-goto-dialog
+    // below to inspect what's actually rendered).
+    const url = `https://www.tradingview.com/chart/?symbol=${encodeURIComponent(tvSymbol)}`;
 
-    await page.goto(widgetUrl, { waitUntil: 'networkidle', timeout: 30_000 });
+    await page.goto(url, { waitUntil: 'networkidle', timeout: 45_000 });
+    await page.waitForSelector('.chart-container, canvas', { timeout: 20_000 });
+    await page.waitForTimeout(3_000); // full chart page has more UI chrome to settle
 
-    // The chart renders on a <canvas>; wait for it to exist and settle.
-    await page.waitForSelector('.chart-container, canvas', { timeout: 15_000 });
-    await page.waitForTimeout(2_000); // let the initial paint / data load finish
+    // Try to dismiss any cookie-consent / sign-in prompt overlays that could
+    // steal focus or block the chart. Best-effort — ignore if not present.
+    await page.keyboard.press('Escape').catch(() => {});
 
-    // Jump the chart to the trade's date/time (already expressed in NY wall
-    // clock, matching the widget's timezone param above) using
-    // TradingView's "Go to date and time" shortcut (Alt+G).
+    // Click the chart area first so keyboard shortcuts actually target it.
+    const chartEl = await page.$('.chart-container, canvas');
+    if (chartEl) await chartEl.click({ position: { x: 400, y: 300 } }).catch(() => {});
+    await page.waitForTimeout(300);
+
     await page.keyboard.press('Alt+G');
-    await page.waitForTimeout(500);
-    // TradingView's go-to-date input is usually the only visible textbox in
-    // the dialog that just opened — if this selector stops matching, open
-    // the widget in a headed browser once and re-check the actual input's
-    // selector/placeholder, then update this line.
-    const dateInput = await page.waitForSelector('input[data-name="date-input"], .goToDate input, input[type="text"]', { timeout: 5_000 });
-    await dateInput.fill(nyGoToValue); // e.g. "2024-01-15 05:23"
+    await page.waitForTimeout(1_000);
+
+    // nyGoToValue comes in as "YYYY-MM-DD HH:mm" — split it for the two
+    // separate inputs the dialog actually has.
+    const [datePart, timePart] = nyGoToValue.split(' ');
+
+    const inputs = await page.$$('input');
+    // Date input: has the YYYY-MM-DD placeholder. Time input: the very
+    // next visible input after it, no placeholder.
+    let dateInput = null;
+    let timeInput = null;
+    for (let i = 0; i < inputs.length; i++) {
+      const placeholder = await inputs[i].getAttribute('placeholder');
+      if (placeholder && placeholder.toUpperCase().includes('YYYY-MM-DD')) {
+        dateInput = inputs[i];
+        timeInput = inputs[i + 1] || null;
+        break;
+      }
+    }
+
+    if (!dateInput) {
+      throw new Error('Go-to-date dialog did not open (date input not found) — TradingView may have changed the full chart page UI, re-run /debug-goto-dialog?mode=fullchart to check.');
+    }
+
+    await dateInput.fill(datePart);
+    if (timeInput) {
+      await timeInput.fill(timePart);
+    }
     await page.keyboard.press('Enter');
     await page.waitForTimeout(1_500); // let the chart scroll/redraw
 
@@ -336,10 +366,9 @@ app.get('/health', (_req, res) => res.json({ ok: true }));
 //   GET /debug-goto-dialog?symbol=CME_MINI:NQ1!
 app.get('/debug-goto-dialog', async (req, res) => {
   const symbol = (req.query.symbol as string) || 'CME_MINI:NQ1!';
-  // 'widget' = the simplified public embed (confirmed: no Go-to-date dialog).
-  // 'fullchart' = the actual tradingview.com/chart/ page, which TradingView's
-  // own docs describe as having the Go to date feature in its bottom bar.
   const mode = (req.query.mode as string) === 'fullchart' ? 'fullchart' : 'widget';
+  const testDate = (req.query.date as string) || '2024-01-15'; // YYYY-MM-DD
+  const testTime = (req.query.time as string) || '09:30'; // HH:mm
   let page: Page | null = null;
   try {
     const browser = await getBrowser();
@@ -356,27 +385,49 @@ app.get('/debug-goto-dialog', async (req, res) => {
     await page.waitForSelector('.chart-container, canvas', { timeout: 20_000 });
     await page.waitForTimeout(3_000); // fullchart has more UI chrome to settle
 
-    // Click the chart area first — keyboard shortcuts often only fire once
-    // the chart pane actually has focus, which a fresh page load may not have.
+    await page.keyboard.press('Escape').catch(() => {});
     const chartEl = await page.$('.chart-container, canvas');
     if (chartEl) await chartEl.click({ position: { x: 400, y: 300 } }).catch(() => {});
     await page.waitForTimeout(300);
 
     await page.keyboard.press('Alt+G');
-    await page.waitForTimeout(1_500);
+    await page.waitForTimeout(1_000);
+
+    // CONFIRMED shape on the fullchart page: 2 separate inputs — a date
+    // field with placeholder "YYYY-MM-DD", and a time field right after
+    // it with no placeholder. Widget embed has 0 inputs (dialog never
+    // opens there at all).
+    const inputs = await page.$$('input');
+    let dateInput = null;
+    let timeInput = null;
+    for (let i = 0; i < inputs.length; i++) {
+      const placeholder = await inputs[i].getAttribute('placeholder');
+      if (placeholder && placeholder.toUpperCase().includes('YYYY-MM-DD')) {
+        dateInput = inputs[i];
+        timeInput = inputs[i + 1] || null;
+        break;
+      }
+    }
+
+    let fillAttempted = false;
+    if (dateInput) {
+      await dateInput.fill(testDate);
+      if (timeInput) await timeInput.fill(testTime);
+      await page.keyboard.press('Enter');
+      await page.waitForTimeout(1_500);
+      fillAttempted = true;
+    }
 
     const screenshotBuffer = await page.screenshot({ type: 'png' });
 
-    const inputs = await page.evaluate(() => {
+    const inputInfo = await page.evaluate(() => {
       return Array.from(document.querySelectorAll('input')).map((el) => {
         const rect = el.getBoundingClientRect();
         return {
           type: el.getAttribute('type'),
           className: el.className,
-          dataName: el.getAttribute('data-name'),
           placeholder: el.getAttribute('placeholder'),
-          ariaLabel: el.getAttribute('aria-label'),
-          id: el.id || null,
+          value: (el as HTMLInputElement).value,
           visible: rect.width > 0 && rect.height > 0,
         };
       });
@@ -385,8 +436,13 @@ app.get('/debug-goto-dialog', async (req, res) => {
     res.json({
       mode,
       symbol,
-      inputCount: inputs.length,
-      inputs,
+      dateInputFound: !!dateInput,
+      timeInputFound: !!timeInput,
+      fillAttempted,
+      testDate,
+      testTime,
+      inputCount: inputInfo.length,
+      inputs: inputInfo,
       screenshotBase64: screenshotBuffer.toString('base64'),
     });
   } catch (err: any) {
