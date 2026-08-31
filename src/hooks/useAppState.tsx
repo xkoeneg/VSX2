@@ -149,13 +149,6 @@ import { useViewportWidth } from './useViewportWidth';
 import { useClickOutside } from './useClickOutside';
 import type { TagColor, RoutineIconKind, WeekDay, RoutineIconColor, RuleSeverity, RuleIconKind, RuleBulletStyle, RuleTextSize } from '../types';
 
-// Base URL of the standalone chart-screenshot-worker deployment (Railway,
-// etc — NOT a Vercel serverless function). Undefined/empty in local dev
-// unless you set it, in which case the fire-and-forget call in
-// handleImportTradesFile below is just skipped — imports still work fine
-// without it, trades just keep the "No Image" placeholder.
-const CHART_SCREENSHOT_WORKER_URL = import.meta.env.VITE_CHART_SCREENSHOT_WORKER_URL as string | undefined;
-
 // ============================================================================
 // useDebouncedSupabaseWriter — generic debounced "save this payload to
 // Supabase" helper, used in place of the old useDebouncedLocalStorageWriter
@@ -3366,9 +3359,6 @@ export function useAppState() {
           absoluteTradeNumber: nextTradeNumber++,
           trackingNumber: String(nextTrackingNumberForAccount++),
           importTicketId: p.ticketId,
-          // Raw broker-server time (pre PH-shift) — used only by the
-          // background chart-screenshot worker, see brokerOpenTime in index.ts.
-          brokerOpenTime: p.openTime,
         });
       }
 
@@ -3391,15 +3381,6 @@ export function useAppState() {
             if (error) {
               console.error('Failed to save imported trades to Supabase:', error);
               showTradeImportToast('error', 'Imported trades may not have synced to your account — reload to check.');
-            } else if (CHART_SCREENSHOT_WORKER_URL) {
-              // Fire-and-forget — never awaited, a screenshot failure/timeout
-              // must never affect the import itself. The worker fills in
-              // trade.data.executionImages asynchronously in the background.
-              fetch(`${CHART_SCREENSHOT_WORKER_URL}/screenshot-batch`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ tradeIds: newTrades.map(t => t.id) }),
-              }).catch(err => console.warn('Chart screenshot trigger failed:', err));
             }
           });
         } else {
