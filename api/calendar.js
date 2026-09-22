@@ -10,11 +10,19 @@
 // "forex-economic-calendar-events" (not "forex-economic-calendar" — that
 // one 404s). This function fetches that path.
 //
-// UPDATE: added a small retry-with-backoff loop before giving up. Myfxbook
-// occasionally answers a single request with a transient non-200 (rate
-// limiting, a momentary hiccup on their end, etc.) even though the feed
-// itself is live — retrying 2-3 times with a short delay clears most of
-// those without the client ever seeing a 502.
+// UPDATE 1: retry-with-backoff before giving up on a transient failure.
+// UPDATE 2: Myfxbook was returning 403 to every request from Vercel's
+// server IPs — it was fingerprinting the request as a bot, not a browser
+// (a bare User-Agent isn't enough; sites like this also check
+// Accept-Language, Referer, and the sec-fetch-* / sec-ch-ua headers a real
+// browser always sends). Added a fuller, more realistic header set below.
+// UPDATE 3: added an in-memory last-good-response cache. If Myfxbook
+// still 403s on a given invocation, we now serve the last successful XML
+// (marked stale via a response header) instead of hard-failing the whole
+// calendar. NOTE: this cache lives in the function's memory, so it only
+// helps on "hot" invocations (same warm instance) — it resets on cold
+// starts/redeploys. That's fine here since it's just a nice-to-have
+// safety net on top of the retry logic, not the primary fix.
 
 const MYFXBOOK_RSS_URL = 'https://www.myfxbook.com/rss/forex-economic-calendar-events';
 
@@ -23,6 +31,26 @@ const RETRY_DELAY_MS = 800; // base delay; doubles each retry (backoff)
 
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
+// Module-scope = persists across invocations on the same warm instance.
+let lastGoodXml = null;
+let lastGoodAt = null;
+
+function browserLikeHeaders() {
+  return {
+    'User-Agent':
+      'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36',
+    Accept: 'application/rss+xml, application/xml, text/xml, */*;q=0.8',
+    'Accept-Language': 'en-US,en;q=0.9',
+    Referer: 'https://www.myfxbook.com/forex-economic-calendar',
+    'Sec-Fetch-Dest': 'document',
+    'Sec-Fetch-Mode': 'navigate',
+    'Sec-Fetch-Site': 'same-origin',
+    'sec-ch-ua': '"Chromium";v="128", "Not;A=Brand";v="24", "Google Chrome";v="128"',
+    'sec-ch-ua-mobile': '?0',
+    'sec-ch-ua-platform': '"Windows"',
+  };
+}
+
 async function fetchWithRetry() {
   let lastStatus = null;
   let lastError = null;
@@ -30,13 +58,7 @@ async function fetchWithRetry() {
   for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
     try {
       const upstreamResponse = await fetch(MYFXBOOK_RSS_URL, {
-        headers: {
-          // Some sites block requests without a browser-like UA/Accept —
-          // this keeps the proxy request looking like a normal RSS fetch.
-          'User-Agent':
-            'Mozilla/5.0 (compatible; VSX-EconomicCalendarBot/1.0; +https://vercel.com)',
-          Accept: 'application/rss+xml, application/xml, text/xml, */*',
-        },
+        headers: browserLikeHeaders(),
         // Vercel functions have their own execution timeout; this just
         // avoids hanging on a slow/unresponsive upstream.
         signal: AbortSignal.timeout(10_000),
@@ -49,9 +71,10 @@ async function fetchWithRetry() {
 
       lastStatus = upstreamResponse.status;
 
-      // Don't bother retrying on a clean 4xx (bad request/URL moved/etc.) —
-      // that's not transient, it'll fail the same way every time. Only
-      // retry on 429 (rate limited) and 5xx (upstream having a bad moment).
+      // Don't bother retrying on a clean 4xx (bad request/blocked/moved/
+      // etc.) — that's not transient, it'll fail the same way every time.
+      // Only retry on 429 (rate limited) and 5xx (upstream having a bad
+      // moment).
       if (lastStatus < 429 && lastStatus < 500) break;
     } catch (err) {
       lastError = err;
@@ -73,6 +96,21 @@ export default async function handler(req, res) {
   }
 
   const result = await fetchWithRetry();
+
+  if (result.ok) {
+    lastGoodXml = result.xml;
+    lastGoodAt = new Date();
+  } else if (lastGoodXml) {
+    // Upstream failed this time, but we have something from a previous
+    // successful fetch on this warm instance — better to serve slightly
+    // stale data than to break the calendar/notification bell entirely.
+    res.setHeader('Content-Type', 'application/xml; charset=utf-8');
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
+    res.setHeader('X-Calendar-Stale', 'true');
+    res.setHeader('X-Calendar-Stale-Since', lastGoodAt ? lastGoodAt.toISOString() : '');
+    return res.status(200).send(lastGoodXml);
+  }
 
   if (!result.ok) {
     if (result.error) {
