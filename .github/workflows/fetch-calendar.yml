@@ -1,1 +1,25 @@
+name: Fetch economic calendar
 
+on:
+  schedule:
+    # Every 15 minutes. GitHub's scheduler runs on a best-effort basis and
+    # can lag a few minutes during high load — that's fine here, the app
+    # only refreshes every 5 minutes on its own anyway.
+    - cron: '*/15 * * * *'
+  workflow_dispatch: {} # lets you trigger it manually from the Actions tab
+
+jobs:
+  fetch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Fetch and cache calendar feed
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+        run: node scripts/fetch-calendar.mjs
