@@ -18,13 +18,11 @@
 // browser — it never talks to Myfxbook itself anymore, so Vercel's IP
 // block is no longer relevant.
 //
-// Requires two environment variables (Vercel Project Settings -> Environment
-// Variables — same Supabase project your app already uses):
-//   SUPABASE_URL       - your Supabase project URL
-//   SUPABASE_ANON_KEY  - the anon/public key (read-only access to this
-//                         table via the RLS policy in the migration; do NOT
-//                         use the service role key here, this code runs
-//                         in a context reachable from the browser's request)
+// Reuses the same Supabase env vars the frontend already has set in
+// Vercel (VITE_SUPABASE_URL / VITE_SUPABASE_ANON_KEY) — no new Vercel env
+// vars needed. The VITE_ prefix only matters for Vite's client-side build;
+// serverless functions can read any project env var via process.env
+// regardless of prefix.
 
 const CACHE_ROW_ID = 'myfxbook-economic-calendar';
 
@@ -39,13 +37,13 @@ export default async function handler(req, res) {
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
-  const SUPABASE_URL = process.env.SUPABASE_URL;
-  const SUPABASE_ANON_KEY = process.env.SUPABASE_ANON_KEY;
+  const SUPABASE_URL = process.env.VITE_SUPABASE_URL;
+  const SUPABASE_ANON_KEY = process.env.VITE_SUPABASE_ANON_KEY;
 
   if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
     return res.status(500).json({
       error: 'Server misconfigured',
-      message: 'SUPABASE_URL / SUPABASE_ANON_KEY are not set on this Vercel project.',
+      message: 'VITE_SUPABASE_URL / VITE_SUPABASE_ANON_KEY are not set on this Vercel project.',
     });
   }
 
